@@ -9,6 +9,12 @@ export interface FramePanel {
   panel_name: string;
   cable_count?: number;
   compare_status?: string;
+  panel_type?: string | null;
+  voltage_level?: string | null;
+  system_type?: string | null;
+  original_filename?: string;
+  uploaded_at?: string;
+  sheet_name?: string;
   [key: string]: unknown;
 }
 

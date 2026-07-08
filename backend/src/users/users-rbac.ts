@@ -86,6 +86,7 @@ export function sanitizeUpdateDto(
     if (dto.full_name !== undefined) allowed.full_name = dto.full_name;
     if (dto.employee_id !== undefined) allowed.employee_id = dto.employee_id;
     if (dto.whatsapp_number !== undefined) allowed.whatsapp_number = dto.whatsapp_number;
+    if (dto.username !== undefined) allowed.username = dto.username;
     return allowed;
   }
 

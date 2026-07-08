@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import * as ExcelJS from 'exceljs';
 import { buildCompletionReport } from '../common/completion-report.helper';
 import { getReportLogoBuffer, prependExcelReportHeader } from '../common/report-branding';
+import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 
 interface AnyUser { id: number; role: string | null; full_name: string | null; }
 
@@ -260,6 +261,7 @@ export class SupervisorService {
   }
 
   async panelReport(projectCode: string, frameId: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
@@ -305,6 +307,7 @@ export class SupervisorService {
   }
 
   async panelReportXlsx(projectCode: string, frameId: string): Promise<Buffer> {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
@@ -353,6 +356,7 @@ export class SupervisorService {
   // ── Wiring Schedule Excel Export (professional, color-coded, visually guided) ──
 
   async wiringScheduleXlsx(projectCode: string, frameId: string): Promise<Buffer> {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
@@ -602,6 +606,7 @@ export class SupervisorService {
   }
 
   async revalidate(projectCode: string, frameId: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
@@ -641,6 +646,7 @@ export class SupervisorService {
   }
 
   async confirmRevalidation(projectCode: string, frameId: string, user: AnyUser) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const path = require('path');
     const fs = require('fs');
     const dir = path.join(process.cwd(), 'uploads', projectCode, 'frames');

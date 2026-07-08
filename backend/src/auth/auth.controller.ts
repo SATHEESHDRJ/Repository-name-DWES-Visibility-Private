@@ -60,6 +60,8 @@ export class AuthController {
   @Get('env')
   env() {
     const demo = process.env.DEMO_MODE === 'true';
+    const devHardReset =
+      demo || process.env.ALLOW_DEV_HARD_RESET === 'true';
     return {
       env_label: demo ? 'Demo / Development' : 'Production',
       db_host: 'localhost:5432',
@@ -69,6 +71,7 @@ export class AuthController {
       server_time: new Date().toISOString(),
       mode: demo ? 'demo' : 'production',
       demo_mode: demo,
+      dev_hard_reset_allowed: devHardReset,
     };
   }
 

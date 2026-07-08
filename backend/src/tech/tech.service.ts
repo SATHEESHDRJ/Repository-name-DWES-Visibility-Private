@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MockStore, type FrameData } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { buildCompletionReport } from '../common/completion-report.helper';
+import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 import * as crypto from 'crypto';
 
 export interface CableStatus { src: boolean; dst: boolean; note: string; issue?: boolean; }
@@ -63,6 +64,8 @@ export class TechService {
                 technician_id: dto.technician_id, status: { not: 'completed' } },
     });
     if (existing) throw new ConflictException('Technician already assigned to this frame');
+
+    assertPanelNameUniqueForWrite(dto.project_code, dto.frame_id);
 
     const cablesList = Array.isArray(frame.cables) ? frame.cables : [];
     const cableStatus: Record<string, CableStatus> = {};
@@ -542,6 +545,7 @@ export class TechService {
   async deleteAssignment(assignmentId: number) {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException('Assignment not found');
+    assertPanelNameUniqueForWrite(a.project_code, a.frame_id);
     if (a.status === 'in_progress') {
       throw new BadRequestException('Cannot deassign while work is in progress. Ask technician to pause first.');
     }
@@ -577,6 +581,8 @@ export class TechService {
       throw new BadRequestException('Assignment must be in progress or paused for changeover');
     }
     if (old.changeover_locked) throw new BadRequestException('Changeover already initiated');
+
+    assertPanelNameUniqueForWrite(old.project_code, old.frame_id);
 
     const reason = (changeoverReason || '').trim();
     if (!reason) throw new BadRequestException('Changeover reason is required');

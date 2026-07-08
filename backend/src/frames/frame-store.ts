@@ -118,6 +118,32 @@ export const FrameStore = {
       .filter(p => fs.existsSync(p));
   },
 
+  /** Archive frame JSON + Excel to uploads/backups/ before replace. Returns archive dir or null. */
+  archiveFrameFiles(projectCode: string, frameId: string, panelName: string): string | null {
+    const srcPaths = this.getFrameFilePaths(projectCode, frameId);
+    if (!srcPaths.length) return null;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safeName = panelName.trim().replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+    const archiveDir = path.join(uploadDir(), 'backups', `FRAME_REPLACE_${safeName}_${ts}`);
+    fs.mkdirSync(archiveDir, { recursive: true });
+    for (const src of srcPaths) {
+      fs.copyFileSync(src, path.join(archiveDir, path.basename(src)));
+    }
+    return archiveDir;
+  },
+
+  /** Archive a drawing file to uploads/backups/ before replace. Returns archive dir or null. */
+  archiveDrawingFile(projectCode: string, drawingId: string, originalName: string): string | null {
+    const src = this.getDrawingFilePath(projectCode, drawingId);
+    if (!src) return null;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safeName = originalName.trim().replace(/[^a-zA-Z0-9_.\-]/g, '_').slice(0, 40);
+    const archiveDir = path.join(uploadDir(), 'backups', `DRAWING_REPLACE_${safeName}_${ts}`);
+    fs.mkdirSync(archiveDir, { recursive: true });
+    fs.copyFileSync(src, path.join(archiveDir, path.basename(src)));
+    return archiveDir;
+  },
+
   /** Return the absolute path of the drawing file on disk (prefix-search), or null */
   getDrawingFilePath(projectCode: string, drawingId: string): string | null {
     const dir = drawingsDir(projectCode);

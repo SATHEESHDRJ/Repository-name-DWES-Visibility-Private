@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0F2436"/>
-      <stop offset="1" stop-color="#0A1826"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="96" fill="url(#tile)"/>
-  <g transform="translate(256 256) scale(2.1) translate(-150 -72)">
-    <circle cx="150" cy="72" r="56" stroke="#2A7A8A" stroke-width="2.5" opacity="0.45" fill="none"/>
-    <ellipse cx="150" cy="72" rx="56" ry="20" stroke="#2E9DAA" stroke-width="4" fill="none" transform="rotate(-38 150 72)"/>
-    <ellipse cx="150" cy="72" rx="56" ry="20" stroke="#6DCFD4" stroke-width="2.5" opacity="0.72" fill="none" transform="rotate(-56 150 72)"/>
-    <line x1="76" y1="90" x2="224" y2="54" stroke="#2E9DAA" stroke-width="6" stroke-linecap="round"/>
-    <line x1="80" y1="100" x2="220" y2="64" stroke="#5BBFCC" stroke-width="4.2" stroke-linecap="round" opacity="0.88"/>
-    <line x1="72" y1="80" x2="228" y2="44" stroke="#1B7080" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
+<!--
+  DWES app / PWA / desktop icon — derived from canonical Ingenious Network mark
+  (src/assets/logo-icon.svg). Colors pulled from public/logo.svg; white tile matches
+  CompanyLogo topbar pill treatment.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="108" fill="#FFFFFF"/>
+  <rect x="2" y="2" width="508" height="508" rx="106" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+
+  <g transform="translate(-46 112) scale(2)">
+    <circle cx="150" cy="72" r="56"
+            stroke="#2A7A8A" stroke-width="2.5" opacity="0.45"/>
+    <ellipse cx="150" cy="72" rx="56" ry="20"
+             stroke="#2E9DAA" stroke-width="4"
+             transform="rotate(-38 150 72)"/>
+    <ellipse cx="150" cy="72" rx="56" ry="20"
+             stroke="#6DCFD4" stroke-width="2.5" opacity="0.72"
+             transform="rotate(-56 150 72)"/>
+    <line x1="76"  y1="90"  x2="224" y2="54"
+          stroke="#2E9DAA" stroke-width="6" stroke-linecap="round"/>
+    <line x1="80"  y1="100" x2="220" y2="64"
+          stroke="#5BBFCC" stroke-width="4.2" stroke-linecap="round" opacity="0.88"/>
+    <line x1="72"  y1="80"  x2="228" y2="44"
+          stroke="#1B7080" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
   </g>
 </svg>

@@ -4,6 +4,7 @@ import DbConfigTab from './tabs/DbConfigTab';
 import DeploymentModeTab from './tabs/DeploymentModeTab';
 import DeleteProjectTab from './tabs/DeleteProjectTab';
 import HardResetTab from './tabs/HardResetTab';
+import HardResetDbTab from './tabs/HardResetDbTab';
 import ResetAllProjectsTab from './tabs/ResetAllProjectsTab';
 
 /**
@@ -19,6 +20,7 @@ export default function AdminSettingsPage() {
       <div className="dash-module"><SyncTab /></div>
       <div className="dash-module"><DeleteProjectTab /></div>
       <div className="dash-module"><HardResetTab /></div>
+      <div className="dash-module"><HardResetDbTab /></div>
       <div className="dash-module"><ResetAllProjectsTab /></div>
     </div>
   );

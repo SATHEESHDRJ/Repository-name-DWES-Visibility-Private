@@ -33,10 +33,13 @@ function normalizeColor(value: unknown): string {
 function normalizeLength(value: unknown): string {
   const text = normalizeText(value);
   if (!text) return '';
-  const normalized = text.replace(/,/g, '.').trim();
-  const match = normalized.match(/(-?\d+(?:\.\d+)?)/);
-  if (match) return match[1];
-  return normalized.replace(/m$/i, '').trim();
+  const normalized = text.replace(/,/g, '.').replace(/\s+/g, '');
+  // Preserve unit suffixes from schedule cells (e.g. "2.5m", "3.25m").
+  const withUnit = normalized.match(/^(-?\d+(?:\.\d+)?)m$/i);
+  if (withUnit) return `${withUnit[1]}m`;
+  const bare = normalized.match(/^(-?\d+(?:\.\d+)?)m?$/i);
+  if (bare) return bare[1];
+  return normalized;
 }
 
 /** Split a "left/right" pair and return the part that is NOT `thisEnd` (the far end). */

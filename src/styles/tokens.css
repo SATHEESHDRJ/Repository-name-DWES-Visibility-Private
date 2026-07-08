@@ -1,10 +1,11 @@
 @layer base {
   :root {
-    /* Typography Sizes */
-    --font-page-title: 24px;
-    --font-section-title: 16px;
-    --font-body: 14px;
-    --font-caption: 12px;
+    /* Typography Sizes — workspace shell (nav, titles, content) */
+    --font-page-title: 26px;
+    --font-section-title: 18px;
+    --font-body: 15px;
+    --font-caption: 13px;
+    --font-nav-item: 15px;
     --font-mono: 16px;
 
     /* Spacing Scale */
@@ -17,10 +18,10 @@
     --spacing-32: 32px;
     --spacing-48: 48px;
 
-    /* Border Radius */
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
+    /* Border Radius — cards & workspace surfaces */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
     --radius-xl: 20px;
 
     /* Button Heights — Android 44 dp minimum */

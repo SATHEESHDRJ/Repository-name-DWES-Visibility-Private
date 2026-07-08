@@ -4,6 +4,7 @@ import DashboardShell from '../../components/ui/DashboardShell';
 import { techApi } from '../../services/api';
 import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
 import PanelsTab from './tabs/PanelsTab';
 import WiringTab from './tabs/WiringTab';
 
@@ -40,6 +41,10 @@ export default function TechnicianDashboard() {
   useEffect(() => { loadPanels(); }, [loadPanels]);
 
   useReadOnlyPoll(loadPanels, 4000);
+
+  useEffect(() => {
+    return onFramesChanged(() => { loadPanels(); });
+  }, [loadPanels]);
 
   const handleSelectPanel = (panel: any) => {
     setSelectedPanel(panel);

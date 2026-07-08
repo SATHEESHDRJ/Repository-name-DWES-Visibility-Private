@@ -3,9 +3,13 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { MockStore, Cable, CompareResult } from '../data/mock-store';
+import { MockStore, Cable, CompareResult, FrameData } from '../data/mock-store';
 import { PrismaService } from '../prisma/prisma.service';
 import { FrameStore } from './frame-store';
+import {
+  assertPanelNameUniqueForWrite,
+  assertPatchPanelNameAllowed,
+} from '../common/panel-duplicate.helper';
 
 const normalize = (s: string) => String(s || '').toUpperCase().trim().replace(/\s+/g, '');
 
@@ -80,7 +84,59 @@ export class FramesService {
       id: f.id, project_code: f.project_code, panel_name: f.panel_name,
       uploaded_at: f.uploaded_at, compare_status: f.compare_status,
       original_filename: f.original_filename, cable_count: f.cable_count, sheet_name: f.sheet_name,
+      panel_type: f.panel_type || null,
+      voltage_level: f.voltage_level || null,
+      system_type: f.system_type || null,
     }));
+  }
+
+  async createPanel(projectCode: string, dto: {
+    name: string;
+    type?: string;
+    voltage_level: string;
+    system_type?: string;
+  }) {
+    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    if (!project || project.is_active === false) {
+      throw new NotFoundException(`Project ${projectCode} not found`);
+    }
+
+    const name = (dto.name || '').trim();
+    if (!name) throw new BadRequestException('Panel name is required');
+    const voltageLevel = (dto.voltage_level || '').trim();
+    if (!voltageLevel) throw new BadRequestException('Voltage level is required');
+
+    const frameId = `frame_${Date.now()}_0_${Math.random().toString(36).slice(2, 7)}`;
+    const frame: FrameData = {
+      id: frameId,
+      project_code: projectCode,
+      panel_name: name,
+      cables: [],
+      uploaded_at: new Date().toISOString(),
+      compare_status: 'none',
+      original_filename: '(created with project)',
+      cable_count: 0,
+      mapping: {},
+      sheet_name: '',
+      voltage_level: voltageLevel,
+      ...(dto.type?.trim() ? { panel_type: dto.type.trim() } : {}),
+      ...(dto.system_type?.trim() ? { system_type: dto.system_type.trim() } : {}),
+    };
+    MockStore.frames.push(frame);
+    FrameStore.save(frame);
+    return {
+      id: frameId,
+      project_code: projectCode,
+      panel_name: frame.panel_name,
+      panel_type: frame.panel_type || null,
+      voltage_level: frame.voltage_level || null,
+      system_type: frame.system_type || null,
+      uploaded_at: frame.uploaded_at,
+      compare_status: frame.compare_status,
+      original_filename: frame.original_filename,
+      cable_count: 0,
+      sheet_name: '',
+    };
   }
 
   findOne(projectCode: string, frameId: string) {
@@ -105,6 +161,7 @@ export class FramesService {
   }
 
   compareVerify(projectCode: string, frameId: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
     if (f.compare_status === 'validated') return { status: 'validated', message: 'Already validated' };
@@ -119,6 +176,7 @@ export class FramesService {
   }
 
   compareSubmit(projectCode: string, frameId: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
     if (f.compare_status !== 'verified') throw new BadRequestException('Frame must be verified before submitting');
@@ -162,6 +220,7 @@ export class FramesService {
   }
 
   patchCable(projectCode: string, frameId: string, cableIndex: number, field: string, value: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
     if (cableIndex < 0 || cableIndex >= f.cables.length) throw new BadRequestException('Invalid cable index');
@@ -182,7 +241,45 @@ export class FramesService {
     return { cable: f.cables[cableIndex], cable_index: cableIndex, validation: buildValidation(f.cables) };
   }
 
+  patchPanel(
+    projectCode: string,
+    frameId: string,
+    dto: { panel_name: string; panel_type?: string; voltage_level?: string; system_type?: string },
+  ) {
+    const name = (dto.panel_name || '').trim();
+    if (!name) throw new BadRequestException('Panel name is required');
+    const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
+    if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
+    assertPatchPanelNameAllowed(projectCode, frameId, name);
+    f.panel_name = name;
+    if (dto.panel_type !== undefined) {
+      const t = dto.panel_type.trim();
+      if (t) f.panel_type = t;
+      else delete f.panel_type;
+    }
+    if (dto.voltage_level !== undefined) {
+      const v = dto.voltage_level.trim();
+      if (v) f.voltage_level = v;
+      else delete f.voltage_level;
+    }
+    if (dto.system_type !== undefined) {
+      const s = dto.system_type.trim();
+      if (s) f.system_type = s;
+      else delete f.system_type;
+    }
+    FrameStore.persist(f);
+    return {
+      id: f.id,
+      panel_name: f.panel_name,
+      project_code: f.project_code,
+      panel_type: f.panel_type || null,
+      voltage_level: f.voltage_level || null,
+      system_type: f.system_type || null,
+    };
+  }
+
   async remapColumn(projectCode: string, frameId: string, systemField: string, excelHeader: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
 
@@ -221,6 +318,7 @@ export class FramesService {
   }
 
   verifyConfirm(projectCode: string, frameId: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     let f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) {
       const disk = FrameStore.getFrameFromDisk(projectCode, frameId);
@@ -302,6 +400,7 @@ export class FramesService {
   }
 
   saveMapping(projectCode: string, frameId: string, mapping: Record<string, string>, sheetName: string) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
     f.mapping = mapping;
@@ -420,6 +519,22 @@ export class FramesService {
       archivedFiles.push(path.basename(src));
     }
 
+    // Purge DB rows tied to this frame (panel_inspections → tech_assignments → audit)
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      select: { id: true },
+    });
+    const assignmentIds = assignments.map(a => a.id);
+    const inspDel = assignmentIds.length
+      ? await this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
+      : { count: 0 };
+    const assnDel = await this.prisma.tech_assignments.deleteMany({
+      where: { project_code: projectCode, frame_id: frameId },
+    });
+    const auditDel = await this.prisma.tech_audit_log.deleteMany({
+      where: { project_code: projectCode, frame_id: frameId },
+    });
+
     const idx = MockStore.frames.findIndex(fr => fr.project_code === projectCode && fr.id === frameId);
     if (idx !== -1) MockStore.frames.splice(idx, 1);
     FrameStore.remove(projectCode, frameId);
@@ -427,7 +542,13 @@ export class FramesService {
     return {
       success: true,
       backup: { dump: dumpFile, archive: archiveDir, files: archivedFiles },
-      deleted: { panel_name: f.panel_name, frame_id: frameId },
+      deleted: {
+        panel_name: f.panel_name,
+        frame_id: frameId,
+        inspections: inspDel.count,
+        assignments: assnDel.count,
+        audit_logs: auditDel.count,
+      },
       message: `Frame "${f.panel_name}" deleted. Backup at backups/FRAME_${safeName}_${ts}.dump`,
       ts: new Date().toISOString(),
     };

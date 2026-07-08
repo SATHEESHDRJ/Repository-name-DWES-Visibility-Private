@@ -1,32 +1,18 @@
 import SupervisorSectionHeader from '../../../components/supervisor/SupervisorSectionHeader';
-import SupervisorScopeToolbar from '../../../components/supervisor/SupervisorScopeToolbar';
-import { useSupervisorScope } from '../../../hooks/useSupervisorScope';
-import ReviewTab from '../tabs/ReviewTab';
+import ReviewApprovalWorkspace from '../../../components/supervisor/ReviewApprovalWorkspace';
 
-export default function ReviewApprovalSection() {
-  const scope = useSupervisorScope();
+interface ReviewApprovalSectionProps {
+  isActive?: boolean;
+}
 
+export default function ReviewApprovalSection({ isActive = true }: ReviewApprovalSectionProps) {
   return (
     <div className="flex flex-col min-w-0 gap-4">
       <SupervisorSectionHeader
-        title="Review & Approval"
-        description="Review completed panel submissions and approve work or request supervisor rework."
+        title="Status"
+        description="Central workspace for project progress, wiring execution, supervisor review, QA/QC status, reporting, and director submission."
       />
-
-      <SupervisorScopeToolbar
-        projects={scope.projects}
-        selectedProjectCode={scope.selectedProjectCode}
-        selectedPanelId={scope.selectedPanelId}
-        onProjectChange={scope.handleProjectChange}
-        onPanelChange={scope.handlePanelChange}
-        onPanelsLoaded={scope.setLoadedPanels}
-        panelsRefreshKey={scope.panelsRefreshKey}
-      />
-
-      <ReviewTab
-        projectCode={scope.selectedProjectCode}
-        panelId={scope.selectedPanelId}
-      />
+      <ReviewApprovalWorkspace isActive={isActive} />
     </div>
   );
 }

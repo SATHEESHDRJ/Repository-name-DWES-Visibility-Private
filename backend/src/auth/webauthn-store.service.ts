@@ -107,4 +107,20 @@ export class WebAuthnStoreService implements OnModuleInit {
       .get(userId) as { n: number };
     return row.n;
   }
+
+  countAll(): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM webauthn_credentials')
+      .get() as { n: number };
+    return row.n;
+  }
+
+  /** Dev hard-reset only — wipes all passkey credentials. */
+  clearAll(): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM webauthn_credentials')
+      .get() as { n: number };
+    this.db.prepare('DELETE FROM webauthn_credentials').run();
+    return row.n;
+  }
 }

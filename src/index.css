@@ -113,10 +113,10 @@
   --color-background:       #F8FAFC;
   --color-background-alt:   #F1F5F9;
 
-  /* Text colors with WCAG AA compliance */
+  /* Text colors with WCAG AA compliance — dark slate, not washed-out gray */
   --color-text-primary:   #0F172A;   /* Slate 900 - 16.17:1 on white */
-  --color-text-secondary: #475569;   /* Slate 600 - 7.03:1 on white */
-  --color-text-tertiary:  #94A3B8;   /* Slate 400 - 3.97:1 on white */
+  --color-text-secondary: #334155;   /* Slate 700 - 10.35:1 on white */
+  --color-text-tertiary:  #64748B;   /* Slate 500 - 4.76:1 on white */
   --color-text-disabled:  #CBD5E1;   /* Slate 300 - 2.27:1 on white */
   --color-text-inverse:    #FFFFFF;  /* White text on dark backgrounds */
 
@@ -127,9 +127,9 @@
 
   /* MD3 semantic color roles (LIGHT default) */
   --color-on-surface:           #0F172A;
-  --color-on-surface-variant:   #475569;
+  --color-on-surface-variant:   #334155;
   --color-outline:              #CBD5E1;
-  --color-outline-variant:      #E2E8F0;
+  --color-outline-variant:      #CBD5E1;
   --color-on-primary-strong:    #0284C7;
 
   /* ── Radius scale (MD3) ── */

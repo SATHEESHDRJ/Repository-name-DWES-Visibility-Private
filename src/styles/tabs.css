@@ -16,7 +16,7 @@
     --nav-tab-ripple: color-mix(in srgb, var(--color-primary) 22%, transparent);
     --nav-tab-pill-bg: color-mix(in srgb, var(--color-on-surface) 5%, transparent);
     --nav-tab-pill-active: linear-gradient(135deg, #2563EB 0%, #4338CA 100%);
-    --nav-tab-inactive-opacity: 0.62;
+    --nav-tab-inactive-opacity: 0.78;
     --nav-tab-active-glow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent),
       0 4px 16px color-mix(in srgb, var(--color-primary) 14%, transparent);
     --nav-tab-active-glow-strong: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent),
@@ -342,13 +342,14 @@
 
   .dash-sidebar-link.is-active {
     background: var(--nav-tab-indicator-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-800, #1E40AF);
+    font-weight: 700;
     box-shadow: var(--nav-tab-active-glow);
     transform: scale(1.01);
   }
 
   .dash-sidebar-link:not(.is-active) {
-    color: color-mix(in srgb, var(--color-on-surface-variant) 90%, transparent);
+    color: var(--color-text-secondary, #334155);
   }
 
   .dash-sidebar-link:not(.is-active) .dash-sidebar-icon svg,

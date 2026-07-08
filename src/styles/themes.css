@@ -133,12 +133,30 @@
 }
 
 [data-theme] .dash-sidebar-link.is-active {
-  background: var(--t-accent-soft, color-mix(in srgb, #1A56DB 12%, transparent));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--t-accent) 14%, transparent) 0%,
+    color-mix(in srgb, #6366F1 10%, transparent) 100%
+  );
   color: var(--t-accent-strong, #1D4ED8);
+  font-weight: 700;
 }
 [data-theme] .dash-sidebar-link.is-active::after {
-  background: linear-gradient(180deg, var(--t-accent-bright, #1A56DB), var(--t-accent, #4338CA));
+  background: linear-gradient(180deg, var(--t-accent-bright, #3B82F6), var(--t-accent-strong, #1D4ED8));
+  width: 4px;
 }
+[data-theme] .dash-sidebar {
+  border-color: var(--t-card-border, #CBD5E1);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.06);
+}
+[data-theme] .dash-module,
+[data-theme] .dashboard-hero,
+[data-theme] .app-section-header {
+  border-color: var(--t-card-border, #CBD5E1);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .app-section-title { color: var(--t-text); }
+[data-theme] .app-section-desc { color: var(--t-muted); }
 [data-theme] .topbar-actions-capsule.topbar-float--dark,
 [data-theme] .topbar-clock-card.topbar-float--dark,
 [data-theme] .topbar-nav-card.topbar-float--dark {
@@ -153,24 +171,28 @@
   box-shadow: var(--t-header-float-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-float-border) 70%, white);
 }
+[data-theme] .topbar-project-pill.topbar-float--light,
 [data-theme] .topbar-user-card.topbar-float--light {
   background: var(--t-header-user-bg);
   border: 1px solid var(--t-header-user-border);
   box-shadow: var(--t-header-user-shadow);
 }
+[data-theme] .topbar-project-pill.topbar-float--light:hover,
 [data-theme] .topbar-user-card.topbar-float--light:hover {
   transform: translateY(-2px);
   box-shadow: var(--t-header-user-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-user-border) 70%, #0F172A);
 }
+[data-theme] .topbar-project-pill.topbar-float--light .topbar-project-value,
 [data-theme] .topbar-user-card.topbar-float--light .topbar-user-name {
-  color: var(--t-header-user-text);
+  color: var(--t-header-pill-text, var(--t-header-user-text, var(--color-on-surface, #0F172A)));
 }
-[data-theme] .topbar-user-card.topbar-float--light .topbar-user-role {
-  color: var(--t-header-user-muted);
+[data-theme] .topbar-project-pill.topbar-float--light .topbar-project-label,
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-role,
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-handle {
+  color: var(--t-header-pill-muted, var(--t-header-user-muted, var(--color-on-surface-variant, #64748B)));
 }
 [data-theme] .topbar-user-card.topbar-float--light .topbar-user-handle {
-  color: var(--t-header-user-text);
   font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 600;
 }

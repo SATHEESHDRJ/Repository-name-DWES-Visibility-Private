@@ -21,6 +21,10 @@ export function recordError(message: string, context: string) {
   if (errorRingBuffer.length > 50) errorRingBuffer.pop();
 }
 
+export function clearErrorRingBuffer() {
+  errorRingBuffer.length = 0;
+}
+
 @Injectable()
 export class AdminService {
   constructor(private prisma: PrismaService) {}

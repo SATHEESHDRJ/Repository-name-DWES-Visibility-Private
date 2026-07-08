@@ -1,29 +1,46 @@
 import { useState } from 'react';
 import {
-  FolderKanban, Users, ArrowLeftRight, ClipboardCheck, LayoutGrid,
+  FolderKanban, Activity,
 } from '../../components/ui/icons';
 import DashboardShell from '../../components/ui/DashboardShell';
+import { useAuthStore } from '../../store/useAuthStore';
 import SupervisorAlertStrips from '../../components/supervisor/SupervisorAlertStrips';
 import SupervisorSectionHeader from '../../components/supervisor/SupervisorSectionHeader';
+import TechnicianWorkflowModal, {
+  type TechnicianWorkflowSection,
+} from '../../components/supervisor/TechnicianWorkflowModal';
 import ProjectsTab from './tabs/ProjectsTab';
-import AssignmentSection from './sections/AssignmentSection';
-import MidChangeoverSection from './sections/MidChangeoverSection';
 import ReviewApprovalSection from './sections/ReviewApprovalSection';
-import PanelStatusSection from './sections/PanelStatusSection';
 
 const TABS = [
   { key: 'projects', label: 'Projects', icon: <FolderKanban size={20} /> },
-  { key: 'assignment', label: 'Assignments', icon: <Users size={20} /> },
-  { key: 'changeover', label: 'Mid-Changeover', icon: <ArrowLeftRight size={20} /> },
-  { key: 'review', label: 'Review & Approval', icon: <ClipboardCheck size={20} /> },
-  { key: 'panel-status', label: 'Overall Panel Status', icon: <LayoutGrid size={20} /> },
+  { key: 'status', label: 'Status', icon: <Activity size={20} /> },
 ];
 
+interface WorkflowState {
+  section?: TechnicianWorkflowSection;
+  projectCode: string;
+  panelId: string;
+  projectName: string;
+  panelName: string;
+  cableCount?: number;
+}
+
 export default function SupervisorDashboard() {
+  const { user } = useAuthStore();
   const [tab, setTab] = useState('projects');
+  const [workflow, setWorkflow] = useState<WorkflowState | null>(null);
 
   const handleNavigate = (nextTab: string) => {
     setTab(nextTab);
+  };
+
+  const openTechnicianWorkflow = (opts: WorkflowState) => {
+    if (!opts.projectCode || !opts.panelId) {
+      setTab('projects');
+      return;
+    }
+    setWorkflow(opts);
   };
 
   return (
@@ -32,41 +49,38 @@ export default function SupervisorDashboard() {
       tabs={TABS}
       activeTab={tab}
       onTabChange={setTab}
-      subtitle="Projects, assignments, changeover, review, and panel status — five focused workspace sections."
+      subtitle={`${user?.full_name || ''} · ${user?.employee_id || ''}`}
       badge="Supervisor Workspace"
       widthVariant="wide"
       hideTabSectionHeader
-      heroClassName="dashboard-hero--supervisor"
     >
-      <SupervisorAlertStrips onNavigate={handleNavigate} hideChangeover={tab === 'projects'} />
+      <SupervisorAlertStrips
+        onNavigate={handleNavigate}
+        hideChangeover={tab === 'projects'}
+      />
       {tab === 'projects' && (
         <div className="dash-module dash-module--wide flex flex-col gap-4 min-w-0">
           <SupervisorSectionHeader
             title="Projects"
-            description="Select one project at a time — uploads and reports always target the active project."
+            description="Select one project and one panel — uploads, reports, and technician workflow target the active panel."
           />
-          <ProjectsTab />
+          <ProjectsTab onOpenTechnicianWorkflow={openTechnicianWorkflow} />
         </div>
       )}
-      {tab === 'assignment' && (
-        <div className="dash-module dash-module--wide">
-          <AssignmentSection />
-        </div>
-      )}
-      {tab === 'changeover' && (
-        <div className="dash-module dash-module--wide">
-          <MidChangeoverSection />
-        </div>
-      )}
-      {tab === 'review' && (
-        <div className="dash-module dash-module--wide">
-          <ReviewApprovalSection />
-        </div>
-      )}
-      {tab === 'panel-status' && (
-        <div className="dash-module dash-module--wide">
-          <PanelStatusSection />
-        </div>
+      <div className="dash-module dash-module--wide" hidden={tab !== 'status'}>
+        <ReviewApprovalSection isActive={tab === 'status'} />
+      </div>
+
+      {workflow && (
+        <TechnicianWorkflowModal
+          onClose={() => setWorkflow(null)}
+          initialSection={workflow.section ?? 'assign'}
+          projectCode={workflow.projectCode}
+          panelId={workflow.panelId}
+          projectName={workflow.projectName}
+          panelName={workflow.panelName}
+          cableCount={workflow.cableCount}
+        />
       )}
     </DashboardShell>
   );

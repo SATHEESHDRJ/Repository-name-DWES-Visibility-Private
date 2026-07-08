@@ -63,14 +63,14 @@ export class UploadController {
   uploadMapped(
     @Param('code') code: string,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { sheet_name: string; mapping: string; header_row?: string },
+    @Body() body: { sheet_name: string; mapping: string; header_row?: string; frame_id?: string },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     let mapping: Record<string, string>;
     try { mapping = typeof body.mapping === 'string' ? JSON.parse(body.mapping) : body.mapping; }
     catch { throw new BadRequestException('Invalid mapping JSON'); }
     const headerRow = body.header_row ? parseInt(body.header_row, 10) : undefined;
-    return this.svc.uploadMapped(code, file.buffer, file.originalname, body.sheet_name || '', mapping, headerRow);
+    return this.svc.uploadMapped(code, file.buffer, file.originalname, body.sheet_name || '', mapping, headerRow, body.frame_id?.trim() || undefined);
   }
 
   @Post('upload/drawing/:code')
@@ -80,9 +80,17 @@ export class UploadController {
   uploadDrawing(
     @Param('code') code: string,
     @UploadedFile() file: Express.Multer.File,
+    @Body() body: { replace_drawing_id?: string; frame_id?: string },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    return this.svc.uploadDrawing(code, file.buffer, file.originalname, file.mimetype);
+    return this.svc.uploadDrawing(
+      code,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      body.replace_drawing_id,
+      body.frame_id?.trim() || undefined,
+    );
   }
 
   @Post('upload/director-report/:code')

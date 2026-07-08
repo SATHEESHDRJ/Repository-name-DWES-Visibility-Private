@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from '../ui/icons';
+import Modal from '../Modal';
 
 /** Structured pause reasons (reference MOD-PAUSE §10) — "Other" requires free text. */
 export const PAUSE_REASONS = [
@@ -25,62 +25,56 @@ export default function PauseReasonModal({
   const resolved = reason === 'Other' ? customReason.trim() : reason;
 
   return (
-    <div className="pause-modal-backdrop" role="presentation" onClick={() => !busy && onClose()}>
-      <div
-        className="pause-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pause-modal-title"
-        onClick={e => e.stopPropagation()}
-      >
-        <header className="pause-modal-head">
-          <h2 id="pause-modal-title" className="pause-modal-title">Pause wiring</h2>
-          <button type="button" className="pause-modal-close" onClick={onClose} disabled={busy} aria-label="Close">
-            <X size={18} />
-          </button>
-        </header>
-
-        <div className="pause-modal-body">
-          <p className="pause-modal-kicker">Select reason</p>
-          <div className="pause-reason-chips">
-            {PAUSE_REASONS.map(r => (
-              <button
-                key={r}
-                type="button"
-                className={`pause-reason-chip${reason === r ? ' is-selected' : ''}`}
-                onClick={() => setReason(r)}
-                disabled={busy}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-          {reason === 'Other' && (
-            <input
-              className="pause-modal-other-input"
-              placeholder="Enter reason (audited)"
-              value={customReason}
-              onChange={e => setCustomReason(e.target.value)}
-              autoFocus
-            />
-          )}
-          <p className="pause-modal-note">Pause time is excluded from total working time.</p>
-        </div>
-
-        <footer className="pause-modal-foot">
-          <button type="button" className="btn-secondary pause-modal-cancel" onClick={onClose} disabled={busy}>
+    <Modal
+      title="Pause wiring"
+      subtitle="Select reason — pause time is excluded from total working time."
+      size="sm"
+      onClose={onClose}
+      closeOnBackdrop={!busy}
+      closeOnEscape={!busy}
+      footer={(
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           <button
             type="button"
-            className="btn-warning pause-modal-confirm"
+            className="btn-warning"
             onClick={() => resolved && onConfirm(resolved)}
             disabled={busy || !resolved}
           >
             {busy ? 'Pausing…' : 'Pause'}
           </button>
-        </footer>
+        </>
+      )}
+    >
+      <div className="pause-modal-content">
+        <p className="pause-modal-kicker">Reason</p>
+        <div className="pause-reason-chips" role="listbox" aria-label="Pause reason">
+          {PAUSE_REASONS.map(r => (
+            <button
+              key={r}
+              type="button"
+              role="option"
+              aria-selected={reason === r}
+              className={`pause-reason-chip${reason === r ? ' is-selected' : ''}`}
+              onClick={() => setReason(r)}
+              disabled={busy}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        {reason === 'Other' && (
+          <input
+            className="pause-modal-other-input form-input"
+            placeholder="Enter reason (audited)"
+            value={customReason}
+            onChange={e => setCustomReason(e.target.value)}
+            autoFocus
+          />
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -70,15 +70,27 @@ export interface HeaderPair {
   name: string;
 }
 
+/**
+ * True when the row immediately below the header row is a wire-spec / label
+ * sub-header row (not the first data row). Data rows typically contain ferrule
+ * pairs with "/" — sub-header rows do not.
+ */
+export function isSubHeaderRow(rows: unknown[][], headerRowIdx: number): boolean {
+  const sub = (rows[headerRowIdx + 1] || []) as unknown[];
+  const headerLikeCount = sub.filter(c => {
+    const t = cleanExcelHeader(c);
+    return t && (looksLikeWireSpec(t) || looksLikeHeaderLabel(t));
+  }).length;
+  if (headerLikeCount < 2) return false;
+  if (sub.some(c => String(c || '').includes('/'))) return false;
+  return true;
+}
+
 /** Build display headers from the detected header row (+ optional sub-header row). */
 export function buildHeaderPairs(rows: unknown[][], headerRowIdx: number): HeaderPair[] {
   const primary = rows[headerRowIdx] || [];
   const sub = rows[headerRowIdx + 1] || [];
-  const subLooksLikeHeaders = (sub as unknown[]).filter(c => {
-    const t = cleanExcelHeader(c);
-    return t && (looksLikeWireSpec(t) || looksLikeHeaderLabel(t));
-  }).length >= 2
-    && !(sub as unknown[]).some(c => String(c || '').includes('/'));
+  const subLooksLikeHeaders = isSubHeaderRow(rows, headerRowIdx);
 
   const pairs: HeaderPair[] = [];
   const maxCols = Math.max(primary.length, sub.length);
@@ -98,10 +110,5 @@ export function scoreSheetHeaders(headers: string[]): number {
 
 /** First data row index — skips a sub-header row when present. */
 export function dataStartRow(rows: unknown[][], headerRowIdx: number): number {
-  const subRow = rows[headerRowIdx + 1] as unknown[] | undefined;
-  const hasSubHeaderRow = subRow?.some(c => {
-    const t = String(c ?? '').trim();
-    return t.length > 0 && !t.includes('/') && /\d/.test(t);
-  });
-  return hasSubHeaderRow ? headerRowIdx + 2 : headerRowIdx + 1;
+  return isSubHeaderRow(rows, headerRowIdx) ? headerRowIdx + 2 : headerRowIdx + 1;
 }

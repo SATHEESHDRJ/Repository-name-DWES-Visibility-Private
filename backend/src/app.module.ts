@@ -10,6 +10,7 @@ import { TechModule } from './tech/tech.module';
 import { QAQCModule } from './qaqc/qaqc.module';
 import { DirectorModule } from './director/director.module';
 import { AdminModule } from './admin/admin.module';
+import { DevModule } from './dev/dev.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
     QAQCModule,
     DirectorModule,
     AdminModule,
+    DevModule,
   ],
 })
 export class AppModule {}

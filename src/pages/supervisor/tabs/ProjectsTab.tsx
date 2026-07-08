@@ -1,45 +1,146 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { projectsApi } from '../../../services/api';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { projectsApi, supervisorApi } from '../../../services/api';
+import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
 import type { Project, ProjectState } from '../../../types';
 import Modal from '../../../components/Modal';
-import { InputField, SelectField, ComboField } from '../../../components/ui/TabletFields';
+import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PdfDrawingUploadModal from '../../../components/supervisor/PdfDrawingUploadModal';
+import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
+import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
+import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
+import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
+import {
+  buildProjectReferenceTitle,
+  encodeProjectMeta,
+  decodeProjectMeta,
+  mergeProjectDescription,
+  projectSelectLabel,
+  resolveProjectCardDetails,
+  compactPanelDisplayName,
+} from '../../../utils/projectDisplay';
+import { buildPanelReportFilename } from '../../../utils/reportFilename';
 import { useProjectSelectionStore } from '../../../store/useProjectSelectionStore';
 import { useAuthStore } from '../../../store/useAuthStore';
+import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
+
+export interface ProjectsTabProps {
+  onOpenTechnicianWorkflow?: (opts: {
+    section?: TechnicianWorkflowSection;
+    projectCode: string;
+    panelId: string;
+    projectName: string;
+    panelName: string;
+    cableCount?: number;
+  }) => void;
+}
 
 const CLIENTS = ['DEWA', 'SEWA', 'ADDC', 'TRANSCO', 'ENOWA', 'HITACHI', 'ABB', 'SIEMENS', 'GE', 'SCHNEIDER', 'ALSTOM'];
 const VOLTAGES = ['400KV', '220KV', '132KV', '115KV', '69KV', '33KV', '13.8KV', '11KV', '6.6KV'];
-// REGION and LOCATION are SEPARATE segments in VOLTAGE_REGION_LOCATION_YEAR_SEQ
 const REGIONS = ['UAE', 'KSA', 'QAT', 'KWT', 'OMN', 'BHR'];
-const LOCATIONS = ['DUBAI', 'ABU_DHABI', 'SHARJAH', 'FUJAIRAH', 'RIYADH', 'JEDDAH', 'NEOM', 'DOHA', 'KUWAIT', 'MUSCAT', 'MANAMA'];
 const YEARS = ['2024', '2025', '2026', '2027'];
+const LOCATION_REGION_PRESETS = [
+  'DUBAI / UAE', 'ABU_DHABI / UAE', 'SHARJAH / UAE', 'FUJAIRAH / UAE',
+  'RIYADH / KSA', 'JEDDAH / KSA', 'NEOM / KSA', 'DOHA / QAT', 'KUWAIT / KWT', 'MUSCAT / OMN', 'MANAMA / BHR',
+];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_YEAR_PRESETS = MONTH_NAMES.flatMap(m => YEARS.map(y => `${m} ${y}`));
 const STATES: ProjectState[] = ['not_started', 'active', 'stopped', 'pending', 'completed', 'in_review', 'submitted_to_director'];
 
 interface CreateForm {
-  displayName: string;  // merged Project / Substation Name → stored in `name` column
+  displayName: string;
   client: string;
-  voltage: string;
-  region: string;
-  location: string;
-  year: string;
+  locationRegion: string;
+  monthYear: string;
   seq: string;
 }
 
 interface PanelDraft {
   key: string;
   name: string;
-  type: string;
+  panelType: string;
+  voltageLevel: string;
+  systemType: string;
 }
 
-function newPanelDraft(): PanelDraft {
-  return { key: `panel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: '', type: '' };
+function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
+  return {
+    key: `panel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: '',
+    panelType: '',
+    voltageLevel: '',
+    systemType: '',
+    ...seed,
+  };
+}
+
+function panelNameTypeLabel(panel: Pick<PanelDraft, 'name' | 'panelType'>): string {
+  const name = panel.name.trim();
+  const type = panel.panelType.trim();
+  if (name && type) return `${name} / ${type}`;
+  return name || type;
+}
+
+function parseLocationRegion(raw: string): { location: string; region: string } {
+  const s = raw.trim();
+  if (!s) return { location: '', region: '' };
+  const slashParts = s.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean);
+  if (slashParts.length >= 2) {
+    return { location: slashParts[0], region: slashParts[slashParts.length - 1] };
+  }
+  const commaParts = s.split(/\s*,\s*/).map(p => p.trim()).filter(Boolean);
+  if (commaParts.length >= 2) {
+    return { location: commaParts[0], region: commaParts[commaParts.length - 1] };
+  }
+  const upper = s.toUpperCase();
+  for (const r of REGIONS) {
+    if (upper === r || upper.endsWith(` ${r}`)) {
+      const loc = s.slice(0, s.toUpperCase().lastIndexOf(r)).replace(/[,\-/]\s*$/, '').trim();
+      return { location: loc || s, region: r };
+    }
+  }
+  for (const r of REGIONS) {
+    if (upper.includes(r)) {
+      return {
+        location: s.replace(new RegExp(r, 'i'), '').replace(/[,\-/]\s*$/, '').trim() || s,
+        region: r,
+      };
+    }
+  }
+  return { location: s, region: '' };
+}
+
+function parseMonthYear(raw: string): { month: string; year: string } {
+  const s = raw.trim();
+  if (!s) return { month: '', year: '' };
+  const yearMatch = s.match(/\b(20\d{2})\b/);
+  const year = yearMatch ? yearMatch[1] : '';
+  let month = s;
+  if (yearMatch) {
+    month = s.replace(yearMatch[0], '').replace(/^[\s,\-/]+|[\s,\-/]+$/g, '').trim();
+  }
+  return { month: month || s, year };
+}
+
+function displayPanelMeta(value: string | null | undefined, fallback?: string): string {
+  const v = typeof value === 'string' ? value.trim() : '';
+  if (v) return v;
+  const fb = fallback?.trim();
+  if (fb) return fb;
+  return 'Not set';
+}
+
+function panelVoltageDisplay(panel: FramePanel, projectCode: string): string {
+  return displayPanelMeta(
+    panel.voltage_level as string | null | undefined,
+    projectCode.split('_')[0] || undefined,
+  );
 }
 
 function apiErrorMessage(err: unknown, fallback: string): string {
@@ -49,7 +150,20 @@ function apiErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function ProjectsTab() {
+function panelMetaValue(value?: string | null): string {
+  return displayPanelMeta(value);
+}
+
+function panelDraftToApiPayload(p: PanelDraft) {
+  return {
+    name: p.name.trim(),
+    ...(p.panelType.trim() ? { type: p.panelType.trim() } : {}),
+    voltage_level: p.voltageLevel.trim(),
+    ...(p.systemType.trim() ? { system_type: p.systemType.trim() } : {}),
+  };
+}
+
+export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabProps = {}) {
   const dialog = useAppDialog();
   const perms = usePermissions();
   // Currently active project for this session (shown in the header pill) — used to
@@ -65,6 +179,9 @@ export default function ProjectsTab() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedPanelId, setSelectedPanelId] = useState('');
+  const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
+  const [loadingPanels, setLoadingPanels] = useState(false);
   const [showWiringUpload, setShowWiringUpload] = useState(false);
   const [showDrawingPicker, setShowDrawingPicker] = useState(false);
   const [drawingUploadType, setDrawingUploadType] = useState<'pdf' | 'dwg' | null>(null);
@@ -74,8 +191,12 @@ export default function ProjectsTab() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState<FramePanel | null>(null);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [deletingPanelId, setDeletingPanelId] = useState<string | null>(null);
+  const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
   const createModalScrollRef = useRef<HTMLFormElement>(null);
-  const emptyForm: CreateForm = { displayName: '', client: '', voltage: '', region: '', location: '', year: '2026', seq: '001' };
+  const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
   const [form, setForm] = useState<CreateForm>(emptyForm);
   const [panels, setPanels] = useState<PanelDraft[]>([newPanelDraft()]);
 
@@ -110,8 +231,26 @@ export default function ProjectsTab() {
     }).catch(() => {});
   }, []);
 
+  const reloadProjectPanels = useCallback((projectCode: string) => {
+    setLoadingPanels(true);
+    return projectsApi.frames(projectCode)
+      .then(data => {
+        const list = data as FramePanel[];
+        setProjectPanels(list);
+        setSelectedPanelId(prev => (prev && list.some(p => p.id === prev) ? prev : ''));
+      })
+      .catch(() => {
+        setProjectPanels([]);
+        setSelectedPanelId('');
+      })
+      .finally(() => setLoadingPanels(false));
+  }, []);
+
   useEffect(() => { load(); }, [load]);
-  useReadOnlyPoll(pollProjects, 4000);
+  useReadOnlyPoll(() => {
+    pollProjects();
+    if (selectedProject?.code) reloadProjectPanels(selectedProject.code);
+  }, 4000);
 
   useEffect(() => {
     if (!reportMenuOpen) return;
@@ -125,57 +264,130 @@ export default function ProjectsTab() {
   }, [reportMenuOpen]);
 
   useEffect(() => {
-    if (!projects.length || !sessionCode) return;
-    setSelectedProject(prev => {
-      if (prev) return prev;
-      return projects.find((p: Project) => p.code === sessionCode) ?? null;
+    setDuplicateBannerDismissed(false);
+  }, [selectedProject?.code, selectedPanelId]);
+
+  useEffect(() => {
+    if (!selectedProject?.code) return;
+    return onFramesChanged((detail) => {
+      if (detail.projectCode === selectedProject.code) {
+        setDuplicateBannerDismissed(false);
+      }
     });
-  }, [projects, sessionCode]);
+  }, [selectedProject?.code]);
+
+  const handleDismissDuplicateWarning = useCallback(() => {
+    setDuplicateBannerDismissed(true);
+    if (selectedProject?.code) {
+      void reloadProjectPanels(selectedProject.code);
+    }
+  }, [selectedProject?.code, reloadProjectPanels]);
+
+  useEffect(() => {
+    if (!projects.length || !sessionCode || selectedProject) return;
+    const match = projects.find((p: Project) => p.code === sessionCode);
+    if (!match) return;
+    setLoadingPanels(true);
+    setProjectPanels([]);
+    setSelectedPanelId('');
+    setSelectedProject(match);
+  }, [projects, sessionCode, selectedProject]);
+
+  useEffect(() => {
+    if (!selectedProject?.code) {
+      setProjectPanels([]);
+      setSelectedPanelId('');
+      setLoadingPanels(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingPanels(true);
+    projectsApi.frames(selectedProject.code)
+      .then(data => {
+        if (cancelled) return;
+        const list = data as FramePanel[];
+        setProjectPanels(list);
+        setSelectedPanelId(prev => (prev && list.some(p => p.id === prev) ? prev : ''));
+      })
+      .catch(() => {
+        if (!cancelled) setProjectPanels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPanels(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedProject?.code]);
+
+  const activePanelOptions = useMemo(
+    () => buildProjectPanelSelectList(projectPanels),
+    [projectPanels],
+  );
+
+  useEffect(() => {
+    if (!selectedPanelId || projectPanels.length === 0) return;
+    if (projectPanels.some(p => p.id === selectedPanelId)) return;
+    setSelectedPanelId('');
+  }, [selectedPanelId, projectPanels]);
 
   // Normalize a code segment: uppercase, strip everything but A-Z0-9 (no spaces / separators).
   // "Al Quoz" -> "ALQUOZ", "132 kV" -> "132KV". Keeps the "_" segment structure intact.
   const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
+  const { location, region } = parseLocationRegion(form.locationRegion);
+  const { year: parsedYear } = parseMonthYear(form.monthYear);
+
+  const primaryPanel = panels[0];
+  const codeVoltage = norm(primaryPanel?.voltageLevel ?? '');
+
   // Project code = VOLTAGE_REGION_LOCATION_YEAR_SEQ (seq zero-padded to 3)
   const seqDigits = (form.seq || '').replace(/\D/g, '');
   const seq3 = seqDigits ? seqDigits.padStart(3, '0').slice(-3) : '';
-  const codeSegs = [norm(form.voltage), norm(form.region), norm(form.location), norm(form.year), seq3];
+  const codeSegs = [codeVoltage, norm(region), norm(location), norm(parsedYear), seq3];
   const computedCode = codeSegs.join('_');
   const codeComplete = codeSegs.every(Boolean);
-  const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim());
-  const canCreate = codeComplete && !!form.displayName.trim() && !!form.client.trim() && panelsValid;
+  const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim() && !!norm(p.voltageLevel));
+  const canCreate = codeComplete && !!form.displayName.trim() && panelsValid;
+
+  const generatedName = primaryPanel
+    ? buildProjectReferenceTitle(
+        form.displayName,
+        form.client,
+        panelNameTypeLabel(primaryPanel),
+        primaryPanel.voltageLevel,
+        form.locationRegion,
+        form.monthYear,
+      )
+    : '';
 
   // Per-field validation errors — only shown after first submit attempt
   const fe = submitted ? {
     displayName: !form.displayName.trim() ? 'Required' : '',
-    client:   !form.client.trim()    ? 'Required' : '',
-    voltage:  !norm(form.voltage)    ? 'Required' : '',
-    region:   !norm(form.region)     ? 'Required' : '',
-    location: !norm(form.location)   ? 'Required' : '',
-    year:     !norm(form.year)       ? 'Required' : '',
-    seq:      !seq3                  ? 'Required (digits only)' : '',
+    locationRegion: !norm(location) || !norm(region) ? 'Use format: Location / Region' : '',
+    monthYear: !norm(parsedYear) ? 'Include a year (e.g. July 2026)' : '',
+    seq: !seq3 ? 'Required (digits only)' : '',
     panels: panels.length === 0
       ? 'Add at least one panel'
-      : panels.some(p => !p.name.trim())
-        ? 'Each panel needs a name'
+      : panels.some(p => !p.name.trim() || !norm(p.voltageLevel))
+        ? 'Each panel needs a name and voltage level'
         : '',
-  } : { displayName:'', client:'', voltage:'', region:'', location:'', year:'', seq:'', panels:'' };
+  } : { displayName: '', locationRegion: '', monthYear: '', seq: '', panels: '' };
 
   const panelFieldErrors = submitted
-    ? panels.map(p => (!p.name.trim() ? 'Required' : ''))
-    : panels.map(() => '');
+    ? panels.map(p => ({
+        name: !p.name.trim() ? 'Required' : '',
+        voltageLevel: !norm(p.voltageLevel) ? 'Required' : '',
+      }))
+    : panels.map(() => ({ name: '', voltageLevel: '' }));
 
   const validationHint = submitted && !canCreate
     ? (() => {
         const missing: string[] = [];
-        if (!form.displayName.trim()) missing.push('project name');
-        if (!panelsValid) missing.push('at least one panel name');
-        if (!form.client.trim()) missing.push('client');
-        if (!norm(form.voltage)) missing.push('voltage');
-        if (!norm(form.region)) missing.push('region');
-        if (!norm(form.location)) missing.push('location');
-        if (!norm(form.year)) missing.push('year');
-        if (!seq3) missing.push('sequence');
+        if (!form.displayName.trim()) missing.push('project / substation name');
+        if (!panelsValid) missing.push('panel name and voltage for each panel');
+        if (!codeVoltage) missing.push('voltage level (panel 1 — used in project code)');
+        if (!norm(location) || !norm(region)) missing.push('location / region');
+        if (!norm(parsedYear)) missing.push('month / year');
+        if (!seq3) missing.push('project numbering');
         return missing.length
           ? `Complete required fields: ${missing.join(', ')}.`
           : 'Complete all required fields before creating.';
@@ -187,7 +399,7 @@ export default function ProjectsTab() {
     setShowCreate(true);
   };
 
-  const addPanel = () => setPanels(prev => [...prev, newPanelDraft()]);
+  const addPanel = () => setPanels(prev => [...prev, newPanelDraft({ voltageLevel: prev[0]?.voltageLevel ?? '' })]);
   const removePanel = (key: string) => {
     setPanels(prev => (prev.length <= 1 ? prev : prev.filter(p => p.key !== key)));
   };
@@ -198,11 +410,17 @@ export default function ProjectsTab() {
   const handleProjectDropdownChange = (code: string) => {
     if (!code) {
       setSelectedProject(null);
+      setSelectedPanelId('');
+      setProjectPanels([]);
+      setLoadingPanels(false);
       return;
     }
     const project = projects.find(p => p.code === code);
     if (!project) return;
+    setLoadingPanels(true);
+    setProjectPanels([]);
     setSelectedProject(project);
+    setSelectedPanelId('');
     if (user?.id) {
       setSessionProject({
         code: project.code,
@@ -215,18 +433,23 @@ export default function ProjectsTab() {
   };
 
   const downloadReport = async (format: 'pdf' | 'excel') => {
-    if (!selectedProject || generatingReport) return;
+    if (!selectedProject || !selectedPanelId || generatingReport) return;
     setGeneratingReport(true);
     setReportMenuOpen(false);
+    const panelName = projectPanels.find(p => p.id === selectedPanelId)?.panel_name ?? 'Panel';
     try {
       const isPdf = format === 'pdf';
       const blob: Blob = isPdf
-        ? await projectsApi.reportPdf(selectedProject.code)
-        : await projectsApi.reportXlsx(selectedProject.code);
+        ? await projectsApi.reportPdf(selectedProject.code, selectedPanelId)
+        : await supervisorApi.panelReportXlsx(selectedProject.code, selectedPanelId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Report_${selectedProject.name.replace(/\s+/g, '_')}.${isPdf ? 'pdf' : 'xlsx'}`;
+      a.download = buildPanelReportFilename({
+        projectCode: selectedProject.code,
+        panelName,
+        ext: isPdf ? 'pdf' : 'xlsx',
+      });
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -254,17 +477,33 @@ export default function ProjectsTab() {
     }
     setSaving(true);
     try {
+      const projectName = form.displayName.trim();
       const created = await projectsApi.create({
         code: computedCode,
         client: form.client.trim(),
-        name: form.displayName.trim(),
+        name: projectName,
+        description: encodeProjectMeta({
+          locationRegion: form.locationRegion.trim(),
+          monthYear: form.monthYear.trim(),
+        }),
         sequence: parseInt(seq3, 10) || 1,
-        panels: panels.map(p => ({
-          name: p.name.trim(),
-          ...(p.type.trim() ? { type: p.type.trim() } : {}),
-        })),
+        panels: panels.map(panelDraftToApiPayload),
       });
-      setProjects(prev => [...prev, created]);   // reflect immediately, no full reload
+      setProjects(prev => [...prev, created]);
+      emitFramesChanged({ projectCode: created.code, action: 'created' });
+      setSelectedProject(created);
+      setSelectedPanelId('');
+      setLoadingPanels(true);
+      setProjectPanels([]);
+      if (user?.id) {
+        setSessionProject({
+          code: created.code,
+          name: created.name,
+          client: created.client,
+          project_state: created.project_state,
+          is_active: created.is_active,
+        }, user.id);
+      }
       setShowCreate(false);
       resetCreateForm();
       setToast({ message: `Project "${created.name}" created (${created.code}).`, tone: 'success' });
@@ -284,7 +523,7 @@ export default function ProjectsTab() {
           .filter((n): n is number => n !== null && !Number.isNaN(n));
         const maxSeq = usedSeqs.length > 0 ? Math.max(...usedSeqs) : parseInt(seq3, 10) || 1;
         const nextSeq = String(maxSeq + 1).padStart(3, '0');
-        setError(`Code ${computedCode} already exists — sequence auto-updated to ${nextSeq}. Review the preview and click Create again.`);
+        setError(`Code ${computedCode} already exists — project numbering auto-updated to ${nextSeq}. Review the preview and click Create again.`);
         setForm(s => ({ ...s, seq: nextSeq }));
       } else {
         setError(apiErrorMessage(apiError, 'Failed to create project. Check your connection and try again.'));
@@ -313,7 +552,9 @@ export default function ProjectsTab() {
     try {
       await projectsApi.remove(project.code);
       setProjects(prev => prev.filter(p => p.code !== project.code));
+      emitFramesChanged({ projectCode: project.code, action: 'deleted' });
       setSelectedProject(prev => (prev?.code === project.code ? null : prev));
+      if (selectedProject?.code === project.code) setSelectedPanelId('');
       setToast({ message: 'Project removed from list.', tone: 'success' });
     } catch (e: any) {
       await dialog.alert({
@@ -326,30 +567,123 @@ export default function ProjectsTab() {
     }
   };
 
-  const projectGated = Boolean(selectedProject);
+  const handleDeletePanel = async (panel: FramePanel) => {
+    if (!selectedProject) return;
+    try {
+      const precheck = await projectsApi.deleteFramePrecheck(selectedProject.code, panel.id);
+      const phrase = await dialog.prompt({
+        title: 'Delete Panel',
+        message: `Remove only panel "${panel.panel_name}" from project "${selectedProject.name}"? The project will remain in the system. Type the confirmation phrase exactly to proceed.`,
+        placeholder: precheck.confirm_phrase,
+        defaultValue: '',
+        tone: 'warning',
+        confirmText: 'Delete Panel',
+        cancelText: 'Cancel',
+      });
+      if (!phrase || phrase.trim() !== precheck.confirm_phrase) {
+        if (phrase !== null) {
+          await dialog.alert({
+            title: 'Confirmation Failed',
+            message: `Phrase did not match. Required: ${precheck.confirm_phrase}`,
+            tone: 'error',
+          });
+        }
+        return;
+      }
+      setDeletingPanelId(panel.id);
+      const result = await projectsApi.deleteFrameGuarded(selectedProject.code, panel.id, phrase.trim());
+      if (result?.error) {
+        await dialog.alert({ title: 'Delete Failed', message: result.error, tone: 'error' });
+        return;
+      }
+      setProjectPanels(prev => prev.filter(p => p.id !== panel.id));
+      setSelectedPanelId(prev => (prev === panel.id ? '' : prev));
+      emitFramesChanged({ projectCode: selectedProject.code, frameId: panel.id, action: 'deleted' });
+      await reloadProjectPanels(selectedProject.code);
+      setToast({ message: `Panel "${panel.panel_name}" deleted.`, tone: 'success' });
+    } catch (e: any) {
+      await dialog.alert({
+        title: 'Delete Failed',
+        message: e?.response?.data?.message || 'Could not delete panel.',
+        tone: 'error',
+      });
+    } finally {
+      setDeletingPanelId(null);
+    }
+  };
+
+  const selectedPanel = projectPanels.find(p => p.id === selectedPanelId)
+    ?? activePanelOptions.find(p => p.id === selectedPanelId);
+  const projectDetails = selectedProject ? resolveProjectCardDetails(selectedProject) : null;
+  const {
+    duplicateKeys,
+    blocked: duplicateBlocked,
+    actionGated,
+    reportGated,
+  } = usePanelDuplicateGuard(
+    projectPanels,
+    selectedPanelId,
+    selectedPanel?.panel_name,
+    duplicateBannerDismissed,
+  );
+  const gateHint = !selectedProject
+    ? 'Select a project and panel to enable wiring upload, drawing upload, and reports.'
+    : loadingPanels
+      ? 'Loading panels for this project…'
+      : projectPanels.length === 0
+        ? 'No Panels Available — add a panel when creating or editing the project.'
+        : !selectedPanelId
+          ? 'Select a panel to enable wiring upload, drawing upload, and reports.'
+          : duplicateBlocked && !duplicateBannerDismissed
+            ? 'Resolve duplicate panel names before wiring upload, drawing upload, reports, or workflow.'
+            : '';
 
   return (
     <div className="flex flex-col gap-4 min-w-0">
       <div className="pj-project-select-row">
-        <label htmlFor="pj-active-project" className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-          Active project
-        </label>
-        <select
-          id="pj-active-project"
-          className="pj-project-select"
-          value={selectedProject?.code ?? ''}
-          onChange={e => handleProjectDropdownChange(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">Select a project…</option>
-          {projects.map(p => (
-            <option key={p.code} value={p.code}>
-              {p.name} · {p.client}
+        <div className="pj-project-select-field">
+          <label htmlFor="pj-active-project" className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+            Active project
+          </label>
+          <select
+            id="pj-active-project"
+            className="pj-project-select"
+            value={selectedProject?.code ?? ''}
+            onChange={e => handleProjectDropdownChange(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select a project…</option>
+            {projects.map(p => (
+              <option key={p.code} value={p.code}>
+                {projectSelectLabel(p)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="pj-project-select-field">
+          <label htmlFor="pj-active-panel" className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+            Active panel
+          </label>
+          <select
+            id="pj-active-panel"
+            className="pj-panel-select"
+            value={selectedPanelId}
+            onChange={e => setSelectedPanelId(e.target.value)}
+            disabled={!selectedProject || loadingPanels || activePanelOptions.length === 0}
+            aria-busy={loadingPanels}
+          >
+            <option value="">
+              {loadingPanels ? 'Loading panels…' : activePanelOptions.length === 0 ? 'No Panels Available' : 'Select a panel…'}
             </option>
-          ))}
-        </select>
-        {!projectGated && (
-          <p className="pj-action-hint">Select a project to enable wiring upload, drawing upload, and reports.</p>
+            {activePanelOptions.map(panel => (
+              <option key={panel.id} value={panel.id}>
+                {compactPanelDisplayName(panel.panel_name)}
+              </option>
+            ))}
+          </select>
+        </div>
+        {gateHint && (
+          <p className="pj-action-hint">{gateHint}</p>
         )}
       </div>
 
@@ -365,26 +699,52 @@ export default function ProjectsTab() {
           {perms.canManageProjects && (
             <button
               type="button"
-              onClick={() => setShowWiringUpload(true)}
-              disabled={!projectGated}
+              onClick={() => {
+                setDuplicateBannerDismissed(false);
+                setShowWiringUpload(true);
+              }}
+              disabled={!actionGated}
               className="pj-btn-primary pj-action-btn"
-              title={projectGated ? `Upload wiring schedule for ${selectedProject!.name}` : 'Select a project first'}
+              title={actionGated ? `Wiring schedule for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
             >
               <FileSpreadsheet size={16} strokeWidth={1.5} />
-              <span>Excel Wiring Upload</span>
+              <span>Wiring Upload</span>
+            </button>
+          )}
+
+          {perms.canManageProjects && onOpenTechnicianWorkflow && (
+            <button
+              type="button"
+              onClick={() => onOpenTechnicianWorkflow({
+                section: 'assign',
+                projectCode: selectedProject!.code,
+                panelId: selectedPanelId,
+                projectName: selectedProject!.name,
+                panelName: selectedPanel!.panel_name,
+                cableCount: selectedPanel!.cable_count,
+              })}
+              disabled={!actionGated}
+              className="pj-btn-primary pj-action-btn"
+              title={actionGated ? `Workflow for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+            >
+              <UserCog size={16} strokeWidth={1.5} />
+              <span>Workflow</span>
             </button>
           )}
 
           {perms.canManageProjects && (
             <button
               type="button"
-              onClick={() => setShowDrawingPicker(true)}
-              disabled={!projectGated}
+              onClick={() => {
+                setDuplicateBannerDismissed(false);
+                setShowDrawingPicker(true);
+              }}
+              disabled={!actionGated}
               className="pj-btn-primary pj-action-btn"
-              title={projectGated ? `Upload drawing for ${selectedProject!.name}` : 'Select a project first'}
+              title={actionGated ? `Upload drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
             >
               <FileText size={16} strokeWidth={1.5} />
-              <span>Drawing Upload</span>
+              <span>Drawing</span>
             </button>
           )}
 
@@ -392,18 +752,18 @@ export default function ProjectsTab() {
             <div className="pj-action-block pj-action-block--menu" ref={reportMenuRef}>
               <button
                 type="button"
-                onClick={() => projectGated && setReportMenuOpen(o => !o)}
-                disabled={!projectGated || generatingReport}
+                onClick={() => reportGated && setReportMenuOpen(o => !o)}
+                disabled={!reportGated || generatingReport}
                 className="pj-btn-primary pj-action-btn w-full"
                 aria-expanded={reportMenuOpen}
                 aria-haspopup="menu"
-                title={projectGated ? 'Export project report' : 'Select a project first'}
+                title={reportGated ? 'Export panel reports' : gateHint || 'Select a project and panel first'}
               >
                 <FileDown size={16} strokeWidth={1.5} />
-                <span>{generatingReport ? 'Generating…' : 'Report'}</span>
+                <span>{generatingReport ? 'Generating…' : 'Reports'}</span>
                 <ChevronDown size={14} strokeWidth={1.5} className={`ml-auto shrink-0 transition-transform ${reportMenuOpen ? 'rotate-180' : ''}`} />
               </button>
-              {reportMenuOpen && projectGated && (
+              {reportMenuOpen && reportGated && (
                 <div className="pj-toolbar-dropdown" role="menu" aria-label="Report format">
                   <button
                     type="button"
@@ -431,108 +791,179 @@ export default function ProjectsTab() {
           {perms.canManageTeamTechnicians && (
             <button type="button" onClick={() => setShowTeam(true)} className="pj-btn-primary pj-action-btn">
               <Users size={16} strokeWidth={1.5} />
-              <span>User Management</span>
+              <span>Users</span>
             </button>
           )}
         </div>
       </section>
 
-      <div className="flex flex-col min-w-0">
-      <div className="pj-surface flex flex-col min-w-0 rounded-xl border border-[#E2E8F0]">
-        <div className="overflow-x-auto">
-          <table className="pj-table w-full text-left border-collapse min-w-[720px]">
-            <thead className="sticky top-0 bg-white z-10 border-b border-[#D5DBE3]">
-              <tr>
-                <th className="font-bold text-slate-500 uppercase">Name</th>
-                <th className="font-bold text-slate-500 uppercase w-[150px]">Client</th>
-                <th className="font-bold text-slate-500 uppercase w-[130px]">State</th>
-                <th className="font-bold text-slate-500 uppercase w-[130px]">Created</th>
-                <th className="font-bold text-slate-500 uppercase w-[160px] text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-12 text-slate-500">
-                    Loading projects...
-                  </td>
-                </tr>
-              ) : projects.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-12 text-slate-500">
-                    <div className="flex flex-col items-center gap-3">
-                      <FolderKanban size={40} className="text-slate-400" strokeWidth={1} />
-                      <div className="text-[14px]">No projects yet. Create your first project to start.</div>
-                    </div>
-                  </td>
-                </tr>
+      {selectedProject && duplicateKeys.size > 0 && !duplicateBannerDismissed && (
+        <DuplicatePanelWarning
+          panels={projectPanels}
+          selectedPanelId={selectedPanelId}
+          onDismiss={handleDismissDuplicateWarning}
+          onEditPanel={panelId => {
+            const panel = projectPanels.find(p => p.id === panelId);
+            if (panel) setShowEditPanel(panel);
+          }}
+          onSelectPanel={setSelectedPanelId}
+        />
+      )}
+
+      {selectedProject && projectDetails && (
+        <section className="pj-project-info-card" aria-label="Project and panel information">
+          <div className="pj-project-info-card-header">
+            <div className="pj-project-info-card-project min-w-0 flex-1">
+              <div className="pj-project-info-card-title-row">
+                <h3 className="pj-project-info-card-heading">Project information</h3>
+                {sessionCode === selectedProject.code && (
+                  <span className="pj-selected-badge">Active</span>
+                )}
+              </div>
+            </div>
+            {perms.canManageProjects && (
+              <div className="pj-project-info-card-actions">
+                <button
+                  type="button"
+                  className="pj-btn-secondary"
+                  onClick={() => setShowAddPanel(true)}
+                  title="Add a new panel to this project"
+                >
+                  <Plus size={16} strokeWidth={1.5} />
+                  <span>Add Panel</span>
+                </button>
+                <button
+                  type="button"
+                  className="pj-btn-secondary"
+                  onClick={() => {
+                    if (selectedPanel) setShowEditPanel(selectedPanel);
+                    else setShowEdit(selectedProject);
+                  }}
+                  disabled={!selectedPanel && loadingPanels}
+                  title={selectedPanel ? 'Edit panel details' : 'Edit project'}
+                >
+                  <Pencil size={16} strokeWidth={1.5} />
+                  <span>{selectedPanel ? 'Edit' : 'Edit Project'}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting || deletingPanelId !== null || (!selectedPanel && loadingPanels)}
+                  className="pj-btn-danger-ghost disabled:opacity-50"
+                  onClick={() => {
+                    if (selectedPanel) handleDeletePanel(selectedPanel);
+                    else handleDelete(selectedProject);
+                  }}
+                  title={selectedPanel ? 'Delete selected panel' : 'Remove project'}
+                >
+                  <Trash2 size={16} strokeWidth={1.5} />
+                  <span>{selectedPanel ? 'Delete' : 'Remove'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="pj-project-info-details-grid">
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Project / Substation</p>
+              <p className="pj-project-info-value" title={projectDetails.substationName}>
+                {projectDetails.substationName}
+              </p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Client</p>
+              <p className="pj-project-info-value">{projectDetails.client}</p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Location / Region</p>
+              <p className="pj-project-info-value">{projectDetails.locationRegion}</p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Month / Year</p>
+              <p className="pj-project-info-value">{projectDetails.monthYear}</p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Project code</p>
+              <p className="pj-project-info-value pj-project-info-code" title={projectDetails.projectCode}>
+                {projectDetails.projectCode}
+              </p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Project numbering</p>
+              <p className="pj-project-info-value">{projectDetails.projectNumbering}</p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Status</p>
+              <p className="pj-project-info-value">
+                <span
+                  data-state={selectedProject.project_state}
+                  className="pj-state-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase"
+                >
+                  {projectDetails.statusLabel}
+                </span>
+              </p>
+            </div>
+            <div className="pj-project-info-field">
+              <p className="pj-project-info-label">Panels</p>
+              <p className="pj-project-info-value">
+                {loadingPanels ? '…' : projectPanels.length}
+              </p>
+            </div>
+          </div>
+
+          <div className="pj-project-info-card-divider" aria-hidden />
+
+          <p className="pj-project-info-section-title">Selected panel</p>
+
+          {loadingPanels ? (
+            <p className="pj-project-info-empty">Loading panels…</p>
+          ) : !selectedPanel ? (
+            <div className="pj-project-info-empty">
+              {projectPanels.length === 0 ? (
+                <>
+                  No Panels Available
+                  <p className="pj-project-info-empty-hint">
+                    Project &ldquo;{projectDetails.substationName}&rdquo; remains active. Add a panel to continue.
+                  </p>
+                </>
               ) : (
-                projects.map(project => {
-                  const isPicked = selectedProject?.code === project.code;
-                  return (
-                  <tr
-                    key={project.code}
-                    className={`transition-colors cursor-pointer ${
-                      isPicked ? 'bg-blue-50/80' : 'hover:bg-slate-50/70'
-                    }`}
-                    aria-current={isPicked ? 'true' : undefined}
-                    onClick={() => handleProjectDropdownChange(project.code)}
-                  >
-                    <td className={`font-medium text-slate-800 truncate ${isPicked ? 'shadow-[inset_3px_0_0_#2563eb]' : ''}`}>
-                      <span className="inline-flex items-center gap-2 min-w-0">
-                        <span className="truncate" title={project.name}>{project.name}</span>
-                        {isPicked && (
-                          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-blue-700 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">
-                            Selected
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="text-slate-700 truncate">{project.client}</td>
-                    <td>
-                      <span data-state={project.project_state} className="pj-state-badge inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide">
-                        {project.project_state.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="text-slate-500">
-                      {project.created_at ? new Date(project.created_at).toLocaleDateString() : '--'}
-                    </td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        {perms.canManageProjects ? (
-                          <>
-                            <button
-                              type="button"
-                              className="pj-btn-secondary min-w-[90px]"
-                              onClick={() => setShowEdit(project)}
-                            >
-                              <Pencil size={16} strokeWidth={1.5} />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={deleting}
-                              className="pj-btn-danger-ghost min-w-[90px] disabled:opacity-50"
-                              onClick={() => handleDelete(project)}
-                            >
-                              <Trash2 size={16} strokeWidth={1.5} />
-                              <span>Remove</span>
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-[13px] text-slate-400">View only</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })
+                <>
+                  Select a panel
+                  <p className="pj-project-info-empty-hint">
+                    Choose a panel from Active panel above to view panel details and enable uploads.
+                  </p>
+                </>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </div>
+            </div>
+          ) : (
+            <div className="pj-project-info-grid">
+              <div className="pj-project-info-field">
+                <p className="pj-project-info-label">Panel name</p>
+                <p className="pj-project-info-value" title={selectedPanel.panel_name}>
+                  {compactPanelDisplayName(selectedPanel.panel_name)}
+                </p>
+              </div>
+              <div className="pj-project-info-field">
+                <p className="pj-project-info-label">Panel type</p>
+                <p className="pj-project-info-value">
+                  {panelMetaValue(selectedPanel.panel_type as string | null | undefined)}
+                </p>
+              </div>
+              <div className="pj-project-info-field">
+                <p className="pj-project-info-label">Voltage level</p>
+                <p className="pj-project-info-value">
+                  {panelVoltageDisplay(selectedPanel, selectedProject.code)}
+                </p>
+              </div>
+              <div className="pj-project-info-field">
+                <p className="pj-project-info-label">System type</p>
+                <p className="pj-project-info-value">
+                  {panelMetaValue(selectedPanel.system_type as string | null | undefined)}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {showTeam && <TeamManagementModal onClose={() => setShowTeam(false)} />}
 
@@ -547,7 +978,10 @@ export default function ProjectsTab() {
             </button>
           )}
         >
-          <p className="text-[13px] text-slate-600 mb-4">Choose the drawing file type for <strong>{selectedProject.name}</strong>.</p>
+          <p className="text-[13px] text-slate-600 mb-4">
+            Choose the drawing file type for <strong>{selectedPanel?.panel_name ?? selectedProject.name}</strong>
+            {selectedPanel ? ` (${selectedProject.name})` : ''}.
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -569,22 +1003,46 @@ export default function ProjectsTab() {
         </Modal>
       )}
 
-      {showWiringUpload && selectedProject && (
+      {showWiringUpload && selectedProject && selectedPanelId && (
         <UploadFrameModal
           projectCode={selectedProject.code}
           projectName={selectedProject.name}
+          targetFrameId={selectedPanelId}
+          targetPanelName={selectedPanel?.panel_name}
+          existingCableCount={selectedPanel?.cable_count ?? 0}
+          siblingPanels={projectPanels}
+          onEditPanel={panelId => {
+            const panel = projectPanels.find(p => p.id === panelId);
+            if (panel) {
+              setShowWiringUpload(false);
+              setShowEditPanel(panel);
+            }
+          }}
+          onSelectPanel={setSelectedPanelId}
           onClose={() => setShowWiringUpload(false)}
           onUploaded={() => {
-            setShowWiringUpload(false);
-            setToast({ message: 'Wiring schedule uploaded — verify it in Frames.', tone: 'success' });
+            setToast({ message: `Wiring schedule uploaded for ${selectedPanel?.panel_name ?? 'panel'}.`, tone: 'success' });
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: selectedPanelId, action: 'updated' });
+            reloadProjectPanels(selectedProject.code);
           }}
         />
       )}
 
-      {drawingUploadType && selectedProject && (
+      {drawingUploadType && selectedProject && selectedPanelId && (
         <PdfDrawingUploadModal
           projectCode={selectedProject.code}
           projectName={selectedProject.name}
+          panelName={selectedPanel?.panel_name}
+          panelId={selectedPanelId}
+          siblingPanels={projectPanels}
+          onEditPanel={panelId => {
+            const panel = projectPanels.find(p => p.id === panelId);
+            if (panel) {
+              setDrawingUploadType(null);
+              setShowEditPanel(panel);
+            }
+          }}
+          onSelectPanel={setSelectedPanelId}
           fileType={drawingUploadType}
           onClose={() => setDrawingUploadType(null)}
           onUploaded={() => setToast({ message: `${drawingUploadType.toUpperCase()} drawing uploaded.`, tone: 'success' })}
@@ -602,7 +1060,7 @@ export default function ProjectsTab() {
       {showCreate && (
         <Modal
           title="New Project"
-          size="form"
+          size="wide"
           onClose={closeCreateModal}
           closeOnBackdrop={false}
           closeOnEscape={!saving}
@@ -629,7 +1087,7 @@ export default function ProjectsTab() {
         >
           <form
             id="create-project-form"
-            className="flex flex-col gap-6"
+            className="pj-create-project-form"
             ref={createModalScrollRef}
             onSubmit={handleCreate}
             noValidate
@@ -649,38 +1107,42 @@ export default function ProjectsTab() {
               </div>
             )}
 
-            <section className="flex flex-col gap-4">
-              <h3 className="text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                Project Information
-              </h3>
+            <section className="pj-create-section">
+              <h3 className="pj-create-section-title">Project details</h3>
 
-              <InputField
-                label="Project / Substation Name *"
-                icon={<FolderKanban size={18} strokeWidth={1.5} />}
-                value={form.displayName}
-                onChange={value => setForm(s => ({ ...s, displayName: value }))}
-                placeholder="e.g. CPR — 132/11kV Al Quoz Main"
-                error={fe.displayName}
-              />
+              <div className="pj-create-grid-2">
+                <InputField
+                  label="Project / Substation Name *"
+                  icon={<FolderKanban size={18} strokeWidth={1.5} />}
+                  value={form.displayName}
+                  onChange={value => setForm(s => ({ ...s, displayName: value }))}
+                  placeholder="e.g. CPR — 132/11kV Al Quoz Main"
+                  error={fe.displayName}
+                />
+                <ComboField
+                  label="Client"
+                  icon={<Building2 size={18} strokeWidth={1.5} />}
+                  value={form.client}
+                  onChange={value => setForm(s => ({ ...s, client: value }))}
+                  options={CLIENTS}
+                  placeholder="Pick or type a client"
+                />
+              </div>
 
-              <div className="flex flex-col gap-4 pt-2 border-t border-slate-200">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-0.5">
-                    <h3 className="text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500">
+              <div className="pj-create-panels-block">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-[12px] font-bold uppercase tracking-[0.06em] text-slate-600 m-0">
                       Panels
                       <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
                         {panels.length} {panels.length === 1 ? 'panel' : 'panels'}
                       </span>
-                    </h3>
-                    <span className="text-[11px] text-slate-400">
-                      Name and type for each panel in this project.
-                    </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Each panel has its own name, type, voltage, and system type. Panel 1 voltage is used in the project code.
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={addPanel}
-                    className="pj-btn-secondary shrink-0"
-                  >
+                  <button type="button" onClick={addPanel} className="pj-btn-secondary shrink-0">
                     <Plus size={14} strokeWidth={1.5} />
                     Add Panel
                   </button>
@@ -690,90 +1152,44 @@ export default function ProjectsTab() {
                   <p className="text-[12px] font-medium text-amber-700">{fe.panels}</p>
                 )}
 
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-3">
                   {panels.map((panel, idx) => (
-                    <div key={panel.key} className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <InputField
-                          label={panels.length > 1 ? `Panel ${idx + 1} name *` : 'Panel name *'}
-                          icon={<LayoutGrid size={16} strokeWidth={1.5} />}
-                          value={panel.name}
-                          onChange={value => updatePanel(panel.key, { name: value })}
-                          placeholder="e.g. Bay 1 Protection Panel"
-                          error={panelFieldErrors[idx]}
-                        />
-                        <InputField
-                          label={panels.length > 1 ? `Panel ${idx + 1} type` : 'Panel type'}
-                          icon={<Tag size={16} strokeWidth={1.5} />}
-                          value={panel.type}
-                          onChange={value => updatePanel(panel.key, { type: value })}
-                          placeholder="e.g. PROTECTION, CONTROL, =Bay-1"
-                        />
-                      </div>
-                      {panels.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removePanel(panel.key)}
-                          className="pj-btn-danger-ghost mt-6 shrink-0"
-                          title="Remove panel"
-                          aria-label={`Remove panel ${idx + 1}`}
-                        >
-                          <Trash2 size={16} strokeWidth={1.5} />
-                        </button>
-                      )}
-                    </div>
+                    <PanelDraftFields
+                      key={panel.key}
+                      index={idx}
+                      panel={panel}
+                      errors={panelFieldErrors[idx]}
+                      onChange={patch => updatePanel(panel.key, patch)}
+                      onRemove={panels.length > 1 ? () => removePanel(panel.key) : undefined}
+                    />
                   ))}
                 </div>
               </div>
 
-              <ComboField
-                label="Client *"
-                icon={<Building2 size={18} strokeWidth={1.5} />}
-                value={form.client}
-                onChange={value => setForm(s => ({ ...s, client: value }))}
-                options={CLIENTS}
-                placeholder="Pick or type a client"
-                error={fe.client}
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="pj-create-grid-2">
                 <ComboField
-                  label="Voltage *"
-                  icon={<Zap size={18} strokeWidth={1.5} />}
-                  value={form.voltage}
-                  onChange={value => setForm(s => ({ ...s, voltage: value }))}
-                  options={VOLTAGES}
-                  placeholder="132KV"
-                  error={fe.voltage}
-                />
-                <ComboField
-                  label="Region *"
+                  label="Location / Region"
                   icon={<MapPin size={18} strokeWidth={1.5} />}
-                  value={form.region}
-                  onChange={value => setForm(s => ({ ...s, region: value }))}
-                  options={REGIONS}
-                  placeholder="UAE"
-                  error={fe.region}
+                  value={form.locationRegion}
+                  onChange={value => setForm(s => ({ ...s, locationRegion: value }))}
+                  options={LOCATION_REGION_PRESETS}
+                  placeholder="DUBAI / UAE"
+                  error={fe.locationRegion}
                 />
                 <ComboField
-                  label="Location *"
-                  icon={<MapPin size={18} strokeWidth={1.5} />}
-                  value={form.location}
-                  onChange={value => setForm(s => ({ ...s, location: value }))}
-                  options={LOCATIONS}
-                  placeholder="DUBAI"
-                  error={fe.location}
-                />
-                <SelectField
-                  label="Year *"
+                  label="Month / Year"
                   icon={<Calendar size={18} strokeWidth={1.5} />}
-                  value={form.year}
-                  onChange={value => setForm(s => ({ ...s, year: value }))}
-                  options={YEARS}
-                  error={fe.year}
+                  value={form.monthYear}
+                  onChange={value => setForm(s => ({ ...s, monthYear: value }))}
+                  options={MONTH_YEAR_PRESETS}
+                  placeholder="July 2026"
+                  error={fe.monthYear}
                 />
+              </div>
+
+              <div className="pj-create-grid-2">
                 <InputField
-                  label="Sequence *"
+                  label="Project Numbering *"
                   icon={<Hash size={18} strokeWidth={1.5} />}
                   value={form.seq}
                   onChange={value => setForm(s => ({ ...s, seq: value }))}
@@ -781,28 +1197,42 @@ export default function ProjectsTab() {
                   error={fe.seq}
                 />
               </div>
+            </section>
 
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400">
-                  Project code
-                </span>
+            <section className="pj-create-section pj-create-previews">
+              <div className="pj-create-preview-block">
+                <span className="pj-create-preview-label">Reference title (for reports &amp; exports)</span>
                 <div
-                  className={`w-full px-4 py-2.5 rounded-[10px] border font-mono text-[13px] flex flex-wrap items-center gap-0 min-h-[44px] ${
-                    codeComplete ? 'bg-blue-50/80 border-blue-200 text-blue-800' : 'bg-slate-50 border-slate-200'
+                  className={`pj-create-preview-value ${generatedName ? 'pj-create-preview-value--ready' : ''}`}
+                  title={generatedName || 'Fill fields to preview'}
+                >
+                  {generatedName || (
+                    <span className="text-slate-400 italic font-normal text-[12px]">
+                      Stored on the card as separate labeled fields — not one long dashed line.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="pj-create-preview-block">
+                <span className="pj-create-preview-label">Project code</span>
+                <div
+                  className={`pj-create-preview-value font-mono text-[13px] ${
+                    codeComplete ? 'pj-create-preview-value--code' : ''
                   }`}
                 >
                   {codeComplete ? (
                     <span className="font-semibold">{computedCode}</span>
                   ) : (
                     [
-                      { seg: norm(form.voltage), label: 'VOLT' },
-                      { seg: norm(form.region), label: 'REG' },
-                      { seg: norm(form.location), label: 'LOC' },
-                      { seg: norm(form.year), label: 'YEAR' },
-                      { seg: seq3, label: 'SEQ' },
+                      { seg: codeVoltage, label: 'VOLT' },
+                      { seg: norm(region), label: 'REG' },
+                      { seg: norm(location), label: 'LOC' },
+                      { seg: norm(parsedYear), label: 'YEAR' },
+                      { seg: seq3, label: 'NUM' },
                     ].map((item, i) => (
-                      <span key={i} className="flex items-center">
-                        {i > 0 && <span className="text-slate-300 select-none">_</span>}
+                      <span key={i} className="inline-flex items-center">
+                        {i > 0 && <span className="text-slate-300 select-none mx-0.5">_</span>}
                         {item.seg
                           ? <span className="font-semibold text-slate-700">{item.seg}</span>
                           : <span className="text-slate-400 italic font-normal text-[12px]">{item.label}</span>
@@ -818,13 +1248,313 @@ export default function ProjectsTab() {
       )}
 
       {showEdit && <EditProjectModal project={showEdit} onClose={() => setShowEdit(null)} onSaved={handleEditSaved} />}
+      {showAddPanel && selectedProject && (
+        <AddPanelModal
+          projectCode={selectedProject.code}
+          siblingPanels={projectPanels}
+          onClose={() => setShowAddPanel(false)}
+          onSaved={(panelId) => {
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, action: 'created' });
+            reloadProjectPanels(selectedProject.code).then(() => setSelectedPanelId(panelId));
+            setShowAddPanel(false);
+            setToast({ message: 'Panel added.', tone: 'success' });
+          }}
+        />
+      )}
+      {showEditPanel && selectedProject && (
+        <EditPanelModal
+          projectCode={selectedProject.code}
+          panel={showEditPanel}
+          siblingPanels={projectPanels}
+          onClose={() => setShowEditPanel(null)}
+          onSaved={() => {
+            const savedId = showEditPanel.id;
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: savedId, action: 'updated' });
+            reloadProjectPanels(selectedProject.code).then(() => setSelectedPanelId(savedId));
+            setShowEditPanel(null);
+            setToast({ message: 'Panel updated.', tone: 'success' });
+          }}
+        />
+      )}
     </div>
   );
 }
 
+function PanelDraftFields({
+  index,
+  panel,
+  errors,
+  onChange,
+  onRemove,
+}: {
+  index: number;
+  panel: PanelDraft;
+  errors: { name: string; voltageLevel: string };
+  onChange: (patch: Partial<Omit<PanelDraft, 'key'>>) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="pj-panel-draft-card">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-[12px] font-semibold text-slate-700">Panel {index + 1}</span>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="pj-btn-danger-ghost shrink-0"
+            title={`Remove panel ${index + 1}`}
+            aria-label={`Remove panel ${index + 1}`}
+          >
+            <Trash2 size={14} strokeWidth={1.5} />
+          </button>
+        )}
+      </div>
+      <div className="pj-create-grid-2">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={16} strokeWidth={1.5} />}
+          value={panel.name}
+          onChange={value => onChange({ name: value })}
+          placeholder="e.g. =H001, Bay 1 Protection"
+          error={errors.name}
+        />
+        <InputField
+          label="Panel type"
+          icon={<Tag size={16} strokeWidth={1.5} />}
+          value={panel.panelType}
+          onChange={value => onChange({ panelType: value })}
+          placeholder="e.g. PROTECTION, CONTROL"
+        />
+        <ComboField
+          label="Voltage level *"
+          icon={<Zap size={16} strokeWidth={1.5} />}
+          value={panel.voltageLevel}
+          onChange={value => onChange({ voltageLevel: value })}
+          options={VOLTAGES}
+          placeholder="132KV"
+          error={errors.voltageLevel}
+        />
+        <InputField
+          label="System type"
+          icon={<LayoutGrid size={16} strokeWidth={1.5} />}
+          value={panel.systemType}
+          onChange={value => onChange({ systemType: value })}
+          placeholder="e.g. SAS, SCADA, LCC"
+        />
+      </div>
+      {index === 0 && (
+        <p className="text-[11px] text-slate-400 mt-1">
+          Special characters (including =) are allowed in panel names.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AddPanelModal({
+  projectCode,
+  siblingPanels,
+  onClose,
+  onSaved,
+}: {
+  projectCode: string;
+  siblingPanels: FramePanel[];
+  onClose: () => void;
+  onSaved: (panelId: string) => void;
+}) {
+  const [panel, setPanel] = useState<PanelDraft>(() => newPanelDraft({
+    voltageLevel: projectCode.split('_')[0] || '',
+  }));
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const wouldDuplicate = (() => {
+    const next = compactPanelKey(panel.name);
+    if (!next) return false;
+    return siblingPanels.some(p => compactPanelKey(p.panel_name) === next);
+  })();
+
+  const errors = submitted ? {
+    name: !panel.name.trim() ? 'Required' : wouldDuplicate ? 'Duplicate panel name' : '',
+    voltageLevel: !norm(panel.voltageLevel) ? 'Required' : '',
+  } : { name: '', voltageLevel: '' };
+
+  const canSave = !!panel.name.trim() && !!norm(panel.voltageLevel) && !wouldDuplicate;
+
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!canSave) return;
+    setSaving(true);
+    setError('');
+    try {
+      const created = await projectsApi.createPanel(projectCode, panelDraftToApiPayload(panel));
+      onSaved(String(created.id));
+    } catch (apiError: unknown) {
+      setError(apiErrorMessage(apiError, 'Failed to add panel.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Add Panel"
+      size="wide"
+      onClose={onClose}
+      closeOnEscape={!saving}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button className="btn-secondary" onClick={onClose} type="button" disabled={saving}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
+            {saving ? 'Adding…' : 'Add Panel'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <PanelDraftFields
+          index={0}
+          panel={panel}
+          errors={errors}
+          onChange={patch => setPanel(prev => ({ ...prev, ...patch }))}
+        />
+        {error && (
+          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
+            {error}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function EditPanelModal({
+  projectCode,
+  panel,
+  siblingPanels,
+  onClose,
+  onSaved,
+}: {
+  projectCode: string;
+  panel: FramePanel;
+  siblingPanels: FramePanel[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(panel.panel_name);
+  const [panelType, setPanelType] = useState(String(panel.panel_type ?? ''));
+  const [voltageLevel, setVoltageLevel] = useState(
+    String(panel.voltage_level ?? projectCode.split('_')[0] ?? ''),
+  );
+  const [systemType, setSystemType] = useState(String(panel.system_type ?? ''));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const wouldDuplicate = (() => {
+    const next = compactPanelKey(name);
+    if (!next) return false;
+    return siblingPanels.some(
+      p => p.id !== panel.id && compactPanelKey(p.panel_name) === next,
+    );
+  })();
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError('Panel name is required.');
+      return;
+    }
+    if (wouldDuplicate) {
+      setError('Duplicate Panel Name Detected — choose a unique name for this project.');
+      return;
+    }
+    if (!voltageLevel.trim()) {
+      setError('Voltage level is required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await projectsApi.patchPanel(projectCode, panel.id, {
+        panel_name: trimmed,
+        panel_type: panelType.trim(),
+        voltage_level: voltageLevel.trim(),
+        system_type: systemType.trim(),
+      });
+      onSaved();
+    } catch (apiError: unknown) {
+      setError(apiErrorMessage(apiError, 'Failed to save panel.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Edit Panel"
+      onClose={onClose}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button className="btn-secondary" onClick={onClose} type="button" disabled={saving}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving || wouldDuplicate} type="button">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+          value={name}
+          onChange={setName}
+          error={wouldDuplicate ? 'Duplicate Panel Name Detected' : ''}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Panel type"
+            icon={<Tag size={18} strokeWidth={1.5} />}
+            value={panelType}
+            onChange={setPanelType}
+            placeholder="e.g. PROTECTION, CONTROL"
+          />
+          <ComboField
+            label="Voltage level *"
+            icon={<Zap size={18} strokeWidth={1.5} />}
+            value={voltageLevel}
+            onChange={setVoltageLevel}
+            options={VOLTAGES}
+            placeholder="132KV"
+          />
+          <InputField
+            label="System type"
+            icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+            value={systemType}
+            onChange={setSystemType}
+            placeholder="e.g. SAS, SCADA, LCC"
+          />
+        </div>
+        {error && (
+          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
+            {error}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function EditProjectModal({ project, onClose, onSaved }: { project: Project; onClose: () => void; onSaved: (updated: Project) => void }) {
-  const [name, setName] = useState(project.name);
-  const [description, setDescription] = useState(project.description || '');
+  const initialDetails = resolveProjectCardDetails(project);
+  const { meta, userNotes } = decodeProjectMeta(project.description);
+  const [name, setName] = useState(initialDetails.substationName);
+  const [description, setDescription] = useState(userNotes);
   const [state, setState] = useState<ProjectState>(project.project_state);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -833,8 +1563,10 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
     setSaving(true);
     setError('');
     try {
-      // Save name/description, then state (separate endpoint) only if it changed.
-      let updated: Project = await projectsApi.update(project.code, { name, description });
+      let updated: Project = await projectsApi.update(project.code, {
+        name: name.trim(),
+        description: mergeProjectDescription(meta, description),
+      });
       if (state !== project.project_state) {
         updated = await projectsApi.setState(project.code, state);
       }
@@ -868,7 +1600,12 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
           <input value={project.code} title="Project Code" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
         </div>
 
-        <InputField label="Project Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />
+        <InputField label="Project / Substation Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />
+
+        <div className="form-group">
+          <label className="form-label">Client</label>
+          <input value={project.client} title="Client" readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+        </div>
 
         <div className="form-group">
           <label className="form-label">State</label>

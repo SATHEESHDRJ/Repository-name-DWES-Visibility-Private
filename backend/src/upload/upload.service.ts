@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MockStore, Cable } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { parseWiringSheet } from './parse-wiring';
+import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 import {
   buildHeaderPairs,
   dataStartRow,
@@ -32,7 +33,7 @@ export class UploadService {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const sheets: {
       name: string; score: number; headers: string[];
-      sample_rows: unknown[][]; header_row: number;
+      sample_rows: unknown[][]; data_row_count: number; header_row: number;
     }[] = [];
     for (const name of wb.SheetNames) {
       const ws = wb.Sheets[name];
@@ -45,18 +46,28 @@ export class UploadService {
 
       const dataStart = dataStartRow(rows, headerRow);
 
-      const rawSampleRows = rows.slice(dataStart, dataStart + 3);
-      const sampleRows = rawSampleRows.map(row =>
+      const rawDataRows = rows.slice(dataStart).filter(r =>
+        (r as unknown[]).some(c => String(c ?? '').trim()),
+      );
+      // Full worksheet data for mapping preview + Full View (cap guards memory on huge files).
+      const MAX_PREVIEW_ROWS = 10000;
+      const dataRows = rawDataRows.slice(0, MAX_PREVIEW_ROWS);
+      const sampleRows = dataRows.map(row =>
         headerPairs.map(p => {
           const v = (row as unknown[])[p.idx];
-          return v !== null && v !== undefined && String(v).trim() !== '' ? String(v).trim() : '';
-        })
-      ).filter(r => r.some(v => v !== ''));
+          return v !== null && v !== undefined ? String(v).trim() : '';
+        }),
+      );
 
       const headers = headerPairs.map(p => p.name);
       const score = scoreSheetHeaders(headers);
 
-      sheets.push({ name, score, headers, sample_rows: sampleRows, header_row: headerRow });
+      sheets.push({
+        name, score, headers,
+        sample_rows: sampleRows,
+        data_row_count: rawDataRows.length,
+        header_row: headerRow,
+      });
     }
     sheets.sort((a, b) => b.score - a.score);
     return { sheets, best_sheet: sheets[0]?.name || wb.SheetNames[0] };
@@ -117,6 +128,7 @@ export class UploadService {
     sheetName: string,
     mapping: Record<string, string>,
     headerRow?: number,
+    targetFrameId?: string,
   ) {
     const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
     if (!project) throw new BadRequestException(`Project ${projectCode} not found`);
@@ -152,22 +164,44 @@ export class UploadService {
       });
     }
 
-    const frameId = `frame_${Date.now()}`;
+    const frameId = targetFrameId?.trim() || `frame_${Date.now()}`;
+    const existingFrame = targetFrameId
+      ? MockStore.findFrameByProjectAndId(projectCode, targetFrameId)
+      : undefined;
+    if (targetFrameId && !existingFrame) {
+      throw new BadRequestException(`Panel ${targetFrameId} not found in project ${projectCode}`);
+    }
+    if (targetFrameId) {
+      assertPanelNameUniqueForWrite(projectCode, targetFrameId);
+    }
 
-    // Panel name: from mapped panel column → project name → filename
-    let panelName = cables.find(c => c.panel)?.panel || '';
-    if (!panelName || panelName.startsWith('=')) {
+    // Panel name: keep selected panel name when updating an existing frame
+    let panelName = existingFrame?.panel_name || cables.find(c => c.panel)?.panel || '';
+    if (!panelName) {
       panelName = project.name || filename.replace(/\.(xlsx?|xls)$/i, '');
     }
 
+    const verifiedAt = new Date().toISOString();
     const frame = {
       id: frameId, project_code: projectCode, panel_name: panelName, cables,
-      uploaded_at: new Date().toISOString(), compare_status: 'none' as const,
+      uploaded_at: verifiedAt, compare_status: 'validated' as const,
+      verified: true, verified_at: verifiedAt,
       original_filename: filename, cable_count: cables.length, mapping, sheet_name: sheetName,
       excel_headers: excelHeaders, header_row: headerRowIdx,
+      ...(existingFrame?.panel_type ? { panel_type: existingFrame.panel_type } : {}),
+      ...(existingFrame?.panel_description ? { panel_description: existingFrame.panel_description } : {}),
+      ...(existingFrame?.voltage_level ? { voltage_level: existingFrame.voltage_level } : {}),
+      ...(existingFrame?.system_type ? { system_type: existingFrame.system_type } : {}),
     };
-    MockStore.frames.push(frame);
-    FrameStore.save(frame, buffer);
+
+    if (existingFrame) {
+      FrameStore.archiveFrameFiles(projectCode, frameId, existingFrame.panel_name || panelName);
+      Object.assign(existingFrame, frame);
+      FrameStore.save(existingFrame, buffer);
+    } else {
+      MockStore.frames.push(frame);
+      FrameStore.save(frame, buffer);
+    }
 
     return {
       ...frame,
@@ -176,9 +210,31 @@ export class UploadService {
     };
   }
 
-  async uploadDrawing(projectCode: string, buffer: Buffer, filename: string, contentType: string) {
+  async uploadDrawing(
+    projectCode: string,
+    buffer: Buffer,
+    filename: string,
+    contentType: string,
+    replaceDrawingId?: string,
+    targetFrameId?: string,
+  ) {
     const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
     if (!project) throw new BadRequestException(`Project ${projectCode} not found`);
+
+    if (targetFrameId?.trim()) {
+      assertPanelNameUniqueForWrite(projectCode, targetFrameId.trim());
+    }
+
+    if (replaceDrawingId?.trim()) {
+      const oldId = replaceDrawingId.trim();
+      const old = MockStore.drawings.find(d => d.project_code === projectCode && d.id === oldId);
+      if (old) {
+        FrameStore.archiveDrawingFile(projectCode, oldId, old.original_name || filename);
+        FrameStore.removeDrawing(projectCode, oldId, old.original_name || '');
+        const idx = MockStore.drawings.findIndex(d => d.project_code === projectCode && d.id === oldId);
+        if (idx !== -1) MockStore.drawings.splice(idx, 1);
+      }
+    }
 
     const hash = crypto.createHash('sha256').update(buffer).digest('hex');
     const existingHash = await this.prisma.file_hashes.findFirst({ where: { file_hash: hash } });

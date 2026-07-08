@@ -19,9 +19,7 @@ interface AssignmentTabProps {
   initialView?: AssignmentView;
   onViewApplied?: () => void;
   onViewChange?: (view: AssignmentView) => void;
-  /** Open panel verification from Operations toolbar context */
-  onOpenVerify?: () => void;
-  /** Bumps when a panel is verified so assign modal refreshes status */
+  /** Bumps when panels reload so assign modal refreshes */
   panelsRefreshKey?: number;
   /** Increment to open Assign modal from external controls */
   openAssignTick?: number;
@@ -37,7 +35,6 @@ export default function AssignmentTab({
   initialView = 'assignments',
   onViewApplied,
   onViewChange,
-  onOpenVerify,
   panelsRefreshKey = 0,
   openAssignTick = 0,
   assignmentsOnly = false,
@@ -267,7 +264,6 @@ export default function AssignmentTab({
               initialPanelId={panelId}
               onClose={() => setShowAssign(false)}
               onAssigned={loadData}
-              onOpenVerify={onOpenVerify}
               panelsRefreshKey={panelsRefreshKey}
             />
           )}

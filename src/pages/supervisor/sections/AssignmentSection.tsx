@@ -1,27 +1,17 @@
 import { useCallback, useState } from 'react';
-import { ShieldCheck, Users } from '../../../components/ui/icons';
+import { Users } from '../../../components/ui/icons';
 import SupervisorSectionHeader from '../../../components/supervisor/SupervisorSectionHeader';
 import SupervisorScopeToolbar from '../../../components/supervisor/SupervisorScopeToolbar';
-import VerificationModal from '../../../components/ui/VerificationModal';
 import { useSupervisorScope } from '../../../hooks/useSupervisorScope';
 import AssignmentTab from '../tabs/AssignmentTab';
 
 export default function AssignmentSection() {
   const scope = useSupervisorScope();
-  const [showVerify, setShowVerify] = useState(false);
   const [openAssignTick, setOpenAssignTick] = useState(0);
-
-  const handleOpenVerify = useCallback(() => setShowVerify(true), []);
-  const handleVerified = useCallback(() => {
-    setShowVerify(false);
-    scope.bumpPanelsRefresh();
-  }, [scope]);
 
   const handleQuickAssign = useCallback(() => {
     setOpenAssignTick(v => v + 1);
   }, []);
-
-  const canVerifyPanel = Boolean(scope.selectedProjectCode && scope.selectedPanelId && scope.selectedPanel);
 
   return (
     <div className="flex flex-col min-w-0 gap-4">
@@ -45,7 +35,6 @@ export default function AssignmentSection() {
         selectedPanel={scope.selectedPanel}
         selectedPanelVerified={scope.selectedPanelVerified}
         showTechnicianFilter
-        showVerificationChip
         selectedTechName={scope.selectedTech?.full_name}
       />
 
@@ -61,23 +50,11 @@ export default function AssignmentSection() {
             <Users size={16} />
             <span>Assign Technician</span>
           </button>
-
-          {canVerifyPanel && (
-            <button
-              type="button"
-              onClick={handleOpenVerify}
-              className="btn-secondary"
-              title="Verify wiring schedule before assigning a technician"
-            >
-              <ShieldCheck size={16} />
-              <span>{scope.selectedPanelVerified ? 'Re-verify Panel' : 'Verify Panel'}</span>
-            </button>
-          )}
         </div>
 
         {!scope.canAssign && (
           <p className="ops-action-hint" role="note">
-            Select a project and panel to enable Assign Technician.
+            Select a project and panel with an uploaded wiring schedule to enable assignment.
           </p>
         )}
       </section>
@@ -88,19 +65,9 @@ export default function AssignmentSection() {
         panelId={scope.selectedPanelId}
         selectedTechId={scope.selectedTechId}
         assignmentsOnly
-        onOpenVerify={handleOpenVerify}
         panelsRefreshKey={scope.panelsRefreshKey}
         openAssignTick={openAssignTick}
       />
-
-      {showVerify && scope.selectedPanelId && (
-        <VerificationModal
-          projectCode={scope.selectedProjectCode}
-          frameId={scope.selectedPanelId}
-          onClose={() => setShowVerify(false)}
-          onVerified={handleVerified}
-        />
-      )}
     </div>
   );
 }

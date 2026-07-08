@@ -41,18 +41,20 @@ Then open your browser: **http://localhost:5175**
 
 ## Login credentials
 
-| Role                | Username      | Password        |
-|---------------------|---------------|-----------------|
-| System Administrator| sysadmin      | admin123        |
-| Operations Director | director1     | director1       |
-| Production Supervisor| supervisor1  | super123        |
-| QA/QC Engineer      | eng001        | eng123          |
-| Wiring Technician   | tech001       | tech123         |
+| Role                | Username        | Password        |
+|---------------------|-----------------|-----------------|
+| System Administrator| sysadmin        | admin123        |
+| Operations Director | ops_director1   | ops_director123 |
+| Sales Director      | sales_director2 | sales_director2 |
+| Production Supervisor| supervisor1    | super123        |
+| QA/QC Engineer      | qa1             | qa1             |
+| Wiring Technician   | tech1           | tech1           |
 
-Additional accounts (from live DB — password = username):
-- `ops_director1` / `ops_director1` (Operations Director)
-- `qcengineer1` / `qcengineer1` (QA/QC Engineer)
-- `tech01` / `tech01` — `tech02` / `tech02` — `tech03` / `tech03` — `tech04` / `tech04` — `tech05` / `tech05` (Wiring Technicians)
+Additional accounts (from live DB — password = username unless noted above):
+- `qa2` / `qa2` (QA/QC Engineer)
+- `tech01`–`tech05`, `tech1`–`tech24` (Wiring Technicians)
+
+Retired demo login: `director1` (deactivated when `DEMO_MODE=true`).
 
 ---
 
@@ -149,6 +151,19 @@ To import additional projects from `wiring-app_pg/uploads/`:
 | **Supervisor** | Create projects, upload schedules, assign technicians, approve/rework reports |
 | **QA/QC** | Inspect completed panels, set pass/fail/conditional, record ferrule and visual checks |
 | **Technician** | Cable-by-cable wiring workflow, pause/resume timer, submit completion report |
+
+---
+
+## Development / demo mode
+
+Set in `backend/.env` (see `backend/.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `DEMO_MODE=true` | Enables demo users, reset-all projects, technician dev toolbar, and **Hard Reset DB** |
+| `ALLOW_DEV_HARD_RESET=true` | Optional — allows `POST /api/dev/hard-reset` without `DEMO_MODE` (local testing only) |
+
+**Hard Reset DB** (Admin → Settings): wipes all projects, wiring data, uploads, session log, WebAuthn passkeys, and duplicate hash cache; re-seeds 5 canonical demo projects; preserves user accounts. Visible only when the Vite dev server is running **and** one of the flags above is set. Requires `sysadmin` login and confirmation phrase `HARD RESET DB`. **Never enable in production.**
 
 ---
 

@@ -15,6 +15,12 @@
    Overrides every CSS custom property consumed by design-system.css and tokens.css.
    ───────────────────────────────────────────────────────────────────────────── */
 [data-theme="aurora"] {
+  /* Light header pills — always dark primary text on white glass */
+  --t-header-user-text:  #0F172A;
+  --t-header-user-muted: #64748B;
+  --t-header-pill-text:  #0F172A;
+  --t-header-pill-muted: #64748B;
+
   /* MD3 color roles */
   --color-background:           linear-gradient(135deg, #312E81 0%, #6D28D9 45%, #0E7490 100%);
   --color-surface:              rgba(255,255,255,0.10);
@@ -160,6 +166,7 @@
     0 10px 28px rgba(7, 11, 30, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
+[data-theme="aurora"] .topbar-project-pill.topbar-float--light,
 [data-theme="aurora"] .topbar-user-card.topbar-float--light {
   background: rgba(255, 255, 255, 0.94);
   border-color: rgba(255, 255, 255, 0.55);
@@ -169,14 +176,22 @@
     0 2px 6px rgba(7, 11, 30, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
+[data-theme="aurora"] .topbar-project-pill.topbar-float--light:hover,
 [data-theme="aurora"] .topbar-user-card.topbar-float--light:hover {
   border-color: rgba(255, 255, 255, 0.72);
   box-shadow:
     0 4px 12px rgba(7, 11, 30, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
-[data-theme="aurora"] .topbar-user-card.topbar-float--light .topbar-user-name { color: #0F172A; }
-[data-theme="aurora"] .topbar-user-card.topbar-float--light .topbar-user-role { color: #64748B; }
+[data-theme="aurora"] .topbar-project-pill.topbar-float--light .topbar-project-value,
+[data-theme="aurora"] .topbar-user-card.topbar-float--light .topbar-user-name {
+  color: var(--t-header-pill-text, #0F172A);
+}
+[data-theme="aurora"] .topbar-project-pill.topbar-float--light .topbar-project-label,
+[data-theme="aurora"] .topbar-user-card.topbar-float--light .topbar-user-role,
+[data-theme="aurora"] .topbar-user-card.topbar-float--light .topbar-user-handle {
+  color: var(--t-header-pill-muted, #64748B);
+}
 [data-theme="aurora"] .topbar-clock-digits { color: #F8FAFC; }
 [data-theme="aurora"] .topbar-clock-date { color: rgba(241, 245, 249, 0.50); }
 

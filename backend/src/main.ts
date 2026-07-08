@@ -9,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { FrameStore } from './frames/frame-store';
+import { CANONICAL_SEED_PROJECTS } from './common/seed-projects';
 import * as bcrypt from 'bcryptjs';
 
 const SEED_USERS = [
@@ -20,13 +21,7 @@ const SEED_USERS = [
   { username: 'qa2',           password: 'qa2',             full_name: 'QA Engineer Two',       employee_id: 'EMP-011',     role: 'qaqc_engineer',     whatsapp_number: '+966500000006' },
 ];
 
-const SEED_PROJECTS = [
-  { code: 'DEWA_Project_001',    client: 'DEWA',    name: 'DEWA Protection Panel 001',  description: 'DEWA substation protection panel', sequence: 1, project_state: 'not_started' },
-  { code: 'DEWA_Project_002',    client: 'DEWA',    name: 'DEWA Control Panel 002',      description: 'DEWA control panel installation',  sequence: 2, project_state: 'not_started' },
-  { code: 'SEWA_Project_001',    client: 'SEWA',    name: 'SEWA Distribution Panel 001', description: 'SEWA distribution board project',  sequence: 1, project_state: 'not_started' },
-  { code: 'HITACHI_Project_001', client: 'HITACHI', name: 'Hitachi Control System 001',  description: 'Hitachi control system wiring',    sequence: 1, project_state: 'not_started' },
-  { code: 'FEWA_Project_001',    client: 'FEWA',    name: 'FEWA Substation Panel 001',   description: 'FEWA substation panel wiring',     sequence: 1, project_state: 'not_started' },
-];
+const SEED_PROJECTS = CANONICAL_SEED_PROJECTS;
 
 function lanIpv4Addresses(): string[] {
   const addrs: string[] = [];

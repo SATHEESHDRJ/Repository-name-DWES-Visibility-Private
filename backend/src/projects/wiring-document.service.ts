@@ -8,6 +8,10 @@ import { MockStore, Cable, Drawing } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { parseCableStatus, cableStatusCounts } from '../common/cable-status.util';
 import { wiringKpiPercent, compositeKpiPercent } from '../common/kpi.constants';
+import { collectPanelCompletionReportData, serializePanelCompletionReportForApi } from '../common/panel-completion-report.helper';
+import { buildPanelCompletionReportPdf } from '../common/panel-completion-report-pdf';
+import { buildPanelReportFilename } from '../common/report-filename';
+import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 import { drawEnterpriseFooter, drawEnterpriseHeader, pageBox } from '../common/pdf-report-layout';
 
 const COMPANY = 'Ingenious Network FZC';
@@ -161,6 +165,44 @@ function cableRowCells(
 @Injectable()
 export class WiringDocumentService {
   constructor(private prisma: PrismaService) {}
+
+  async generatePanelCompletionReport(
+    projectCode: string,
+    frameId: string,
+    generatedBy = '',
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
+    const reportData = await collectPanelCompletionReportData(
+      this.prisma,
+      projectCode,
+      frameId,
+      generatedBy,
+    );
+    const buffer = await buildPanelCompletionReportPdf(reportData);
+    return {
+      buffer,
+      filename: buildPanelReportFilename({
+        projectCode,
+        panelName: reportData.panel.name || frameId,
+        ext: 'pdf',
+      }),
+    };
+  }
+
+  async getPanelCompletionReportData(
+    projectCode: string,
+    frameId: string,
+    generatedBy = '',
+  ) {
+    assertPanelNameUniqueForWrite(projectCode, frameId);
+    const reportData = await collectPanelCompletionReportData(
+      this.prisma,
+      projectCode,
+      frameId,
+      generatedBy,
+    );
+    return serializePanelCompletionReportForApi(reportData);
+  }
 
   async generateFrameDocument(
     projectCode: string,

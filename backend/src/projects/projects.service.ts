@@ -10,6 +10,8 @@ export interface CreatePanelDto {
   name: string;
   type?: string;
   description?: string;
+  voltage_level?: string;
+  system_type?: string;
 }
 
 function parseCS(raw: string | null | undefined): Record<string, { src?: boolean; dst?: boolean }> {
@@ -47,6 +49,9 @@ export class ProjectsService {
       if (!String(panels[i]?.name || '').trim()) {
         throw new BadRequestException(`Panel ${i + 1}: name is required`);
       }
+      if (!String(panels[i]?.voltage_level || '').trim()) {
+        throw new BadRequestException(`Panel ${i + 1}: voltage level is required`);
+      }
     }
 
     const existing = await this.prisma.projects.findUnique({ where: { code: dto.code } });
@@ -75,6 +80,8 @@ export class ProjectsService {
         sheet_name: '',
         ...(panel.type?.trim() ? { panel_type: panel.type.trim() } : {}),
         ...(panel.description?.trim() ? { panel_description: panel.description.trim() } : {}),
+        voltage_level: panel.voltage_level!.trim(),
+        ...(panel.system_type?.trim() ? { system_type: panel.system_type.trim() } : {}),
       };
       MockStore.frames.push(frame);
       FrameStore.save(frame);
@@ -83,6 +90,8 @@ export class ProjectsService {
         name: frame.panel_name,
         type: frame.panel_type || null,
         description: frame.panel_description || null,
+        voltage_level: frame.voltage_level || null,
+        system_type: frame.system_type || null,
       };
     });
 

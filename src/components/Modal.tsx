@@ -4,14 +4,20 @@ import { X } from './ui/icons';
 
 interface ModalProps {
   title: string;
+  /** Optional muted context line under the title. */
+  subtitle?: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'default' | 'lg' | 'form' | 'wide' | 'xl';
+  size?: 'sm' | 'default' | 'lg' | 'form' | 'wide' | 'xl' | 'team' | 'fullscreen';
+  /** Optional extra classes on modal-body (e.g. flush grid layouts). */
+  bodyClassName?: string;
   /** When false, backdrop clicks do not call onClose (avoids native select/datalist dismiss). Default true. */
   closeOnBackdrop?: boolean;
   /** When false, Escape does not call onClose. Default true. */
   closeOnEscape?: boolean;
+  /** Optional action button in header (e.g., fullscreen toggle) */
+  headerAction?: ReactNode;
 }
 
 const MODAL_ROOT_ID = 'modal-root';
@@ -30,12 +36,15 @@ function getModalRoot(): HTMLElement | null {
 
 export default function Modal({
   title,
+  subtitle,
   onClose,
   children,
   footer,
   size = 'default',
+  bodyClassName,
   closeOnBackdrop = true,
   closeOnEscape = true,
+  headerAction,
 }: ModalProps) {
   const openedAt = useRef(Date.now());
   const onCloseRef = useRef(onClose);
@@ -69,7 +78,9 @@ export default function Modal({
     };
   }, []);
 
-  const boxClass = size === 'xl' ? 'modal-box-xl'
+  const boxClass = size === 'fullscreen' ? 'modal-box-fullscreen'
+    : size === 'team' ? 'modal-box-team'
+    : size === 'xl' ? 'modal-box-xl'
     : size === 'wide' ? 'modal-box-wide'
     : size === 'form' ? 'modal-box-form'
     : size === 'lg' ? 'modal-box-lg'
@@ -98,17 +109,23 @@ export default function Modal({
     >
       <div className={boxClass} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 id="modal-title" className="modal-title">{title}</h2>
-          <button
-            onClick={() => onCloseRef.current()}
-            className="btn-icon"
-            type="button"
-            aria-label="Close"
-          >
-            <X size={18} strokeWidth={1.5} />
-          </button>
+          <div className="modal-header-text">
+            <h2 id="modal-title" className="modal-title">{title}</h2>
+            {subtitle ? <p className="modal-subtitle">{subtitle}</p> : null}
+          </div>
+          <div className="modal-header-actions">
+            {headerAction}
+            <button
+              onClick={() => onCloseRef.current()}
+              className="modal-close-btn"
+              type="button"
+              aria-label="Close"
+            >
+              <X size={18} strokeWidth={1.75} />
+            </button>
+          </div>
         </div>
-        <div className="modal-body">
+        <div className={bodyClassName ? `modal-body ${bodyClassName}` : 'modal-body'}>
           {children}
         </div>
         {footer && (

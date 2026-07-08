@@ -89,6 +89,9 @@ export const projectsApi = {
   frameReportPdf: (code: string, frameId: string) =>
     api.get(`/projects/${code}/frames/${frameId}/report-pdf`, { responseType: 'blob' }).then(r => r.data),
 
+  panelCompletionReport: (code: string, frameId: string) =>
+    api.get(`/projects/${code}/frames/${frameId}/completion-report`).then(r => r.data),
+
   reportPdf: (code: string, frameId?: string) =>
     frameId
       ? api.get(`/projects/${code}/frames/${frameId}/report-pdf`, { responseType: 'blob' }).then(r => r.data)
@@ -97,7 +100,15 @@ export const projectsApi = {
   reportXlsx: (code: string) =>
     api.get(`/projects/${code}/report-xlsx`, { responseType: 'blob' }).then(r => r.data as Blob),
 
+  submitToDirector: (code: string) =>
+    api.post(`/projects/${code}/submit-to-director`).then(r => r.data),
+
   frames: (code: string) => api.get(`/projects/${code}/frames`).then(r => r.data),
+
+  createPanel: (
+    code: string,
+    dto: { name: string; type?: string; voltage_level: string; system_type?: string },
+  ) => api.post(`/projects/${code}/frames`, dto).then(r => r.data),
 
   frame: (code: string, frameId: string) =>
     api.get(`/projects/${code}/frames/${frameId}`).then(r => r.data),
@@ -118,6 +129,18 @@ export const projectsApi = {
 
   patchCable: (code: string, frameId: string, idx: number, field: string, value: string) =>
     api.post(`/projects/${code}/frames/${frameId}/patch-cable`, { cable_index: idx, field, value }).then(r => r.data),
+
+  patchPanel: (
+    code: string,
+    frameId: string,
+    payload: {
+      panel_name: string;
+      panel_type?: string;
+      voltage_level?: string;
+      system_type?: string;
+    },
+  ) =>
+    api.post(`/projects/${code}/frames/${frameId}/patch-panel`, payload).then(r => r.data),
 
   remapColumn: (code: string, frameId: string, systemField: string, excelHeader: string) =>
     api.post(`/projects/${code}/frames/${frameId}/remap-column`, { system_field: systemField, excel_header: excelHeader }).then(r => r.data),
@@ -174,13 +197,15 @@ export const uploadApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data),
 
-  uploadMapped: (code: string, formData: FormData, onProgress?: (pct: number) => void) =>
-    api.post(`/upload/wiring-schedule-mapped/${code}`, formData, {
+  uploadMapped: (code: string, formData: FormData, onProgress?: (pct: number) => void, frameId?: string) => {
+    if (frameId && !formData.has('frame_id')) formData.append('frame_id', frameId);
+    return api.post(`/upload/wiring-schedule-mapped/${code}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: onProgress
         ? e => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
         : undefined,
-    }).then(r => r.data),
+    }).then(r => r.data);
+  },
 
   previewMapped: (code: string, formData: FormData) =>
     api.post(`/upload/preview-mapped/${code}`, formData, {
@@ -400,6 +425,15 @@ export const adminApi = {
 
   resetAllProjects: (confirmedPhrase: string) =>
     api.post('/admin/reset-all-projects', { confirmed_phrase: confirmedPhrase }).then(r => r.data),
+};
+
+// ─── Dev (DEMO_MODE / ALLOW_DEV_HARD_RESET only) ─────────────────────────────
+
+export const devApi = {
+  hardResetPrecheck: () => api.get('/dev/hard-reset').then(r => r.data),
+
+  hardReset: (confirmedPhrase: string) =>
+    api.post('/dev/hard-reset', { confirmed_phrase: confirmedPhrase }).then(r => r.data),
 };
 
 // ─── QA/QC ────────────────────────────────────────────────────────────────────

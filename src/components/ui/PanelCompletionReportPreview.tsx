@@ -1,0 +1,228 @@
+import CompanyLogo from './CompanyLogo';
+
+export interface PanelCompletionReportPreviewData {
+  project: {
+    code: string;
+    name: string;
+    client: string | null;
+    locationRegion: string | null;
+    monthYear: string | null;
+  };
+  panel: {
+    id: string;
+    name: string;
+    panelType: string | null;
+    voltageLevel: string | null;
+  };
+  reportStatus: string;
+  reportStatusLabel: string;
+  technician: { fullName: string; username: string } | null;
+  midChangeTechnician: { fullName: string; username: string } | null;
+  supervisor: { fullName: string } | null;
+  assignedBy: { fullName: string } | null;
+  cables: {
+    total: number;
+    completed: number;
+    remaining: number;
+    openEndSource: number;
+    openEndDestination: number;
+  };
+  wiring: {
+    startedAt: string | null;
+    completedAt: string | null;
+    durationHuman: string;
+  };
+  sessionLog: { loginAt: string; logoutAt: string | null }[];
+  totalWorkingHours: string;
+  completionPercent: number;
+  kpi: number;
+  projectDurationDays: number;
+  rework: { count: number; status: string; reason: string };
+  technicianRemarks: string[];
+  supervisorRemarks: string;
+  generatedBy: string;
+  generatedAt: string;
+}
+
+function fmt(dt: string | null) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function parseSubstation(name: string, client: string | null) {
+  const parts = name.split(/\s+[–—]\s+|\s+-\s+/).map(p => p.trim()).filter(Boolean);
+  if (parts.length <= 1) return name.trim() || '—';
+  let i = 1;
+  const norm = (v: string) => v.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (parts[i] && client && norm(parts[i]) === norm(client)) i += 1;
+  return parts[0];
+}
+
+function statusTone(status: string): string {
+  switch (status) {
+    case 'completed': return 'pcr-status--completed';
+    case 'in_progress': return 'pcr-status--progress';
+    case 'on_hold': return 'pcr-status--hold';
+    case 'not_started': return 'pcr-status--not-started';
+    default: return 'pcr-status--hold';
+  }
+}
+
+function MetaGrid({ rows }: { rows: [string, string][] }) {
+  return (
+    <dl className="pcr-meta-grid">
+      {rows.map(([label, value]) => (
+        <div key={label} className="pcr-meta-item">
+          <dt>{label}</dt>
+          <dd title={value}>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+export default function PanelCompletionReportPreview({ data }: { data: PanelCompletionReportPreviewData }) {
+  const client = (data.project.client || '').trim() || '—';
+  const substation = parseSubstation(data.project.name, data.project.client);
+  const docRef = `DWES-PCR-${data.panel.id.replace(/[^A-Za-z0-9]/g, '').slice(0, 24)}`;
+  const loginTimes = data.sessionLog.length
+    ? data.sessionLog.map(s => fmt(s.loginAt)).join(' · ')
+    : '—';
+  const logoutTimes = data.sessionLog.length
+    ? data.sessionLog.map(s => (s.logoutAt ? fmt(s.logoutAt) : 'Active')).join(' · ')
+    : '—';
+  const reworkLabel = data.rework.count > 0 ? `${data.rework.count} · ${data.rework.status}` : 'None';
+  const techRemarks = data.technicianRemarks.length ? data.technicianRemarks.join(' · ') : '—';
+  const supRemarks = data.supervisorRemarks || data.rework.reason || '—';
+
+  const personnel = [
+    { label: 'Assigned technician', name: data.technician?.fullName || '—' },
+    ...(data.midChangeTechnician
+      ? [{ label: 'Mid-change technician', name: data.midChangeTechnician.fullName }]
+      : []),
+    { label: 'Production supervisor', name: data.supervisor?.fullName || '—' },
+  ];
+
+  return (
+    <div className="pcr-sheet" role="document" aria-label="Project Completion Report preview">
+      {/* Zone 1 — header band */}
+      <header className="pcr-header">
+        <div className="pcr-header-brand">
+          <CompanyLogo variant="white" size="sm" className="shrink-0" />
+          <div>
+            <div className="pcr-header-company">Ingenious Network FZC</div>
+            <div className="pcr-header-system">Digital Wiring Execution System</div>
+          </div>
+        </div>
+        <div className="pcr-header-title">
+          <div className="pcr-header-report-title">Project Completion Report</div>
+          <div className="pcr-header-ref">Ref: {docRef}</div>
+          <div className="pcr-header-ref">Frame: {data.panel.id}</div>
+        </div>
+      </header>
+
+      {/* Zone 2 — project / client meta */}
+      <section className="pcr-section">
+        <MetaGrid rows={[
+          ['Project name', substation],
+          ['Panel / subpanel', data.panel.name],
+          ['Client', client],
+          ['Region / location', data.project.locationRegion || '—'],
+          ['Voltage', data.panel.voltageLevel || '—'],
+          ['Project assigned by', data.assignedBy?.fullName || '—'],
+          ['Generated', fmt(data.generatedAt)],
+          ['Generated by', data.generatedBy],
+        ]} />
+      </section>
+
+      {/* Zone 3 — personnel */}
+      <section className="pcr-personnel">
+        {personnel.map(p => (
+          <div key={p.label} className="pcr-person-block">
+            <div className="pcr-person-label">{p.label}</div>
+            <div className="pcr-person-name">{p.name}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* Zone 4 — KPI cards */}
+      <section className="pcr-kpi-row">
+        <div className="pcr-kpi-lead">
+          <div className="pcr-kpi-lead-value">{data.completionPercent}%</div>
+          <div className="pcr-kpi-lead-label">Completion %</div>
+          <progress className="pcr-progress" value={Math.min(data.completionPercent, 100)} max={100} />
+        </div>
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.cables.total}</span><span className="pcr-kpi-label">Total cables</span></div>
+        <div className="pcr-kpi-card pcr-kpi-card--green"><span className="pcr-kpi-value">{data.cables.completed}</span><span className="pcr-kpi-label">Completed</span></div>
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.cables.remaining}</span><span className="pcr-kpi-label">Remaining</span></div>
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.kpi}%</span><span className="pcr-kpi-label">Wiring KPI</span></div>
+      </section>
+      <section className="pcr-kpi-sub">
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value pcr-kpi-value--sm">{data.cables.openEndSource} / {data.cables.openEndDestination}</span><span className="pcr-kpi-label">Open-end (src / dst)</span></div>
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value pcr-kpi-value--sm">{reworkLabel}</span><span className="pcr-kpi-label">Rework</span></div>
+        <div className={`pcr-status-pill ${statusTone(data.reportStatus)}`}>
+          <span className="pcr-status-pill-label">Final status</span>
+          <span className="pcr-status-pill-value">{data.reportStatusLabel}</span>
+        </div>
+      </section>
+
+      {/* Zone 5 — timeline */}
+      <section className="pcr-section pcr-section--titled">
+        <h3 className="pcr-section-title">Execution timeline &amp; duration</h3>
+        <MetaGrid rows={[
+          ['Wiring start', fmt(data.wiring.startedAt)],
+          ['Wiring completion', fmt(data.wiring.completedAt)],
+          ['Wiring duration', data.wiring.durationHuman || '—'],
+          ['Project duration', `${data.projectDurationDays} day(s)`],
+          ['Technician login(s)', loginTimes],
+          ['Technician logout(s)', logoutTimes],
+          ['Total working hours', data.totalWorkingHours],
+          ['Frame ID', data.panel.id],
+        ]} />
+      </section>
+
+      {/* Zone 6 — remarks */}
+      <section className="pcr-section pcr-section--titled">
+        <h3 className="pcr-section-title">Remarks &amp; notes</h3>
+        <div className="pcr-remarks">
+          <div className="pcr-remark-row">
+            <span className="pcr-remark-label">Technician remarks</span>
+            <span className="pcr-remark-text">{techRemarks}</span>
+          </div>
+          <div className="pcr-remark-row">
+            <span className="pcr-remark-label">Supervisor remarks</span>
+            <span className="pcr-remark-text">{supRemarks}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Zone 7 — approval */}
+      <section className="pcr-section pcr-section--titled">
+        <h3 className="pcr-section-title">Approval &amp; sign-off</h3>
+        <div className="pcr-signatures">
+          {[
+            { title: 'Technician', name: data.technician?.fullName },
+            { title: 'Production Supervisor', name: data.supervisor?.fullName || data.generatedBy },
+            { title: 'Client / Management', name: '' },
+          ].map(sig => (
+            <div key={sig.title} className="pcr-sig-block">
+              <div className="pcr-sig-title">{sig.title}</div>
+              {sig.name && <div className="pcr-sig-name">{sig.name}</div>}
+              <div className="pcr-sig-line" />
+              <div className="pcr-sig-hint">Signature / Date</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Zone 8 — footer */}
+      <footer className="pcr-footer">
+        <span>Confidential — Management and Client Review Copy</span>
+        <span>Generated {fmt(data.generatedAt)}</span>
+        <span>Page 1 of 1</span>
+      </footer>
+    </div>
+  );
+}

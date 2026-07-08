@@ -18,6 +18,6 @@ import { WebAuthnStoreService } from './webauthn-store.service';
   ],
   providers: [AuthService, JwtStrategy, WebAuthnService, WebAuthnStoreService],
   controllers: [AuthController, WebAuthnController],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule, WebAuthnStoreService],
 })
 export class AuthModule {}

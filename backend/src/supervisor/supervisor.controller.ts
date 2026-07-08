@@ -7,7 +7,9 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { User } from '../data/mock-store';
+import { User, MockStore } from '../data/mock-store';
+import { buildPanelReportFilename } from '../common/report-filename';
+import { FrameStore } from '../frames/frame-store';
 
 @Controller('api/supervisor')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -116,9 +118,16 @@ export class SupervisorController {
     @Res() res: Response,
   ) {
     const buffer = await this.svc.panelReportXlsx(code, frameId);
+    const frame = MockStore.findFrameByProjectAndId(code, frameId)
+      ?? FrameStore.getFrameFromDisk(code, frameId);
+    const filename = buildPanelReportFilename({
+      projectCode: code,
+      panelName: frame?.panel_name || frameId,
+      ext: 'xlsx',
+    });
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="panel_report_${frameId}.xlsx"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);

@@ -57,12 +57,12 @@ function toneConfirm(tone: DialogTone) {
   return 'Confirm';
 }
 
-function toneIconBg(tone: DialogTone) {
-  if (tone === 'delete' || tone === 'error' || tone === 'logout') return 'bg-red-100 text-red-600';
-  if (tone === 'warning' || tone === 'unsaved') return 'bg-amber-100 text-amber-600';
-  if (tone === 'success') return 'bg-green-100 text-green-600';
-  if (tone === 'save') return 'bg-blue-100 text-blue-600';
-  return 'bg-slate-100 text-slate-500';
+function toneIconWrap(tone: DialogTone) {
+  if (tone === 'delete' || tone === 'error' || tone === 'logout') return 'dlg-icon-wrap dlg-icon-wrap--danger';
+  if (tone === 'warning' || tone === 'unsaved') return 'dlg-icon-wrap dlg-icon-wrap--warning';
+  if (tone === 'success') return 'dlg-icon-wrap dlg-icon-wrap--success';
+  if (tone === 'save') return 'dlg-icon-wrap dlg-icon-wrap--info';
+  return 'dlg-icon-wrap dlg-icon-wrap--info';
 }
 
 function ToneIcon({ tone }: { tone: DialogTone }) {
@@ -158,7 +158,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
         >
           <div className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${toneIconBg(active.tone)}`}>
+              <div className={toneIconWrap(active.tone)}>
                 <ToneIcon tone={active.tone} />
               </div>
               <p className="dlg-message mt-1">{active.message}</p>

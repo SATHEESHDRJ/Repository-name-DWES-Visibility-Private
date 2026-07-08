@@ -1,43 +1,35 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { projectsApi, uploadApi, supervisorApi } from '../../../services/api';
 import type { Project } from '../../../types';
 import Modal from '../../../components/Modal';
+import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
-import VerificationModal from '../../../components/ui/VerificationModal';
 import ProjectPanelSelect from '../../../components/assignment/ProjectPanelSelect';
 import AssignTechnicianModal from '../../../components/assignment/AssignTechnicianModal';
-import { isVerifiedFrame } from '../../../components/assignment/frameUtils';
 import {
   Upload, FileSpreadsheet, CheckCircle, TriangleAlert, ArrowRight, ArrowLeft,
-  Star,
+  Star, Search, Maximize,
 } from '../../../components/ui/icons';
+import PanelFileMetadataBar from '../../../components/supervisor/PanelFileMetadataBar';
+import FileViewer from '../../../components/ui/FileViewer';
+import {
+  type PanelFileMetadata,
+  type PanelFilePopupMode,
+  frameHasWiringSchedule,
+} from '../../../components/supervisor/panelFilePopup';
+import UploadTargetHeader from '../../../components/supervisor/UploadTargetHeader';
+import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
 import UnifiedUploadModal from '../../../components/supervisor/UnifiedUploadModal';
+import WiringScheduleMappingGrid from '../../../components/supervisor/WiringScheduleMappingGrid';
+import { WIRING_SYSTEM_FIELDS, buildAutoWiringMapping, fieldKeyForHeader } from '../../../constants/wiringSystemFields';
+import { assertNoDuplicatePanels } from '../../../utils/panelDuplicates';
+import { onFramesChanged } from '../../../utils/projectFramesEvents';
 
-const SYSTEM_FIELDS = [
-  { key: 'sno',              label: 'S.No',                            required: false },
-  { key: 'panel',            label: 'Panel Name',                      required: false },
-  { key: 'ferrule',          label: 'Ferrule *',                       required: true  },
-  { key: 'path',             label: 'Path (SRC/DST or SRC→DST)',       required: false, hint: 'Auto-derives Source & Destination when mapped' },
-  { key: 'source',           label: 'Source (dev:term)',                required: false, hint: 'Optional if Path or Ferrule derives it' },
-  { key: 'destination',      label: 'Destination (dev:term)',           required: false, hint: 'Optional if Path or Ferrule derives it' },
-  { key: 'source_device',    label: 'Source Device',                   required: false },
-  { key: 'source_terminal',  label: 'Source Terminal',                  required: false },
-  { key: 'dest_device',      label: 'Dest Device',                     required: false },
-  { key: 'dest_terminal',    label: 'Dest Terminal',                    required: false },
-  { key: 'color',            label: 'Wire Color',                      required: false },
-  { key: 'size',             label: 'Wire Size',                       required: false },
-  { key: 'length',           label: 'Length',                          required: false },
-  { key: 'sign',             label: 'Sign/Polarity',                   required: false },
-  { key: 'rack',             label: 'Rack',                            required: false },
-  { key: 'ref',              label: 'Ref',                             required: false },
-  { key: 'remarks',          label: 'Remarks',                         required: false },
-];
+type UploadStep = 'file' | 'sheet' | 'mapping';
 
-type UploadStep = 'file' | 'sheet' | 'mapping' | 'validate';
-
-function isVerified(frame: any) {
-  return isVerifiedFrame(frame);
+function frameReady(frame: { cable_count?: number }): boolean {
+  return (frame.cable_count ?? 0) > 0;
 }
 
 interface FramesTabProps { projectCode?: string }
@@ -52,7 +44,6 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
   const [, setLoading] = useState(false);
   const [showScheduleUpload, setShowScheduleUpload] = useState(false);
   const [showUnifiedUpload, setShowUnifiedUpload] = useState(false);
-  const [showVerify, setShowVerify] = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState<any | null>(null);
 
   // Sync if parent changes the controlled project
@@ -93,10 +84,23 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
 
   useReadOnlyPoll(loadFrames, 4000);
 
+  useEffect(() => {
+    return onFramesChanged((detail) => {
+      if (!selectedProject || detail.projectCode !== selectedProject) return;
+      if (detail.action === 'deleted' && detail.frameId) {
+        setFrames(prev => prev.filter(f => f.id !== detail.frameId));
+        setAssignments(prev => prev.filter(a => a.frame_id !== detail.frameId));
+        setSelectedPanelId(prev => (prev === detail.frameId ? '' : prev));
+        return;
+      }
+      loadFrames();
+    });
+  }, [selectedProject, loadFrames]);
+
   const handleScheduleUploaded = (frameId: string) => {
     loadFrames();
     setShowScheduleUpload(false);
-    setShowVerify(frameId);
+    setShowAssign({ id: frameId });
   };
 
   const handleProjectChange = (code: string) => {
@@ -174,11 +178,10 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
               ) : (
                 displayedFrames.map(frame => {
                   const asgn = assignments.find(a => a.frame_id === frame.id);
-                  const verified = isVerified(frame);
+                  const ready = frameReady(frame);
 
-                  // Pill CSS class and label based on assignment state
-                  let pillClass = verified ? 'frame-status-verified' : 'frame-status-none';
-                  let pillLabel = verified ? 'Verified' : 'Draft';
+                  let pillClass = ready ? 'frame-status-verified' : 'frame-status-none';
+                  let pillLabel = ready ? 'Ready' : 'No schedule';
                   if (asgn) {
                     const m: Record<string, [string, string]> = {
                       assigned:    ['frame-status-assigned',   'Assigned'],
@@ -216,34 +219,15 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
                         ) : (
                           <div className="flex items-center gap-2">
                             <span className={`frame-status-pill ${pillClass}`}>{pillLabel}</span>
-                            {!verified ? (
+                            {ready && (
                               <button
-                                onClick={() => setShowVerify(frame.id)}
-                                className="text-[11px] font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap underline-offset-2 hover:underline"
+                                onClick={() => setShowAssign(frame)}
+                                className="text-[11px] font-semibold text-green-600 hover:text-green-800 transition-colors whitespace-nowrap underline-offset-2 hover:underline"
                                 type="button"
-                                title="Verify this frame before assigning to a technician"
+                                title="Assign to a technician"
                               >
-                                Verify →
+                                Assign →
                               </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => setShowAssign(frame)}
-                                  className="text-[11px] font-semibold text-green-600 hover:text-green-800 transition-colors whitespace-nowrap underline-offset-2 hover:underline"
-                                  type="button"
-                                  title="Assign to a technician"
-                                >
-                                  Assign →
-                                </button>
-                                <button
-                                  onClick={() => setShowVerify(frame.id)}
-                                  className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap"
-                                  type="button"
-                                  title="Re-open verification"
-                                >
-                                  Re-verify →
-                                </button>
-                              </>
                             )}
                           </div>
                         )}
@@ -273,14 +257,6 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
           onUpdated={loadFrames}
         />
       )}
-      {showVerify && (
-        <VerificationModal
-          projectCode={selectedProject}
-          frameId={showVerify}
-          onClose={() => setShowVerify(null)}
-          onVerified={() => { setShowVerify(null); loadFrames(); }}
-        />
-      )}
       {showAssign && (
         <AssignTechnicianModal
           projects={projects}
@@ -297,7 +273,35 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
 
 // ── Upload Frame Modal ────────────────────────────────────────────────────────
 
-export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded }: { projectCode: string; projectName?: string; onClose: () => void; onUploaded: (frameId: string) => void }) {
+export function UploadFrameModal({
+  projectCode,
+  projectName,
+  targetFrameId,
+  targetPanelName,
+  existingCableCount = 0,
+  siblingPanels = [],
+  onEditPanel,
+  onSelectPanel,
+  onClose,
+  onUploaded,
+}: {
+  projectCode: string;
+  projectName?: string;
+  targetFrameId?: string;
+  targetPanelName?: string;
+  /** When > 0, modal opens with View / Replace choice instead of upload-only. */
+  existingCableCount?: number;
+  /** All panels in the project — used for duplicate-name detection. */
+  siblingPanels?: { id?: string; panel_name: string }[];
+  onEditPanel?: (panelId: string) => void;
+  onSelectPanel?: (panelId: string) => void;
+  onClose: () => void;
+  onUploaded: (frameId: string) => void;
+}) {
+  const dialog = useAppDialog();
+  const [mode, setMode] = useState<PanelFilePopupMode>('loading');
+  const [metadata, setMetadata] = useState<PanelFileMetadata | null>(null);
+  const [sheetName, setResolvedSheetName] = useState('');
   const [step, setStep] = useState<UploadStep>('file');
   const [file, setFile] = useState<File | null>(null);
   const [dupInfo, setDupInfo] = useState<{ kind: 'same' | 'other'; file_name: string; project_code: string; uploaded_at: string } | null>(null);
@@ -307,7 +311,9 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
   const [selSheet, setSelSheet] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [sampleRows, setSampleRows] = useState<any[][]>([]);
+  const [dataRowCount, setDataRowCount] = useState(0);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [includedHeaders, setIncludedHeaders] = useState<Record<string, boolean>>({});
   const [headerRow, setHeaderRow] = useState(0);
   const [preview, setPreview] = useState<{
     cable_count: number;
@@ -319,7 +325,136 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [columnFilter, setColumnFilter] = useState<'all' | 'selected' | 'required' | 'unselected'>('all');
+  const [fullViewOpen, setFullViewOpen] = useState(false);
+  const [viewBlob, setViewBlob] = useState<Blob | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewLoadError, setViewLoadError] = useState('');
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const resolveFrameOnOpen = useCallback(async () => {
+    if (!targetFrameId) {
+      setMode(existingCableCount > 0 ? 'populated' : 'empty');
+      return;
+    }
+    setMode('loading');
+    try {
+      const frame = await projectsApi.frame(projectCode, targetFrameId);
+      const present = frameHasWiringSchedule(frame) || existingCableCount > 0;
+      if (present) {
+        const name = String(frame.original_filename || 'Wiring schedule.xlsx');
+        setMetadata({
+          fileName: name,
+          fileType: /\.xls$/i.test(name) && !/xlsx/i.test(name) ? 'Excel (.xls)' : 'Excel (.xlsx)',
+          uploadedAt: frame.uploaded_at ? String(frame.uploaded_at) : undefined,
+          sheetName: frame.sheet_name ? String(frame.sheet_name) : undefined,
+        });
+        setResolvedSheetName(frame.sheet_name ? String(frame.sheet_name) : '');
+        setMode('populated');
+      } else {
+        setMetadata(null);
+        setMode('empty');
+      }
+    } catch {
+      setMode(existingCableCount > 0 ? 'populated' : 'empty');
+    }
+  }, [projectCode, targetFrameId, existingCableCount]);
+
+  useEffect(() => {
+    void resolveFrameOnOpen();
+  }, [resolveFrameOnOpen]);
+
+  const loadViewBlob = useCallback(() => {
+    if (!targetFrameId) return;
+    setViewLoading(true);
+    setViewLoadError('');
+    setViewBlob(null);
+    supervisorApi.wiringScheduleXlsx(projectCode, targetFrameId)
+      .then(blob => {
+        setViewBlob(blob);
+        setMetadata(prev => prev ? { ...prev, sizeBytes: blob.size } : prev);
+        setViewLoading(false);
+      })
+      .catch((err: { response?: { data?: { message?: string } }; message?: string }) => {
+        setViewLoadError(err?.response?.data?.message || err?.message || 'Failed to load wiring schedule file.');
+        setViewBlob(null);
+        setViewLoading(false);
+      });
+  }, [projectCode, targetFrameId]);
+
+  const duplicateGuard = assertNoDuplicatePanels(
+    siblingPanels,
+    targetFrameId,
+    targetPanelName,
+  );
+  const duplicateBlocked = duplicateGuard.blocked;
+  const duplicateBlockMessage = duplicateGuard.message;
+
+  const panelListForWarning = siblingPanels.map((p, i) => ({
+    id: p.id ?? String(i),
+    panel_name: p.panel_name,
+    cable_count: 'cable_count' in p ? (p as { cable_count?: number }).cable_count : undefined,
+    original_filename: 'original_filename' in p ? (p as { original_filename?: string }).original_filename : undefined,
+  }));
+
+  useEffect(() => {
+    if (mode !== 'populated' || !targetFrameId || duplicateBlocked) return;
+    loadViewBlob();
+  }, [mode, targetFrameId, loadViewBlob, duplicateBlocked]);
+
+  const finishUploadPopulated = useCallback(async (frameId: string) => {
+    setStep('file');
+    setFile(null);
+    setPreview(null);
+    setError('');
+    onUploaded(frameId);
+    await resolveFrameOnOpen();
+    setMode('populated');
+    loadViewBlob();
+  }, [loadViewBlob, onUploaded, resolveFrameOnOpen]);
+
+  const handleColumnResize = useCallback((header: string, width: number) => {
+    setColumnWidths(prev => ({ ...prev, [header]: width }));
+  }, []);
+
+  const appendTargetFrame = (formData: FormData) => {
+    if (targetFrameId) formData.append('frame_id', targetFrameId);
+    return formData;
+  };
+
+  const confirmReplaceSchedule = async (): Promise<boolean> => {
+    let progressWarning = '';
+    if (targetFrameId) {
+      try {
+        const prog = await supervisorApi.frameProgress(projectCode, targetFrameId);
+        const assignments = Array.isArray(prog?.assignments) ? prog.assignments : [];
+        const hasExecution = assignments.some((a: {
+          status?: string;
+          cables_src_done?: number;
+          cables_dst_done?: number;
+        }) => {
+          const done = (a.cables_src_done ?? 0) + (a.cables_dst_done ?? 0);
+          return done > 0 || ['in_progress', 'paused', 'completed'].includes(a.status || '');
+        });
+        if (hasExecution) {
+          progressWarning =
+            '\n\nTechnician execution progress exists on this panel. Replacing the schedule may orphan cable completion data.';
+        }
+      } catch {
+        /* non-blocking */
+      }
+    }
+
+    return dialog.confirm({
+      title: 'Replace wiring schedule?',
+      message:
+        `This will replace the current wiring schedule for panel ${targetPanelName || 'this panel'}.${progressWarning}\n\nThe current schedule and Excel file will be archived to uploads/backups/ before overwrite. Continue?`,
+      tone: 'warning',
+      confirmText: 'Replace Upload',
+    });
+  };
 
   const hashFile = async (selectedFile: File) => {
     const buffer = await selectedFile.arrayBuffer();
@@ -372,6 +507,7 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
       const best = result.sheets.find((sheet: any) => sheet.name === result.best_sheet);
       setHeaders(best?.headers || []);
       setSampleRows(best?.sample_rows || []);
+      setDataRowCount(best?.data_row_count ?? best?.sample_rows?.length ?? 0);
       setHeaderRow(best?.header_row ?? 0);
       setStep('sheet');
       if (result.best_sheet && best) {
@@ -384,46 +520,7 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
     }
   };
 
-  const buildAutoMapping = (hdrs: string[], sample: any[][]) => {
-    const auto: Record<string, string> = {};
-    for (const field of SYSTEM_FIELDS) {
-      const match = hdrs.find((header: string) => {
-        const hl = header.toLowerCase();
-        if (field.key === 'sno') return hl === 's.no' || hl === 's.no.' || hl === 'sno' || hl === 'sl.no' || hl === 'sl no';
-        if (field.key === 'ferrule') {
-          if (hl.includes('pnl') || hl.includes('panel')) return false;
-          return hl.includes('ferrule')
-            || hl === 'iec_ferr_a' || (hl.includes('ferr') && !hl.endsWith('_b'))
-            || hl === 'wire no' || hl === 'wire no.' || hl === 'wire number' || hl === 'cable no' || hl === 'cable no.';
-        }
-        if (field.key === 'source') return hl === 'source' || hl === 'from';
-        if (field.key === 'destination') return hl === 'destination' || hl === 'to' || hl === 'dest';
-        if (field.key === 'color') return hl.includes('color') || hl.includes('colour');
-        if (field.key === 'size') return (hl.includes('size') || hl.includes('sq')) && !hl.includes('source');
-        if (field.key === 'length') return hl.includes('length') || hl.includes('len(') || hl.includes('length(');
-        if (field.key === 'ref') return hl === 'ref' || hl.includes('refrnce') || hl.includes('reference');
-        if (field.key === 'remarks') return hl.includes('remark');
-        if (field.key === 'sign') return hl.includes('sign') || hl === 'sign mark';
-        if (field.key === 'rack') return hl === 'rack';
-        if (field.key === 'panel') return (hl.includes('panel') && !hl.includes('layout')) || hl.includes('pnlno') || hl === 'pnl no' || hl === 'pnl_no';
-        if (field.key === 'source_device') return hl.includes('src_dev') || hl === 'dev_tblk_a' || hl === 'dev_a';
-        if (field.key === 'source_terminal') return hl === 'term_a' || hl === 'src_term' || hl === 'terminal_a';
-        if (field.key === 'dest_device') return hl.includes('dst_dev') || hl === 'dev_tblk_b' || hl === 'dev_b';
-        if (field.key === 'dest_terminal') return hl === 'term_b' || hl === 'dst_term' || hl === 'terminal_b';
-        return false;
-      });
-      if (match) auto[field.key] = match;
-    }
-
-    if (!auto['path'] && !auto['source'] && !auto['destination']) {
-      const pathCol = hdrs.find((_header, hidx) => {
-        const sampleVal = String(sample[0]?.[hidx] ?? '');
-        return sampleVal.includes('/') && sampleVal.length > 3;
-      });
-      if (pathCol) auto['path'] = pathCol;
-    }
-    return auto;
-  };
+  const buildAutoMapping = buildAutoWiringMapping;
 
   const selectSheet = (name: string, sheetList = sheets) => {
     setSelSheet(name);
@@ -432,20 +529,24 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
     const rows: any[][] = selected?.sample_rows || [];
     setHeaders(hdrs);
     setSampleRows(rows);
+    setDataRowCount(selected?.data_row_count ?? rows.length);
     setHeaderRow(selected?.header_row ?? 0);
     setMapping(buildAutoMapping(hdrs, rows));
+    setIncludedHeaders(Object.fromEntries(hdrs.map(h => [h, true])));
     setPreview(null);
+    setSearchQuery('');
+    setColumnFilter('all');
     setStep('mapping');
   };
 
   const runPreview = async () => {
-    const missing = SYSTEM_FIELDS.filter(field => field.required && !mapping[field.key]).map(field => field.label.replace(' *', ''));
+    const missing = WIRING_SYSTEM_FIELDS.filter(field => field.required && !effectiveMapping[field.key]).map(field => field.label);
     if (missing.length) {
       setError(`Map required fields: ${missing.join(', ')}`);
       return;
     }
-    const hasDerivation = mapping['source'] || mapping['destination'] || mapping['path'] ||
-      mapping['source_device'] || mapping['dest_device'];
+    const hasDerivation = effectiveMapping['source'] || effectiveMapping['destination'] || effectiveMapping['path'] ||
+      effectiveMapping['source_device'] || effectiveMapping['dest_device'];
     if (!hasDerivation) {
       setError('Map at least Source, Destination, Path, or Source/Dest Device so cables can be located.');
       return;
@@ -458,7 +559,7 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
       const formData = new FormData();
       formData.append('file', file);
       formData.append('sheet_name', selSheet);
-      formData.append('mapping', JSON.stringify(mapping));
+      formData.append('mapping', JSON.stringify(effectiveMapping));
       formData.append('header_row', String(headerRow));
       const result = await uploadApi.previewMapped(projectCode, formData);
       if (result.cable_count === 0) {
@@ -466,19 +567,26 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
         return;
       }
       if (result.validation.error_count === 0) {
+        if (duplicateBlocked) return;
+        if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
+          const ok = await confirmReplaceSchedule();
+          if (!ok) return;
+        }
         setPreview(result);
         setProgress(0);
         const uploadData = new FormData();
         uploadData.append('file', file);
         uploadData.append('sheet_name', selSheet);
-        uploadData.append('mapping', JSON.stringify(mapping));
+        uploadData.append('mapping', JSON.stringify(effectiveMapping));
         uploadData.append('header_row', String(headerRow));
-        const uploaded = await uploadApi.uploadMapped(projectCode, uploadData, setProgress);
-        onUploaded(uploaded.id);
+        const uploaded = await uploadApi.uploadMapped(projectCode, appendTargetFrame(uploadData), setProgress);
+        finishUploadPopulated(uploaded.id);
         return;
       }
       setPreview(result);
-      setStep('validate');
+      if (result.validation.error_count > 0) {
+        setColumnFilter('all');
+      }
     } catch (apiError: any) {
       setError(apiError?.response?.data?.message || 'Preview failed');
     } finally {
@@ -487,7 +595,11 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file || duplicateBlocked) return;
+    if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
+      const ok = await confirmReplaceSchedule();
+      if (!ok) return;
+    }
 
     setUploading(true);
     setError('');
@@ -496,10 +608,10 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
       const formData = new FormData();
       formData.append('file', file);
       formData.append('sheet_name', selSheet);
-      formData.append('mapping', JSON.stringify(mapping));
+      formData.append('mapping', JSON.stringify(effectiveMapping));
       formData.append('header_row', String(headerRow));
-      const result = await uploadApi.uploadMapped(projectCode, formData, setProgress);
-      onUploaded(result.id);
+      const result = await uploadApi.uploadMapped(projectCode, appendTargetFrame(formData), setProgress);
+      await finishUploadPopulated(result.id);
     } catch (apiError: any) {
       setError(apiError?.response?.data?.message || 'Upload failed');
     } finally {
@@ -507,329 +619,558 @@ export function UploadFrameModal({ projectCode, projectName, onClose, onUploaded
     }
   };
 
-  const requiredDone = SYSTEM_FIELDS.filter(field => field.required).every(field => !!mapping[field.key]);
+  const activeHeaders = useMemo(
+    () => headers.filter(h => includedHeaders[h] !== false),
+    [headers, includedHeaders],
+  );
+  const effectiveMapping = useMemo(
+    () => Object.fromEntries(Object.entries(mapping).filter(([, header]) => includedHeaders[header] !== false)),
+    [mapping, includedHeaders],
+  );
+  const requiredDone = WIRING_SYSTEM_FIELDS.filter(field => field.required).every(field => !!effectiveMapping[field.key]);
+  const includedCount = activeHeaders.length;
+  const mappedCount = Object.values(effectiveMapping).filter(Boolean).length;
+
+  const toggleHeaderIncluded = (header: string, nextChecked: boolean) => {
+    setIncludedHeaders(prev => ({ ...prev, [header]: nextChecked }));
+    if (!nextChecked) {
+      setMapping(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(key => {
+          if (next[key] === header) delete next[key];
+        });
+        return next;
+      });
+    }
+    setPreview(null);
+    setError('');
+  };
+
+  const toggleAllHeaders = (checked: boolean) => {
+    setIncludedHeaders(Object.fromEntries(headers.map(h => [h, checked])));
+    if (!checked) {
+      setMapping({});
+    }
+    setPreview(null);
+    setError('');
+  };
+
+  const requiredHeaderCount = useMemo(() => {
+    return headers.filter(h => {
+      const fk = Object.keys(effectiveMapping).find(k => effectiveMapping[k] === h);
+      const field = fk ? WIRING_SYSTEM_FIELDS.find(f => f.key === fk) : null;
+      return field?.required;
+    }).length;
+  }, [headers, effectiveMapping]);
+
+  const unselectedCount = headers.length - includedCount;
+
+  const visibleColumnCount = useMemo(() => {
+    return headers.filter(header => {
+      const included = includedHeaders[header] !== false;
+      const fk = fieldKeyForHeader(mapping, header);
+      const field = fk ? WIRING_SYSTEM_FIELDS.find(f => f.key === fk) : null;
+      switch (columnFilter) {
+        case 'selected':
+          return included;
+        case 'unselected':
+          return !included;
+        case 'required':
+          return !!field?.required;
+        default:
+          return true;
+      }
+    }).length;
+  }, [headers, includedHeaders, mapping, columnFilter]);
+  const displayRowCount = preview?.cable_count ?? dataRowCount;
+
+  const wiringGridProps = {
+    headers,
+    rows: sampleRows,
+    mapping,
+    includedHeaders,
+    onMappingChange: (m: Record<string, string>) => { setMapping(m); setPreview(null); setError(''); },
+    onToggleHeader: toggleHeaderIncluded,
+    onToggleAll: toggleAllHeaders,
+    searchQuery,
+    columnFilter,
+    preview,
+    columnWidths,
+    onColumnResize: handleColumnResize,
+    frozenColumns: 1 as const,
+  };
+
+  const inMappingUpload = (mode === 'empty' || mode === 'replacing') && step === 'mapping';
+  const showViewer = mode === 'populated' && step === 'file';
+
+  const modalTitle = showViewer
+    ? 'View Wiring Schedule'
+    : mode === 'replacing' && step === 'file'
+      ? 'Replace Wiring Schedule'
+      : inMappingUpload && fullViewOpen
+        ? 'Wiring schedule — full view'
+        : step === 'mapping'
+          ? 'Excel Wiring Upload'
+          : 'Wiring Upload';
+
+  const handleModalClose = () => {
+    if (inMappingUpload && fullViewOpen) {
+      setFullViewOpen(false);
+      return;
+    }
+    onClose();
+  };
+
+  const startReplaceUpload = async () => {
+    if (duplicateBlocked) return;
+    if (!(await confirmReplaceSchedule())) return;
+    setMode('replacing');
+    setStep('file');
+    setFile(null);
+    setError('');
+    setPreview(null);
+  };
+
+  const fullViewBar = (
+    <>
+      <div className="wu-fullview-bar">
+        <div className="wu-chips" role="list" aria-label="Worksheet summary">
+          <span className="wu-chip wu-chip--sheet" role="listitem">{selSheet}</span>
+          <span className="wu-chip" role="listitem">{displayRowCount} rows</span>
+          <span className="wu-chip" role="listitem">{headers.length} columns</span>
+          <span className="wu-chip wu-chip--accent" role="listitem">{includedCount} selected</span>
+          <span className="wu-chip wu-chip--accent" role="listitem">{mappedCount} mapped</span>
+        </div>
+        <div className="wu-fullview-actions">
+          <div className="wu-search">
+            <Search size={15} strokeWidth={1.75} className="wu-search-icon" aria-hidden />
+            <input
+              type="search"
+              className="wu-input wu-input--compact"
+              placeholder="Search rows…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              aria-label="Search worksheet rows"
+            />
+          </div>
+          <button
+            type="button"
+            className="btn-secondary wu-expand-btn wu-expand-btn--compact"
+            onClick={() => setFullViewOpen(false)}
+          >
+            <span>Exit full view</span>
+          </button>
+        </div>
+      </div>
+
+      {preview && (
+        <div className={`wu-banner wu-banner--compact ${preview.validation.error_count ? 'wu-banner--warn' : 'wu-banner--ok'}`} role="status">
+          <div className="wu-banner-icon">
+            {preview.validation.error_count
+              ? <TriangleAlert size={16} strokeWidth={1.75} />
+              : <CheckCircle size={16} strokeWidth={1.75} />}
+          </div>
+          <div className="wu-banner-body">
+            <p className="wu-banner-title">
+              {preview.cable_count} cable{preview.cable_count === 1 ? '' : 's'} parsed
+              {preview.validation.error_count
+                ? ` · ${preview.validation.error_count} issue(s) highlighted`
+                : ' · validated'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <WiringScheduleMappingGrid {...wiringGridProps} variant="fullview" />
+    </>
+  );
 
   return (
+    <>
     <Modal
-      title="Upload Wiring Schedule"
-      onClose={onClose}
-      size={step === 'mapping' || step === 'validate' ? 'xl' : 'lg'}
-      footer={step === 'file' ? (
-        <>
+      title={modalTitle}
+      onClose={handleModalClose}
+      size={
+        showViewer || inMappingUpload
+          ? 'fullscreen'
+          : 'lg'
+      }
+      bodyClassName={
+        (showViewer && viewBlob && !viewLoading)
+        || inMappingUpload
+          ? 'modal-body-flush'
+          : undefined
+      }
+      closeOnBackdrop={
+        !fullViewOpen || !inMappingUpload
+      }
+      footer={
+        mode === 'loading' ? (
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
-          <button
-            onClick={readHeaders}
-            disabled={!file || uploading || dupInfo?.kind === 'same' && dupChoice !== 'replace'}
-            className="btn-primary"
-            type="button"
-          >
-            <span>{uploading ? 'Reading...' : 'Next'}</span>
-            {!uploading && <ArrowRight size={16} />}
-          </button>
-        </>
-      ) : step === 'mapping' ? (
-        <>
-          <button onClick={() => setStep('sheet')} className="btn-secondary" type="button" disabled={uploading}>
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </button>
-          <button onClick={onClose} className="btn-secondary" type="button" disabled={uploading}>Cancel</button>
-          <button onClick={runPreview} disabled={!requiredDone || uploading} className="btn-primary" type="button">
-            {uploading ? 'Parsing…' : 'Review & Import'}
-          </button>
-        </>
-      ) : step === 'validate' ? (
-        <>
-          <button onClick={() => setStep('mapping')} className="btn-secondary" type="button" disabled={uploading}>
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </button>
-          <button onClick={onClose} className="btn-secondary" type="button" disabled={uploading}>Cancel</button>
-          <button
-            onClick={handleImport}
-            disabled={uploading || !preview || preview.cable_count === 0}
-            className="btn-primary"
-            type="button"
-          >
-            {uploading
-              ? `Uploading… ${progress}%`
-              : preview?.validation.error_count
-                ? `Import anyway (${preview.validation.error_count} issue${preview.validation.error_count === 1 ? '' : 's'})`
-                : `Import ${preview?.cable_count ?? 0} cables`}
-          </button>
-        </>
-      ) : undefined}
-    >
-      {step === 'file' && (
-        <div>
-          <p className="text-[13px] text-slate-600 leading-relaxed mb-4">
-            Upload a wiring schedule for{' '}
-            <span className="font-semibold text-slate-800">{projectName || projectCode}</span>
-            {projectName && <span className="font-mono text-[12px] text-slate-400"> · {projectCode}</span>}
-          </p>
-          <div
-            onClick={() => fileRef.current?.click()}
-            onDragOver={event => event.preventDefault()}
-            onDrop={event => { event.preventDefault(); const selectedFile = event.dataTransfer.files[0]; if (selectedFile) onFileSelect(selectedFile); }}
-            className="drawing-dropzone"
-          >
-            <div className="drawing-dropzone-icon"><FileSpreadsheet size={32} /></div>
-            <div className={`drawing-dropzone-copy ${file ? 'has-file' : ''}`}>
-              {file ? file.name : 'Click or drag-drop an Excel file (.xlsx)'}
-            </div>
-            <div className="drawing-meta">.xlsx, .xls - max 50MB</div>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="drawing-hidden-input" aria-label="Select wiring schedule Excel file" onChange={event => { const selectedFile = event.target.files?.[0]; if (selectedFile) onFileSelect(selectedFile); }} />
-          </div>
-
-          {dupInfo?.kind === 'same' && dupChoice === null && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <div className="flex items-start gap-2 mb-3">
-                <TriangleAlert size={16} className="shrink-0 text-amber-600 mt-0.5" />
-                <div>
-                  <div className="text-[13px] font-semibold text-amber-800">This file already exists in this project</div>
-                  <div className="text-[12px] text-amber-700 mt-0.5">
-                    "{dupInfo.file_name}" was uploaded on {new Date(dupInfo.uploaded_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setDupChoice('replace')}
-                  className="flex-1 h-10 rounded-lg bg-blue-600 text-white text-[13px] font-semibold hover:bg-blue-700 transition-colors">
-                  Re-upload (create new version)
-                </button>
-                <button type="button" onClick={() => setDupChoice('keep')}
-                  className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {dupInfo?.kind === 'same' && dupChoice === 'replace' && (
-            <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[13px] text-blue-700 flex items-center gap-2">
-              <TriangleAlert size={16} className="shrink-0" />
-              Will create a new version alongside the existing one — click Next to continue.
-              <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-slate-500 hover:underline">Change</button>
-            </div>
-          )}
-
-          {dupInfo?.kind === 'other' && (
-            <div className="assignment-warning mt-3 flex items-center gap-1">
-              <TriangleAlert size={16} /> This file was also used in project <strong className="ml-1">{dupInfo.project_code}</strong> — you can still upload it here.
-            </div>
-          )}
-        </div>
-      )}
-
-      {step === 'sheet' && (
-        <div>
-          <div className="review-sub mb-4">Select the sheet containing your wiring schedule. Auto-scored best match is highlighted.</div>
-          <div className="stack-grid-sm">
-            {sheets.map(sheet => (
-              <button key={sheet.name} onClick={() => selectSheet(sheet.name)} className={`frame-sheet-item ${sheet.name === bestSheet ? 'is-best' : ''}`} type="button">
-                <div>
-                  <span className="frame-title">{sheet.name}</span>
-                  {sheet.name === bestSheet && <span className="frame-best-mark flex items-center gap-1"><Star size={12} /> Best match</span>}
-                </div>
-                <div className="frame-sub">Score: {sheet.score} · {sheet.headers.length} cols</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === 'mapping' && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-[13px] text-slate-600">
-              Select a system field under each column. Dark green = required mapped. Blue = optional mapped.
-            </p>
-            {sampleRows.length > 0 && (
-              <span className="text-[11px] text-slate-400 shrink-0 font-medium">{sampleRows.length} preview rows</span>
+        ) : showViewer && !viewLoading && viewBlob ? (
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => void startReplaceUpload()}
+              disabled={duplicateBlocked}
+              title={duplicateBlocked ? duplicateBlockMessage : undefined}
+            >
+              <Upload size={16} strokeWidth={1.5} />
+              <span>Replace Upload</span>
+            </button>
+            <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+          </>
+        ) : (mode === 'empty' || mode === 'replacing') && step === 'file' ? (
+          <>
+            {mode === 'replacing' && (
+              <button type="button" className="btn-secondary" onClick={() => { setMode('populated'); setStep('file'); }}>Cancel replace</button>
             )}
+            <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
+            <button
+              onClick={readHeaders}
+              disabled={!file || uploading || duplicateBlocked || (dupInfo?.kind === 'same' && dupChoice !== 'replace')}
+              className="btn-primary"
+              type="button"
+            >
+              <span>{uploading ? 'Reading...' : 'Next'}</span>
+              {!uploading && <ArrowRight size={16} />}
+            </button>
+          </>
+        ) : step === 'mapping' && !fullViewOpen ? (
+          <>
+            <button onClick={() => { setPreview(null); setFullViewOpen(false); setStep('sheet'); }} className="btn-secondary" type="button" disabled={uploading}>
+              <ArrowLeft size={16} />
+              <span>Back</span>
+            </button>
+            <button onClick={onClose} className="btn-secondary" type="button" disabled={uploading}>Cancel</button>
+            {preview ? (
+              <button
+                onClick={handleImport}
+                disabled={uploading || preview.cable_count === 0 || duplicateBlocked}
+                className="btn-primary"
+                type="button"
+              >
+                {uploading
+                  ? `Importing… ${progress}%`
+                  : preview.validation.error_count
+                    ? `Import anyway (${preview.validation.error_count} issue${preview.validation.error_count === 1 ? '' : 's'})`
+                    : `Import ${preview.cable_count} cables`}
+              </button>
+            ) : (
+              <button onClick={runPreview} disabled={!requiredDone || uploading || duplicateBlocked} className="btn-primary" type="button">
+                {uploading ? 'Validating…' : 'Validate & Import'}
+              </button>
+            )}
+          </>
+        ) : undefined
+      }
+    >
+      {mode === 'loading' ? (
+        <div className="flex items-center justify-center py-12 text-slate-500 text-[13px]">
+          Checking for existing wiring schedule…
+        </div>
+      ) : !targetFrameId && !targetPanelName ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500 text-[13px]">
+          <TriangleAlert size={24} className="text-amber-500" />
+          <p>Select a panel before uploading a wiring schedule.</p>
+        </div>
+      ) : showViewer ? (
+        <div className="panel-file-popup flex flex-col gap-4 min-h-0">
+          {(targetPanelName && projectName) && (
+            <div className="px-4 pt-4">
+              <UploadTargetHeader
+                projectName={projectName}
+                projectCode={projectCode}
+                panelName={targetPanelName}
+                panelId={targetFrameId}
+                kind="wiring"
+              />
+            </div>
+          )}
+          {!duplicateBlocked && metadata && (
+            <div className="px-4"><PanelFileMetadataBar metadata={metadata} /></div>
+          )}
+          {duplicateBlocked && (
+            <div className="px-4">
+              <DuplicatePanelWarning
+                panels={panelListForWarning}
+                selectedPanelId={targetFrameId}
+                onEditPanel={onEditPanel}
+                onSelectPanel={onSelectPanel}
+              />
+            </div>
+          )}
+          {!duplicateBlocked && (
+          <FileViewer
+            blob={viewBlob}
+            fileType="excel"
+            panelLabel={
+              targetPanelName && targetFrameId
+                ? `${targetPanelName} · ID: ${targetFrameId}`
+                : targetPanelName || projectName || projectCode
+            }
+            fileName={metadata?.fileName}
+            sheetName={sheetName || metadata?.sheetName}
+            loading={viewLoading}
+            error={viewLoadError}
+            onRetry={loadViewBlob}
+            className="file-viewer--modal"
+          />
+          )}
+        </div>
+      ) : step === 'mapping' && !fullViewOpen ? (
+        <div className="wu-workspace">
+          {(targetPanelName && projectName) && (
+            <div className="wu-target-wrap">
+              <UploadTargetHeader
+                projectName={projectName}
+                projectCode={projectCode}
+                panelName={targetPanelName}
+                panelId={targetFrameId}
+                kind="wiring"
+              />
+            </div>
+          )}
+          <DuplicatePanelWarning
+            panels={panelListForWarning}
+            selectedPanelId={targetFrameId}
+            onEditPanel={onEditPanel}
+            onSelectPanel={onSelectPanel}
+          />
+
+          <div className="wu-toolbar">
+            <div className="wu-toolbar-controls">
+              <div className="wu-search">
+                <Search size={15} strokeWidth={1.75} className="wu-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="wu-input"
+                  placeholder="Search worksheet…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  aria-label="Search worksheet rows"
+                />
+              </div>
+              {/* Column filter hidden from UI — re-enable by removing wu-filter--hidden */}
+              <div className="wu-filter wu-filter--hidden" aria-hidden>
+                <select
+                  className="wu-select"
+                  value={columnFilter}
+                  onChange={e => setColumnFilter(e.target.value as 'all' | 'selected' | 'required' | 'unselected')}
+                  aria-label="Filter columns"
+                  tabIndex={-1}
+                >
+                  <option value="all">All columns</option>
+                  <option value="selected">Selected columns</option>
+                  <option value="required">Required columns</option>
+                  <option value="unselected" disabled={unselectedCount === 0}>Unselected columns</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary wu-expand-btn"
+                onClick={() => setFullViewOpen(true)}
+                title="Open full-screen preview"
+                aria-label="Open full-screen wiring schedule preview"
+              >
+                <Maximize size={16} strokeWidth={1.75} aria-hidden />
+                <span>Full view</span>
+              </button>
+            </div>
+            <div className="wu-chips" role="list" aria-label="Worksheet summary">
+              <span className="wu-chip wu-chip--sheet" role="listitem">{selSheet}</span>
+              <span className="wu-chip" role="listitem">{displayRowCount} rows</span>
+              <span className="wu-chip" role="listitem">{headers.length} columns</span>
+              <span className="wu-chip wu-chip--accent" role="listitem">{includedCount} selected</span>
+              <span className="wu-chip wu-chip--accent" role="listitem">{mappedCount} mapped</span>
+              {requiredHeaderCount > 0 && (
+                <span className="wu-chip wu-chip--required" role="listitem">{requiredHeaderCount} required</span>
+              )}
+            </div>
           </div>
+
+          {headers.length > 0 && visibleColumnCount === 0 && (
+            <div className="wu-hint" role="status">
+              <TriangleAlert size={14} strokeWidth={1.75} aria-hidden />
+              No columns match the current filter — try &ldquo;All columns&rdquo; or adjust selection.
+            </div>
+          )}
+
+          {preview && (
+            <div className={`wu-banner ${preview.validation.error_count ? 'wu-banner--warn' : 'wu-banner--ok'}`} role="status">
+              <div className="wu-banner-icon">
+                {preview.validation.error_count
+                  ? <TriangleAlert size={18} strokeWidth={1.75} />
+                  : <CheckCircle size={18} strokeWidth={1.75} />}
+              </div>
+              <div className="wu-banner-body">
+                <p className="wu-banner-title">
+                  {preview.cable_count} cable{preview.cable_count === 1 ? '' : 's'} parsed from &ldquo;{selSheet}&rdquo;
+                </p>
+                <p className="wu-banner-sub">
+                  {preview.mapped_columns} columns mapped
+                  {preview.unmatched_headers.length > 0 && ` · ${preview.unmatched_headers.length} Excel column(s) skipped`}
+                  {preview.validation.error_count
+                    ? ` · ${preview.validation.error_count} field issue(s) in ${Object.keys(preview.validation.issues).length} row(s) — highlighted below`
+                    : ' · all rows validated — ready to import'}
+                </p>
+              </div>
+              {preview.validation.error_count > 0 && (
+                <button
+                  type="button"
+                  className="wu-banner-action"
+                  onClick={() => { setPreview(null); setColumnFilter('all'); }}
+                >
+                  Re-map columns
+                </button>
+              )}
+            </div>
+          )}
 
           {headers.length > 0 && (
-            <div className="mapping-table-wrap">
-              <table className="mapping-table">
-                <thead>
-                  <tr className="mapping-col-header-row">
-                    <th className="th-idx">#</th>
-                    {headers.map(h => {
-                      const fk = Object.keys(mapping).find(k => mapping[k] === h);
-                      const f = SYSTEM_FIELDS.find(sf => sf.key === fk);
-                      return (
-                        <th key={h} className={f?.required ? 'col-required' : f ? 'col-mapped' : ''}>
-                          <span className="block truncate max-w-[140px]" title={h}>{h}</span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                  <tr className="mapping-field-header-row">
-                    <th className="th-idx">→</th>
-                    {headers.map(h => {
-                      const fk = Object.keys(mapping).find(k => mapping[k] === h);
-                      const f = SYSTEM_FIELDS.find(sf => sf.key === fk);
-                      return (
-                        <th key={h}>
-                          <select
-                            className={`mapping-select${f?.required ? ' sel-required' : f ? ' sel-mapped' : ''}`}
-                            value={fk || ''}
-                            onChange={e => {
-                              const newKey = e.target.value;
-                              setMapping(prev => {
-                                const next = { ...prev };
-                                for (const k of Object.keys(next)) { if (next[k] === h) delete next[k]; }
-                                if (newKey) next[newKey] = h;
-                                return next;
-                              });
-                            }}
-                            aria-label={`Map column "${h}"`}
-                          >
-                            <option value="">— skip —</option>
-                            {SYSTEM_FIELDS.map(sf => (
-                              <option
-                                key={sf.key}
-                                value={sf.key}
-                                disabled={!!mapping[sf.key] && mapping[sf.key] !== h}
-                              >
-                                {sf.label.replace(' *', '')}{sf.required ? ' ★' : ''}
-                              </option>
-                            ))}
-                          </select>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sampleRows.map((row, ri) => (
-                    <tr key={ri}>
-                      <td className="mapping-td td-idx">{ri + 1}</td>
-                      {headers.map((h, ci) => {
-                        const fk = Object.keys(mapping).find(k => mapping[k] === h);
-                        const mono = fk && ['ferrule','source','destination','path','source_device','dest_device','source_terminal','dest_terminal'].includes(fk);
-                        const val = String(row[ci] ?? '');
-                        return (
-                          <td key={ci} className={`mapping-td${mono ? ' td-mono' : ''}`} title={val || undefined}>
-                            {val || <span className="text-slate-300 select-none">—</span>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <WiringScheduleMappingGrid {...wiringGridProps} />
           )}
 
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {SYSTEM_FIELDS.filter(f => f.required).map(f => (
-              <span key={f.key} className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${mapping[f.key] ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                {mapping[f.key] ? <CheckCircle size={12} /> : '!'}
-                {f.label.replace(' *', '')}
-                {mapping[f.key] ? <span className="font-normal opacity-75">← {mapping[f.key]}</span> : <span className="font-normal">(not mapped)</span>}
+          <div className="wu-legends" role="list" aria-label="Field mapping status">
+            {WIRING_SYSTEM_FIELDS.filter(f => f.required).map(f => (
+              <span
+                key={f.key}
+                role="listitem"
+                className={`wu-chip ${effectiveMapping[f.key] ? 'wu-chip--ok' : 'wu-chip--danger'}`}
+              >
+                {effectiveMapping[f.key] ? <CheckCircle size={12} strokeWidth={2} /> : <TriangleAlert size={12} strokeWidth={2} />}
+                {f.label}
+                {effectiveMapping[f.key]
+                  ? <span className="wu-chip-meta">← {effectiveMapping[f.key]}</span>
+                  : <span className="wu-chip-meta">(required)</span>}
               </span>
             ))}
-            {!mapping['source'] && !mapping['destination'] && !mapping['path'] && !mapping['source_device'] && !mapping['dest_device'] && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                ! Map at least one of: Source, Destination, Path, or Source Device
+            {!effectiveMapping.source && !effectiveMapping.destination && !effectiveMapping.path && !effectiveMapping.source_device && !effectiveMapping.dest_device && (
+              <span className="wu-chip wu-chip--warn" role="listitem">
+                <TriangleAlert size={12} strokeWidth={2} />
+                Map Source, Destination, Path, or Source Device
               </span>
             )}
           </div>
 
           {uploading && (
-            <div className="flex flex-col gap-1.5 pt-2">
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width] duration-200"
-                  style={{ width: `${progress}%` }}
-                />
+            <div className="wu-progress">
+              <div className="wu-progress-track">
+                <div className="wu-progress-fill" style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-[11.5px] text-slate-500 tabular-nums">{progress}% uploaded</span>
+              <span className="wu-progress-label">{progress}% uploaded</span>
             </div>
           )}
-        </div>
-      )}
 
-      {step === 'validate' && preview && (
+          {error && <div className="form-error wu-error">{error}</div>}
+        </div>
+      ) : step === 'mapping' && fullViewOpen ? (
+        <div className="wu-workspace wu-fullview">
+          {fullViewBar}
+        </div>
+      ) : (
         <div className="flex flex-col gap-4">
-          <div className={`rounded-xl border p-4 ${preview.validation.error_count ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
-            <div className="flex items-start gap-2">
-              {preview.validation.error_count
-                ? <TriangleAlert size={18} className="shrink-0 text-amber-600 mt-0.5" />
-                : <CheckCircle size={18} className="shrink-0 text-green-600 mt-0.5" />}
-              <div>
-                <div className={`text-[14px] font-bold ${preview.validation.error_count ? 'text-amber-900' : 'text-green-900'}`}>
-                  {preview.cable_count} cable{preview.cable_count === 1 ? '' : 's'} parsed from “{selSheet}”
-                </div>
-                <div className={`text-[12px] mt-1 ${preview.validation.error_count ? 'text-amber-800' : 'text-green-800'}`}>
-                  {preview.mapped_columns} columns mapped
-                  {preview.unmatched_headers.length > 0 && ` · ${preview.unmatched_headers.length} Excel column(s) kept unmapped`}
-                  {preview.validation.error_count
-                    ? ` · ${preview.validation.error_count} field issue(s) across ${Object.keys(preview.validation.issues).length} row(s)`
-                    : ' · all rows have ferrule, source, and destination'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {preview.validation.error_count > 0 && (
-            <div className="rounded-xl border border-amber-100 bg-white overflow-hidden">
-              <div className="px-3 py-2 text-[12px] font-semibold text-amber-800 bg-amber-50 border-b border-amber-100">
-                Rows with missing fields (first 10)
-              </div>
-              <ul className="divide-y divide-slate-100 max-h-[160px] overflow-y-auto text-[12px]">
-                {Object.entries(preview.validation.issues).slice(0, 10).map(([rowIdx, fields]) => (
-                  <li key={rowIdx} className="px-3 py-2 text-slate-700">
-                    Row {Number(rowIdx) + 1}: {Object.entries(fields).map(([f, msg]) => `${f} — ${msg}`).join('; ')}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {targetPanelName && projectName && (
+            <UploadTargetHeader
+              projectName={projectName}
+              projectCode={projectCode}
+              panelName={targetPanelName}
+              panelId={targetFrameId}
+              kind="wiring"
+            />
           )}
+          <DuplicatePanelWarning
+            panels={panelListForWarning}
+            selectedPanelId={targetFrameId}
+            onEditPanel={onEditPanel}
+            onSelectPanel={onSelectPanel}
+          />
 
-          {preview.sample_cables.length > 0 && (
+          {step === 'file' && (
             <div>
-              <div className="text-[12px] font-semibold text-slate-600 mb-2">Sample parsed cables</div>
-              <div className="mapping-table-wrap">
-                <table className="mapping-table text-[12px]">
-                  <thead>
-                    <tr>
-                      {['ferrule', 'source', 'destination', 'path', 'color', 'size', 'length'].map(col => (
-                        <th key={col} className="capitalize">{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.sample_cables.map((c, i) => (
-                      <tr key={i}>
-                        {['ferrule', 'source', 'destination', 'path', 'color', 'size', 'length'].map(col => (
-                          <td key={col} className="mapping-td td-mono">{c[col] || '—'}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {!targetPanelName && (
+              <p className="text-[13px] text-slate-600 leading-relaxed mb-4">
+                Upload a wiring schedule for{' '}
+                <span className="font-semibold text-slate-800">{projectName || projectCode}</span>
+                {projectName && <span className="font-mono text-[12px] text-slate-400"> · {projectCode}</span>}
+              </p>
+              )}
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDragOver={event => event.preventDefault()}
+                onDrop={event => { event.preventDefault(); const selectedFile = event.dataTransfer.files[0]; if (selectedFile) onFileSelect(selectedFile); }}
+                className="drawing-dropzone"
+              >
+                <div className="drawing-dropzone-icon"><FileSpreadsheet size={32} /></div>
+                <div className={`drawing-dropzone-copy ${file ? 'has-file' : ''}`}>
+                  {file ? file.name : 'Click or drag-drop an Excel file (.xlsx)'}
+                </div>
+                <div className="drawing-meta">.xlsx, .xls - max 50MB</div>
+                <input ref={fileRef} type="file" accept=".xlsx,.xls" className="drawing-hidden-input" aria-label="Select wiring schedule Excel file" onChange={event => { const selectedFile = event.target.files?.[0]; if (selectedFile) onFileSelect(selectedFile); }} />
+              </div>
+
+              {dupInfo?.kind === 'same' && dupChoice === null && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <TriangleAlert size={16} className="shrink-0 text-amber-600 mt-0.5" />
+                    <div>
+                      <div className="text-[13px] font-semibold text-amber-800">This file already exists in this project</div>
+                      <div className="text-[12px] text-amber-700 mt-0.5">
+                        &ldquo;{dupInfo.file_name}&rdquo; was uploaded on {new Date(dupInfo.uploaded_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setDupChoice('replace')}
+                      className="flex-1 h-10 rounded-lg bg-blue-600 text-white text-[13px] font-semibold hover:bg-blue-700 transition-colors">
+                      Re-upload (create new version)
+                    </button>
+                    <button type="button" onClick={() => setDupChoice('keep')}
+                      className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {dupInfo?.kind === 'same' && dupChoice === 'replace' && (
+                <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[13px] text-blue-700 flex items-center gap-2">
+                  <TriangleAlert size={16} className="shrink-0" />
+                  Will create a new version alongside the existing one — click Next to continue.
+                  <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-slate-500 hover:underline">Change</button>
+                </div>
+              )}
+
+              {dupInfo?.kind === 'other' && (
+                <div className="assignment-warning mt-3 flex items-center gap-1">
+                  <TriangleAlert size={16} /> This file was also used in project <strong className="ml-1">{dupInfo.project_code}</strong> — you can still upload it here.
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'sheet' && (
+            <div>
+              <div className="review-sub mb-4">Select the sheet containing your wiring schedule. Auto-scored best match is highlighted.</div>
+              <div className="stack-grid-sm">
+                {sheets.map(sheet => (
+                  <button key={sheet.name} onClick={() => selectSheet(sheet.name)} className={`frame-sheet-item ${sheet.name === bestSheet ? 'is-best' : ''}`} type="button">
+                    <div>
+                      <span className="frame-title">{sheet.name}</span>
+                      {sheet.name === bestSheet && <span className="frame-best-mark flex items-center gap-1"><Star size={12} /> Best match</span>}
+                    </div>
+                    <div className="frame-sub">Score: {sheet.score} · {sheet.headers.length} cols</div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {uploading && (
-            <div className="flex flex-col gap-1.5 pt-2">
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width] duration-200"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-[11.5px] text-slate-500 tabular-nums">{progress}% uploaded</span>
-            </div>
-          )}
+          {error && <div className="form-error mt-2">{error}</div>}
         </div>
       )}
-
-      {error && <div className="form-error mt-2">{error}</div>}
     </Modal>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ConflictException, ForbiddenException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -112,6 +112,7 @@ export class UsersService {
   }
 
   async update(id: number, dto: Partial<{
+    username: string;
     full_name: string; employee_id: string; role: UserRole;
     whatsapp_number: string; is_active: boolean; password: string;
   }>, caller: User) {
@@ -122,6 +123,13 @@ export class UsersService {
 
     const sanitized = sanitizeUpdateDto(caller, u, dto as Record<string, unknown>);
     const data: any = {};
+    if (sanitized.username !== undefined) {
+      const username = String(sanitized.username).trim();
+      if (!username) throw new BadRequestException('Username is required');
+      const taken = await this.prisma.users.findUnique({ where: { username } });
+      if (taken && taken.id !== id) throw new ConflictException('Username already exists');
+      data.username = username;
+    }
     if (sanitized.full_name !== undefined)       data.full_name = sanitized.full_name;
     if (sanitized.employee_id !== undefined)     data.employee_id = sanitized.employee_id;
     if (sanitized.role !== undefined)              data.role = sanitized.role;

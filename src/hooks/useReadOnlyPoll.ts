@@ -25,9 +25,11 @@ export function useReadOnlyPoll(fetchFn: () => void | Promise<void>, intervalMs 
     const id = setInterval(tick, intervalMs);
     const onVis = () => { if (!document.hidden) void tick(); };
     document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onVis);
     };
   }, [intervalMs]);
 }

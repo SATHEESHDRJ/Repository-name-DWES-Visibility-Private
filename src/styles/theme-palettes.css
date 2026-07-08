@@ -27,6 +27,8 @@
   --t-header-user-hover-shadow:  0 4px 12px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   --t-header-user-text:          #0F172A;
   --t-header-user-muted:         #64748B;
+  --t-header-pill-text:          var(--t-header-user-text);
+  --t-header-pill-muted:         var(--t-header-user-muted);
   --t-header-divider:       rgba(255, 255, 255, 0.12);
   --t-header-nav-active-bg: rgba(56, 189, 248, 0.14);
   --t-header-logout-bg:          rgba(239, 68, 68, 0.10);
@@ -35,8 +37,8 @@
   --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.18);
   --t-header-logout-hover-icon:    #FECACA;
   --t-card:          #FFFFFF;
-  --t-card-border:   rgba(15, 23, 42, 0.08);
-  --t-card-shadow:   0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --t-card-border:   #CBD5E1;
+  --t-card-shadow:   0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 14px rgba(15, 23, 42, 0.06);
   --t-elev:          #FFFFFF;
   --t-elev-shadow:   0 12px 32px rgba(15, 23, 42, 0.12);
   --t-surface:       var(--t-card);
@@ -51,8 +53,8 @@
   --t-border:        rgba(15, 23, 42, 0.08);
   --t-border-strong: rgba(15, 23, 42, 0.14);
   --t-text:          #0F172A;
-  --t-muted:         #475569;
-  --t-faint:         #64748B;
+  --t-muted:         #334155;
+  --t-faint:         #475569;
   --t-accent:        #2563EB;
   --t-accent-strong: #1D4ED8;
   --t-accent-bright: #3B82F6;

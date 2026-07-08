@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Res, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Res, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { FramesService } from './frames.service';
@@ -20,11 +20,24 @@ export class FramesController {
   @Get('frames')
   findAll(@Param('code') code: string) { return this.svc.findAll(code); }
 
+  @Post('frames')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor')
+  createPanel(
+    @Param('code') code: string,
+    @Body() body: {
+      name: string;
+      type?: string;
+      voltage_level: string;
+      system_type?: string;
+    },
+  ) { return this.svc.createPanel(code, body); }
+
   @Get('frames/:id')
   findOne(@Param('code') code: string, @Param('id') id: string) { return this.svc.findOne(code, id); }
 
-  /** Read-only complete paper-style wiring schedule PDF (all cable rows + optional GA appendix).
-   *  Open to every role; technicians only for projects they are assigned to. */
+  /** Panel Project Completion Report PDF (executive single-page; GA drawing is separate).
+   *  Technicians only when assigned to the project. */
   @Get('frames/:id/report-pdf')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
@@ -38,13 +51,32 @@ export class FramesController {
       res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
       return;
     }
-    const { buffer, filename } = await this.wiringDoc.generateFrameDocument(
+    const { buffer, filename } = await this.wiringDoc.generatePanelCompletionReport(
       code,
       id,
       user.full_name || user.username || '',
     );
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"` });
     res.end(buffer);
+  }
+
+  /** Live panel completion report data for on-screen executive preview. */
+  @Get('frames/:id/completion-report')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
+  async frameCompletionReport(
+    @Param('code') code: string,
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    if (user.role === 'wiring_technician' && !(await this.svc.technicianAssignedToProject(code, user.id))) {
+      throw new ForbiddenException('You are not assigned to this project');
+    }
+    return this.wiringDoc.getPanelCompletionReportData(
+      code,
+      id,
+      user.full_name || user.username || '',
+    );
   }
 
   @Delete('frames/:id')
@@ -89,6 +121,20 @@ export class FramesController {
     @Param('code') code: string, @Param('id') id: string,
     @Body() body: { cable_index: number; field: string; value: string },
   ) { return this.svc.patchCable(code, id, body.cable_index, body.field, body.value); }
+
+  @Post('frames/:id/patch-panel')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor')
+  patchPanel(
+    @Param('code') code: string,
+    @Param('id') id: string,
+    @Body() body: {
+      panel_name: string;
+      panel_type?: string;
+      voltage_level?: string;
+      system_type?: string;
+    },
+  ) { return this.svc.patchPanel(code, id, body); }
 
   @Post('frames/:id/remap-column')
   @UseGuards(RolesGuard)
