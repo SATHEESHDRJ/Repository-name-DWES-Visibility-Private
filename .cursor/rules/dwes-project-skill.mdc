@@ -183,4 +183,31 @@ Never fill such gaps with assumptions from outside this project.
 - Keep all reasoning, code, and suggestions strictly within the DWES project
   unless the user explicitly widens the scope.
 
+---
+
+## 8. MCP Servers for This Project
+
+The DWES workspace MCP config lives in **`.cursor/mcp.json`**. Use MCP tools under
+the same scope-lock rules as everything else in this skill.
+
+### 8.1 Approved MCP usage
+- **dwes-filesystem** — reading/searching the DWES codebase during discovery (Section 2).
+  Scope: `C:\Users\sathe\OneDrive\Desktop\DWES` only.
+- **dwes-database** (PostgreSQL **WiringSchemeDB**) — inspect schema, verify column names,
+  types, relations, and sample data before writing queries or models. **Read-only by
+  default.** Never execute INSERT/UPDATE/DELETE/DDL through MCP without explicit user
+  confirmation. Also load **`dwes-db-guard`** — WiringSchemeDB schema is never migrated via MCP.
+- **git** — review history, diffs, branches for the DWES repository only.
+- **browser** — visually verify DWES screens after UI changes (`http://localhost:5175`).
+- **memory** — persist DWES Project Profile (Section 3 / `dwes-profile.mdc`) and
+  discovered conventions across sessions.
+
+### 8.2 MCP rules
+1. MCP tools ground work in **DWES reality** — never pull external code or templates.
+2. Prefer MCP-verified facts over assumptions: if `dwes-database` is connected,
+   check the actual table before writing schema-dependent code.
+3. Never send DWES source, schema, or data to MCP servers not listed in
+   `.cursor/mcp.json`.
+4. If a needed MCP server isn't configured, tell the user what to add — don't guess.
+
 **This skill is permanent. Apply it to every interaction in this workspace.**

@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "dwes-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES"
+      ]
+    },
+
+    "dwes-database": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:postgres@localhost:5432/WiringSchemeDB"
+      ]
+    },
+
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@cyanheads/git-mcp-server"],
+      "env": {
+        "GIT_REPO_PATH": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES"
+      }
+    },
+
+    "browser": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}

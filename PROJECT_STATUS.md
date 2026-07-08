@@ -76,6 +76,7 @@
 |---------|------|
 | **Project skill (always apply)** | `.cursor/rules/dwes-project-skill.mdc` |
 | **Project profile (stack/domain)** | `.cursor/rules/dwes-profile.mdc` |
+| **MCP servers** | `.cursor/mcp.json` |
 | Setup & ports | `README.md`, `DEPLOY-LAN.md` |
 | Feature progress (long form) | `PROGRESS.md` |
 | Changelog | `CHANGELOG.md` |

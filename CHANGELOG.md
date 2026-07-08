@@ -6,6 +6,21 @@ Format: `YYYY-MM-DD` · prompt/source · summary · files · restore point · fl
 
 ---
 
+## 2026-07-08 — MCP config + Section 8 (files sync)
+
+- **Summary:** Added `.cursor/mcp.json` (filesystem, Postgres WiringSchemeDB, git, browser, memory). Merged Section 8 MCP rules into `dwes-project-skill.mdc`. Fixed `files/mcp.json` (removed invalid example-only `dwes-database` block). Synced `files/dwes-project-skill.md`.
+- **Files:** `.cursor/mcp.json`, `dwes-project-skill.mdc`, `dwes-profile.mdc`, `Desktop/files/mcp.json`, `Desktop/files/dwes-project-skill.md`
+- **Note:** `dwes-database` URL must match `backend/.env` `DATABASE_URL`. Reload Cursor after MCP install.
+
+---
+
+## 2026-07-08 — Revalidate project skills (artifact sync)
+
+- **Summary:** Restored full artifact content to `dwes-project-skill.mdc`; fixed §2.3 for WiringSchemeDB read-only (not generic migrations); synced Desktop master copy; revalidated `dwes-profile.mdc` rules index.
+- **Files:** `.cursor/rules/dwes-project-skill.mdc`, `dwes-profile.mdc`, `~/.claude/skills/dwes-project/SKILL.md`, `Desktop/dwes-project-skill.mdc`
+
+---
+
 ## 2026-07-08 — Project skills sync (`dwes-project-skill.mdc`)
 
 - **Summary:** Added permanent DWES project skill and discovered profile to `.cursor/rules/`; created `dwes-project` agent skill index linking `dwes-db-guard` and `dwes-reports-backup`.

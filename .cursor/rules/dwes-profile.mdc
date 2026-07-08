@@ -1,5 +1,5 @@
 ---
-description: DWES project profile — stack, folder map, conventions, and domain vocabulary (discovered from codebase)
+description: DWES project profile — stack, folder map, conventions, and domain vocabulary (revalidated 2026-07-08)
 alwaysApply: false
 ---
 
@@ -7,6 +7,31 @@ alwaysApply: false
 
 Maintained working model of the Digital Wiring Execution System. Update when stack,
 ports, or major structure changes.
+
+## CURSOR RULES (repo)
+
+| Rule | Path | Apply |
+|------|------|-------|
+| Project skill | `dwes-project-skill.mdc` | always |
+| Change management | `change-management.mdc` | always |
+| UI smoke test | `ui-refactor-smoke-test.mdc` | always |
+| This profile | `dwes-profile.mdc` | on demand |
+| Technician wiring | `technician-wiring-workflow.mdc` | wiring files |
+| Report branding | `report-branding.mdc` | report files |
+
+## MCP SERVERS
+
+Config: **`.cursor/mcp.json`** (reload Cursor after edits)
+
+| Server | Purpose |
+|--------|---------|
+| `dwes-filesystem` | DWES repo read/search (scoped to project root) |
+| `dwes-database` | PostgreSQL **WiringSchemeDB** — read-only inspection; match `backend/.env` `DATABASE_URL` |
+| `git` | DWES repo history/diffs |
+| `browser` | UI smoke at `http://localhost:5175` |
+| `memory` | Cross-session profile/conventions |
+
+**DB MCP:** read-only by default; `dwes-db-guard` applies — no DDL/writes without approval.
 
 ## STACK
 
