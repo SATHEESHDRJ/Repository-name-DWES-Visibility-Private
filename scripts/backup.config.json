@@ -1,0 +1,28 @@
+{
+  "projectRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
+  "backupRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES_backups",
+  "backupFolderPrefix": "DWES_backup",
+  "schedule": {
+    "mode": "daily",
+    "dailyTime": "02:00",
+    "twiceDailyTimes": ["02:00", "14:00"]
+  },
+  "excludeDirectories": [
+    "node_modules",
+    ".git",
+    "backend\\node_modules"
+  ],
+  "retention": {
+    "maxCount": null,
+    "maxAgeDays": null
+  },
+  "database": {
+    "enabled": true,
+    "envFile": "backend\\.env",
+    "pgDumpPath": "C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe",
+    "format": "custom",
+    "failOnDbError": false
+  },
+  "logDirectory": null,
+  "scheduledTaskName": "DWES Project Backup"
+}

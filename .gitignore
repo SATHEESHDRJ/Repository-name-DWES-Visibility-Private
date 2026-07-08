@@ -1,0 +1,81 @@
+# ===== Dependencies =====
+node_modules/
+**/node_modules/
+
+# ===== Env & secrets (keep example templates only) =====
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.pfx
+
+# ===== Build output =====
+dist/
+build/
+**/dist/
+**/build/
+.vite/
+*.tsbuildinfo
+dist-ssr/
+*.local
+
+# ===== Frontend (Vite) =====
+frontend/dist/
+.cache/
+
+# ===== Backend (NestJS) =====
+backend/dist/
+backend/data/
+
+# ===== File-store: uploaded frames / drawings (user uploads — never commit) =====
+uploads/
+**/uploads/
+file-store/
+**/file-store/
+storage/
+**/storage/
+
+# ===== Database backups / dumps (contain password hashes — never commit) =====
+backup*.sql
+*_backup.sql
+pg_dump*.sql
+dwes_backup*.sql
+*.dump
+*.pg_dump
+backups/
+DEWS_Backups/
+
+# ===== Logs =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ===== OS / editor cruft =====
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+
+# ===== Test / coverage =====
+coverage/
+.nyc_output/
+
+# ===== Project-specific (from prior .gitignore) =====
+certs/
+.dwes-port
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
+# ===== Archived legacy files (not part of the app) =====
+_archive/
+_old_src_extract/

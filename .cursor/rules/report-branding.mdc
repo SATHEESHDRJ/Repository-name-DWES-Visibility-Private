@@ -1,0 +1,48 @@
+---
+description: Company logo and shared branding on all DWES reports (PDF, Excel, preview UI)
+globs: backend/src/**/*report*,backend/src/projects/projects.service.ts,backend/src/projects/wiring-document.service.ts,backend/src/supervisor/supervisor.service.ts,backend/src/director/director.service.ts,src/components/ui/ReportPreviewModal.tsx,src/components/ui/CompletionReport.tsx
+alwaysApply: false
+---
+
+# Report branding (DWES)
+
+All generated reports must use the **central branding helpers** — never one-off headers.
+
+## Source of truth
+
+- `backend/src/common/report-branding.ts` — logo path, PDF header, Excel header
+- Logo asset: `public/logo-full.png` and `backend/assets/report-logo.png`
+
+## PDF reports
+
+Use `drawPdfReportHeader(doc, { title, subtitle })` from `report-branding.ts`.
+
+```typescript
+// ✅ GOOD
+let y = drawPdfReportHeader(doc, {
+  title: 'Project Completion Report',
+  subtitle: `Ingenious Network FZC · ${code}`,
+});
+doc.y = y;
+
+// ❌ BAD — duplicate text-only header, no logo
+doc.text('Digital Wiring Execution System', { align: 'center' });
+```
+
+Applies to: project PDF, frame wiring PDF, director PDF, any new PDF export.
+
+## Excel reports
+
+Use `prependExcelReportHeader(wb, ws, { title, subtitle, colCount })` for ExcelJS workbooks.
+
+For new Excel exports, prefer **ExcelJS** over raw SheetJS so the logo can embed.
+
+## On-screen preview
+
+Report preview modals must show `CompanyLogo` in the header bar (`ReportPreviewModal`, `CompletionReport`).
+
+## Do not
+
+- Hardcode logo paths outside `report-branding.ts`
+- Ship PDF/Excel without the company logo in the header band
+- Remove `Ingenious Network FZC` / DWES subtitle when replacing headers

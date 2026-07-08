@@ -1,0 +1,151 @@
+/* ── Material Symbols Rounded — unified icon system ─────────────────────────
+   Font bundled via `material-symbols/rounded.css` (see index.css import).
+   Icons inherit currentColor from parent; use --t-* / MD3 tokens for theming.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --icon-size-xs: 14px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+  --icon-size-xl: 32px;
+  --icon-weight-default: 400;
+  --icon-weight-emphasis: 500;
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded", sans-serif;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ui-icon {
+  color: currentColor;
+  vertical-align: middle;
+  flex-shrink: 0;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.ui-icon--depth {
+  filter: drop-shadow(0 1px 1.5px color-mix(in srgb, currentColor 18%, transparent));
+}
+
+[data-theme="dark"] .ui-icon--depth {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+/* Size utility classes */
+.icon-xs { font-size: var(--icon-size-xs); }
+.icon-sm { font-size: var(--icon-size-sm); }
+.icon-md { font-size: var(--icon-size-md); }
+.icon-lg { font-size: var(--icon-size-lg); }
+.icon-xl { font-size: var(--icon-size-xl); }
+
+/* Animated loader (Material progress_activity) */
+.ui-icon--spin {
+  animation: ui-icon-spin 1.1s linear infinite;
+}
+
+@keyframes ui-icon-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Context-enforced icon sizing ────────────────────────────────────────────
+   Inside system controls the CONTAINER dictates icon size, not the call site —
+   this is what keeps toolbars/menus/footers optically even regardless of the
+   size prop a screen passed. !important is required because Icon.tsx writes
+   font-size as an inline style (same precedent as the active-tab FILL rule
+   below). Workstation (ws-*) and technician CTA families are deliberately
+   excluded — their glove-safe sizing is owned by their own CSS. */
+.btn .ui-icon,
+.btn-primary .ui-icon,
+.btn-primary-lg .ui-icon,
+.btn-secondary .ui-icon,
+.btn-danger .ui-icon,
+.btn-success .ui-icon,
+.btn-warning .ui-icon,
+.pj-btn-primary .ui-icon,
+.pj-btn-secondary .ui-icon,
+.pj-btn-danger-ghost .ui-icon,
+.frame-pill-btn .ui-icon,
+.dr-btn-refresh .ui-icon,
+.dr-export-btn .ui-icon,
+.login-btn .ui-icon,
+.tab-btn .ui-icon {
+  font-size: 18px !important;
+}
+.btn-sm .ui-icon,
+.btn-ghost .ui-icon,
+.pj-toolbar-dropdown-item .ui-icon,
+.upload-menu-item .ui-icon,
+.dt-btn .ui-icon {
+  font-size: 16px !important;
+}
+.btn-icon .ui-icon {
+  font-size: 20px !important;
+}
+.dash-sidebar-icon .ui-icon {
+  font-size: 20px !important;
+}
+
+/* Topbar / nav icon buttons — subtle depth on interactive icons */
+.topbar-nav-btn .ui-icon,
+.topbar-capsule-btn .ui-icon,
+.topbar-menu-btn .ui-icon,
+.sidebar-toggle .ui-icon {
+  opacity: 0.92;
+}
+
+.topbar-nav-btn.active .ui-icon {
+  opacity: 1;
+}
+
+.topbar-nav-btn:hover .ui-icon,
+.topbar-capsule-btn:hover:not(:disabled) .ui-icon,
+.topbar-menu-btn:hover .ui-icon {
+  opacity: 1;
+}
+
+/* Sidebar / in-page tab icons — dynamic active transitions (not topbar) */
+.dash-sidebar-link .ui-icon,
+.tab-btn .ui-icon,
+.ws-filter-chip .ui-icon,
+.ga-drawing-tab-btn .ui-icon,
+.ws-draw-tabs button .ui-icon {
+  transition:
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Android-style filled + glow on active nav icons (overrides inline FILL axis) */
+.dash-sidebar-link.is-active .material-symbols-rounded,
+.tab-btn.active .material-symbols-rounded,
+.ws-filter-chip.active .material-symbols-rounded,
+.ga-drawing-tab-btn.active .material-symbols-rounded,
+.ws-draw-tabs button.active .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+}
+
+.dash-sidebar-link.is-active .ui-icon,
+.tab-btn.active .ui-icon,
+.ws-filter-chip.active .ui-icon {
+  opacity: 1;
+}
+
+/* Tap feedback — subtle scale on press (nav icons only) */
+.dash-sidebar-link:active .ui-icon,
+.tab-btn:active .ui-icon,
+.ws-filter-chip:active .ui-icon {
+  transform: scale(0.92);
+}
+
+/* Disabled nav icon state */
+.tab-btn:disabled .ui-icon,
+.tab-btn:disabled .material-symbols-rounded {
+  opacity: 0.38;
+  filter: grayscale(0.4);
+}

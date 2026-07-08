@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls src/components)",
+      "Bash(ls src *)",
+      "Bash(ls backend/src)",
+      "Bash(npm run *)",
+      "Read(//c/Users/sathe/OneDrive/Desktop/06_Wiring-App/**)",
+      "Read(//c/Users/sathe/OneDrive/Desktop/**)",
+      "Bash(cd \"C:/Users/sathe/OneDrive/Desktop/06_Wiring-App/wiring-app_pg\" && ls && echo --- && find . -maxdepth 3 -type d -not -path \"*/node_modules*\" -not -path \"*/.git*\" -not -path \"*/venv*\" -not -path \"*/__pycache__*\" | head -50)",
+      "Bash(ls \"C:/Users/sathe/OneDrive/Desktop/DWES_backups\" 2>&1 | head -20; echo ---; ls \"C:/Users/sathe/OneDrive/Desktop/DWES\" | grep -i legacy; echo ---; ls \"C:/Users/sathe/OneDrive/Desktop/DWES/src/components/technician\" \"C:/Users/sathe/OneDrive/Desktop/DWES/src/pages/technician\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3001/api/health)",
+      "Bash(curl -sk https://localhost:5173/api/health -o /dev/null -w \"%{http_code}\")",
+      "Bash(cp C:/Users/sathe/OneDrive/Desktop/DWES_backups/DWES_backup_2026-07-03_11-05/files/src/components/ui/VerificationModal.tsx C:/Users/sathe/OneDrive/Desktop/DWES/src/components/ui/VerificationModal.tsx)",
+      "Bash(cp C:/Users/sathe/OneDrive/Desktop/DWES_backups/DWES_backup_2026-07-03_11-05/files/src/pages/supervisor/tabs/FramesTab.tsx C:/Users/sathe/OneDrive/Desktop/DWES/src/pages/supervisor/tabs/FramesTab.tsx)",
+      "Bash(cp C:/Users/sathe/OneDrive/Desktop/DWES_backups/DWES_backup_2026-07-03_11-05/files/src/styles/design-system.css C:/Users/sathe/OneDrive/Desktop/DWES/src/styles/design-system.css)",
+      "Bash(cp C:/Users/sathe/OneDrive/Desktop/DWES_backups/DWES_backup_2026-07-03_11-05/files/src/styles/themes.css C:/Users/sathe/OneDrive/Desktop/DWES/src/styles/themes.css)",
+      "Bash(cp C:/Users/sathe/OneDrive/Desktop/DWES_backups/DWES_backup_2026-07-03_11-05/files/backend/src/tech/tech.service.ts C:/Users/sathe/OneDrive/Desktop/DWES/backend/src/tech/tech.service.ts)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"backend-typecheck-exit:$?\")",
+      "Bash(curl -sk -o /dev/null -w \"%{http_code}\" https://localhost:5173)",
+      "Bash(curl -sk -o /dev/null -w \"%{http_code}\" https://localhost:5173/api/health)",
+      "Bash(ls -t /c/Users/sathe/OneDrive/Desktop/DWES/dist/assets/index-*.js 2>/dev/null | head -5)",
+      "Read(//c/Users/sathe/OneDrive/Desktop/DWES/dist/assets/**)",
+      "Bash(echo \"exit=$?\")",
+      "Bash([ -f \"$f\" ])",
+      "Read(//c/Users/sathe/OneDrive/Desktop/DWES/backend/dist/tech/**)",
+      "Bash(grep -n \"findFrameById\\\\|findFrameByProjectAndId\\(\" /c/Users/sathe/OneDrive/Desktop/DWES/backend/dist/tech/tech.service.js)",
+      "Read(//c/Users/sathe/OneDrive/Desktop/DWES/backend/src/tech/**)",
+      "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")",
+      "Bash(python -c \"import fitz; print\\('pymupdf ok'\\)\")",
+      "Bash(python -c \"import pdfplumber; print\\('pdfplumber ok'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -m pip install pypdf)",
+      "Bash(python -)",
+      "Bash(python -m pip install pymupdf)",
+      "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:5173)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"tsc-exit:$?\")"
+    ]
+  }
+}

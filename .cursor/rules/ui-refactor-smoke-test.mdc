@@ -1,0 +1,18 @@
+---
+description: After icon/UI refactors, always build and smoke-test routes before declaring done
+alwaysApply: true
+---
+
+# UI refactor smoke test (required)
+
+After any icon system change, shared component refactor, or layout/CSS overhaul:
+
+1. Run `npm run build` — must exit 0.
+2. Smoke-test in the browser (dev server): `/`, `/technician`, and at least one other role route.
+3. Confirm `#root` renders content (not blank white screen).
+4. On white screen, check **first**:
+   - Browser DevTools console for module/import errors
+   - Vite terminal for `Pre-transform error`, `PARSE_ERROR`, or `Failed to load url`
+5. Icon barrel rule: **never put JSX in barrel files** — keep re-exports in `index.tsx`, components in `named-icons.tsx`.
+
+Do not mark UI/icon work complete until build passes and at least one dashboard route mounts.

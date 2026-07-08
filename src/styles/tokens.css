@@ -1,0 +1,79 @@
+@layer base {
+  :root {
+    /* Typography Sizes */
+    --font-page-title: 24px;
+    --font-section-title: 16px;
+    --font-body: 14px;
+    --font-caption: 12px;
+    --font-mono: 16px;
+
+    /* Spacing Scale */
+    --spacing-4: 4px;
+    --spacing-8: 8px;
+    --spacing-12: 12px;
+    --spacing-16: 16px;
+    --spacing-20: 20px;
+    --spacing-24: 24px;
+    --spacing-32: 32px;
+    --spacing-48: 48px;
+
+    /* Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+
+    /* Button Heights — Android 44 dp minimum */
+    --btn-h-primary: 44px;
+    --btn-h-secondary: 44px;
+    --btn-h-table: 44px;
+    --btn-h-icon: 44px;
+
+    /* Status Colors */
+    --status-completed-text: #16A34A;
+    --status-completed-bg: #DCFCE7;
+    --status-completed-border: #86EFAC;
+
+    --status-one-open-text: #EA580C;
+    --status-one-open-bg: #FFEDD5;
+    --status-one-open-border: #FED7AA;
+
+    --status-pending-text: #64748B;
+    --status-pending-bg: #F1F5F9;
+    --status-pending-border: #CBD5E1;
+
+    --status-progress-text: #2563EB;
+    --status-progress-bg: #DBEAFE;
+    --status-progress-border: #BFDBFE;
+
+    --status-source-text: #1D4ED8;
+    --status-dest-text: #C2410C;
+    
+    --color-primary-brand: #1B4FD8;
+
+    /* Role Badges */
+    --role-admin-bg: #FEE2E2;
+    --role-admin-text: #DC2626;
+
+    --role-director-bg: #EDE9FE;
+    --role-director-text: #7C3AED;
+
+    --role-supervisor-bg: #DBEAFE;
+    --role-supervisor-text: #1D4ED8;
+
+    --role-qaqc-bg: #FEF3C7;
+    --role-qaqc-text: #D97706;
+
+    --role-tech-bg: #DCFCE7;
+    --role-tech-text: #16A34A;
+  }
+
+  button, [role="button"] { 
+    min-height: 44px; 
+    font-family: inherit; 
+  }
+  
+  input, select, textarea { 
+    font-family: inherit; 
+  }
+}

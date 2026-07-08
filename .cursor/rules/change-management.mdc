@@ -1,0 +1,28 @@
+---
+description: DWES change-management protocol — verify, backup, scope, document, verify (mandatory before any repo change)
+alwaysApply: true
+---
+
+# DWES Change-Management Protocol
+
+**Full spec:** `dwes_change_management_protocol.md` (author MD1 folder) or repo copy if added.
+
+## Before every change
+
+1. **Verify:** `git status` + `git branch --show-current`. If dirty and not your scoped work, **STOP** and ask the author.
+2. **Backup:** `git switch -c change/<short-name>-<yyyy-mm-dd>` then checkpoint commit, OR tag clean `main`. Report restore point (branch/tag/hash). **No `DWES-backup/` folder copies** (OneDrive).
+3. **Scope:** Detect-before-edit; no schema changes without flag; preserve guarded backend logic.
+
+## After every change
+
+4. **Update knowledge:** `PROJECT_STATUS.md`, append `CHANGELOG.md`, update `README`/setup docs if ports/scripts changed, update `.cursor/rules` or skills if behavior changed.
+5. **Verify:** `npm run build` for UI/layout/icon work; smoke-test `/`, `/technician`, one other role route.
+6. **Do not** merge to `main` or delete restore branch — author reviews.
+
+## Rollback
+
+`git switch main` or `git reset --hard <checkpoint>` on the change branch.
+
+## If git has no commits yet
+
+STOP before per-change branches; complete initial commit on `main` per `dwes_git_init_safe.md` with author approval.

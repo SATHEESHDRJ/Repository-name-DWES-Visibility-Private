@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dwes",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "Remove-Item Env:PORT -ErrorAction SilentlyContinue; npm run dev:watch"
+      ],
+      "port": 5173
+    }
+  ]
+}

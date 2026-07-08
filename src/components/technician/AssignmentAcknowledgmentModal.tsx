@@ -1,0 +1,62 @@
+import { CheckCircle2 } from '../ui/icons';
+import Modal from '../Modal';
+
+interface Props {
+  panel: {
+    id: number;
+    panel_name: string;
+    project_name?: string;
+    project_code: string;
+    cables_total?: number;
+  };
+  technicianName: string;
+  onClose: () => void;
+  onAcknowledge: () => void;
+  busy?: boolean;
+}
+
+export default function AssignmentAcknowledgmentModal({
+  panel,
+  technicianName,
+  onClose,
+  onAcknowledge,
+  busy = false,
+}: Props) {
+  return (
+    <Modal
+      title=""
+      onClose={() => !busy && onClose()}
+      size="lg"
+      footer={(
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className="btn-primary" onClick={onAcknowledge} disabled={busy}>
+            {busy ? 'Starting…' : 'Acknowledge & Start'}
+          </button>
+        </>
+      )}
+    >
+      <div className="flex flex-col items-center text-center gap-2 mb-4">
+        <CheckCircle2 size={40} className="text-green-500" />
+        <h2 className="text-[18px] font-bold text-slate-900">Assignment Acknowledgment</h2>
+        <p className="text-[13px] text-slate-500">Please review and acknowledge before starting</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'PANEL', value: panel.panel_name },
+          { label: 'PROJECT', value: panel.project_name || panel.project_code },
+          { label: 'TOTAL CABLES', value: `${panel.cables_total ?? 0} cables` },
+          { label: 'ASSIGNED TO', value: technicianName },
+        ].map(tile => (
+          <div key={tile.label} className="tc-ack-tile rounded-lg border border-slate-200 bg-slate-50 p-3 text-left">
+            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{tile.label}</div>
+            <div className="text-[14px] font-semibold text-slate-800 break-words">{tile.value}</div>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}

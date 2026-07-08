@@ -1,0 +1,529 @@
+/* ── Modern navigation & selection tabs (Android-style motion) ───────────────
+   Applies to: tab-strip, tab-btn, sidebar module nav, filter chips, drawing tabs.
+   EXCLUDED: topbar-nav-btn and all topbar-* rules (see Topbar.tsx).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  :root {
+    --nav-tab-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --nav-tab-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+    --nav-tab-indicator: linear-gradient(90deg, #2563EB 0%, #4F46E5 52%, #7C3AED 100%);
+    --nav-tab-indicator-soft: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 14%, transparent) 0%,
+      color-mix(in srgb, #6366F1 10%, transparent) 100%
+    );
+    --nav-tab-ripple: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    --nav-tab-pill-bg: color-mix(in srgb, var(--color-on-surface) 5%, transparent);
+    --nav-tab-pill-active: linear-gradient(135deg, #2563EB 0%, #4338CA 100%);
+    --nav-tab-inactive-opacity: 0.62;
+    --nav-tab-active-glow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent),
+      0 4px 16px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    --nav-tab-active-glow-strong: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent),
+      0 6px 22px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  @keyframes nav-tab-ripple {
+    0%   { transform: scale(0); opacity: 0.42; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+
+  @keyframes nav-tab-icon-pop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.14); }
+    100% { transform: scale(1.08); }
+  }
+
+  @keyframes nav-tab-panel-in {
+    0%   { opacity: 0; transform: translateY(10px); }
+    /* End at `none` (not translateY(0)): a retained transform makes this panel
+       the containing block for position:fixed descendants (workstation shell,
+       toasts), trapping and clipping them inside the tab box. */
+    100% { opacity: 1; transform: none; }
+  }
+
+  @keyframes nav-tab-glow-pulse {
+    0%, 100% { box-shadow: var(--nav-tab-active-glow); }
+    50%      { box-shadow: var(--nav-tab-active-glow-strong); }
+  }
+
+  /* ── Tab panel content (fade + slide on section switch) ───────────────────── */
+  .nav-tab-panel {
+    animation: nav-tab-panel-in 0.34s var(--nav-tab-ease) both;
+    min-width: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-tab-panel,
+    .tab-btn::before,
+    .dash-sidebar-link::before,
+    .tab-btn.active svg,
+    .tab-btn.active .material-symbols-rounded {
+      animation: none !important;
+    }
+    .nav-tab-panel {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ── Shared tab button base ─────────────────────────────────────────────── */
+  .tab-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--color-on-surface-variant);
+    background: transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    user-select: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color 0.28s var(--nav-tab-ease),
+      background 0.28s var(--nav-tab-ease),
+      border-color 0.28s var(--nav-tab-ease),
+      box-shadow 0.28s var(--nav-tab-ease),
+      transform 0.18s var(--nav-tab-ease);
+  }
+
+  .tab-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, var(--nav-tab-ripple) 0%, transparent 68%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .tab-btn:active::before {
+    animation: nav-tab-ripple 0.52s var(--nav-tab-ease);
+  }
+
+  .tab-btn:hover {
+    color: var(--color-on-surface);
+    background: var(--nav-tab-pill-bg);
+  }
+
+  .tab-btn:not(.active):not(:disabled) {
+    color: color-mix(in srgb, var(--color-on-surface-variant) 88%, transparent);
+  }
+
+  .tab-btn:not(.active) svg,
+  .tab-btn:not(.active) .ui-icon,
+  .tab-btn:not(.active) .material-symbols-rounded {
+    opacity: var(--nav-tab-inactive-opacity);
+    filter: saturate(0.68);
+  }
+
+  .tab-btn.active {
+    color: var(--color-primary);
+    font-weight: 600;
+    background: var(--nav-tab-indicator-soft);
+    border-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    box-shadow: var(--nav-tab-active-glow);
+    transform: scale(1.015);
+  }
+
+  .tab-btn svg,
+  .tab-btn .ui-icon,
+  .tab-btn .material-symbols-rounded {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    opacity: 0.72;
+    transition:
+      transform 0.28s var(--nav-tab-ease),
+      color 0.28s var(--nav-tab-ease),
+      opacity 0.28s var(--nav-tab-ease);
+  }
+
+  .tab-btn:hover svg,
+  .tab-btn:hover .ui-icon,
+  .tab-btn:hover .material-symbols-rounded {
+    opacity: 0.92;
+  }
+
+  .tab-btn.active svg,
+  .tab-btn.active .ui-icon,
+  .tab-btn.active .material-symbols-rounded {
+    opacity: 1;
+    filter: saturate(1.08) drop-shadow(0 1px 4px color-mix(in srgb, var(--color-primary) 28%, transparent));
+    animation: nav-tab-icon-pop 0.38s var(--nav-tab-spring);
+    color: var(--color-primary);
+  }
+
+  .tab-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .tab-btn:disabled svg,
+  .tab-btn:disabled .material-symbols-rounded {
+    filter: grayscale(0.35);
+  }
+
+  /* ── Horizontal tab strip (sliding gradient underline) ──────────────────── */
+  .tab-strip {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0;
+    border-bottom: 1px solid var(--color-outline-variant);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-strip > .tab-btn {
+    border-radius: 0.625rem 0.625rem 0 0;
+    margin-bottom: -1px;
+    padding: 0.75rem 0.875rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .tab-strip > .tab-btn::after {
+    content: "";
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--nav-tab-indicator);
+    transform: scaleX(0);
+    transform-origin: center;
+    opacity: 0;
+    transition:
+      transform 0.34s var(--nav-tab-ease),
+      opacity 0.24s var(--nav-tab-ease);
+    z-index: 2;
+  }
+
+  .tab-strip > .tab-btn:hover {
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    border-bottom-color: transparent;
+  }
+
+  .tab-strip > .tab-btn.active {
+    color: #1D4ED8;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-primary) 12%, transparent) 0%,
+      transparent 100%
+    );
+    border-bottom-color: transparent;
+    box-shadow: var(--nav-tab-active-glow);
+    transform: none;
+  }
+
+  .tab-strip > .tab-btn.active::after {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  @media (min-width: 768px) and (max-width: 1366px) {
+    .tab-btn {
+      min-height: 48px;
+      font-size: 14px;
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+    }
+
+    .tab-strip {
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+
+    .tab-strip > .tab-btn {
+      padding: 12px 14px;
+    }
+  }
+
+  /* Icons stay visible when parent uses text gradient clip */
+  .tab-strip > .tab-btn.active svg,
+  .tab-strip > .tab-btn.active .ui-icon,
+  .tab-strip > .tab-btn.active .material-symbols-rounded {
+    color: #2563EB;
+  }
+
+  /* ── Segmented pill groups (scroll strips / filter rows) ────────────────── */
+  .h-scroll-strip:has(> .tab-btn),
+  .table-actions:has(> .tab-btn) {
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--color-on-surface) 4%, var(--color-surface-variant));
+    border: 1px solid var(--color-outline-variant);
+  }
+
+  .h-scroll-strip > .tab-btn.active,
+  .toolbar > .tab-btn.active,
+  .table-actions > .tab-btn.active {
+    color: #fff;
+    background: var(--nav-tab-pill-active);
+    border-color: transparent;
+    box-shadow: var(--nav-tab-active-glow-strong);
+    transform: scale(1.02);
+  }
+
+  .h-scroll-strip > .tab-btn.active svg,
+  .toolbar > .tab-btn.active svg,
+  .table-actions > .tab-btn.active svg,
+  .h-scroll-strip > .tab-btn.active .ui-icon,
+  .toolbar > .tab-btn.active .ui-icon,
+  .table-actions > .tab-btn.active .ui-icon {
+    color: #fff;
+  }
+
+  /* ── Sidebar module navigation ─────────────────────────────────────────── */
+  .dash-sidebar-link {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+      background 0.3s var(--nav-tab-ease),
+      color 0.3s var(--nav-tab-ease),
+      transform 0.2s var(--nav-tab-ease);
+  }
+
+  .dash-sidebar-link::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 28% 50%, var(--nav-tab-ripple) 0%, transparent 62%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .dash-sidebar-link:active::before {
+    animation: nav-tab-ripple 0.52s var(--nav-tab-ease);
+  }
+
+  .dash-sidebar-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: var(--nav-tab-indicator);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform 0.32s var(--nav-tab-ease);
+    z-index: 1;
+  }
+
+  .dash-sidebar-link.is-active {
+    background: var(--nav-tab-indicator-soft);
+    color: var(--color-primary);
+    box-shadow: var(--nav-tab-active-glow);
+    transform: scale(1.01);
+  }
+
+  .dash-sidebar-link:not(.is-active) {
+    color: color-mix(in srgb, var(--color-on-surface-variant) 90%, transparent);
+  }
+
+  .dash-sidebar-link:not(.is-active) .dash-sidebar-icon svg,
+  .dash-sidebar-link:not(.is-active) .dash-sidebar-icon .ui-icon,
+  .dash-sidebar-link:not(.is-active) .dash-sidebar-icon .material-symbols-rounded {
+    opacity: var(--nav-tab-inactive-opacity);
+    filter: saturate(0.65);
+  }
+
+  .dash-sidebar-link.is-active::after {
+    transform: scaleY(1);
+  }
+
+  .dash-sidebar-link.is-active .dash-sidebar-icon svg,
+  .dash-sidebar-link.is-active .dash-sidebar-icon .ui-icon,
+  .dash-sidebar-link.is-active .dash-sidebar-icon .material-symbols-rounded {
+    animation: nav-tab-icon-pop 0.38s var(--nav-tab-spring);
+    color: var(--color-primary);
+    opacity: 1;
+    filter: saturate(1.1) drop-shadow(0 0 8px color-mix(in srgb, var(--color-primary) 32%, transparent));
+  }
+
+  .dash-sidebar-icon svg,
+  .dash-sidebar-icon .ui-icon,
+  .dash-sidebar-icon .material-symbols-rounded {
+    opacity: 0.78;
+    transition:
+      transform 0.28s var(--nav-tab-ease),
+      color 0.28s var(--nav-tab-ease),
+      opacity 0.28s var(--nav-tab-ease);
+  }
+
+  .dash-sidebar-link:hover .dash-sidebar-icon svg,
+  .dash-sidebar-link:hover .dash-sidebar-icon .ui-icon,
+  .dash-sidebar-link:hover .dash-sidebar-icon .material-symbols-rounded {
+    opacity: 0.95;
+  }
+
+  /* ── GA drawing viewer tabs (dark toolbar) ─────────────────────────────── */
+  .ga-drawing-tab-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+      color 0.28s var(--nav-tab-ease),
+      background 0.28s var(--nav-tab-ease),
+      box-shadow 0.28s var(--nav-tab-ease),
+      transform 0.18s var(--nav-tab-ease);
+  }
+
+  .ga-drawing-tab-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(96, 165, 250, 0.35) 0%, transparent 68%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ga-drawing-tab-btn:active::before {
+    animation: nav-tab-ripple 0.52s var(--nav-tab-ease);
+  }
+
+  .ga-drawing-tab-btn.active {
+    color: #fff;
+    background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+  }
+
+  .ga-drawing-tab-btn.active svg,
+  .ga-drawing-tab-btn.active .ui-icon {
+    animation: nav-tab-icon-pop 0.34s var(--nav-tab-spring);
+  }
+
+  /* ── Wiring workstation filter chips ───────────────────────────────────── */
+  .ws-filter-chip {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+      color 0.26s var(--nav-tab-ease),
+      background 0.26s var(--nav-tab-ease),
+      border-color 0.26s var(--nav-tab-ease),
+      box-shadow 0.26s var(--nav-tab-ease),
+      transform 0.16s var(--nav-tab-ease);
+  }
+
+  .ws-filter-chip::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, var(--nav-tab-ripple) 0%, transparent 68%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ws-filter-chip:active::before {
+    animation: nav-tab-ripple 0.48s var(--nav-tab-ease);
+  }
+
+  .ws-filter-chip.active {
+    color: #fff;
+    border-color: transparent;
+    background: var(--nav-tab-pill-active);
+    box-shadow: 0 2px 6px color-mix(in srgb, #4338CA 24%, transparent);
+  }
+
+  /* ── Wiring workstation drawing tabs (dark panel) ──────────────────────── */
+  .ws-draw-tabs button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-bottom: 2px solid transparent;
+    transition:
+      color 0.28s var(--nav-tab-ease),
+      background 0.28s var(--nav-tab-ease),
+      box-shadow 0.28s var(--nav-tab-ease);
+  }
+
+  .ws-draw-tabs button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(96, 165, 250, 0.32) 0%, transparent 68%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ws-draw-tabs button:active::before {
+    animation: nav-tab-ripple 0.48s var(--nav-tab-ease);
+  }
+
+  .ws-draw-tabs button::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(90deg, #38BDF8 0%, #2563EB 52%, #6366F1 100%);
+    transform: scaleX(0);
+    transform-origin: center;
+    opacity: 0;
+    transition:
+      transform 0.34s var(--nav-tab-ease),
+      opacity 0.24s var(--nav-tab-ease);
+    z-index: 1;
+  }
+
+  .ws-draw-tabs button.active {
+    color: #fff;
+    background: linear-gradient(
+      180deg,
+      rgba(37, 99, 235, 0.18) 0%,
+      rgba(15, 23, 42, 0.4) 100%
+    );
+    border-bottom-color: transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .ws-draw-tabs button.active::after {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  .ws-draw-tabs button.active svg,
+  .ws-draw-tabs button.active .ui-icon {
+    animation: nav-tab-icon-pop 0.34s var(--nav-tab-spring);
+    color: #93C5FD;
+  }
+}

@@ -1,0 +1,42 @@
+---
+description: Technician cable-centric wiring — single-wire sequential execution in Digital Wiring View
+globs: src/components/technician/**/*.tsx,src/pages/technician/**/*.tsx
+alwaysApply: false
+---
+
+# Technician wiring workflow (DWES)
+
+Technician execution uses **one cable at a time** in the Digital Wiring View workspace. Supervisor dashboard retains the full wiring list from Excel upload.
+
+## UX model (2026-07-07)
+
+- **Digital Wiring View** loads **inside the technician dashboard** (`WiringWorkstation` embedded in `DashboardShell`) — default **web view** with full DWES chrome.
+- **Tablet View** — fullscreen execution mode via `createPortal` + `html.dwf-tablet-active` (hides topbar, sidebar, dashboard hero). **Return to Web View** restores embedded layout.
+- **Single-wire execution** — no filter toolbar; **Full Wiring View** opens scrollable Excel-style reference schedule (read-only); Close returns to execution.
+- **Skip (Next)** — marks **both** source and destination complete (`cableAction('complete')`) then advances serially.
+- **Source Open** / **Destination Open** — partial completion on the execution screen (`dst_only` / `src_only`) then advance.
+- **Pause modal** — reason selection only (chip picker + Other text); no cable-end controls.
+- **No** Confirm Source / Confirm Destination buttons.
+- **Status badges:** Green Completed · Amber In Progress · Grey Not Started.
+- **Complete project** disabled until every cable has both ends done.
+- **Back to panels** via workspace header (web view only); Pause/Resume and Start (ack modal) on the wiring page.
+- **Dashboard:** original static header (`Technician Dashboard` + role chip); Digital Wiring View button swaps panel list for embedded workspace.
+- **Visual:** no scoped modern-ui layers; uses existing technician panel card + wiring workspace styles only.
+
+## Data integrity
+
+- Frame JSON (`_raw`, `excel_headers`) — use `normalizeCable` / `getCellValue` in `wiring-utils.ts`
+- Progress KPI: `(cables_src_done + cables_dst_done) / (cables_total * 2) * 100`
+- Live top bar: `useLiveWiringStore` when `status === 'in_progress'`
+
+## Do not
+
+- Reintroduce popup/modal backdrop for technician Digital Wiring View (tablet fullscreen portal is allowed)
+- Reintroduce filter toolbar on the default single-wire execution screen
+- Reintroduce Confirm Source/Destination step buttons without author approval
+- Reintroduce QR display on technician surfaces
+- Change backend wiring mutations without explicit approval
+
+## Smoke test after changes
+
+`npm run build` · `/technician` · Digital Wiring View · embedded workspace · Full Wiring View toggle · Skip (Next) + Open buttons · Complete project gating · SRC/DST persist
