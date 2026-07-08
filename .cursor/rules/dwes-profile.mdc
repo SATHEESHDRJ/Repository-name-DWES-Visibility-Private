@@ -1,0 +1,76 @@
+---
+description: DWES project profile — stack, folder map, conventions, and domain vocabulary (discovered from codebase)
+alwaysApply: false
+---
+
+# DWES Project Profile
+
+Maintained working model of the Digital Wiring Execution System. Update when stack,
+ports, or major structure changes.
+
+## STACK
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19 + TypeScript, Vite 8, React Router |
+| Backend | NestJS 10, Node.js |
+| Primary DB | PostgreSQL **WiringSchemeDB** via Prisma 7 (`prisma db pull` only — no migrations) |
+| Auth store | SQLite `backend/data/dwes_auth.sqlite` (WebAuthn credentials — app-managed) |
+| Styling | Tailwind v4 + `design-system.css`, `tokens.css`, `themes.css`, `buttons.css` |
+| Auth | JWT (localStorage `dwes_token`), Passport, optional WebAuthn |
+| 3D (optional) | `@react-three/fiber`, `@react-three/drei` |
+| Reports | PDFKit, pdf-lib, ExcelJS, xlsx |
+
+**Dev commands:** `npm run dev:all` (FE :5175, BE :3001) · `npm run build` · `npm run backup`
+
+## STRUCTURE
+
+```
+DWES/
+├── src/                          # React frontend
+│   ├── pages/{role}/             # Role dashboards (admin, director, supervisor, technician, qaqc)
+│   ├── components/{ui,layout,technician,supervisor,...}
+│   ├── services/api.ts           # Axios client → /api proxy
+│   ├── store/                    # Zustand (auth, project selection, UI)
+│   ├── styles/                   # Global CSS design system
+│   └── hooks/
+├── backend/src/                  # NestJS modules
+│   ├── auth/ tech/ supervisor/ director/ admin/ projects/ upload/ frames/
+│   ├── common/report-branding.ts
+│   └── prisma/ → ../prisma/schema.prisma
+├── backend/uploads/<PROJECT_CODE>/frames|drawings/   # Frame JSON + drawings (filesystem, not DB tables)
+├── backend/prisma/schema.prisma  # WiringSchemeDB schema (read-only DDL)
+├── scripts/                      # backup, dev ports, certs, demo
+└── .cursor/rules/                # Project AI rules
+```
+
+## CONVENTIONS
+
+| Area | Pattern |
+|------|---------|
+| Naming | kebab-case files; PascalCase components; `pj-*` supervisor project UI; `dwf-*` wiring frame |
+| API client | `src/services/api.ts` — named exports (`authApi`, `projectsApi`, `techApi`, …) |
+| Layout | `AppShell` + `Sidebar` ("Workspace") + `DashboardShell` + `PageContainer` |
+| Errors | Axios interceptors; NestJS exceptions; UI toasts/modals |
+| Validation | `class-validator` backend; form state + `useAppDialog` frontend |
+| Roles | `admin`, `director`, `supervisor`, `technician`, `qaqc` — route per role dashboard |
+
+## CORE DOMAIN
+
+| Entity | Notes |
+|--------|-------|
+| **projects** | Code format `VOLTAGE_REGION_LOCATION_YEAR_SEQ` (SEQ 3-digit); `project_state` enum |
+| **tech_assignments** | Technician ↔ panel/frame; wiring progress on assignment |
+| **panel_inspections** | QA/QC — use `overall_result`, `redmarkup_check`, `inspection_notes` |
+| **session_log** | Audit log — **no `user_name`**; JOIN `users` for names |
+| **Frames** | JSON files under `uploads/<code>/frames/` — not a DB table |
+| **Drawings** | PDF/DWG under `uploads/<code>/drawings/` — not a DB table |
+| **Cable progress** | `(cables_src_done + cables_dst_done) / (cables_total * 2) * 100` |
+
+## AGENT SKILLS (user-level, trigger when relevant)
+
+| Skill | Path | When |
+|-------|------|------|
+| dwes-project | `~/.claude/skills/dwes-project/SKILL.md` | Any DWES workspace task |
+| dwes-db-guard | `~/.claude/skills/dwes-db-guard/SKILL.md` | DB, schema, data, uploads |
+| dwes-reports-backup | `~/.claude/skills/dwes-reports-backup/SKILL.md` | Reports, wiring UI, backup scripts |

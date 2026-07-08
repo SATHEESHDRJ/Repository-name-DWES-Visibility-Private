@@ -74,6 +74,8 @@
 
 | Purpose | Path |
 |---------|------|
+| **Project skill (always apply)** | `.cursor/rules/dwes-project-skill.mdc` |
+| **Project profile (stack/domain)** | `.cursor/rules/dwes-profile.mdc` |
 | Setup & ports | `README.md`, `DEPLOY-LAN.md` |
 | Feature progress (long form) | `PROGRESS.md` |
 | Changelog | `CHANGELOG.md` |

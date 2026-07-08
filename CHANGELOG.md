@@ -6,7 +6,13 @@ Format: `YYYY-MM-DD` · prompt/source · summary · files · restore point · fl
 
 ---
 
-## 2026-07-08 — Supervisor Dashboard UI polish (Prompt.md)
+## 2026-07-08 — Project skills sync (`dwes-project-skill.mdc`)
+
+- **Summary:** Added permanent DWES project skill and discovered profile to `.cursor/rules/`; created `dwes-project` agent skill index linking `dwes-db-guard` and `dwes-reports-backup`.
+- **Files:** `.cursor/rules/dwes-project-skill.mdc`, `.cursor/rules/dwes-profile.mdc`, `~/.claude/skills/dwes-project/SKILL.md`, `CHANGELOG.md`
+- **Restore point:** _(pending git — no commits on main yet)_
+
+---
 
 - **Summary:** Reorganized All Projects action buttons into a compact flex toolbar (consistent 40px height, even spacing). Added supervisor-scoped gradient hero header (`dashboard-hero--supervisor`). Hid mid-changeover alert strips on the Projects tab; Mid-Changeover tab unchanged.
 - **Files:** `SupervisorDashboard.tsx`, `ProjectsTab.tsx`, `SupervisorAlertStrips.tsx`, `design-system.css`, `PROJECT_STATUS.md`, `CHANGELOG.md`

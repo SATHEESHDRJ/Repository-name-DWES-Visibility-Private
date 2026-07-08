@@ -1,0 +1,186 @@
+---
+description: >
+  Permanent AI development guide for the Digital Wiring Execution System (DWES)
+  project located at C:\Users\sathe\OneDrive\Desktop\DWES. This skill MUST be
+  applied to every code generation, bug fix, refactor, UI change, feature
+  implementation, or architectural question inside this workspace. It governs
+  all AI-assisted development in this project.
+alwaysApply: true
+---
+
+# DWES Project Skill — Permanent AI Development Guide
+
+You are the dedicated AI developer for the **Digital Wiring Execution System (DWES)** project.
+This workspace (`C:\Users\sathe\OneDrive\Desktop\DWES`) is your **entire universe**.
+Everything you generate must come from, conform to, and integrate with the code that
+already exists in this project — nothing else.
+
+**Related rules & skills (read when relevant):**
+- `.cursor/rules/dwes-profile.mdc` — discovered stack, structure, domain vocabulary
+- `.cursor/rules/change-management.mdc` — backup, scope, changelog (mandatory)
+- `dwes-db-guard` skill — WiringSchemeDB integrity (trigger on any DB/data work)
+- `.cursor/rules/ui-refactor-smoke-test.mdc` — build + route smoke test after UI changes
+- `.cursor/rules/technician-wiring-workflow.mdc` — technician wiring UX constraints
+- `.cursor/rules/report-branding.mdc` — PDF/Excel report logo helpers
+- `dwes-reports-backup` skill — reports, wiring workstation, backup scripts
+
+---
+
+## 1. Scope Lock (Non-Negotiable)
+
+1. **Single source of truth:** The DWES codebase in this workspace is the ONLY
+   authoritative reference for architecture, coding style, naming, UI patterns,
+   database schema, API contracts, and business logic.
+2. **No external projects:** Never import patterns, boilerplate, templates,
+   components, or conventions from other projects, starter kits, tutorials, or
+   generic "best practice" scaffolds unless the user explicitly instructs you to.
+3. **No unrelated technologies:** Do not introduce new frameworks, libraries,
+   state managers, ORMs, CSS systems, build tools, or architectural patterns
+   (e.g., switching to a different router, adding Redux/Zustand, swapping the
+   ORM, adding Tailwind to a non-Tailwind project) unless the user explicitly
+   requests it. If a task seems to need a new dependency, STOP and ask first,
+   proposing an alternative that uses what the project already has.
+4. **Changes stay in scope:** Modify only the files required for the requested
+   task. Do not opportunistically refactor, reformat, rename, reorganize
+   folders, "clean up," or upgrade dependencies while doing something else.
+5. **Business logic is sacred:** Existing workflows, validation rules,
+   calculations, status transitions, permissions, and domain rules must be
+   preserved exactly. If a change would alter existing behavior for any user,
+   flag it explicitly and get confirmation before proceeding.
+
+---
+
+## 2. Mandatory Codebase Discovery Protocol
+
+**Before implementing ANY feature, fix, or modification**, you must ground yourself
+in the actual code. Never implement from memory or assumption.
+
+Run this protocol (skim what you already know from earlier in the session; read
+fresh anything relevant to the current task):
+
+### 2.1 Project map
+- Read the root: `package.json` / `backend/package.json` to identify the exact
+  stack, framework versions, scripts, and dependencies actually in use.
+- Read config files: `tsconfig.json`, `vite.config.ts`, linter configs,
+  `README.md`, and `/docs` content.
+- Walk the folder tree and note the established layering (React pages/components/
+  hooks/api → NestJS controllers/services → Prisma/file store). **The existing
+  folder structure defines where new code goes. Never invent a new top-level
+  structure.**
+
+### 2.2 Architecture & conventions
+- Open 2–3 existing modules similar to the one you're about to touch and extract:
+  - Naming conventions (files, classes, functions, variables, DB columns, routes)
+  - Error-handling pattern (exceptions vs result objects, toast/alert patterns)
+  - Logging, auth/permission checks, and validation patterns
+  - How API calls are made (reuse `src/services/api.ts` — never ad hoc `fetch`
+    if the shared client exists)
+  - State management and data-flow patterns already in use (Zustand stores)
+- Match these patterns exactly. New code should be indistinguishable in style
+  from code a long-time DWES developer would write.
+
+### 2.3 Database & API contracts
+- Schema source of truth: `backend/prisma/schema.prisma` (WiringSchemeDB).
+  Read actual table/column definitions for the task — never guess.
+- **DWES exception — WiringSchemeDB schema is read-only:** `prisma db pull` only.
+  Never run `prisma migrate`, `prisma db push`, or DDL against WiringSchemeDB.
+  App code adapts to existing columns. Load `dwes-db-guard` before any data work.
+- Writable exception: `backend/data/dwes_auth.sqlite` (WebAuthn store) only.
+- Frames and drawings are **files** under `backend/uploads/<PROJECT_CODE>/` —
+  not DB tables.
+- New endpoints must follow existing NestJS route naming, JWT auth, request/
+  response shapes, and status-code conventions in current controllers.
+
+### 2.4 UI/UX inventory
+- Before building any UI, inventory `src/components/ui/`, `src/components/layout/`,
+  and styles in `design-system.css`, `tokens.css`, `themes.css`, `buttons.css`.
+- **Reuse-first rule:** If a button, table, modal, form control, layout, badge,
+  or pattern already exists — use it. Create a new component only when nothing
+  in the project fits, and place/style it like its siblings.
+- Match spacing, typography, colors, iconography, form validation display,
+  loading states, empty states, and error states to existing screens (`AppShell`,
+  `DashboardShell`, `SectionHeader`, role dashboards).
+
+### 2.5 Wiring-domain awareness
+DWES is a wiring execution system. Use exact entity names from code/DB: projects,
+panels, frames, cables, tech_assignments, panel_inspections (`overall_result`,
+`redmarkup_check`, `inspection_notes`), session_log (no `user_name` column),
+roles (admin, director, supervisor, technician, qaqc). Never invent parallel
+terminology.
+
+---
+
+## 3. DWES Project Profile
+
+The completed profile lives in **`.cursor/rules/dwes-profile.mdc`**. On first use
+in a session, read it for stack, structure, conventions, and domain vocabulary.
+Update that file when stack, ports, or major structure changes.
+
+---
+
+## 4. Implementation Rules
+
+1. **Analyze → Plan → Confirm → Implement.** For anything non-trivial, state a
+   short plan first: files to touch, components/services to reuse, schema/API
+   impact. For trivial fixes, proceed directly but still verify against real code.
+2. **Smallest correct diff.** Prefer surgical edits over rewrites. Never rewrite
+   a whole file when a targeted change suffices.
+3. **Consistency beats preference.** If the project does something in a way you
+   consider suboptimal, follow the project's way. Suggest improvements only as
+   a separate, clearly-labeled note — never silently apply them.
+4. **Integration over duplication.** Extend existing services, hooks, utilities,
+   and helpers rather than duplicating logic. Search the codebase for existing
+   implementations before writing new ones.
+5. **Backward compatibility.** Bug fixes must not change unrelated behavior.
+   New features must not break existing screens, endpoints, reports, or data.
+6. **Data safety.** Load `dwes-db-guard` before any data/schema command. Never
+   generate destructive migrations, mass updates, or deletes without explicit
+   confirmation.
+7. **Testing & verification.** After UI changes: `npm run build` (exit 0) and
+   smoke-test `/`, `/technician`, and one other role route. Describe manual
+   verification steps when no automated tests exist.
+8. **Security & config.** Follow JWT auth, permission hooks, and input validation
+   on every new endpoint and form. Never hardcode secrets; use `.env` patterns.
+
+---
+
+## 5. Long-Term Architectural Alignment
+
+- Every change must fit the project's long-term architecture: respect layer
+  boundaries (UI ↔ `src/services/api.ts` ↔ NestJS services ↔ Prisma read / file
+  store) exactly as the project draws them.
+- New modules mirror the structure of the best existing module of the same kind.
+- Cross-cutting concerns (logging, auth, error handling, notifications) go
+  through the project's existing mechanisms — never a one-off implementation.
+- When the user requests something architecturally significant (new module,
+  schema redesign, integration), first present how it maps onto the existing
+  architecture and get approval before writing code.
+
+---
+
+## 6. When to Stop and Ask
+
+Ask the user before proceeding when:
+- A task appears to require a new dependency, framework, or external service.
+- A requested change would modify existing business rules, workflows, statuses,
+  permissions, or stored data semantics.
+- The database schema or a public API contract must change.
+- The request conflicts with existing DWES patterns and you can't resolve it
+  by following the codebase.
+- Required context (a file, table, endpoint, or requirement) cannot be found
+  in the workspace.
+
+Never fill such gaps with assumptions from outside this project.
+
+---
+
+## 7. Response Discipline
+
+- Reference real file paths, real component names, and real schema objects from
+  this workspace in every explanation.
+- When reusing something, name it (e.g., "reusing `<ExistingComponent>` from
+  `<actual path>`").
+- Keep all reasoning, code, and suggestions strictly within the DWES project
+  unless the user explicitly widens the scope.
+
+**This skill is permanent. Apply it to every interaction in this workspace.**
