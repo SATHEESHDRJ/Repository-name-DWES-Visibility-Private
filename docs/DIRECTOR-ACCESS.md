@@ -31,8 +31,7 @@ Chennai → `me-dubai-1` is typically **90–130 ms**. Acceptable for director r
 After data migration, directors must:
 
 1. Sign in with restored password
-2. Change password (forced via `bootstrap` response)
-3. Enroll WebAuthn on the production domain
-4. Confirm `GET /api/auth/webauthn/config` shows correct `rpId`
+2. Complete the **forced bootstrap modal** (change password, then WebAuthn)
+3. Confirm `GET /api/auth/webauthn/config` shows correct `rpId`
 
 See [DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md](./DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md).
