@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { ROLE_ROUTES } from '../types';
 import type { UserRole } from '../types';
+import ProductionBootstrapGate from './auth/ProductionBootstrapGate';
 
 interface Props {
   children: React.ReactNode;
@@ -14,5 +15,9 @@ export default function ProtectedRoute({ children, allowedRole }: Props) {
   if (user.role !== allowedRole) {
     return <Navigate to={ROLE_ROUTES[user.role as UserRole] ?? '/'} replace />;
   }
-  return <>{children}</>;
+  return (
+    <ProductionBootstrapGate>
+      {children}
+    </ProductionBootstrapGate>
+  );
 }

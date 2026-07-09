@@ -39,7 +39,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @Roles('system_admin', 'prod_supervisor', 'wiring_technician')
+  @Roles('system_admin', 'prod_supervisor', 'ops_director', 'wiring_technician')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: any,

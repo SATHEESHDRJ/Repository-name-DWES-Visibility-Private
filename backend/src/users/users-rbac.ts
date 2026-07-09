@@ -53,6 +53,12 @@ export function assertCanCreateUser(caller: UserLike, dtoRole: string): void {
 
 export function assertCanMutateUser(caller: UserLike, target: UserLike): void {
   if (caller.role === 'system_admin') return;
+  if (caller.role === 'ops_director') {
+    if (caller.id !== target.id) {
+      throw new ForbiddenException('Directors may only update their own account');
+    }
+    return;
+  }
   if (caller.role === 'prod_supervisor') {
     if (!isTechnicianRole(target.role)) {
       throw new ForbiddenException('Supervisors may only manage technician accounts');
@@ -87,6 +93,12 @@ export function sanitizeUpdateDto(
     if (dto.employee_id !== undefined) allowed.employee_id = dto.employee_id;
     if (dto.whatsapp_number !== undefined) allowed.whatsapp_number = dto.whatsapp_number;
     if (dto.username !== undefined) allowed.username = dto.username;
+    return allowed;
+  }
+
+  if (caller.role === 'ops_director' && caller.id === target.id) {
+    const allowed: Record<string, unknown> = {};
+    if (dto.password) allowed.password = dto.password;
     return allowed;
   }
 

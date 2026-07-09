@@ -29,6 +29,12 @@ export interface AuthUser {
   ready_since: string | null;
 }
 
+export interface BootstrapStatus {
+  required: boolean;
+  needs_password_rotation: boolean;
+  needs_webauthn_enrollment: boolean;
+}
+
 export interface Project {
   id: number;
   code: string;

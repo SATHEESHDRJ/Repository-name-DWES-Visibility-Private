@@ -1,11 +1,28 @@
 import { create } from 'zustand';
-import type { AuthUser } from '../types';
+import type { AuthUser, BootstrapStatus } from '../types';
 import { authApi } from '../services/api';
 import { PROJECT_SELECTION_STORAGE_KEY } from './useProjectSelectionStore';
+
+const BOOTSTRAP_KEY = 'dwes_bootstrap';
+
+function readBootstrap(): BootstrapStatus | null {
+  try {
+    const raw = localStorage.getItem(BOOTSTRAP_KEY);
+    return raw ? JSON.parse(raw) as BootstrapStatus : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistBootstrap(b: BootstrapStatus | null) {
+  if (!b) localStorage.removeItem(BOOTSTRAP_KEY);
+  else localStorage.setItem(BOOTSTRAP_KEY, JSON.stringify(b));
+}
 
 interface AuthState {
   user: AuthUser | null;
   token: string | null;
+  bootstrap: BootstrapStatus | null;
   isLoading: boolean;
   error: string | null;
 
@@ -13,11 +30,14 @@ interface AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   hydrateFromStorage: () => void;
+  patchBootstrap: (patch: Partial<BootstrapStatus>) => void;
+  clearBootstrap: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
+  bootstrap: null,
   isLoading: false,
   error: null,
 
@@ -25,12 +45,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const token = localStorage.getItem('dwes_token');
       const userRaw = localStorage.getItem('dwes_user');
+      const bootstrap = readBootstrap();
       if (token && userRaw) {
-        set({ token, user: JSON.parse(userRaw) });
+        set({ token, user: JSON.parse(userRaw), bootstrap });
       }
     } catch {
       localStorage.removeItem('dwes_token');
+      localStorage.removeItem('dwes_refresh_token');
       localStorage.removeItem('dwes_user');
+      localStorage.removeItem(BOOTSTRAP_KEY);
     }
   },
 
@@ -41,7 +64,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('dwes_token', data.access_token);
       if (data.refresh_token) localStorage.setItem('dwes_refresh_token', data.refresh_token);
       localStorage.setItem('dwes_user', JSON.stringify(data.user));
-      set({ user: data.user, token: data.access_token, isLoading: false, error: null });
+      const bootstrap = data.bootstrap ?? null;
+      persistBootstrap(bootstrap?.required ? bootstrap : null);
+      set({
+        user: data.user,
+        token: data.access_token,
+        bootstrap: bootstrap?.required ? bootstrap : null,
+        isLoading: false,
+        error: null,
+      });
     } catch (err: unknown) {
       const ax = err as {
         response?: { status?: number; data?: { message?: string } };
@@ -50,7 +81,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
       const status = ax.response?.status;
 
-      // Log the real status/error for debugging — the user only sees the friendly text.
       console.error('[auth] login failed:', {
         status: status ?? '(no response)',
         code: ax.code,
@@ -60,13 +90,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       let msg: string;
       if (status === 401 || status === 403) {
-        // Reached the server, credentials rejected
         msg = 'Incorrect username or password.';
       } else if (status === undefined || status >= 500) {
-        // No response (backend down / network) OR server/proxy error (500, 502, 503…)
         msg = "Can't reach the server. Please try again or contact support.";
       } else {
-        // Other 4xx (e.g. 400 validation) — surface server text if present
         msg = ax.response?.data?.message || 'Login failed. Please try again.';
       }
 
@@ -81,11 +108,36 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('dwes_token');
     localStorage.removeItem('dwes_refresh_token');
     localStorage.removeItem('dwes_user');
+    localStorage.removeItem(BOOTSTRAP_KEY);
     sessionStorage.removeItem(PROJECT_SELECTION_STORAGE_KEY);
-    set({ user: null, token: null, error: null });
+    set({ user: null, token: null, bootstrap: null, error: null });
   },
 
   clearError: () => set({ error: null }),
+
+  patchBootstrap: (patch) => {
+    const current = get().bootstrap;
+    if (!current) return;
+    const needsPassword = patch.needs_password_rotation ?? current.needs_password_rotation;
+    const needsWebAuthn = patch.needs_webauthn_enrollment ?? current.needs_webauthn_enrollment;
+    const next: BootstrapStatus = {
+      needs_password_rotation: needsPassword,
+      needs_webauthn_enrollment: needsWebAuthn,
+      required: needsPassword || needsWebAuthn,
+    };
+    if (!next.required) {
+      persistBootstrap(null);
+      set({ bootstrap: null });
+      return;
+    }
+    persistBootstrap(next);
+    set({ bootstrap: next });
+  },
+
+  clearBootstrap: () => {
+    persistBootstrap(null);
+    set({ bootstrap: null });
+  },
 }));
 
 if (typeof window !== 'undefined') {
