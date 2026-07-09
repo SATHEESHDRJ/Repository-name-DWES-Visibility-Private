@@ -10,6 +10,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { FrameStore } from './frames/frame-store';
 import { CANONICAL_SEED_PROJECTS } from './common/seed-projects';
+import { allowStartupSeed } from './common/demo-mode.util';
 import * as bcrypt from 'bcryptjs';
 
 const SEED_USERS = [
@@ -67,6 +68,20 @@ function buildCorsOrigins(): (string | RegExp)[] {
   return origins;
 }
 
+function resolveCorsOrigins(): (string | RegExp)[] {
+  const fromEnv = process.env.CORS_ORIGINS?.trim();
+  if (fromEnv) {
+    return fromEnv.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return buildCorsOrigins();
+}
+
+function assertProductionSecrets() {
+  if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET?.trim()) {
+    throw new Error('[DWES] JWT_SECRET is required when NODE_ENV=production');
+  }
+}
+
 function getRuntimePortFilePath() {
   return path.resolve(__dirname, '..', '.dwes-port');
 }
@@ -81,7 +96,9 @@ function writeRuntimePort(port: number) {
 
 async function listenWithFallback(app: Awaited<ReturnType<typeof NestFactory.create>>, host: string, requestedPort: number) {
   let port = requestedPort;
-  const maxAttempts = 10;
+  // Launcher sets DWES_MODE=dev — keep Nest on :3001 so Vite proxy stays aligned.
+  const strictPort = process.env.DWES_MODE === 'dev';
+  const maxAttempts = strictPort ? 1 : 10;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
@@ -101,14 +118,14 @@ async function listenWithFallback(app: Awaited<ReturnType<typeof NestFactory.cre
 }
 
 async function bootstrap() {
+  assertProductionSecrets();
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
   await prisma.$connect();
 
-  // Seed users only if table is empty
   const userCount = await prisma.users.count();
-  if (userCount === 0) {
+  if (userCount === 0 && allowStartupSeed()) {
     console.log('[DWES] Users table empty — seeding canonical leadership users...');
     for (const u of SEED_USERS) {
       const hashed = await bcrypt.hash(u.password, 10);
@@ -118,16 +135,19 @@ async function bootstrap() {
       });
     }
     console.log(`[DWES] Seeded ${SEED_USERS.length} users`);
+  } else if (userCount === 0) {
+    console.log('[DWES] Users table empty — skipping seed (production; restore DB or set DEMO_MODE=true)');
   } else {
     console.log(`[DWES] Found ${userCount} existing users — skipping seed`);
   }
 
-  // Import historical projects if their codes don't exist
-  for (const p of SEED_PROJECTS) {
-    const exists = await prisma.projects.findUnique({ where: { code: p.code } });
-    if (!exists) {
-      await prisma.projects.create({ data: { ...p, is_active: true } });
-      console.log(`[DWES] Imported project: ${p.code}`);
+  if (allowStartupSeed()) {
+    for (const p of SEED_PROJECTS) {
+      const exists = await prisma.projects.findUnique({ where: { code: p.code } });
+      if (!exists) {
+        await prisma.projects.create({ data: { ...p, is_active: true } });
+        console.log(`[DWES] Imported project: ${p.code}`);
+      }
     }
   }
 
@@ -138,8 +158,23 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'] });
 
+  if (process.env.TRUST_PROXY === 'true') {
+    const http = app.getHttpAdapter().getInstance();
+    if (typeof http?.set === 'function') http.set('trust proxy', 1);
+  }
+
+  try {
+    const helmet = (await import('helmet')).default;
+    app.use(helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }));
+  } catch {
+    console.warn('[DWES] helmet not installed — security headers rely on reverse proxy');
+  }
+
   app.enableCors({
-    origin: buildCorsOrigins(),
+    origin: resolveCorsOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

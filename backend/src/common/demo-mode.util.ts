@@ -9,3 +9,8 @@ export function isDemoMode(): boolean {
 export function assertDemoMode(): void {
   if (!isDemoMode()) throw new NotFoundException();
 }
+
+/** Allow canonical user/project seeding at startup (local demo only). */
+export function allowStartupSeed(): boolean {
+  return isDemoMode() || process.env.NODE_ENV !== 'production';
+}

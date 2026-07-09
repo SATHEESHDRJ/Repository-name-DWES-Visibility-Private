@@ -1,0 +1,66 @@
+name: Deploy Production OCI
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  OCI_REGION: me-dubai-1
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image tag
+        id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to OCIR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.OCI_OCIR_HOST }}
+          username: ${{ secrets.OCI_OCIR_USERNAME }}
+          password: ${{ secrets.OCI_OCIR_AUTH_TOKEN }}
+
+      - name: Build and push API
+        run: |
+          docker build -f infra/docker/Dockerfile.api \
+            -t ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ steps.meta.outputs.tag }} \
+            -t ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:latest .
+          docker push ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ steps.meta.outputs.tag }}
+          docker push ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:latest
+
+      - name: Build and push Nginx
+        run: |
+          docker build -f infra/docker/Dockerfile.nginx \
+            -t ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ steps.meta.outputs.tag }} \
+            -t ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:latest .
+          docker push ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ steps.meta.outputs.tag }}
+          docker push ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:latest
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_VM_HOST }}
+          username: ${{ secrets.OCI_VM_USER }}
+          key: ${{ secrets.OCI_VM_SSH_KEY }}
+          script: |
+            cd /opt/dwes
+            git fetch --tags
+            git checkout ${{ github.ref_name }}
+            export DWES_API_IMAGE=${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ needs.build-push.outputs.image_tag }}
+            export DWES_NGINX_IMAGE=${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ needs.build-push.outputs.image_tag }}
+            bash infra/oci/scripts/deploy.sh "$DWES_API_IMAGE" "$DWES_NGINX_IMAGE"

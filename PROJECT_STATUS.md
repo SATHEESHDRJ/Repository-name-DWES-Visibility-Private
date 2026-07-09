@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-08 (Hard Reset DB dev tool)  
+**Last updated:** 2026-07-09 (Supervisor Digital Wiring Monitor)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -10,13 +10,13 @@
 
 | Item | State |
 |------|--------|
-| Repository | Branch `change/fix-duplicate-resolver-2026-07-08` off `main` @ `f6af0a9` |
-| Latest commit | `f6af0a9` — MCP config + project rules |
-| Working tree | **Dirty** — duplicate resolver fix + prior unstaged set |
-| Duplicate resolver fix (2026-07-08) | Branch `change/fix-duplicate-resolver-2026-07-08` (no commit) |
+| Repository | Branch `change/oci-single-vm-prod-2026-07-09` |
+| Latest commit | (see `git rev-parse --short HEAD`) |
+| Working tree | OCI single-VM hardening in progress |
+| OCI deploy | See `docs/DEPLOY-TIMELINE.md` — code ready; awaiting `terraform apply` + cutover |
 | Protocol | `dwes_change_management_protocol.md` — follow before every change |
 
-**Stabilization pass (2026-07-08):** No checkpoint branch/commit created (author did not request commit). Restore point = current dirty `main` at `f6af0a9` + working tree.
+**Launcher restore point (2026-07-09):** Branch `change/production-startup-2026-07-09` (no commit requested).
 
 ---
 
@@ -62,18 +62,28 @@
 |------|--------|
 | **Supervisor** — All Projects action toolbar (compact buttons, even spacing) | **DONE** |
 | **Supervisor** — Projects toolbar shorter action labels (Wiring Upload, Workflow, Drawing, Reports, Users) | **DONE** |
+| **App-wide** — Workspace hero header layout (title/subtitle/badge spacing, no ascender clipping) | **DONE** (2026-07-08) |
+| **App-wide** — Liquid Glass design system (selective glassmorphism on shells, cards, modals, forms) | **DONE** (2026-07-08) |
+| **App-wide** — Bento Grid layouts (role dashboards, KPI strips, user mgmt, upload sections) | **DONE** (2026-07-08) |
+| **App-wide** — Dense data tables/grids exempt from glass blur (wrappers only) | **DONE** (2026-07-08) |
+| **App-wide** — Dashboard data refresh: event-driven (`dwes:frames-changed`, `dwes:workflow-changed`, `dwes:documents-changed`) + 45 s idle poll; no 4 s rogue intervals | **DONE** (2026-07-09) |
+| **Supervisor** — Delete Panel confirmation modal (unified `DeleteConfirmModal`, checkbox ack, backup-first API) | **DONE** (2026-07-09) |
+| **Supervisor** — Digital Wiring Monitor (fullscreen read-only schedule grid + cable inspector + KPI dashboard) | **DONE** (2026-07-09) |
+| **App-wide** — Unified delete confirmation (`DeleteConfirmModal`: impact, scopes, backup status, checkbox; no type-phrase) | **DONE** (2026-07-09) |
+| **Admin** — Permanent project delete uses unified modal (still sends `confirmed_code` after checkbox) | **DONE** (2026-07-09) |
+| **Admin** — Hard Reset / Hard Reset DB / Reset All Projects remain phrase-gated exceptions | **DEFERRED** (2026-07-09) |
 | **Supervisor** — hero header matches admin/director (default `dashboard-hero`) | **DONE** |
-| **Supervisor** — Projects tab project + panel selector; gated uploads/reports | **DONE** |
+| **Supervisor** — Projects tab View Drawing / Digital Wiring View auto-enable after upload (API-validated, `documents-changed` event) | **DONE** (2026-07-09) |
 | **Supervisor** — Projects Active Panel dropdown (compact `=H001` labels only; project-scoped dedupe) | **DONE** |
 | **Supervisor** — Duplicate panel delete removes frame + DB refs; auto-refresh all workspaces | **DONE** (2026-07-08) |
 | **Supervisor** — wiring upload targets selected panel (`frame_id`) | **DONE** |
 | **Supervisor** — Wiring Upload + Drawing modals: View / Replace when file exists (no separate View button) | **DONE** (2026-07-08) |
 | **Supervisor** — Unified `FileViewer` (PDF/image/Excel) + metadata bar in upload popups | **DONE** (2026-07-08, spec pass) |
 | **Supervisor** — Global duplicate panel name guard (UI + API 409) blocks wiring/drawing/reports/workflow until resolved | **DONE** (2026-07-08; drawing modal + toolbar gating aligned in master verify pass) |
-| **Supervisor** — Duplicate panel resolver: distinguishable rename buttons, duplicate-only select, selection preserved on resolve | **DONE** (2026-07-08) |
+| **Supervisor** — Delete Panel uses unified checkbox confirmation (phrase still sent to guarded API) | **DONE** (2026-07-09) |
 | **Supervisor** — Panel ID shown in upload headers + viewer; duplicate-name upload confirm | **SUPERSEDED** — hard block + rename/select resolution (2026-07-08) |
 | **Supervisor** — Replace upload: confirm + progress warning + backups before overwrite | **DONE** (2026-07-08) |
-| **Supervisor** — mid-changeover alerts hidden on Projects tab | **DONE** |
+| **Supervisor** — Mid-Changeover Availability banner removed from dashboard chrome (workflow modal retained) | **DONE** (2026-07-09) |
 | **Supervisor** — per-panel metadata (create/add/edit); info card shows selected panel fields | **DONE** |
 | **Supervisor** — New Project popup (compact 2-col, combined fields, auto project name) | **DONE** |
 | **Desktop icon** — canonical Ingenious globe mark on white tile (from `logo-icon.svg`); `favicon.ico` + SVG favicon + PWA PNGs + `apple-touch-icon` + `app-icon.ico`; manifest theme `#1B2958` | **DONE** |
@@ -88,7 +98,8 @@
 | **Supervisor** — Project Report inline PDF viewer (`ProjectPdfPreviewModal` + `PdfDocumentViewer` + **pdf.js** canvas renderer) | **DONE** |
 | **Supervisor** — Excel Wiring Upload full-screen worksheet grid | **DONE** |
 | **UI** — Global modal/popup shell redesign (shared `Modal`, unified backdrop/sizes/motion) | **DONE** |
-| **Supervisor** — Technician Workflow modal (assign / deassign / changeover) | **DONE** |
+| **Supervisor** — Technician Workflow modal (assign / deassign / changeover) | **SUPERSEDED** — Smart Assignment Center (2026-07-09) |
+| **Supervisor** — Smart Assignment Center (dense MES workspace: KPI strip, assignment board, compact tech cards, Assign Best, filters, auto-next queue, parallel/reassign badges) | **DONE** (2026-07-09) |
 | **Supervisor** — Assignments + Mid-Changeover removed from sidebar | **DONE** |
 | **Supervisor** — Review & Approval unified workspace (panel status consolidated) | **DONE** |
 | **Supervisor** — Panel Status sidebar tab removed | **DONE** |
@@ -103,11 +114,27 @@
 | **Supervisor** — Technician Workflow dashboard-scoped (gated button, no in-modal project/panel select) | **DONE** |
 | **Supervisor** — Technician Workflow status context card (badges, technician, KPI) | **DONE** |
 | **Supervisor** — Status workspace collapsible compact project cards | **DONE** |
-| **Supervisor** — Status workspace live refresh (12s poll, tab-activate refetch, `dwes:frames-changed`, compact panel names) | **DONE** (2026-07-08) |
+| **Supervisor** — Status workspace live refresh (12s poll, tab-activate refetch, `dwes:frames-changed`, compact panel names) | **SUPERSEDED** — event-driven `useDwesRefresh` + 45 s idle fallback (2026-07-09) |
 | Viewport / shell scroll fixes | **DONE** |
 | **Stabilization pass** — frontend + backend production builds | **PASS** (2026-07-08) |
-| **Stabilization pass** — panel completion report PDF (no GA merge) | **PASS** on rebuilt backend; **stale** on long-running `:3001` dev process |
-| **Stabilization pass** — completion-report JSON endpoint | **PASS** on rebuilt backend (`:3003`); **404** on stale `:3001` — **restart required** |
+| **Final QA pass (2026-07-09)** — `npm run build` | **PASS** (exit 0, post delete-modal fix) |
+| **Final QA pass (2026-07-09)** — SPA route HTTP smoke (`/`, role routes, admin sub-routes) | **PASS** (all 200) |
+| **Final QA pass (2026-07-09)** — role JWT login (supervisor, admin, tech, director, qaqc) | **PASS** |
+| **Final QA pass (2026-07-09)** — `report-pdf` + `completion-report` + `delete-precheck` + role APIs on `:3001` | **PASS** (PDF ~66 KB; `director/stats`, `tech/my-panels`, `admin/diagnostics`, `qaqc/stats`) |
+| **Refresh validation (2026-07-09)** — grep audit (no 3–4 s dashboard polls) | **PASS** |
+| **Refresh validation (2026-07-09)** — `useDwesRefresh` on all role dashboards | **PASS** |
+| **Refresh validation (2026-07-09)** — missing `emitWorkflowChanged` at assignment paths | **FIXED** (3 files) |
+| **Refresh validation (2026-07-09)** — idle poll loading flicker (Projects/QAQC panels) | **FIXED** (silent background reload) |
+| **Refresh validation (2026-07-09)** — `npm run build` | **PASS** (exit 0) |
+| **Refresh validation (2026-07-09)** — browser idle/event network QA (`cursor-ide-browser`) | **BLOCKED** — MCP tab lost; author DevTools checklist required |
+| **Final QA pass (2026-07-09)** — browser visual/modal/viewport QA (`cursor-ide-browser`) | **BLOCKED** — MCP tab lost after create; author manual checklist required |
+| **Final QA pass (2026-07-08)** — `npm run build` | **PASS** (exit 0) |
+| **Final QA pass** — SPA route HTTP smoke (`/`, role routes, admin sub-routes) | **PASS** (all 200) |
+| **Final QA pass** — role JWT login (supervisor, admin, tech, director, qaqc) | **PASS** |
+| **Final QA pass** — `completion-report` + `report-pdf` + `delete-precheck` on `:3001` | **PASS** (200; PDF ~66 KB) |
+| **Final QA pass** — browser visual/modal/viewport QA (`cursor-ide-browser`) | **BLOCKED** — MCP tab lost after create; author manual checklist required |
+| **Stabilization pass** — panel completion report PDF (no GA merge) | **PASS** on `:3001` (~66 KB `report-pdf`) |
+| **Stabilization pass** — completion-report JSON endpoint | **PASS** on `:3001` (200 with valid `frame_id`) |
 | **Stabilization pass** — report meta grid overlap | **FIXED** in `panel-completion-report-pdf.ts` + `PanelCompletionReportPreview` CSS grid |
 
 ---
@@ -117,9 +144,11 @@
 | Purpose | Path |
 |---------|------|
 | **Project skill (always apply)** | `.cursor/rules/dwes-project-skill.mdc` |
+| **Project skill index + CPI** | `.cursor/skills/dwes-project/SKILL.md`, `improvement-review.md` |
 | **Project profile (stack/domain)** | `.cursor/rules/dwes-profile.mdc` |
 | **MCP servers** | `.cursor/mcp.json` |
 | Setup & ports | `README.md`, `DEPLOY-LAN.md` |
+| Desktop launch Dev/Prod + HMR | `scripts/LAUNCH.md` |
 | Feature progress (long form) | `PROGRESS.md` |
 | Changelog | `CHANGELOG.md` |
 | Cursor rules | `.cursor/rules/*.mdc` |
@@ -128,13 +157,61 @@
 
 ---
 
+## Developer experience / IDE (2026-07-09)
+
+| Item | Status |
+|------|--------|
+| `.vscode/extensions.json` (oxlint, Tailwind CSS IntelliSense, Prisma, Postgres, EditorConfig, …) | **DONE** |
+| `.vscode/settings.json` (workspace TS SDK, oxlint, no Prettier/ESLint format-on-save) | **DONE** |
+| `.vscode/launch.json` — FE Vite, BE Nest `--debug`, attach `:9229`, compound Full stack | **DONE** |
+| `.vscode/tasks.json` — `dev:all`, build FE/BE, lint, typecheck, prisma generate, backup dry-run | **DONE** |
+| `.editorconfig` · `.cursorignore` · `.nvmrc` (24) · `engines` node≥22 | **DONE** |
+| Lint = **oxlint** only (no Prettier) | **CONFIRMED** |
+| Electron | **OUT OF SCOPE** (browser shortcut launchers) |
+
+**Debug FE+BE:** Run and Debug → **DWES: Full stack (FE + BE)** (or `npm run dev:all` + Chrome at `http://localhost:5175`). Backend inspector on Nest `start:debug` (default `:9229`).
+
+---
+
+## Desktop launcher (2026-07-09)
+
+| Item | Status |
+|------|--------|
+| Default desktop shortcut = **Dev** (Vite HMR `:5175` + Nest `start:dev`) | **DONE** |
+| Silent VBS / no CMD windows | **DONE** |
+| Prod launcher (`Start DWES Prod (Hidden).vbs`, `npm run launch:prod`) | **DONE** |
+| Health wait (`GET /api/health`) before browser | **DONE** |
+| Duplicate prevention (reuse healthy stack; free wrong-mode FE only) | **DONE** |
+| Logs under `logs/` (`launcher.log`, `backend.log`, `frontend.log`) | **DONE** |
+| Autostart Task Scheduler (`npm run autostart:register`) | **READY** (author must register) |
+| Docs | `scripts/LAUNCH.md`, `README.md` How to start |
+
+---
+
+## Backup & recovery (2026-07-09)
+
+| Item | Status |
+|------|--------|
+| Daily backups to `Backup/YYYY-MM-DD_HH-mm` inside project | **DONE** |
+| Excludes `node_modules`, `dist`, `.git`, `Backup`, caches, logs | **DONE** |
+| Pre-backup disk space check (`minFreeGb` 5, configurable) | **DONE** |
+| Retention: 21 backups / 30 days max age (configurable) | **DONE** |
+| Post-backup verification + `backup-report.json` | **DONE** |
+| `npm run backup`, `backup:dry-run`, `backup:verify`, `backup:pre-op` | **DONE** |
+| Pre-op backup before dev hard reset + `deploy:lan*` | **DONE** |
+| Task Scheduler registration (`register-backup-task.ps1`, daily 02:00) | **READY** (author must register) |
+
+**Commands:** `npm run backup` · `npm run backup:verify` · `powershell -File scripts/register-backup-task.ps1`
+
+---
+
 ## Open flags
 
-1. **Restart backend (required):** Stop long-running `npm run dev:all` / Nest on `:3001` and restart so `completion-report` + standalone ~66 KB panel PDF are served. Evidence: `:3001` uptime 18k+ s, `completion-report` → 404, `report-pdf` → ~15 MB; `:3003` (fresh `dist`) → JSON OK + ~66 KB PDF.
+1. **Author manual QA (required):** `cursor-ide-browser` MCP could not retain a tab for automated visual QA (2026-07-08 and **2026-07-09** — tab create OK, navigate fails). **Refresh validation DevTools checklist:** (a) Login each role; open Network, filter `Fetch/XHR`, enable Preserve log. (b) Idle **15+ s** on `/supervisor` Projects, `/technician`, `/director`, `/qaqc` — confirm **no** repeating `/api/*` every 3–4 s; at most one burst at ~45 s idle or on tab focus. (c) Trigger assign/deassign/changeover, wiring cable action, inspection submit, panel upload — confirm **one debounced** refetch (~300 ms), not a cascade. (d) Confirm project/panel selection, scroll position, and open modals survive idle background refresh. Also smoke at 1440 / 1280 / 768–1024 px: Login; `/admin`; `/supervisor` (Projects + Status; modals); `/director`; `/technician`; `/qaqc`. Confirm workspace headers, glass off dense grids, no console JS errors.
 2. **IT-1 live data:** `frame_1783506467856` (`=H00+R`) holds **399** cables (imported before S.NO-1 fix). Re-upload `_H00+R.xlsx` → Validate & Import for 400.
 3. **GA merge decision:** `report-pdf` now serves standalone completion report (no GA). `generateFrameDocument()` still contains GA-append logic but has **no route** — author to confirm whether to expose as separate “full package” export or remove dead code.
 4. **Demo passwords** in `backend/src/main.ts` seed — do not deploy without rotation.
 5. **Merge policy:** Agents create `change/*` branches; author merges to `main` after review.
 6. **Wiring & Drawing spec (2026-07-08):** Drawings are **project-scoped** in backend — panel picker gates UI but `projectsApi.drawings` lists project files. Image drawing upload (PNG/JPG/SVG) not in supervisor picker. `uploadedBy` not in file store (metadata bar shows `—`). Populated popup opens viewer directly + **Replace** footer.
 7. **Security triage (report-only, not fixed):** see master verify report in `CHANGELOG.md` 2026-07-08 entry — seed creds, `DEMO_MODE`, `/api/login-hints`, `.env` in tree, large client bundle, frontend role routing without server substitute.
-8. **Hard Reset DB (dev only):** Admin → Settings → **Hard Reset DB** when `import.meta.env.DEV` + backend `DEMO_MODE=true` (or `ALLOW_DEV_HARD_RESET=true`). Wipes operational data + session log + WebAuthn; re-seeds 5 canonical projects; preserves user accounts + `uploads/backups/`.
+8. **Hard Reset DB (dev only):** Admin → Settings → **Hard Reset DB** when `import.meta.env.DEV` + backend `DEMO_MODE=true` (or `ALLOW_DEV_HARD_RESET=true`). Runs full project backup to `Backup/` first, then pg_dump + upload archive to `uploads/backups/`; wipes operational data + session log + WebAuthn; re-seeds 5 canonical projects; preserves user accounts + `uploads/backups/`.

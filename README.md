@@ -6,26 +6,54 @@ Tablet-optimised wiring execution platform for industrial panel shops. Replaces 
 
 ## How to start
 
-### One-click launcher (recommended)
+### One-click launcher (recommended — Development / HMR)
 
-Double-click `Start DWES.cmd` in the DWES root folder.  
-This opens two terminal windows — one for the backend, one for the frontend.
+1. Create the desktop icon once: `npm run shortcut:create`
+2. Double-click **DWES** on the Desktop (or `Start DWES (Hidden).vbs` / `Start DWES.cmd`).
 
-### Manual start
+This starts Vite on **:5175** and Nest `start:dev` **with no console windows**, waits for `/api/health`, then opens the browser. Frontend edits hot-reload (HMR) — you do **not** need to close and reopen the shortcut. Details: `scripts/LAUNCH.md`.
 
-**Terminal 1 — Backend (NestJS)**
+**Production (no HMR):** build first (`npm run build` + `npm --prefix backend run build`), then `Start DWES Prod (Hidden).vbs` or `npm run launch:prod`.
+
+### Oracle Cloud (OCI) production
+
+**Region:** `me-dubai-1` (Sharjah primary; Chennai director over HTTPS).
+
+| Doc | Purpose |
+|-----|---------|
+| [docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md](docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md) | Full bootstrap + cutover |
+| [docs/DEPLOY-TIMELINE.md](docs/DEPLOY-TIMELINE.md) | Progress tracking |
+| [docs/OCI-ARCHITECTURE.md](docs/OCI-ARCHITECTURE.md) | Architecture |
+| [docs/DIRECTOR-ACCESS.md](docs/DIRECTOR-ACCESS.md) | Chennai director (app only) |
+
+- **Deploy:** GitHub Actions on tag `v*` → OCIR → Bastion SSH → `infra/oci/scripts/deploy.sh`
+- **Data:** bind mounts under `/mnt/dwes-data/` (postgres, uploads, auth, backups, ssl)
+- **Rollback:** `infra/oci/scripts/rollback.sh`
+- **Secrets:** OCI Vault — never commit `infra/docker/.env`
+- **WebAuthn:** `RP_ID`, `RP_ORIGIN`, `CORS_ORIGINS` must match `DWES_DOMAIN`
+
+```bash
+docker build -f infra/docker/Dockerfile.api -t dwes-api .
+docker build -f infra/docker/Dockerfile.nginx -t dwes-nginx .
 ```
-cd C:\Users\sathe\OneDrive\Desktop\DWES\backend
-node dist\main.js
+
+### Manual start (visible terminals)
+
+```
+npm run dev:all
 ```
 
-**Terminal 2 — Frontend (Vite)**
+Or separately: `npm run backend` + `npm run dev`, then open **http://localhost:5175**.
+
+### Git pre-commit hook (new clones)
+
+After cloning, install the tracked hook once:
+
 ```
-cd C:\Users\sathe\OneDrive\Desktop\DWES
-npm run dev
+npm run hooks:install
 ```
 
-Then open your browser: **http://localhost:5175**
+Source: `scripts/git-hooks/pre-commit` (blocks secrets, build artifacts, and files >50MB). Requires Git for Windows so commits invoke `bash` for the hook.
 
 ---
 
@@ -105,7 +133,10 @@ DWES/
 │   ├── prisma/
 │   │   └── schema.prisma   Database schema (read-only)
 │   └── dist/               Compiled backend (run via node dist/main.js)
-├── Start DWES.cmd          One-click launcher
+├── Start DWES (Hidden).vbs Dev launcher (Vite HMR, no console)
+├── Start DWES Prod (Hidden).vbs  Production launcher (no HMR)
+├── Start DWES.cmd          Delegates to hidden Dev launcher
+├── scripts/LAUNCH.md       Dev/Prod launch, autostart, HMR notes
 └── README.md               This file
 ```
 

@@ -1,0 +1,47 @@
+#!/bin/bash
+# DWES Pre-commit Hook (tracked copy — install via: npm run hooks:install)
+# Prevents accidental commits of build artifacts, secrets, and large files
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Check for large files (>50MB)
+git diff --cached --name-only --diff-filter=AM | while read file; do
+  if [ -f "$file" ]; then
+    size=$(du -b "$file" | cut -f1)
+    # 50MB = 52428800 bytes
+    if [ $size -gt 52428800 ]; then
+      echo "❌ ERROR: File too large (>50MB): $file"
+      exit 1
+    fi
+  fi
+done
+
+# Block node_modules, dist, Backup, uploads if somehow staged
+blocked_paths=(
+  "node_modules/"
+  "backend/node_modules/"
+  "dist/"
+  "backend/dist/"
+  ".vite/"
+  "Backup/"
+  "uploads/"
+  "backend/data/"
+)
+
+for pattern in "${blocked_paths[@]}"; do
+  if git diff --cached --name-only | grep -q "^${pattern}"; then
+    echo "❌ ERROR: Cannot commit files in $pattern (should be in .gitignore)"
+    exit 1
+  fi
+done
+
+# Block secrets (*.key, .env, *.pem, *.pfx)
+if git diff --cached --name-only | grep -qE '\.(key|pem|pfx)$|^\.env|infra/docker/\.env$|backend/backups/.*\.(dump|sql)$'; then
+  echo "❌ ERROR: Attempting to commit secrets or DB dumps (.env, infra/docker/.env, *.dump)"
+  exit 1
+fi
+
+echo "✓ Pre-commit checks passed"
+exit 0

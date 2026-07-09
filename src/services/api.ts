@@ -12,16 +12,42 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Global 401 handler — clear token and redirect to login on session expiry.
-// Skip the login request itself: a 401 there means bad credentials, and the
-// login page must keep the error message instead of reloading the page.
+// Global 401 handler — try refresh once, then clear session.
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function tryRefreshSession(): Promise<string | null> {
+  const refresh = localStorage.getItem('dwes_refresh_token');
+  if (!refresh) return null;
+  if (!refreshInFlight) {
+    refreshInFlight = api.post('/auth/refresh', { refresh_token: refresh })
+      .then((res) => {
+        const data = res.data;
+        localStorage.setItem('dwes_token', data.access_token);
+        if (data.refresh_token) localStorage.setItem('dwes_refresh_token', data.refresh_token);
+        if (data.user) localStorage.setItem('dwes_user', JSON.stringify(data.user));
+        return data.access_token as string;
+      })
+      .catch(() => null)
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
 api.interceptors.response.use(
   res => res,
-  err => {
+  async err => {
     const url: string = err.config?.url ?? '';
     const isLoginRequest = url.includes('/auth/login');
-    if (err.response?.status === 401 && !isLoginRequest) {
+    const isRefreshRequest = url.includes('/auth/refresh');
+    if (err.response?.status === 401 && !isLoginRequest && !isRefreshRequest && !err.config?._retry) {
+      const newToken = await tryRefreshSession();
+      if (newToken) {
+        err.config._retry = true;
+        err.config.headers.Authorization = `Bearer ${newToken}`;
+        return api.request(err.config);
+      }
       localStorage.removeItem('dwes_token');
+      localStorage.removeItem('dwes_refresh_token');
       localStorage.removeItem('dwes_user');
       window.location.href = '/';
     }
@@ -37,7 +63,11 @@ export const authApi = {
   login: (username: string, password: string, project_code?: string) =>
     api.post('/auth/login', { username, password, project_code }).then(r => r.data),
 
-  logout: () => api.post('/auth/logout').then(r => r.data),
+  refresh: (refresh_token: string) =>
+    api.post('/auth/refresh', { refresh_token }).then(r => r.data),
+
+  logout: (refresh_token?: string) =>
+    api.post('/auth/logout', refresh_token ? { refresh_token } : {}).then(r => r.data),
 
   me: () => api.get('/me').then(r => r.data),
 

@@ -1,0 +1,37 @@
+#cloud-config
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-plugin
+  - git
+  - curl
+  - jq
+  - rsync
+
+groups:
+  - docker
+
+users:
+  - default
+  - name: dwes
+    groups: docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  - mkdir -p /opt/dwes /mnt/dwes-data
+  - |
+    if ! blkid /dev/oracleoci/oraclevdb; then
+      mkfs.ext4 /dev/oracleoci/oraclevdb || true
+    fi
+  - mount /dev/oracleoci/oraclevdb /mnt/dwes-data || true
+  - echo '/dev/oracleoci/oraclevdb /mnt/dwes-data ext4 defaults,nofail 0 2' >> /etc/fstab
+  - mkdir -p /mnt/dwes-data/{postgres,uploads,auth,backups,ssl/nginx,ssl/letsencrypt,staging}
+  - chown -R dwes:dwes /mnt/dwes-data /opt/dwes
+  - |
+    cat > /etc/cron.d/dwes-backup <<'CRON'
+    0 2 * * * dwes cd /opt/dwes && docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env --profile backup run --rm backup >> /mnt/dwes-data/backups/cron.log 2>&1
+    CRON
+  - chmod 644 /etc/cron.d/dwes-backup

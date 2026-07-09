@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'change/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Typecheck and build frontend
+        run: npm run build
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client and build backend
+        working-directory: backend
+        run: npx prisma generate && npm run build
+
+      - name: Backend unit tests
+        working-directory: backend
+        run: npm test
+
+      - name: Terraform validate
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform fmt check
+        working-directory: infra/oci/terraform
+        run: terraform fmt -check -recursive
+      - name: Terraform init and validate
+        working-directory: infra/oci/terraform
+        run: terraform init -backend=false && terraform validate
+
+      - name: Build Docker images (smoke)
+        run: |
+          docker build -f infra/docker/Dockerfile.api -t dwes-api:ci .
+          docker build -f infra/docker/Dockerfile.nginx -t dwes-nginx:ci .
+
+  e2e-roles:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npx playwright install chromium --with-deps
+        working-directory: e2e
+      - name: E2E role journeys (requires local stack — skip if unavailable)
+        run: |
+          echo "E2E runs against DWES_E2E_BASE_URL when stack is up"
+          if [ -n "${{ secrets.DWES_E2E_BASE_URL }}" ]; then
+            npm exec --prefix e2e playwright test --config=playwright.config.ts
+          else
+            echo "Skipping E2E — set DWES_E2E_BASE_URL secret for full run"
+          fi
+        env:
+          DWES_E2E_BASE_URL: ${{ secrets.DWES_E2E_BASE_URL }}

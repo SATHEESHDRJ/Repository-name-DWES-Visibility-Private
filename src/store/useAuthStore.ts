@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const data = await authApi.login(username, password, projectCode);
       localStorage.setItem('dwes_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('dwes_refresh_token', data.refresh_token);
       localStorage.setItem('dwes_user', JSON.stringify(data.user));
       set({ user: data.user, token: data.access_token, isLoading: false, error: null });
     } catch (err: unknown) {
@@ -75,8 +76,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
+    const refresh = localStorage.getItem('dwes_refresh_token') ?? undefined;
+    try { await authApi.logout(refresh); } catch { /* ignore */ }
     localStorage.removeItem('dwes_token');
+    localStorage.removeItem('dwes_refresh_token');
     localStorage.removeItem('dwes_user');
     sessionStorage.removeItem(PROJECT_SELECTION_STORAGE_KEY);
     set({ user: null, token: null, error: null });

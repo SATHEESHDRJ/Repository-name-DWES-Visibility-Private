@@ -23,6 +23,14 @@ alwaysApply: true
 
 `git switch main` or `git reset --hard <checkpoint>` on the change branch.
 
+## OCI production (me-dubai-1)
+
+- **Deploy:** CI on tag `v*` only — see `.github/workflows/deploy-production-oci.yml` and `.cursor/rules/oci-production.mdc`.
+- **Secrets:** Never commit `infra/docker/.env`; use OCI Vault + `infra/oci/scripts/fetch-secrets.sh`.
+- **WebAuthn:** `RP_ID` / `RP_ORIGIN` must match `DWES_DOMAIN` in production `.env`.
+- **VM rollback:** `infra/oci/scripts/rollback.sh` (single-VM; not zero-downtime).
+- **Data cutover:** Follow cutover checklist in `docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md`; track progress in `docs/DEPLOY-TIMELINE.md`.
+
 ## If git has no commits yet
 
 STOP before per-change branches; complete initial commit on `main` per `dwes_git_init_safe.md` with author approval.

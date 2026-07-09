@@ -1,0 +1,11 @@
+{
+  "name": "dwes-e2e",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.51.0"
+  },
+  "scripts": {
+    "test": "playwright test"
+  }
+}

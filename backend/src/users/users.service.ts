@@ -15,6 +15,7 @@ import {
   isTechnicianRole,
   sanitizeUpdateDto,
 } from './users-rbac';
+import { ProductionBootstrapService } from '../auth/production-bootstrap.service';
 
 function safeUser(u: any) {
   const { hashed_password: _hashed_password, ...safe } = u;
@@ -23,7 +24,10 @@ function safeUser(u: any) {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private bootstrap: ProductionBootstrapService,
+  ) {}
 
   private async enrichWithTeamProjects(users: any[]) {
     const techUsers = users.filter(u => isTechnicianRole(u.role));
@@ -142,6 +146,9 @@ export class UsersService {
     }
 
     const updated = await this.prisma.users.update({ where: { id }, data });
+    if (sanitized.password && caller.id === id) {
+      this.bootstrap.recordPasswordRotation(id);
+    }
     return safeUser(updated);
   }
 

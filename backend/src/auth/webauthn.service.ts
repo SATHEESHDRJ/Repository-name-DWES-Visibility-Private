@@ -13,6 +13,7 @@ import type {
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
+import { ProductionBootstrapService } from './production-bootstrap.service';
 import { loadWebAuthnConfig } from './webauthn-config';
 import { WebAuthnStoreService } from './webauthn-store.service';
 
@@ -40,6 +41,7 @@ export class WebAuthnService {
     private readonly store:       WebAuthnStoreService,
     private readonly prisma:      PrismaService,
     private readonly authService: AuthService,
+    private readonly bootstrap:   ProductionBootstrapService,
   ) {}
 
   // ── Registration (requires prior password auth) ───────────────────────────
@@ -105,6 +107,8 @@ export class WebAuthnService {
       transports:   credential.transports as string[] | undefined,
       deviceLabel,
     });
+
+    this.bootstrap.recordWebAuthnEnrollment(userId);
 
     this.logger.log(`Registered passkey for user ${userId} — device: ${deviceLabel ?? 'unlabelled'}`);
     return { success: true };
