@@ -51,16 +51,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.OCI_VM_HOST }}
-          username: ${{ secrets.OCI_VM_USER }}
-          key: ${{ secrets.OCI_VM_SSH_KEY }}
-          script: |
-            cd /opt/dwes
-            git fetch --tags
-            git checkout ${{ github.ref_name }}
-            export DWES_API_IMAGE=${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ needs.build-push.outputs.image_tag }}
-            export DWES_NGINX_IMAGE=${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ needs.build-push.outputs.image_tag }}
-            bash infra/oci/scripts/deploy.sh "$DWES_API_IMAGE" "$DWES_NGINX_IMAGE"
+      - name: Install OCI CLI
+        run: |
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Configure OCI CLI
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+          echo "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${OCI_USER_OCID}
+          fingerprint=${OCI_FINGERPRINT}
+          tenancy=${OCI_TENANCY_OCID}
+          region=${OCI_REGION}
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+
+      - name: Write Bastion SSH key
+        env:
+          OCI_VM_SSH_KEY: ${{ secrets.OCI_VM_SSH_KEY }}
+        run: |
+          echo "$OCI_VM_SSH_KEY" > /tmp/dwes_bastion_key
+          chmod 600 /tmp/dwes_bastion_key
+
+      - name: Deploy via Bastion
+        env:
+          OCI_BASTION_ID: ${{ secrets.OCI_BASTION_ID }}
+          OCI_VM_INSTANCE_ID: ${{ secrets.OCI_VM_INSTANCE_ID }}
+          OCI_VM_USER: ${{ secrets.OCI_VM_USER }}
+          OCI_VM_SSH_KEY: /tmp/dwes_bastion_key
+          DWES_API_IMAGE: ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ needs.build-push.outputs.image_tag }}
+          DWES_NGINX_IMAGE: ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ needs.build-push.outputs.image_tag }}
+          GIT_REF: ${{ github.ref_name }}
+        run: bash infra/oci/scripts/deploy-via-bastion.sh

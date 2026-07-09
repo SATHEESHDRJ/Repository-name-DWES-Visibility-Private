@@ -31,9 +31,7 @@ docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile certbot run -
 
 LIVE="${DATA_ROOT}/ssl/letsencrypt/live/${DOMAIN}"
 if [ -f "${LIVE}/fullchain.pem" ]; then
-  cp -L "${LIVE}/fullchain.pem" "${DATA_ROOT}/ssl/nginx/fullchain.pem"
-  cp -L "${LIVE}/privkey.pem" "${DATA_ROOT}/ssl/nginx/privkey.pem"
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec nginx nginx -s reload
+  bash "${ROOT}/infra/docker/scripts/sync-letsencrypt-to-nginx.sh"
   echo "[init-letsencrypt] Installed certs for ${DOMAIN}"
 else
   echo "[init-letsencrypt] WARN: certbot did not produce ${LIVE}; using bootstrap self-signed" >&2

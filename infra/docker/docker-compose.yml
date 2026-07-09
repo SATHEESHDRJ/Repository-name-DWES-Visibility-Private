@@ -90,12 +90,14 @@ services:
     profiles: ["certbot"]
     volumes:
       - ${DATA_ROOT:-/mnt/dwes-data}/ssl/letsencrypt:/etc/letsencrypt
+      - ${DATA_ROOT:-/mnt/dwes-data}/ssl/nginx:/nginx-out
       - certbot_www:/var/www/certbot
+      - ./scripts/certbot-deploy-hook.sh:/etc/letsencrypt/renewal-hooks/deploy/copy-nginx.sh:ro
     entrypoint: /bin/sh -c
     command: >
       "trap exit TERM;
       while :; do
-        certbot renew --webroot -w /var/www/certbot --deploy-hook 'cp -L /etc/letsencrypt/live/${DWES_DOMAIN}/fullchain.pem /etc/letsencrypt/nginx-out/fullchain.pem 2>/dev/null || true' --quiet;
+        certbot renew --webroot -w /var/www/certbot --quiet;
         sleep 12h;
       done"
     environment:

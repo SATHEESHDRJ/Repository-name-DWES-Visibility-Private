@@ -1,6 +1,6 @@
 # TLS certificates for Nginx container
 
-Mount files here as `fullchain.pem` and `privkey.pem` (see `docker-compose.yml`).
+Nginx reads `${DATA_ROOT}/ssl/nginx/fullchain.pem` and `privkey.pem` (see `docker-compose.yml`).
 
 ## Staging / bootstrap (self-signed)
 
@@ -12,11 +12,13 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ## Production (Let's Encrypt)
 
-Use the `certbot` compose profile after DNS points to the VM:
+After DNS points to the VM:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml --profile certbot run --rm certbot \
-  certonly --webroot -w /var/www/certbot -d dwes.example.com --agree-tos -m admin@example.com
+bash infra/oci/scripts/init-letsencrypt.sh
 ```
 
-Copy issued certs into this folder or adjust compose volume mounts to `/etc/letsencrypt/live/...`.
+Renewal:
+
+- Certbot profile copies PEMs on renew via `infra/docker/scripts/certbot-deploy-hook.sh`
+- Host reload: `bash infra/docker/scripts/sync-letsencrypt-to-nginx.sh` (also weekly cron on VM)
