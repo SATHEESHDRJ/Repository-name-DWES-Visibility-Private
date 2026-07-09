@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-09 (go-live blocked — migration prep done)  
+**Last updated:** 2026-07-09 (autonomous session — preflight blocked)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -14,6 +14,8 @@
 | OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
 | Go-live command | `npm run go-live:preflight` then `npm run go-live` |
+| Autonomous log | [docs/AUTONOMOUS-SESSION.md](docs/AUTONOMOUS-SESSION.md) |
+| Checkpoint | `PREFLIGHT_BLOCKED` — fill secrets in `deploy-secrets.local.env` |
 | Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |
 
 **Launcher restore point (2026-07-09):** Branch `change/production-startup-2026-07-09` (no commit requested).

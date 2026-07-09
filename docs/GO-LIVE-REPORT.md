@@ -4,7 +4,9 @@
 **Branch:** `change/oci-single-vm-prod-2026-07-09`  
 **Target region:** `me-dubai-1`  
 **Live URL:** **NOT DEPLOYED** — awaiting real OCI/Cloudflare credentials in `deploy-secrets.local.env`  
-**Last execution attempt:** 2026-07-09 22:00 UTC+4 — scaffold created, preflight failed on placeholders  
+**Last execution attempt:** 2026-07-09 22:11 UTC+4 — autonomous verification pass; preflight still blocked on placeholders  
+**Autonomous log:** [AUTONOMOUS-SESSION.md](./AUTONOMOUS-SESSION.md)  
+**Latest commit:** `cbbb100` (go-live orchestrator; push blocked — no `origin` remote)  
 **Production readiness:** **CONFIRMED** (author sign-off 2026-07-09)
 
 ---
@@ -38,12 +40,14 @@
 
 The go-live orchestrator (`npm run go-live`) and all infrastructure code are ready. **Terraform apply, DNS, VM bootstrap, GitHub secrets, and live verification did not run** because the agent session cannot read:
 
-| Prerequisite | Expected path | Agent session |
-|--------------|---------------|---------------|
-| Deploy secrets | `deploy-secrets.local.env` (repo root) | **MISSING** |
-| OCI API config | `%USERPROFILE%\.oci\config` | **MISSING** |
-| Bastion SSH keys | `%USERPROFILE%\.ssh\dwes_oci` (+ `.pub`) | **MISSING** |
+| Prerequisite | Expected path | Agent session (22:11) |
+|--------------|---------------|------------------------|
+| Deploy secrets | `deploy-secrets.local.env` (repo root) | **Exists — placeholders only** |
+| OCI API config | `%USERPROFILE%\.oci\config` | **Template only** |
+| OCI API key PEM | `%USERPROFILE%\.oci\oci_api_key.pem` | **Missing** |
+| Bastion SSH keys | `%USERPROFILE%\.ssh\dwes_oci` (+ `.pub`) | **OK** |
 | GitHub CLI auth | `gh auth status` | **Not logged in** |
+| Git remote | `origin` | **Not configured** |
 
 **You can sleep.** Place the three files above (copy from `deploy-secrets.local.env.example`), run `gh auth login` once, then either:
 

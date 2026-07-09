@@ -6,7 +6,13 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
-## 2026-07-09 — Infra — Production readiness confirmed (author sign-off)
+## 2026-07-09 — Infra — Autonomous session verification pass
+
+- **Scope:** `docs/AUTONOMOUS-SESSION.md`; refreshed cutover dump; verified build (exit 0), backend tests (24/24), terraform validate, compose config.
+- **Blocked:** preflight exit 1 (secrets placeholders); no git `origin` remote; `gh` not authed.
+- **Checkpoint:** `PREFLIGHT_BLOCKED` — resume with `npm run go-live` when secrets filled.
+
+## 2026-07-09 — Infra — Go-live orchestrator commit (`cbbb100`)
 
 - **Scope:** Author confirmed technical production readiness; outstanding items documented in `docs/GO-LIVE-REPORT.md`; `LOCAL_PG_PASSWORD` added to secrets example.
 - **Deploy:** Pending `deploy-secrets.local.env`, `~/.oci/config`, `gh auth` on deployment host; then `npm run go-live`.
