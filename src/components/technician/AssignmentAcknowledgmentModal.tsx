@@ -24,7 +24,8 @@ export default function AssignmentAcknowledgmentModal({
 }: Props) {
   return (
     <Modal
-      title=""
+      title="Assignment Acknowledgment"
+      subtitle="Please review and acknowledge before starting"
       onClose={() => !busy && onClose()}
       size="lg"
       footer={(
@@ -39,9 +40,7 @@ export default function AssignmentAcknowledgmentModal({
       )}
     >
       <div className="flex flex-col items-center text-center gap-2 mb-4">
-        <CheckCircle2 size={40} className="text-green-500" />
-        <h2 className="text-[18px] font-bold text-slate-900">Assignment Acknowledgment</h2>
-        <p className="text-[13px] text-slate-500">Please review and acknowledge before starting</p>
+        <CheckCircle2 size={40} className="text-green-500" aria-hidden="true" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -52,7 +51,7 @@ export default function AssignmentAcknowledgmentModal({
           { label: 'ASSIGNED TO', value: technicianName },
         ].map(tile => (
           <div key={tile.label} className="tc-ack-tile rounded-lg border border-slate-200 bg-slate-50 p-3 text-left">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{tile.label}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">{tile.label}</div>
             <div className="text-[14px] font-semibold text-slate-800 break-words">{tile.value}</div>
           </div>
         ))}

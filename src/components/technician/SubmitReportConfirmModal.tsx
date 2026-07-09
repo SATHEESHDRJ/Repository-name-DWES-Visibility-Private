@@ -20,7 +20,7 @@ export default function SubmitReportConfirmModal({
 
   return (
     <Modal
-      title=""
+      title="Submit Report"
       onClose={() => !submitting && onClose()}
       size="sm"
       footer={(
@@ -35,11 +35,10 @@ export default function SubmitReportConfirmModal({
       )}
     >
       <div className="flex flex-col items-center text-center gap-2 mb-3">
-        <CheckCircle2 size={36} className="text-green-500" />
-        <h2 className="text-[17px] font-bold text-slate-900">Submit Report</h2>
+        <CheckCircle2 size={36} className="text-green-500" aria-hidden="true" />
       </div>
-      <p className="text-[14px] text-slate-700 text-center mb-2">
-        Submit completion report for <strong>{panelName}</strong> to your supervisor?
+      <p className="text-[14px] text-slate-700 text-center mb-2 break-words">
+        Submit completion report for <strong title={panelName}>{panelName}</strong> to your supervisor?
       </p>
       <p className="text-[13px] text-slate-500 text-center mb-4">
         Submission is <strong>final</strong> for you — any further changes require a

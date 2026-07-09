@@ -47,7 +47,7 @@ export default function ColumnPrefsModal({ excelHeaders, prefs, onSave, onClose 
         Pin fields on the cable card, or hide columns from the main grid — all Excel data stays available in the details drawer.
       </p>
       <div className="ws-col-search-wrap mb-3">
-        <Search size={14} className="text-slate-400 shrink-0" />
+        <Search size={14} className="text-slate-500 shrink-0" aria-hidden="true" />
         <input
           className="ws-col-search"
           placeholder="Filter columns…"
@@ -82,7 +82,7 @@ export default function ColumnPrefsModal({ excelHeaders, prefs, onSave, onClose 
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-[13px] text-slate-400 py-4 text-center">No columns match.</p>
+          <p className="text-[13px] text-slate-500 py-4 text-center">No columns match.</p>
         )}
       </div>
       <div className="flex gap-2 justify-end">

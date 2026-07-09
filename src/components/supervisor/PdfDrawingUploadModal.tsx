@@ -317,7 +317,7 @@ export default function PdfDrawingUploadModal({
         <div className="flex items-center gap-3 px-3.5 py-3 rounded-[10px] border border-slate-200 bg-slate-50/70">
           <FileText size={20} className="text-red-500 shrink-0" strokeWidth={1.5} />
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-slate-800 truncate" title={file.name}>{file.name}</div>
+            <div className="text-[13px] font-semibold text-slate-800 modal-filename" title={file.name}>{file.name}</div>
             <div className="text-[11px] text-slate-500">{formatSize(file.size)}</div>
           </div>
           {done ? (
@@ -329,7 +329,7 @@ export default function PdfDrawingUploadModal({
               type="button"
               title="Remove file"
               onClick={() => { setFile(null); setError(''); }}
-              className="flex items-center justify-center w-8 h-8 rounded-[8px] text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+              className="flex items-center justify-center w-9 h-9 rounded-[8px] text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
             >
               <X size={16} strokeWidth={1.5} />
             </button>

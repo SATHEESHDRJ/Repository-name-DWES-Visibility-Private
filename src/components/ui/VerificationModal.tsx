@@ -189,15 +189,22 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
               type="button"
               onClick={onClose}
               title="Close"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+              aria-label="Close"
+              className="w-10 h-10 min-w-10 min-h-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
             <div className="flex-1 min-w-0">
-              <div className="text-[15px] font-bold text-slate-900 truncate">
+              <div
+                className="text-[15px] font-bold text-slate-900 break-words"
+                title={`Verify: ${meta?.panel_name || 'Frame'}`}
+              >
                 Verify: {meta?.panel_name || (loading ? '…' : 'Frame')}
               </div>
-              <div className="text-[11px] font-mono text-slate-400 truncate mt-0.5">
+              <div
+                className="text-[11px] font-mono text-slate-500 break-words mt-0.5"
+                title={[meta?.original_filename, meta?.sheet_name && `Sheet: ${meta.sheet_name}`].filter(Boolean).join(' · ')}
+              >
                 {meta?.original_filename}
                 {meta?.sheet_name && ` · Sheet: ${meta.sheet_name}`}
                 {!loading && cables.length > 0 && ` · ${cables.length} cables`}
@@ -205,7 +212,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
             </div>
             {/* Status badge */}
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold select-none shrink-0 border ${
-              loading ? 'bg-slate-50 text-slate-400 border-slate-200' :
+              loading ? 'bg-slate-50 text-slate-500 border-slate-200' :
               isVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
               'bg-slate-50 text-slate-600 border-slate-200'
             }`}>
@@ -246,7 +253,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                 }`}>
                   <FileSpreadsheet size={10} />
-                  <span className="truncate max-w-[180px]">{sourceFile.name}</span>
+                  <span className="modal-long-text max-w-[min(100%,280px)]" title={sourceFile.name}>{sourceFile.name}</span>
                   <span>—</span>
                   <span>{mismatchCount === 0 ? 'No mismatches' : `${mismatchCount} mismatch${mismatchCount !== 1 ? 'es' : ''}`}</span>
                 </div>
@@ -264,13 +271,13 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                     remapField === field ? 'bg-blue-100 border-blue-300' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <span className="text-slate-500">{FIELD_LABELS[field] || field}</span>
-                    <span className="text-slate-300">←</span>
+                    <span className="text-slate-500">←</span>
                     <span className="font-mono text-blue-700">{excelCol}</span>
                     {meta?.has_source_excel && (
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); setRemapField(remapField === field ? null : field); }}
-                        className="text-slate-300 hover:text-blue-500 transition-colors ml-0.5 cursor-pointer"
+                        className="text-slate-500 hover:text-blue-600 transition-colors ml-0.5 cursor-pointer"
                         title="Remap this column"
                         disabled={remapping}
                       >
@@ -318,7 +325,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
               ))}
 
               {!meta?.has_source_excel && mappedEntries.length === 0 && (
-                <span className="text-[10px] text-slate-400 italic select-none">
+                <span className="text-[11px] text-slate-500 italic select-none">
                   No source Excel stored — use "Select Source File" to compare, or edit cells directly.
                 </span>
               )}
@@ -329,19 +336,19 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
         {/* ── Cable Table ─────────────────────────────────────────────── */}
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-20 text-slate-400 text-[13px]">
+            <div className="flex items-center justify-center py-20 text-slate-500 text-[13px]">
               Loading cable data…
             </div>
           ) : loadError ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <AlertTriangle size={32} className="text-red-400" />
               <div className="text-[13px] font-semibold text-red-600 text-center max-w-md">{loadError}</div>
-              <div className="text-[11px] text-slate-400 text-center">
+              <div className="text-[11px] text-slate-500 text-center">
                 Ensure the backend server is running, then close and re-open the verification modal.
               </div>
             </div>
           ) : cables.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-2 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-20 gap-2 text-slate-500">
               <Info size={32} />
               <div className="text-[13px]">No cable data found for this frame.</div>
             </div>
@@ -349,7 +356,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
             <table className="w-full border-collapse text-[12px]">
               <thead className="sticky top-0 z-10 shadow-[0_1px_0_#E2E8F0]">
                 <tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 w-[44px] select-none border-r border-slate-100 bg-slate-50">
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 w-[44px] select-none border-r border-slate-100 bg-slate-50">
                     #
                   </th>
                   {TABLE_COLS.map(col => {
@@ -361,7 +368,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                         className={`px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider select-none ${
                           hasIssue ? 'text-red-500 bg-red-50' :
                           hasMismatch ? 'text-amber-600 bg-amber-50' :
-                          'text-slate-400 bg-slate-50'
+                          'text-slate-500 bg-slate-50'
                         }`}
                       >
                         {FIELD_LABELS[col]}
@@ -387,7 +394,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                         idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                       }`}
                     >
-                      <td className="px-3 py-1.5 text-[11px] tabular-nums text-slate-400 border-r border-slate-100 select-none bg-slate-50/50">
+                      <td className="px-3 py-1.5 text-[11px] tabular-nums text-slate-500 border-r border-slate-100 select-none bg-slate-50/50">
                         {cable.sno ?? idx + 1}
                       </td>
                       {TABLE_COLS.map(col => {
@@ -422,11 +429,14 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                                 className="w-full bg-blue-50 border border-blue-400 rounded px-1.5 py-0.5 text-[12px] outline-none focus:ring-2 focus:ring-blue-300 min-w-[100px]"
                               />
                             ) : (
-                              <span className={`block truncate ${
+                              <span
+                                className={`block truncate ${
                                 issue ? 'text-red-600 font-medium' :
                                 mismatch ? 'text-amber-700 font-medium' :
-                                val ? 'text-slate-700' : 'text-slate-300 italic'
-                              } ${col === 'ferrule' ? 'font-mono text-[11px]' : ''}`}>
+                                val ? 'text-slate-700' : 'text-slate-500 italic'
+                              } ${col === 'ferrule' ? 'font-mono text-[11px]' : ''}`}
+                                title={val || issue || mismatch || undefined}
+                              >
                                 {val || (issue ? `⚠ ${issue}` : '—')}
                               </span>
                             )}
@@ -470,13 +480,13 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                     max={Math.max(cables.length, 1)}
                   />
                   {totalIssues > 0 && (
-                    <div className="text-[11px] text-slate-400 mt-1 select-none">
+                    <div className="text-[11px] text-slate-500 mt-1 select-none">
                       Issues are for review only — you can still confirm and mark as verified.
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-[12px] text-slate-400 select-none">
+                <div className="text-[12px] text-slate-500 select-none">
                   {loadError
                     ? 'Could not load cables — confirm is unavailable.'
                     : cables.length === 0 && !loading

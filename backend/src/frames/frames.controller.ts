@@ -18,7 +18,13 @@ export class FramesController {
   ) {}
 
   @Get('frames')
-  findAll(@Param('code') code: string) { return this.svc.findAll(code); }
+  async findAll(@Param('code') code: string, @CurrentUser() user: User) {
+    await this.assertTechnicianProjectAccess(user, code);
+    const frames = this.svc.findAll(code);
+    if (user.role !== 'wiring_technician') return frames;
+    const allowedIds = new Set(await this.svc.technicianAssignedFrameIds(code, user.id));
+    return frames.filter(f => allowedIds.has(f.id));
+  }
 
   @Post('frames')
   @UseGuards(RolesGuard)
@@ -34,7 +40,10 @@ export class FramesController {
   ) { return this.svc.createPanel(code, body); }
 
   @Get('frames/:id')
-  findOne(@Param('code') code: string, @Param('id') id: string) { return this.svc.findOne(code, id); }
+  async findOne(@Param('code') code: string, @Param('id') id: string, @CurrentUser() user: User) {
+    await this.assertTechnicianFrameAccess(user, code, id);
+    return this.svc.findOne(code, id);
+  }
 
   /** Panel Project Completion Report PDF (executive single-page; GA drawing is separate).
    *  Technicians only when assigned to the project. */
@@ -103,14 +112,16 @@ export class FramesController {
   }
 
   @Get('frames/:id/compare-status')
-  compareStatus(@Param('code') code: string, @Param('id') id: string) {
+  async compareStatus(@Param('code') code: string, @Param('id') id: string, @CurrentUser() user: User) {
+    await this.assertTechnicianFrameAccess(user, code, id);
     return this.svc.getCompareStatus(code, id);
   }
 
   // ── Verification endpoints ─────────────────────────────────────────────────
 
   @Get('frames/:id/verify-data')
-  verifyData(@Param('code') code: string, @Param('id') id: string) {
+  async verifyData(@Param('code') code: string, @Param('id') id: string, @CurrentUser() user: User) {
+    await this.assertTechnicianFrameAccess(user, code, id);
     return this.svc.verifyData(code, id);
   }
 
@@ -185,7 +196,8 @@ export class FramesController {
   }
 
   @Get('frames/:id/compare-mapping')
-  getMapping(@Param('code') code: string, @Param('id') id: string) {
+  async getMapping(@Param('code') code: string, @Param('id') id: string, @CurrentUser() user: User) {
+    await this.assertTechnicianFrameAccess(user, code, id);
     return this.svc.getMapping(code, id);
   }
 
@@ -201,10 +213,19 @@ export class FramesController {
   }
 
   @Get('cables')
-  getCables(@Param('code') code: string) { return this.svc.getCables(code); }
+  async getCables(@Param('code') code: string, @CurrentUser() user: User) {
+    await this.assertTechnicianProjectAccess(user, code);
+    const cables = this.svc.getCables(code);
+    if (user.role !== 'wiring_technician') return cables;
+    const allowedIds = new Set(await this.svc.technicianAssignedFrameIds(code, user.id));
+    return cables.filter(c => allowedIds.has(c.frame_id));
+  }
 
   @Get('drawings')
-  getDrawings(@Param('code') code: string) { return this.svc.getDrawings(code); }
+  async getDrawings(@Param('code') code: string, @CurrentUser() user: User) {
+    await this.assertTechnicianProjectAccess(user, code);
+    return this.svc.getDrawings(code);
+  }
 
   // Additive read-only: stream a drawing file inline. Technicians may open it ONLY if they have an
   // assignment on this project; other authenticated roles per existing rules. No schema change.
@@ -215,12 +236,11 @@ export class FramesController {
     @CurrentUser() user: User,
     @Res() res: Response,
   ) {
-    if (user.role === 'wiring_technician') {
-      const allowed = await this.svc.technicianAssignedToProject(code, user.id);
-      if (!allowed) {
-        res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
-        return;
-      }
+    try {
+      await this.assertTechnicianProjectAccess(user, code);
+    } catch {
+      res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
+      return;
     }
     const file = this.svc.getDrawingFile(code, id);
     if (!file) {
@@ -261,14 +281,19 @@ export class FramesController {
   }
 
   @Get('director-reports')
-  getDirectorReports(@Param('code') code: string) { return this.svc.getDirectorReports(code); }
+  getDirectorReports(@Param('code') code: string, @CurrentUser() user: User) {
+    this.assertTechnicianDenied(user);
+    return this.svc.getDirectorReports(code);
+  }
 
   @Get('director-reports/:id/file')
   async directorReportFile(
     @Param('code') code: string,
     @Param('id') id: string,
+    @CurrentUser() user: User,
     @Res() res: Response,
   ) {
+    this.assertTechnicianDenied(user);
     const file = this.svc.getDirectorReportFile(code, id);
     if (!file) {
       res.status(404).json({ statusCode: 404, message: 'Director report not found' });
@@ -287,5 +312,28 @@ export class FramesController {
   @Roles('prod_supervisor')
   removeDirectorReport(@Param('code') code: string, @Param('reportId') reportId: string) {
     return this.svc.removeDirectorReport(code, reportId);
+  }
+
+  /** Technicians may read project-scoped document APIs only when assigned to the project. */
+  private async assertTechnicianProjectAccess(user: User, projectCode: string): Promise<void> {
+    if (user.role !== 'wiring_technician') return;
+    if (!(await this.svc.technicianAssignedToProject(projectCode, user.id))) {
+      throw new ForbiddenException('You are not assigned to this project');
+    }
+  }
+
+  /** Technicians may read panel/frame data only for frames they are assigned to. */
+  private async assertTechnicianFrameAccess(user: User, projectCode: string, frameId: string): Promise<void> {
+    if (user.role !== 'wiring_technician') return;
+    if (!(await this.svc.technicianAssignedToFrame(projectCode, frameId, user.id))) {
+      throw new ForbiddenException('You are not assigned to this panel');
+    }
+  }
+
+  /** Director reports are not exposed to wiring technicians. */
+  private assertTechnicianDenied(user: User): void {
+    if (user.role === 'wiring_technician') {
+      throw new ForbiddenException('Not authorized for this resource');
+    }
   }
 }
