@@ -1,70 +1,66 @@
 # DWES OCI — human action queue
 
-**Status:** Blocking items the agent cannot complete overnight.  
+**Status:** Go-live **blocked** — credentials not visible to agent session (2026-07-09 21:50 UTC+4).  
 **Branch:** `change/oci-single-vm-prod-2026-07-09`  
-**Last updated:** 2026-07-09
+**Full report:** [GO-LIVE-REPORT.md](./GO-LIVE-REPORT.md)
 
-Skip and continue agent work when blocked; items stay here until you complete them.
+---
+
+## BLOCKER — unblock go-live (5 min)
+
+The agent cannot see these files in the Cursor shell. **Create them on disk** before `npm run go-live`:
+
+| File | Action |
+|------|--------|
+| `deploy-secrets.local.env` | Copy `deploy-secrets.local.env.example` → fill all values |
+| `%USERPROFILE%\.oci\config` | OCI API user + key (or set `OCI_*` in secrets file) |
+| `%USERPROFILE%\.ssh\dwes_oci` + `.pub` | Ed25519 key pair for Bastion |
+| `gh auth login` | Authenticate GitHub CLI |
+
+Then:
+
+```powershell
+npm run go-live:preflight   # exit 0 required
+npm run go-live
+```
+
+**You can sleep** — migration dump and uploads are prepped. Go-live runs unattended once preflight passes.
 
 ---
 
 ## A. Terraform apply (OCI PAYG, me-dubai-1)
 
-**You provide:**
+Automated by `npm run go-live` when preflight passes.
 
-| Variable | Example |
-|----------|---------|
-| `compartment_id` | `ocid1.compartment.oc1..xxxx` |
-| `object_storage_namespace` | From Console → Object Storage |
-| `ssh_public_key` | Your `ssh-ed25519 AAAA...` |
-| `bastion_client_cidr_allow_list` | `["YOUR.PUBLIC.IP/32"]` |
-
-**Commands:**
+**Manual fallback:**
 
 ```bash
 cd infra/oci/terraform
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars with values above
-terraform init
-terraform plan
-terraform apply
+terraform init && terraform plan && terraform apply
 ```
 
-**Save outputs:** `app_public_ip`, `bastion_id`, `vault_id`, `backup_bucket`, instance OCID (for `OCI_VM_INSTANCE_ID`).
+**Save outputs:** `app_public_ip`, `app_private_ip`, `bastion_id`, `vault_id`, `vault_key_id`, `backup_bucket`, `app_instance_id`.
 
 ---
 
 ## B. Domain + Cloudflare DNS
 
-**Decision:** See [DEPLOY-DECISIONS.md](./DEPLOY-DECISIONS.md) — prefer `dwes.ingeniousnetwork.com`, else `dwes.ingenious.network`.
+Prefer `dwes.ingeniousnetwork.com` (see [DEPLOY-DECISIONS.md](./DEPLOY-DECISIONS.md)).
 
-1. Confirm domain ownership with director.
-2. Cloudflare: **gray cloud** (DNS only) A record → `app_public_ip`.
-3. On VM `infra/docker/.env`:
-
-```
-DWES_DOMAIN=<chosen-host>
-CORS_ORIGINS=https://<chosen-host>
-RP_ID=<chosen-host>
-RP_ORIGIN=https://<chosen-host>
-```
+Automated: gray-cloud A record via Cloudflare API (`proxied=false`).
 
 ---
 
 ## C. Secrets on VM
 
-```bash
-# On VM via Bastion
-bash infra/oci/scripts/fetch-secrets.sh   # if Vault populated
-# OR set manually in infra/docker/.env:
-# JWT_SECRET, POSTGRES_PASSWORD, CERTBOT_EMAIL
-bash infra/oci/scripts/init-letsencrypt.sh
-docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env up -d
-```
+Automated via Bastion: Vault secrets + `fetch-secrets.sh` + `init-letsencrypt.sh` + `docker compose up -d`.
 
 ---
 
 ## D. GitHub Actions secrets
+
+Automated by go-live script (`gh secret set` for all §D keys) + staging tag push.
 
 | Secret | Value |
 |--------|--------|
@@ -73,60 +69,58 @@ docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env u
 | `OCI_OCIR_USERNAME` | `tenancy/oracleidentitycloudservice/<user>` |
 | `OCI_OCIR_AUTH_TOKEN` | OCIR auth token |
 | `OCI_BASTION_ID` | `terraform output bastion_id` |
-| `OCI_VM_INSTANCE_ID` | App VM instance OCID |
-| `OCI_VM_HOST` | VM **private** IP |
+| `OCI_VM_INSTANCE_ID` | `terraform output app_instance_id` |
+| `OCI_VM_HOST` | `terraform output app_private_ip` |
 | `OCI_VM_USER` | `dwes` |
-| `OCI_VM_SSH_KEY` | Private key (Bastion session) |
-| `OCI_BASTION_SSH_PUBLIC_KEY` | Matching public key file path (optional if `.pub` beside private key) |
-| `OCI_TENANCY_OCID` | For OCI CLI in deploy job |
-| `OCI_USER_OCID` | API user OCID |
-| `OCI_FINGERPRINT` | API key fingerprint |
-| `OCI_PRIVATE_KEY` | API private key PEM |
-| `DWES_SMOKE_USER` / `DWES_SMOKE_PASS` | Post-deploy login (non-demo prod user) |
+| `OCI_VM_SSH_KEY` | Private key PEM |
+| `OCI_BASTION_SSH_PUBLIC_KEY` | Matching `.pub` content |
+| `OCI_TENANCY_OCID` / `OCI_USER_OCID` / `OCI_FINGERPRINT` / `OCI_PRIVATE_KEY` | OCI API |
+| `DWES_SMOKE_USER` / `DWES_SMOKE_PASS` | Post-deploy login |
 
 ---
 
-## E. Data cutover (1–3 h downtime)
+## E. Data cutover
 
-```powershell
-# Windows laptop — fresh dump (does not modify live DB)
-pg_dump -h localhost -U postgres -Fc -f backend/backups/cutover_YYYYMMDD.dump WiringSchemeDB
-```
+**Prep done:** `backend/backups/cutover_20260709.dump` (47 KB), 123 upload files counted.
+
+On VM via Bastion (after go-live step 3):
 
 ```bash
-# On VM via Bastion
 bash infra/oci/scripts/migrate-db.sh /path/cutover.dump
-bash infra/oci/scripts/migrate-uploads.sh dwes@<vm-private-ip> backend/uploads
+bash infra/oci/scripts/migrate-uploads.sh ...
 bash infra/oci/scripts/verify-migration.sh https://$DWES_DOMAIN
 DEACTIVATE_DEMO_SEEDS=true bash infra/oci/scripts/init-production-bootstrap.sh
 ```
 
 ---
 
-## F. WebAuthn sign-off
+## F. WebAuthn sign-off (ONLY human item after go-live)
+
+Sharjah tablet + Chennai director — password bootstrap modal, then fingerprint enroll.
 
 ```bash
 bash infra/oci/scripts/verify-webauthn-prod.sh https://$DWES_DOMAIN
 ```
-
-Manual: Sharjah tablet + Chennai director — password bootstrap modal, then fingerprint enroll.
 
 ---
 
 ## G. Load test
 
 ```bash
-k6 run -e DWES_BASE_URL=https://$DWES_DOMAIN infra/load/k6/smoke-120vus.js
-# or: npm run load:smoke -- https://$DWES_DOMAIN
+npm run load:smoke -- https://$DWES_DOMAIN
 ```
 
-If p95 > 800 ms: `app_ocpus=4`, `app_memory_gb=24` in `terraform.tfvars`, then `terraform apply`.
+If p95 > 800 ms: `TF_APP_OCPUS=4`, `TF_APP_MEMORY_GB=24` in secrets → re-run go-live from terraform step.
 
 ---
 
-## Tool gaps (dev laptop)
+## Tool status (agent session 2026-07-09)
 
-| Tool | Status | Action |
-|------|--------|--------|
-| Terraform CLI | May be missing locally | CI validates; install for local `terraform plan` |
-| Docker Desktop | May be missing locally | Required for local E2E compose; install or run E2E on VM |
+| Tool | Status |
+|------|--------|
+| Terraform | OK |
+| Docker | OK |
+| OCI CLI | Installed; **no config** |
+| GitHub CLI | Installed; **not authed** |
+| k6 | Not verified |
+| pg_dump | Via `postgres:18-alpine` Docker image |

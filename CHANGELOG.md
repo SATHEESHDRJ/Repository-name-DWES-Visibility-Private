@@ -6,6 +6,19 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-09 — Infra — Production readiness confirmed (author sign-off)
+
+- **Scope:** Author confirmed technical production readiness; outstanding items documented in `docs/GO-LIVE-REPORT.md`; `LOCAL_PG_PASSWORD` added to secrets example.
+- **Deploy:** Pending `deploy-secrets.local.env`, `~/.oci/config`, `gh auth` on deployment host; then `npm run go-live`.
+
+## 2026-07-09 — Infra — Go-live orchestrator + migration prep (blocked on credentials)
+
+- **Scope:** `scripts/go-live.mjs`, `scripts/go-live-preflight.mjs`, `deploy-secrets.local.env.example`, Terraform AD retry + KMS vault key + `app_private_ip` output, `docs/GO-LIVE-REPORT.md`, `docs/HUMAN-ACTIONS.md` blocker section.
+- **Branch:** `change/oci-single-vm-prod-2026-07-09`
+- **Prep:** `backend/backups/cutover_20260709.dump` (47 KB); 123 upload files; local DB counts in `docs/go-live-artifacts/`.
+- **Blocked:** `deploy-secrets.local.env`, `~/.oci/config`, `gh auth` not visible in agent session — terraform/DNS/bootstrap not applied.
+- **Verify:** `npm run build` exit 0; `npm run go-live:preflight` documents blockers.
+
 ## 2026-07-09 — Infra — Overnight OCI prep (review fixes, bootstrap UI, E2E)
 
 - **Scope:** Certbot renew path fix, Bastion deploy workflow, director password RBAC, `ProductionBootstrapGate` UI, E2E compose stack, k6 one-command, `HUMAN-ACTIONS.md`, `MORNING-REPORT.md`.

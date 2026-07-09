@@ -14,5 +14,6 @@ alwaysApply: false
 - **SSH:** Bastion sessions only — no public port 22. CI uses `infra/oci/scripts/deploy-via-bastion.sh`.
 - **Bootstrap:** Admin/director first login blocked by `ProductionBootstrapGate` until password rotation + WebAuthn.
 - **Staging:** `docker-compose.staging.yml` on port 8443.
+- **Second review (required before production tag):** `docs/SECOND-REVIEW.md` must exist for the release branch tip (security + deploy audit). All **Critical** and **High** findings must be fixed or explicitly accepted in [docs/DEPLOY-DECISIONS.md](../../docs/DEPLOY-DECISIONS.md) before pushing a `v*` deploy tag.
 
 See [docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md](../../docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md).

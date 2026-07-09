@@ -75,7 +75,10 @@ resource "oci_core_network_security_group_security_rule" "dwes_ingress_https" {
   source                    = "0.0.0.0/0"
   source_type               = "CIDR_BLOCK"
   tcp_options {
-    destination_port_range { min = 443 max = 443 }
+    destination_port_range {
+      min = 443
+      max = 443
+    }
   }
 }
 
@@ -86,7 +89,10 @@ resource "oci_core_network_security_group_security_rule" "dwes_ingress_http" {
   source                    = "0.0.0.0/0"
   source_type               = "CIDR_BLOCK"
   tcp_options {
-    destination_port_range { min = 80 max = 80 }
+    destination_port_range {
+      min = 80
+      max = 80
+    }
   }
 }
 
@@ -98,16 +104,20 @@ resource "oci_core_network_security_group_security_rule" "dwes_egress_all" {
   destination_type          = "CIDR_BLOCK"
 }
 
+locals {
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_index].name
+}
+
 resource "oci_core_volume" "dwes_data" {
-  compartment_id = var.compartment_id
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-  display_name   = "${var.project_name}-data"
-  size_in_gbs    = var.data_volume_gb
+  compartment_id      = var.compartment_id
+  availability_domain = local.availability_domain
+  display_name        = "${var.project_name}-data"
+  size_in_gbs         = var.data_volume_gb
 }
 
 resource "oci_core_instance" "dwes_app" {
   compartment_id      = var.compartment_id
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  availability_domain = local.availability_domain
   display_name        = "${var.project_name}-app"
   shape               = "VM.Standard.A1.Flex"
 
@@ -122,15 +132,15 @@ resource "oci_core_instance" "dwes_app" {
   }
 
   create_vnic_details {
-    subnet_id                 = oci_core_subnet.dwes_public_subnet.id
-    assign_public_ip          = true
-    nsg_ids                   = [oci_core_network_security_group.dwes_nsg.id]
-    display_name              = "${var.project_name}-vnic"
+    subnet_id        = oci_core_subnet.dwes_public_subnet.id
+    assign_public_ip = true
+    nsg_ids          = [oci_core_network_security_group.dwes_nsg.id]
+    display_name     = "${var.project_name}-vnic"
   }
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data           = base64encode(templatefile("${path.module}/cloud-init.yaml", {
+    user_data = base64encode(templatefile("${path.module}/cloud-init.yaml", {
       project_name = var.project_name
     }))
   }
@@ -138,9 +148,9 @@ resource "oci_core_instance" "dwes_app" {
 
 resource "oci_core_volume_attachment" "dwes_data_attach" {
   attachment_type = "paravirtualized"
-  compartment_id    = var.compartment_id
-  instance_id       = oci_core_instance.dwes_app.id
-  volume_id         = oci_core_volume.dwes_data.id
+  compartment_id  = var.compartment_id
+  instance_id     = oci_core_instance.dwes_app.id
+  volume_id       = oci_core_volume.dwes_data.id
 }
 
 resource "oci_objectstorage_bucket" "dwes_backups" {

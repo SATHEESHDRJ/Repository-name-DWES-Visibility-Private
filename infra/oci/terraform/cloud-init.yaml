@@ -36,7 +36,7 @@ runcmd:
     CRON
   - |
     cat > /etc/cron.d/dwes-cert-renew <<'CRON'
-    0 3 * * 0 dwes cd /opt/dwes && bash infra/docker/scripts/sync-letsencrypt-to-nginx.sh >> /mnt/dwes-data/backups/cert-renew.log 2>&1
+    0 3 * * * dwes cd /opt/dwes && bash infra/docker/scripts/sync-letsencrypt-to-nginx.sh >> /mnt/dwes-data/backups/cert-renew.log 2>&1
     CRON
   - chmod 644 /etc/cron.d/dwes-backup
   - chmod 644 /etc/cron.d/dwes-cert-renew

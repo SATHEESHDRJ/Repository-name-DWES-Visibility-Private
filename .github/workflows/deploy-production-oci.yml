@@ -64,23 +64,26 @@ jobs:
           OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.oci
-          echo "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          printf '%s\n' "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
-          cat > ~/.oci/config <<EOF
-          [DEFAULT]
-          user=${OCI_USER_OCID}
-          fingerprint=${OCI_FINGERPRINT}
-          tenancy=${OCI_TENANCY_OCID}
-          region=${OCI_REGION}
-          key_file=~/.oci/oci_api_key.pem
-          EOF
+          {
+            echo "[DEFAULT]"
+            echo "user=${OCI_USER_OCID}"
+            echo "fingerprint=${OCI_FINGERPRINT}"
+            echo "tenancy=${OCI_TENANCY_OCID}"
+            echo "region=${OCI_REGION}"
+            echo "key_file=${HOME}/.oci/oci_api_key.pem"
+          } > ~/.oci/config
 
-      - name: Write Bastion SSH key
+      - name: Write Bastion SSH keys
         env:
           OCI_VM_SSH_KEY: ${{ secrets.OCI_VM_SSH_KEY }}
+          OCI_BASTION_SSH_PUBLIC_KEY: ${{ secrets.OCI_BASTION_SSH_PUBLIC_KEY }}
         run: |
-          echo "$OCI_VM_SSH_KEY" > /tmp/dwes_bastion_key
+          printf '%s\n' "$OCI_VM_SSH_KEY" > /tmp/dwes_bastion_key
           chmod 600 /tmp/dwes_bastion_key
+          printf '%s\n' "$OCI_BASTION_SSH_PUBLIC_KEY" > /tmp/dwes_bastion_key.pub
+          chmod 644 /tmp/dwes_bastion_key.pub
 
       - name: Deploy via Bastion
         env:
@@ -88,6 +91,7 @@ jobs:
           OCI_VM_INSTANCE_ID: ${{ secrets.OCI_VM_INSTANCE_ID }}
           OCI_VM_USER: ${{ secrets.OCI_VM_USER }}
           OCI_VM_SSH_KEY: /tmp/dwes_bastion_key
+          OCI_BASTION_SSH_PUBLIC_KEY: /tmp/dwes_bastion_key.pub
           DWES_API_IMAGE: ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-api:${{ needs.build-push.outputs.image_tag }}
           DWES_NGINX_IMAGE: ${{ secrets.OCI_OCIR_HOST }}/${{ secrets.OCI_OCIR_NAMESPACE }}/dwes-nginx:${{ needs.build-push.outputs.image_tag }}
           GIT_REF: ${{ github.ref_name }}

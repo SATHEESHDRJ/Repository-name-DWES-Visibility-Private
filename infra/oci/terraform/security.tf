@@ -43,21 +43,32 @@ resource "oci_kms_vault" "dwes_vault" {
   vault_type     = "DEFAULT"
 }
 
+resource "oci_kms_key" "dwes_vault_key" {
+  compartment_id = var.compartment_id
+  display_name   = "${var.project_name}-vault-key"
+  key_shape {
+    algorithm = "AES"
+    length    = 32
+  }
+  management_endpoint = oci_kms_vault.dwes_vault.management_endpoint
+  protection_mode     = "SOFTWARE"
+}
+
 resource "oci_ons_notification_topic" "dwes_alerts" {
   compartment_id = var.compartment_id
   name           = "${var.project_name}-alerts"
 }
 
 resource "oci_monitoring_alarm" "dwes_cpu_high" {
-  compartment_id        = var.compartment_id
-  display_name          = "${var.project_name}-cpu-high"
-  is_enabled            = true
-  metric_compartment_id = var.compartment_id
-  namespace             = "oci_computeagent"
-  query                 = "CpuUtilization[1m]{resourceId = \"${oci_core_instance.dwes_app.id}\"}.mean() > 80"
-  severity              = "CRITICAL"
-  destinations          = [oci_ons_notification_topic.dwes_alerts.id]
-  pending_duration      = "PT5M"
-  body                  = "DWES VM CPU > 80%"
+  compartment_id               = var.compartment_id
+  display_name                 = "${var.project_name}-cpu-high"
+  is_enabled                   = true
+  metric_compartment_id        = var.compartment_id
+  namespace                    = "oci_computeagent"
+  query                        = "CpuUtilization[1m]{resourceId = \"${oci_core_instance.dwes_app.id}\"}.mean() > 80"
+  severity                     = "CRITICAL"
+  destinations                 = [oci_ons_notification_topic.dwes_alerts.id]
+  pending_duration             = "PT5M"
+  body                         = "DWES VM CPU > 80%"
   repeat_notification_duration = "PT1H"
 }

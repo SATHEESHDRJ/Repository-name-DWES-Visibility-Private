@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Deploy DWES on OCI VM through Bastion (security list blocks public SSH).
+# Deploy DWES on OCI VM through Bastion managed SSH session (no public port 22).
 set -euo pipefail
 
 BASTION_ID="${OCI_BASTION_ID:?set OCI_BASTION_ID}"
 INSTANCE_ID="${OCI_VM_INSTANCE_ID:?set OCI_VM_INSTANCE_ID}"
 VM_USER="${OCI_VM_USER:-dwes}"
 SSH_KEY="${OCI_VM_SSH_KEY:?set OCI_VM_SSH_KEY}"
-PUB_KEY="${OCI_BASTION_SSH_PUBLIC_KEY:-${SSH_KEY}.pub}"
+PUB_KEY="${OCI_BASTION_SSH_PUBLIC_KEY:?set OCI_BASTION_SSH_PUBLIC_KEY}"
 API_IMAGE="${DWES_API_IMAGE:?set DWES_API_IMAGE}"
 NGINX_IMAGE="${DWES_NGINX_IMAGE:?set DWES_NGINX_IMAGE}"
 GIT_REF="${GIT_REF:-main}"
@@ -14,12 +14,13 @@ GIT_REF="${GIT_REF:-main}"
 SESSION_JSON="$(mktemp)"
 trap 'rm -f "$SESSION_JSON"' EXIT
 
-echo "[bastion-deploy] Creating port-forwarding Bastion session..."
-oci bastion session create-port-forwarding-session \
+echo "[bastion-deploy] Creating managed SSH Bastion session..."
+oci bastion session create-managed-ssh-session \
   --bastion-id "$BASTION_ID" \
   --ssh-public-key-file "$PUB_KEY" \
   --target-resource-id "$INSTANCE_ID" \
   --target-resource-port 22 \
+  --target-resource-operating-system-user-name "$VM_USER" \
   --session-ttl 1800 \
   --wait-for-state SUCCEEDED \
   --max-wait-seconds 300 \
@@ -43,7 +44,9 @@ EOF
 
 # shellcheck disable=SC2086
 eval "$SSH_CMD" -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-  "${VM_USER}@host" "$REMOTE_SCRIPT"
+  bash -s <<REMOTE_EOF
+${REMOTE_SCRIPT}
+REMOTE_EOF
 
 echo "[bastion-deploy] Closing session ${SESSION_ID}"
 oci bastion session delete --session-id "$SESSION_ID" --force \

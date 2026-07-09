@@ -60,3 +60,9 @@ variable "alert_email" {
   description = "Email for OCI Notifications subscription (configure manually after apply)"
   default     = ""
 }
+
+variable "availability_domain_index" {
+  type        = number
+  description = "Index into region AD list — go-live script retries 0..2 on A1 capacity errors"
+  default     = 0
+}

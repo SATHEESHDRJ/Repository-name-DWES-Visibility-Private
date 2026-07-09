@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-09 (overnight OCI prep)  
+**Last updated:** 2026-07-09 (go-live blocked — migration prep done)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -11,8 +11,9 @@
 | Item | State |
 |------|--------|
 | Repository | Branch `change/oci-single-vm-prod-2026-07-09` |
-| OCI deploy | Agent work complete — **your steps:** [docs/MORNING-REPORT.md](docs/MORNING-REPORT.md) |
+| OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
+| Go-live command | `npm run go-live:preflight` then `npm run go-live` |
 | Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |
 
 **Launcher restore point (2026-07-09):** Branch `change/production-startup-2026-07-09` (no commit requested).

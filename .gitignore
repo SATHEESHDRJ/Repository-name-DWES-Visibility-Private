@@ -5,6 +5,8 @@ node_modules/
 # ===== Env & secrets (keep example templates only) =====
 .env
 .env.*
+deploy-secrets.local.env
+docs/go-live-artifacts/
 !.env.example
 !**/.env.example
 !infra/docker/.env.production.example
