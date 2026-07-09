@@ -7,6 +7,16 @@ node_modules/
 .env.*
 !.env.example
 !**/.env.example
+!infra/docker/.env.production.example
+!infra/docker/.env.e2e.example
+infra/docker/.env
+infra/docker/.env.e2e
+infra/docker/.e2e-data/
+infra/docker/ssl/*.pem
+infra/docker/.previous-tag*
+.terraform/
+*.tfstate
+*.tfstate.*
 *.pem
 *.key
 *.pfx
@@ -45,6 +55,7 @@ dwes_backup*.sql
 *.dump
 *.pg_dump
 backups/
+Backup/
 DEWS_Backups/
 
 # ===== Logs =====
@@ -62,6 +73,9 @@ desktop.ini
 *.swp
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
 
 # ===== Test / coverage =====
 coverage/

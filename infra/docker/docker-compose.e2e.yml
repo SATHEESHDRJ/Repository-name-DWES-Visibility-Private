@@ -1,0 +1,24 @@
+# E2E Docker Compose override — local headless Playwright (DEMO_MODE=true)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.e2e.yml --env-file .env.e2e up -d
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    image: dwes-api:e2e
+    environment:
+      DEMO_MODE: "true"
+      NODE_ENV: production
+      CORS_ORIGINS: http://localhost:18080
+      RP_ID: localhost
+      RP_ORIGIN: http://localhost:18080
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nginx
+    image: dwes-nginx:e2e
+    ports:
+      - "18080:80"
+      - "18443:443"
