@@ -3,15 +3,9 @@
 **Plan:** OCI Single-VM Production (`me-dubai-1`)  
 **Branch:** `change/oci-single-vm-prod-2026-07-09`  
 **Started:** 2026-07-09  
-**Last updated:** 2026-07-09 (local verification pass)
-
-## Progress summary
-
-| Metric | Value |
-|--------|-------|
-| **Agent implementation** | Complete |
-| **Local verification** | Pass (except Terraform + Docker — tools not on laptop) |
-| **Blocking human steps** | 7 (see below) |
+**Last updated:** 2026-07-09 (overnight OCI prep complete)  
+**Agent implementation:** Complete on branch  
+**Blocking human steps:** 7 — see [HUMAN-ACTIONS.md](./HUMAN-ACTIONS.md) and [MORNING-REPORT.md](./MORNING-REPORT.md)
 
 Status: done | in progress | waiting-on-human | pending | blocked (tool missing)
 
@@ -31,9 +25,12 @@ Status: done | in progress | waiting-on-human | pending | blocked (tool missing)
 | 7 | webauthn-prod | waiting-on-human | 1 h | 30 min | `verify-webauthn-prod.sh` ready; needs live domain |
 | 8 | load-testing | waiting-on-human | 1 h | 30 min | k6 script ready; run on prod URL |
 | 9 | data-migration | waiting-on-human | 2 h | 1 h | Scripts ready; cutover not run |
-| 10 | prod-account-bootstrap | done | 1.5 h | 1 h | API returns `bootstrap` on login |
+| 10 | prod-account-bootstrap | done | 1.5 h | 2 h | API + UI gate (`ProductionBootstrapGate`) |
 | 11 | cursor-housekeeping | done | 1 h | 45 min | rules, skills, hooks, README |
-| 12 | verify-build | done | 1 h | 45 min | See raw outputs below |
+| 12 | verify-build | done | 1 h | 1 h | 24/24 tests; builds exit 0 |
+| 13 | agent-review-fixes | done | 30 min | 45 min | certbot renew + Bastion deploy |
+| 14 | e2e-compose | done | 2 h | 1.5 h | `npm run e2e:compose` (needs Docker) |
+| 15 | overnight-docs | done | 1 h | 1 h | MORNING-REPORT, HUMAN-ACTIONS, DEPLOY-DECISIONS |
 
 ---
 
@@ -224,6 +221,7 @@ If p95 > 800 ms: set `app_ocpus=4`, `app_memory_gb=24` in `terraform.tfvars` and
 
 | Date | Event |
 |------|-------|
+| 2026-07-09 | Overnight: review fixes, bootstrap UI, E2E/k6 scripts, MORNING-REPORT |
 | 2026-07-09 | Agent implementation complete on branch |
 | 2026-07-09 | Local verification: build 0, tests 19/19, API prod/demo checks pass |
 | 2026-07-09 | Terraform + Docker compose config pending (tools not on dev laptop) |

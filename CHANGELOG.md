@@ -6,6 +6,12 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-09 — Infra — Overnight OCI prep (review fixes, bootstrap UI, E2E)
+
+- **Scope:** Certbot renew path fix, Bastion deploy workflow, director password RBAC, `ProductionBootstrapGate` UI, E2E compose stack, k6 one-command, `HUMAN-ACTIONS.md`, `MORNING-REPORT.md`.
+- **Branch:** `change/oci-single-vm-prod-2026-07-09`
+- **Verify:** `npm run build`; `npm --prefix backend test` (24/24).
+
 ## 2026-07-09 — Infra — OCI single-VM enterprise hardening (me-dubai-1)
 
 - **Scope:** Security gates (login-hints, env, seed), deep health check, production bootstrap (password + WebAuthn), bind mounts `/mnt/dwes-data`, TLS/certbot paths, Postgres tuning, Bastion/Vault/monitoring Terraform, migration scripts, Playwright E2E scaffold, k6 load test, deploy prompt + director access docs, Cursor rules/skills update.

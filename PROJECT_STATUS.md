@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-09 (Supervisor Digital Wiring Monitor)  
+**Last updated:** 2026-07-09 (overnight OCI prep)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -11,10 +11,9 @@
 | Item | State |
 |------|--------|
 | Repository | Branch `change/oci-single-vm-prod-2026-07-09` |
-| Latest commit | (see `git rev-parse --short HEAD`) |
-| Working tree | OCI single-VM hardening in progress |
-| OCI deploy | See `docs/DEPLOY-TIMELINE.md` — code ready; awaiting `terraform apply` + cutover |
-| Protocol | `dwes_change_management_protocol.md` — follow before every change |
+| OCI deploy | Agent work complete — **your steps:** [docs/MORNING-REPORT.md](docs/MORNING-REPORT.md) |
+| Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
+| Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |
 
 **Launcher restore point (2026-07-09):** Branch `change/production-startup-2026-07-09` (no commit requested).
 

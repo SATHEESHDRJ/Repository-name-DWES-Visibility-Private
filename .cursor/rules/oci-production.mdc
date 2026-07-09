@@ -11,7 +11,8 @@ alwaysApply: false
 - **Schema:** WiringSchemeDB is read-only — no `prisma migrate` / DDL without explicit author approval.
 - **Data paths:** Production bind mounts under `/mnt/dwes-data/{postgres,uploads,auth,backups,ssl}`.
 - **Rollback:** `infra/oci/scripts/rollback.sh` on single VM (~30s API blip). No LB until scale tier.
-- **SSH:** Bastion sessions only — no public port 22.
+- **SSH:** Bastion sessions only — no public port 22. CI uses `infra/oci/scripts/deploy-via-bastion.sh`.
+- **Bootstrap:** Admin/director first login blocked by `ProductionBootstrapGate` until password rotation + WebAuthn.
 - **Staging:** `docker-compose.staging.yml` on port 8443.
 
 See [docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md](../../docs/DWES_ORACLE_CLOUD_DEPLOY_PROMPT.md).
