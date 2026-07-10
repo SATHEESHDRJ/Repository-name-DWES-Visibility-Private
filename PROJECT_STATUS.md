@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-10 (go-live orchestrator hardened — pre-go-live audit)  
+**Last updated:** 2026-07-10 (production hardening: log rotation, TLS http2, ops docs)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -10,12 +10,12 @@
 
 | Item | State |
 |------|--------|
-| Repository | Branch `change/oci-single-vm-prod-2026-07-09` |
+| Repository | Branch `main` (baseline commit `294cc2e`; **no `origin` remote configured yet**) |
 | OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
-| Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
+| Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) (production path) · [docs/CLOUD-ONBOARDING.md](docs/CLOUD-ONBOARDING.md) (dev/demo path — start here for a fresh cloud setup) |
 | Go-live command | `npm run go-live:plan` (preview) → `npm run go-live:preflight` → `npm run go-live` |
 | Orchestrator | **Hardened 2026-07-10** — secret redaction, origin/gh fail-fast, `--plan-only`, health-gated post-deploy ([CHANGELOG](CHANGELOG.md)) |
-| Dev/demo deploy | **Added 2026-07-10** — push-to-main CI/CD to OCI VM `dwes.ingenious-network.com`; native on-VM build, health-gate + auto-rollback ([docs/DEV-DEPLOY.md](docs/DEV-DEPLOY.md)) |
+| Dev/demo deploy | **Added 2026-07-10** — push-to-main CI/CD to OCI VM `dwes.ingenious-network.com`; native on-VM build, health-gate + auto-rollback ([docs/DEV-DEPLOY.md](docs/DEV-DEPLOY.md)). **Blocked on cloud accounts** (no GitHub `origin`/auth, no OCI VM, DNS still pointing at Turbify cPanel) — see onboarding guide above. |
 | Autonomous log | [docs/AUTONOMOUS-SESSION.md](docs/AUTONOMOUS-SESSION.md) |
 | Checkpoint | `PREFLIGHT_BLOCKED` — fill secrets in `deploy-secrets.local.env` |
 | Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |

@@ -9,6 +9,39 @@
 | UAT | staging compose + prod-like `.env` | 8443 | false |
 | Development | local `npm run dev:all` | 5175/3001 | true |
 
+## Deploy paths
+
+Two supported paths (choose one):
+
+1. **Simplified single-VM, push-to-main (current dev/demo — needs only email + DNS + VM IP):**
+   `git push origin main` → GitHub Actions `Deploy Dev (main)` → validate (build+tests) → SSH →
+   `infra/oci/scripts/redeploy-dev.sh` on the VM (native build, health-gate on `db:connected`,
+   auto-rollback to prior commit on failure, preserves volumes). See [DEV-DEPLOY.md](DEV-DEPLOY.md).
+2. **Full production (OCIR + Bastion + Vault + Terraform):** the `deploy.sh` / tag-`v*` path below.
+
+## Production hardening (applied)
+
+- **Log rotation:** all long-running containers use `json-file` with `max-size`/`max-file`
+  (compose `x-logging` anchor; override via `LOG_MAX_SIZE` / `LOG_MAX_FILE`) so logs can't fill
+  the disk. Ref: docs.docker.com/config/containers/logging/json-file/.
+- **TLS/HTTP2:** nginx uses `listen 443 ssl;` + `http2 on;` (nginx ≥1.25 form); TLS 1.2/1.3 only;
+  HSTS + security-headers snippet; per-zone rate limits (`api_limit`, `login_limit`).
+- **Non-root app:** API container runs as `dwes` (entrypoint chowns bind mounts then drops via
+  `gosu`). Postgres on `internal` network (no public egress); only nginx is on the `public` network.
+- **Firewall:** VM ingress limited to **22, 80, 443**. Prod Terraform path removes public 22
+  (Bastion only); the simplified path keeps 22 for the CI SSH deploy — restrict its source to the
+  GitHub Actions egress or your admin IP if hardening further.
+- **Secrets:** never in git/images/logs — injected at runtime (`.env` from the `DWES_ENV_FILE`
+  GitHub Secret on the simplified path, or OCI Vault on the prod path). See §"Secrets" below.
+
+## Go-live inputs (only three, all configurable — no dummy values baked in)
+
+| Input | Where it goes | Placeholder today |
+|-------|---------------|-------------------|
+| Admin email | `CERTBOT_EMAIL` in `.env` (Let's Encrypt contact) + OCI alarm subscriber | blank → `admin@$DWES_DOMAIN` |
+| DNS A record | `dwes.<domain>` → VM public IP (DNS-only for HTTP-01) | domain in `DWES_DOMAIN`/`RP_ID`/`RP_ORIGIN`/`CORS_ORIGINS` |
+| VM public IP | `DEPLOY_SSH_HOST` GitHub Secret + the DNS A record | GitHub Secret (empty) |
+
 ## Deploy production
 
 ```bash

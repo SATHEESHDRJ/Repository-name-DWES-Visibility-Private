@@ -6,6 +6,20 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-10 — Infra — Production hardening (log rotation, TLS http2, ops docs)
+
+- **Scope:** `infra/docker/docker-compose.yml`, `infra/nginx/conf.d/dwes.conf`, `infra/docker/.env.{dev,production}.example`, `docs/OCI-RUNBOOK.md`, `docs/DEV-DEPLOY.md`. Hardens the simplified single-VM path for production; preserves the existing architecture (adapts only what is necessary).
+- **Changes:** (1) **bounded logs** — compose `x-logging` json-file `max-size`/`max-file` (override via `LOG_MAX_SIZE`/`LOG_MAX_FILE`) on postgres/api/nginx/certbot so logs can't fill the VM disk; (2) **nginx** `listen 443 ssl;` + `http2 on;` — the official nginx ≥1.25 form, removes the deprecated `listen … http2` warning; (3) `CERTBOT_EMAIL` added as a **configurable placeholder** (blank → `admin@$DWES_DOMAIN`); (4) runbook: deploy-paths / production-hardening / security checklist / go-live-inputs sections; (5) DEV-DEPLOY ops section (daily backup cron, log rotation, monitoring, TLS contact).
+- **Secure Auto Mode:** no secret values generated or embedded — only env-var references and empty placeholders; email/domain/DNS/IP stay configurable.
+- **Verify:** `docker compose config` valid (log rotation on 4 services); nginx image rebuilt; **full-stack smoke PASS** — restore real v18.3 dump → `/healthz`, `/api/health`=`db:connected` through nginx TLS, frontend served, HTTP→HTTPS 301, HSTS present.
+
+## 2026-07-10 — Docs — Cloud onboarding guide (accounts/credentials checklist)
+
+- **Scope:** `docs/CLOUD-ONBOARDING.md` (new) — every account/service/credential required to take the dev/demo deployment from an empty environment to live, grouped by category (GitHub, OCI, Domain/DNS, SSL/TLS, Email, Database, Monitoring, Backup, Security), each with purpose/mandatory-optional/registration+docs links/info needed/credential handling/pricing.
+- **Fix:** `docs/DEV-DEPLOY.md` step 3 — the clone command used unauthenticated HTTPS, which fails against the private repo; switched to SSH clone via a GitHub Deploy Key (documented in the new guide §A5), added cross-reference link at the top of both docs.
+- **Security:** no credential values generated, displayed, or embedded anywhere — every item documents only the reference (env var / GitHub Secret name) with the real value entered by the user. Flags one real architecture fork (this repo's `infra/oci/terraform/*` — Bastion-only, no port 22 — vs. the already-built/verified direct-SSH dev path) rather than assuming; also flags an incomplete OCI-backup wiring gap found in `backup-oci.sh` without silently fixing it (out of scope).
+- **Verify:** evidence-checked against live state this session (`git remote -v` empty, `gh auth status` logged out, `~/.oci/config` present but API key missing, `nslookup` confirms Turbify nameservers/current alias) and against source (`docker-compose.yml` env guards, `init-letsencrypt.sh` HTTP-01 requirement, `webauthn-config.ts` RP_ID rules, full grep sweep confirming no email/APM SaaS in the codebase).
+
 ## 2026-07-10 — Infra — Continuous dev/demo deploy pipeline (dwes.ingenious-network.com)
 
 - **Scope:** Push-to-main CI/CD to a simplified OCI VM for a live dev/demo environment the Director reviews. Reuses the existing Docker Compose stack (services/env/networking/health); only required, verified adaptations below.

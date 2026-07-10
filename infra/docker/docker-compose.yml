@@ -9,6 +9,14 @@ name: dwes-production
 
 x-data-root: &data_root ${DATA_ROOT:-/mnt/dwes-data}
 
+# Bounded container logs so a crash-loop or verbose service can't fill the VM disk.
+# Overridable via LOG_MAX_SIZE / LOG_MAX_FILE. Ref: docs.docker.com/config/containers/logging/json-file/
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-5}
+
 services:
   postgres:
     # PostgreSQL 18 to match the source WiringSchemeDB dumps (v18.3) — a v18 dump cannot be
@@ -18,6 +26,7 @@ services:
     # path makes 18+ refuse to start. Refs: docker-library/postgres PR #1259, issue #37.
     image: postgres:18-alpine
     restart: unless-stopped
+    logging: *default-logging
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -41,6 +50,7 @@ services:
       dockerfile: infra/docker/Dockerfile.api
     image: ${DWES_API_IMAGE:-dwes-api:local}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
@@ -77,6 +87,7 @@ services:
       dockerfile: infra/docker/Dockerfile.nginx
     image: ${DWES_NGINX_IMAGE:-dwes-nginx:local}
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
@@ -93,6 +104,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     profiles: ["certbot"]
+    logging: *default-logging
     volumes:
       - ${DATA_ROOT:-/mnt/dwes-data}/ssl/letsencrypt:/etc/letsencrypt
       - ${DATA_ROOT:-/mnt/dwes-data}/ssl/nginx:/nginx-out

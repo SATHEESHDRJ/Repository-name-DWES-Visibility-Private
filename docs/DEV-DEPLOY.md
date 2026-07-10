@@ -1,5 +1,8 @@
 # DWES Dev/Demo Deployment — dwes.ingenious-network.com
 
+**New to this?** Start with [`docs/CLOUD-ONBOARDING.md`](CLOUD-ONBOARDING.md) — the full
+account/credential checklist (GitHub, OCI, DNS, TLS, etc.) this guide assumes is already done.
+
 A lightweight, continuously-deployed environment for the Director to review progress.
 Reuses the existing Docker Compose stack unchanged; images are built **natively on the VM**
 (correct arch for OCI A1.Flex / arm64), so there is no container registry to manage.
@@ -28,9 +31,13 @@ sudo apt-get update && sudo apt-get install -y docker.io docker-compose-plugin g
 sudo systemctl enable --now docker
 sudo usermod -aG docker "$USER"   # re-login after this
 
-# Clone the repo to the fixed path the CI expects
+# Add a GitHub Deploy Key (repo Settings -> Deploy keys, read-only) so the VM can clone/pull
+# the private repo over SSH — see docs/CLOUD-ONBOARDING.md §A5 for how to create one.
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+# Clone the repo to the fixed path the CI expects (SSH remote, private-repo safe)
 sudo mkdir -p /opt/dwes && sudo chown "$USER":"$USER" /opt/dwes
-git clone https://github.com/<you>/<dwes-repo>.git /opt/dwes
+git clone git@github.com:<you>/<dwes-repo>.git /opt/dwes
 cd /opt/dwes && git checkout main
 
 # Persistent data dirs (survive every redeploy)
@@ -110,3 +117,18 @@ ssh <user>@<vm> 'cd /opt/dwes && git reset --hard <last-good-sha> \
   never volumes. Uploaded drawings and DB data persist across every deploy.
 - No Prisma migrations run anywhere in this pipeline.
 - Take periodic dumps: `docker compose ... exec -T postgres pg_dump -U postgres -Fc WiringSchemeDB > backup.dump`.
+
+## Operations & production hardening
+- **Automated daily backup** (DB dump + uploads tarball, 14-day retention via `backup-oci.sh`).
+  Add this cron on the VM:
+  ```cron
+  0 2 * * * cd /opt/dwes && docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env --profile backup run --rm backup
+  ```
+  Backups land in `${DATA_ROOT}/backups`. Set `OCI_BUCKET` (and install the OCI CLI on the VM) to
+  also push them to OCI Object Storage; otherwise they stay on the VM disk.
+- **Log rotation** is built in (compose `x-logging`: 10 MB × 5 files/container; override with
+  `LOG_MAX_SIZE` / `LOG_MAX_FILE` in `.env`).
+- **TLS contact:** set `CERTBOT_EMAIL` in `.env` to your admin email (blank falls back to
+  `admin@$DWES_DOMAIN`).
+- **Monitoring/self-healing:** every container has a healthcheck + `restart: unless-stopped`; the
+  deploy health-gate + auto-rollback covers releases. Full ops procedures: [OCI-RUNBOOK.md](OCI-RUNBOOK.md).
