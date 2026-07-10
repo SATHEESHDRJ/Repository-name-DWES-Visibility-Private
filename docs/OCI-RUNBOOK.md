@@ -35,6 +35,7 @@ bash infra/oci/scripts/rollback.sh
 
 - Production: Certbot profile `docker compose --profile certbot`
 - Initial bootstrap: self-signed in `infra/docker/ssl/fullchain.pem` + `privkey.pem`
+- **Renewal reload:** the certbot renew loop copies fresh PEMs into the shared nginx ssl mount but does **not** itself reload nginx. The daily host cron `sync-letsencrypt-to-nginx.sh` performs the copy + `nginx -s reload`. After a manual `certbot renew`, run `bash infra/docker/scripts/sync-letsencrypt-to-nginx.sh` (or `docker compose exec nginx nginx -s reload`) so the new cert is served.
 
 ## Secrets (OCI Vault)
 

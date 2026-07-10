@@ -31,6 +31,17 @@ function fail(msg) {
 function pass(msg) {
   console.log(`[preflight] OK: ${msg}`);
 }
+function warn(msg) {
+  console.warn(`[preflight] WARN: ${msg}`);
+}
+function expandHome(p) {
+  if (!p) return p;
+  return p.replace(/^%USERPROFILE%/i, os.homedir()).replace(/^~/, os.homedir());
+}
+function readKey(env, key) {
+  const m = env.match(new RegExp(`^${key}=(.*)$`, 'm'));
+  return (m?.[1]?.trim().replace(/^["']|["']$/g, '') ?? '').trim();
+}
 
 if (!fs.existsSync(secrets)) {
   fail(`Missing ${secrets} — copy deploy-secrets.local.env.example`);
@@ -43,6 +54,16 @@ if (!fs.existsSync(secrets)) {
     if (!v || /CHANGE_ME|xxxx|your_namespace|example\.com|\.\.\./i.test(v)) {
       fail(`deploy-secrets missing or placeholder ${k}`);
     } else pass(`${k} set`);
+  }
+  // SSH key files referenced by secrets must exist (Bastion deploy + gh secrets read them).
+  for (const [label, key] of [
+    ['VM SSH private key', 'OCI_VM_SSH_KEY_FILE'],
+    ['Bastion SSH public key', 'OCI_BASTION_SSH_PUBLIC_KEY_FILE'],
+  ]) {
+    const p = expandHome(readKey(env, key));
+    if (!p) fail(`${key} not set in deploy-secrets`);
+    else if (!fs.existsSync(p)) fail(`${label} file not found: ${p}`);
+    else pass(`${label} present (${key})`);
   }
 }
 
@@ -70,12 +91,36 @@ for (const tool of ['docker', 'terraform', 'curl']) {
   }
 }
 
+try {
+  const remotes = execSync('git remote', { cwd: root, encoding: 'utf8' })
+    .split(/\r?\n/)
+    .map((x) => x.trim());
+  if (remotes.includes('origin')) pass("git 'origin' remote configured");
+  else fail("No 'origin' git remote — github step (gh secret set + git push origin) will fail");
+} catch {
+  fail('git remote check failed — not a git repository?');
+}
+
 const gh = 'C:\\Program Files\\GitHub CLI\\gh.exe';
 try {
   execSync(`"${gh}" auth status`, { stdio: 'ignore' });
   pass('gh authenticated');
+  try {
+    execSync(`"${gh}" repo view`, { cwd: root, stdio: 'ignore' });
+    pass('gh resolves this repository');
+  } catch {
+    fail('gh cannot resolve this repository — check origin remote / gh access');
+  }
 } catch {
   fail('gh not authenticated — run: gh auth login');
+}
+
+// k6 is only needed for the post/load step — warn, do not block preflight.
+try {
+  execSync('k6 version', { stdio: 'ignore', shell: true });
+  pass('k6 available');
+} catch {
+  warn('k6 not in PATH — the post/load step will be skipped until k6 is installed');
 }
 
 const dumpDir = path.join(root, 'backend', 'backups');

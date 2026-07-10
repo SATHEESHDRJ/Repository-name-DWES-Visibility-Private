@@ -27,9 +27,27 @@ if (startIdx < 0) {
   console.error(`Unknown --from=${FROM}; use ${STEPS.join('|')}`);
   process.exit(1);
 }
+// --plan-only / --dry-run: run terraform init+plan only, then stop — no apply, DNS,
+// Vault, GitHub secrets, migration, or post-deploy. Safety preview before a real go-live.
+const PLAN_ONLY = process.argv.includes('--plan-only') || process.argv.includes('--dry-run');
+
+// Secret redaction: every registered secret value is replaced with *** before any line is
+// written to the console or docs/go-live-artifacts/go-live.log. Prevents the Cloudflare
+// token, Vault secret material, GitHub secret values, and private keys from landing on disk.
+const SECRET_VALUES = new Set();
+function registerSecret(v) {
+  if (typeof v === 'string' && v.trim().length >= 4) SECRET_VALUES.add(v.trim());
+}
+function redact(text) {
+  let out = String(text);
+  for (const s of SECRET_VALUES) {
+    if (s) out = out.split(s).join('***');
+  }
+  return out;
+}
 
 function log(msg) {
-  const line = `[go-live ${new Date().toISOString()}] ${msg}`;
+  const line = redact(`[go-live ${new Date().toISOString()}] ${msg}`);
   console.log(line);
   fs.appendFileSync(path.join(artifacts, 'go-live.log'), line + '\n');
 }
@@ -49,6 +67,29 @@ function runCapture(cmd, args, opts = {}) {
     throw new Error((r.stderr || r.stdout || `exit ${r.status}`).trim());
   }
   return (r.stdout || '').trim();
+}
+
+// Like run() but the secret value is written to the child's stdin instead of argv, so it
+// never appears in the logged command line. Used for `gh secret set <NAME>`.
+function runInput(cmd, args, input, opts = {}) {
+  log(`$ ${cmd} ${args.join(' ')}`);
+  const r = spawnSync(cmd, args, { input, encoding: 'utf8', shell: true, ...opts });
+  if (r.status !== 0) {
+    throw new Error((r.stderr || `exit ${r.status}`).trim());
+  }
+}
+
+function registerKnownSecrets(s) {
+  for (const k of [
+    'CLOUDFLARE_API_TOKEN',
+    'OCI_OCIR_AUTH_TOKEN',
+    'OCI_PRIVATE_KEY',
+    'OCI_FINGERPRINT',
+    'DWES_SMOKE_PASS',
+    'LOCAL_PG_PASSWORD',
+  ]) {
+    if (s[k]) registerSecret(s[k]);
+  }
 }
 
 function expandHome(p) {
@@ -113,6 +154,39 @@ function ghBin() {
     }
   }
   throw new Error('gh CLI not found — install GitHub CLI or set GH_CLI_BIN');
+}
+
+// The github step sets GitHub Actions secrets and pushes a deploy tag; both need an
+// 'origin' remote and an authenticated gh with repo access. Assert this BEFORE any cloud
+// mutation so the run fails fast instead of after terraform apply / DNS / Vault already ran.
+function assertGithubReady() {
+  let hasOrigin = false;
+  try {
+    hasOrigin = execSync('git remote', { cwd: root, encoding: 'utf8' })
+      .split(/\r?\n/)
+      .map((x) => x.trim())
+      .includes('origin');
+  } catch {
+    /* not a git repo */
+  }
+  if (!hasOrigin) {
+    throw new Error(
+      "No 'origin' git remote — the github step (gh secret set + git push origin) would fail " +
+        'after terraform apply / DNS / Vault already created cloud resources. Add a remote ' +
+        '(git remote add origin <url>), or preview with: npm run go-live -- --plan-only',
+    );
+  }
+  const gh = ghBin();
+  try {
+    execSync(`"${gh}" auth status`, { stdio: 'ignore' });
+  } catch {
+    throw new Error('gh not authenticated — run: gh auth login (required for the github step).');
+  }
+  try {
+    execSync(`"${gh}" repo view`, { cwd: root, stdio: 'ignore' });
+  } catch {
+    throw new Error('gh cannot resolve this repository — check the origin remote and gh access.');
+  }
 }
 
 function ensureOciConfig(s) {
@@ -195,6 +269,16 @@ function terraformApplyWithAdRetry(s) {
   }
 }
 
+function terraformPlanOnly(s) {
+  writeTfVars(s, 0);
+  terraformDocker(['init', '-input=false']);
+  terraformDocker(['plan', '-input=false', '-var-file=terraform.tfvars', '-out=tfplan']);
+  log(
+    'Plan-only complete — terraform plan written to infra/oci/terraform/tfplan. ' +
+      'No apply, DNS, Vault, GitHub secrets, migration, or post-deploy performed.',
+  );
+}
+
 function saveTerraformOutputs() {
   const out = runCapture('docker', [
     'run',
@@ -217,7 +301,6 @@ function cloudflareDns(s, ip) {
   const domain = s.DWES_DOMAIN;
   if (!token || !zone || !domain) throw new Error('CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, DWES_DOMAIN required');
 
-  const name = domain.includes('.') ? domain.split('.')[0] : domain;
   const list = runCapture('curl', [
     '-sS',
     '-H',
@@ -273,6 +356,26 @@ async function pollDns(domain, ip, maxSec = 600) {
   throw new Error(`DNS did not resolve to ${ip} within ${maxSec}s`);
 }
 
+// Wait for the app to serve a healthy /api/health (200 with db:connected). Returns false
+// on timeout instead of throwing, so post-deploy can degrade gracefully when VM bring-up
+// (via the Deploy Production OCI workflow) has not finished yet.
+async function pollHealth(base, maxSec = 300) {
+  const start = Date.now();
+  while (Date.now() - start < maxSec * 1000) {
+    try {
+      const out = runCapture('curl', ['-fsS', '-k', '--max-time', '10', `${base}/api/health`]);
+      if (/"db"\s*:\s*"connected"/i.test(out)) {
+        log(`Health OK: ${base}/api/health`);
+        return true;
+      }
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 10000));
+  }
+  return false;
+}
+
 function vaultStoreSecrets(s, outputs) {
   const oci = ociBin();
   const vaultId = outputs.vault_id.value;
@@ -280,28 +383,41 @@ function vaultStoreSecrets(s, outputs) {
   const compartmentId = s.OCI_COMPARTMENT_ID;
   const jwt = crypto.randomBytes(48).toString('base64url');
   const pg = crypto.randomBytes(24).toString('base64url');
+  registerSecret(jwt);
+  registerSecret(pg);
 
   for (const [name, content] of [
     ['dwes-jwt-secret', jwt],
     ['dwes-postgres-password', pg],
   ]) {
-    run(oci, [
-      'vault',
-      'secret',
-      'create-base64',
-      '--compartment-id',
-      compartmentId,
-      '--vault-id',
-      vaultId,
-      '--secret-name',
-      name,
-      '--key-id',
-      keyId,
-      '--secret-content-content',
-      Buffer.from(content).toString('base64'),
-      '--secret-content-stage',
-      'CURRENT',
-    ]);
+    const b64 = Buffer.from(content).toString('base64');
+    registerSecret(b64);
+    try {
+      run(oci, [
+        'vault',
+        'secret',
+        'create-base64',
+        '--compartment-id',
+        compartmentId,
+        '--vault-id',
+        vaultId,
+        '--secret-name',
+        name,
+        '--key-id',
+        keyId,
+        '--secret-content-content',
+        b64,
+        '--secret-content-stage',
+        'CURRENT',
+      ]);
+    } catch (e) {
+      // Re-run safety: OCI rejects a duplicate secret name — treat as already provisioned.
+      if (/already exists|conflict|409/i.test(String(e.message || e))) {
+        log(`Vault secret ${name} already exists — skipping create (re-run safe).`);
+      } else {
+        throw e;
+      }
+    }
   }
   return { jwt, pg };
 }
@@ -311,11 +427,9 @@ function bastionBootstrap(s, outputs) {
   const bastionId = outputs.bastion_id.value;
   const instanceId = outputs.app_instance_id.value;
   const vmUser = 'dwes';
-  const sshKey = expandHome(s.OCI_VM_SSH_KEY_FILE);
   const pubKey = expandHome(s.OCI_BASTION_SSH_PUBLIC_KEY_FILE);
   const domain = s.DWES_DOMAIN;
 
-  const sessionJson = path.join(artifacts, 'bastion-session.json');
   run(oci, [
     'bastion',
     'session',
@@ -339,10 +453,12 @@ function bastionBootstrap(s, outputs) {
     `--output=json`,
   ]);
 
-  // Remote bootstrap script (secrets already in vault or passed inline for first boot)
+  // Remote bootstrap script (secrets pulled from Vault by fetch-secrets.sh on the VM).
+  // /opt/dwes is provisioned by cloud-init — abort loudly if absent rather than cloning
+  // from a wrong path.
   const remote = `
 set -euo pipefail
-cd /opt/dwes || { sudo mkdir -p /opt/dwes && sudo chown dwes:dwes /opt/dwes && git clone . /opt/dwes; }
+cd /opt/dwes
 cp infra/docker/.env.production.example infra/docker/.env
 sed -i "s|^DWES_DOMAIN=.*|DWES_DOMAIN=${domain}|" infra/docker/.env
 sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=https://${domain}|" infra/docker/.env
@@ -356,7 +472,12 @@ curl -fsS https://${domain}/healthz
 curl -fsS https://${domain}/api/health
 `;
   fs.writeFileSync(path.join(artifacts, 'bootstrap-remote.sh'), remote);
-  log('Bootstrap remote script written — run via Bastion SSH (see docs/GO-LIVE-REPORT.md if session SSH fails on Windows)');
+  log(
+    'VM bootstrap script prepared (docs/go-live-artifacts/bootstrap-remote.sh) and a Bastion ' +
+      'managed-SSH session created. This step does NOT bring the VM up itself: VM bring-up is ' +
+      'performed by the Deploy Production OCI workflow (triggered by the github step), or by ' +
+      'running the prepared script through the Bastion session. Post-deploy waits for health.',
+  );
 }
 
 function setGithubSecrets(s, outputs) {
@@ -364,6 +485,8 @@ function setGithubSecrets(s, outputs) {
   const privKey = fs.readFileSync(expandHome(s.OCI_VM_SSH_KEY_FILE), 'utf8');
   const pubKey = fs.readFileSync(expandHome(s.OCI_BASTION_SSH_PUBLIC_KEY_FILE), 'utf8');
   const apiKey = fs.readFileSync(expandHome(s.OCI_API_KEY_FILE || path.join(os.homedir(), '.oci', 'oci_api_key.pem')), 'utf8');
+  registerSecret(privKey);
+  registerSecret(apiKey);
 
   const secrets = {
     OCI_OCIR_HOST: s.OCI_OCIR_HOST,
@@ -389,7 +512,9 @@ function setGithubSecrets(s, outputs) {
       log(`SKIP gh secret ${name} (empty)`);
       continue;
     }
-    run(gh, ['secret', 'set', name, '--body', value], { cwd: root });
+    registerSecret(value);
+    // Pipe the value via stdin so it never appears in argv or the go-live log.
+    runInput(gh, ['secret', 'set', name], value, { cwd: root });
   }
 
   const tag = `v-go-live-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
@@ -452,8 +577,16 @@ function migrateData(s) {
   log(`Dump written ${dumpPath}`);
 }
 
-function postDeploy(s, outputs, domain) {
+async function postDeploy(s, outputs, domain) {
   const base = `https://${domain}`;
+  const healthy = await pollHealth(base, 300);
+  if (!healthy) {
+    log(
+      `App is not yet serving ${base}/api/health — skipping k6 and alarm subscription. ` +
+        'After the Deploy Production OCI workflow finishes, run: npm run go-live -- --from=post',
+    );
+    return;
+  }
   run('node', [path.join(root, 'scripts', 'k6-smoke.mjs'), base], { cwd: root });
 
   const oci = ociBin();
@@ -478,9 +611,20 @@ function postDeploy(s, outputs, domain) {
 
 async function main() {
   fs.mkdirSync(artifacts, { recursive: true });
-  log(`Starting from step: ${FROM}`);
+  log(`Starting from step: ${FROM}${PLAN_ONLY ? ' (plan-only)' : ''}`);
   const s = loadSecrets();
+  registerKnownSecrets(s);
   ensureOciConfig(s);
+
+  if (PLAN_ONLY) {
+    terraformPlanOnly(s);
+    return;
+  }
+
+  // Fail fast before any cloud mutation if this run will reach the github step.
+  if (startIdx <= STEPS.indexOf('github')) {
+    assertGithubReady();
+  }
 
   let outputs = fs.existsSync(tfOutputs) ? JSON.parse(fs.readFileSync(tfOutputs, 'utf8')) : null;
 
@@ -512,14 +656,21 @@ async function main() {
   }
 
   if (startIdx <= 5 && outputs) {
-    postDeploy(s, outputs, domain);
+    await postDeploy(s, outputs, domain);
   }
 
   log('Go-live orchestrator finished — see docs/GO-LIVE-REPORT.md');
 }
 
-main().catch((err) => {
-  log(`FATAL: ${err.message}`);
-  console.error(err);
-  process.exit(1);
-});
+// Only auto-run when invoked directly (node scripts/go-live.mjs). Importing the module
+// (e.g. from a test) exposes the pure helpers without executing the pipeline.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  main().catch((err) => {
+    log(`FATAL: ${err.message}`);
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+export { redact, registerSecret };

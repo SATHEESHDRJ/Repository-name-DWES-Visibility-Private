@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-09 (autonomous session — preflight blocked)  
+**Last updated:** 2026-07-10 (go-live orchestrator hardened — pre-go-live audit)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -13,7 +13,8 @@
 | Repository | Branch `change/oci-single-vm-prod-2026-07-09` |
 | OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
-| Go-live command | `npm run go-live:preflight` then `npm run go-live` |
+| Go-live command | `npm run go-live:plan` (preview) → `npm run go-live:preflight` → `npm run go-live` |
+| Orchestrator | **Hardened 2026-07-10** — secret redaction, origin/gh fail-fast, `--plan-only`, health-gated post-deploy ([CHANGELOG](CHANGELOG.md)) |
 | Autonomous log | [docs/AUTONOMOUS-SESSION.md](docs/AUTONOMOUS-SESSION.md) |
 | Checkpoint | `PREFLIGHT_BLOCKED` — fill secrets in `deploy-secrets.local.env` |
 | Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |

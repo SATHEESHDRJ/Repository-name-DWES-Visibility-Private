@@ -11,6 +11,17 @@
 
 ---
 
+## Hardening update (2026-07-10)
+
+Pre-go-live audit of the orchestrator (`scripts/go-live.mjs`) — see [CHANGELOG.md](../CHANGELOG.md). The run is now safer:
+
+- **Preview first:** `npm run go-live:plan` runs `terraform init` + `plan` only and stops — no apply, DNS, Vault, secrets, or migration.
+- **Fail-fast:** a missing `origin` git remote or unauthenticated `gh` now aborts **before** terraform apply / DNS / Vault (previously it failed at the github step, after cloud resources existed). Preflight reports the same. **Add an `origin` remote and `gh auth login` before `npm run go-live`.**
+- **No secret leakage:** the Cloudflare token, Vault secret material, GitHub secret values, and private keys are redacted (`***`) in `go-live.log`; `gh secret set` values are piped via stdin.
+- **Post-deploy waits for health:** the k6/alarms step polls `https://<domain>/api/health` first. VM bring-up itself is performed by the **Deploy Production OCI workflow** (triggered by the github step) or by running the prepared `bootstrap-remote.sh` through the Bastion session — the orchestrator's bootstrap step only prepares Vault secrets + that script. If the app is not up yet, run `npm run go-live -- --from=post` once the deploy workflow finishes.
+
+---
+
 ## Production readiness confirmation (author)
 
 **Status:** Confirmed

@@ -16,13 +16,17 @@ The agent cannot see these files in the Cursor shell. **Create them on disk** be
 | `%USERPROFILE%\.oci\config` | OCI API user + key (or set `OCI_*` in secrets file) |
 | `%USERPROFILE%\.ssh\dwes_oci` + `.pub` | Ed25519 key pair for Bastion |
 | `gh auth login` | Authenticate GitHub CLI |
+| `git remote add origin <url>` | **Required** — go-live now aborts up front if there is no `origin` remote (the github step pushes the deploy tag). |
 
 Then:
 
 ```powershell
-npm run go-live:preflight   # exit 0 required
+npm run go-live:plan        # optional: terraform plan preview only, no changes
+npm run go-live:preflight   # exit 0 required (also checks origin remote + SSH key files)
 npm run go-live
 ```
+
+> If VM bring-up (Deploy Production OCI workflow) is still finishing when go-live reaches the load step, it skips k6 gracefully — re-run `npm run go-live -- --from=post` afterward.
 
 **You can sleep** — migration dump and uploads are prepped. Go-live runs unattended once preflight passes.
 

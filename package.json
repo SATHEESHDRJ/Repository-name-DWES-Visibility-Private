@@ -54,6 +54,7 @@
     "e2e:compose:down": "node scripts/e2e-stack.mjs down",
     "load:smoke": "node scripts/k6-smoke.mjs",
     "go-live": "node scripts/go-live.mjs",
+    "go-live:plan": "node scripts/go-live.mjs --plan-only",
     "go-live:preflight": "node scripts/go-live-preflight.mjs"
   },
   "dependencies": {

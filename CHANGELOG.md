@@ -6,6 +6,14 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-10 — Infra — Harden go-live orchestrator (pre-go-live audit)
+
+- **Scope:** `scripts/go-live.mjs`, `scripts/go-live-preflight.mjs`, `package.json`, `docs/GO-LIVE-REPORT.md`, `docs/HUMAN-ACTIONS.md`, `docs/OCI-RUNBOOK.md`. Audit of the never-reviewed orchestrator (`cbbb100`, after the second-review range).
+- **Fixes:** (1) secret redaction — Cloudflare token / Vault material / GitHub secret values / private keys are now `***` in `go-live.log`, and `gh secret set` values pipe via stdin (never in argv); (2) fail-fast — missing `origin` remote / `gh` auth aborts **before** any cloud mutation (also in preflight); (3) health-gated post-deploy — polls `/api/health` before k6, degrades gracefully; (4) honest bootstrap step + fixed broken `git clone .` in emitted script; (5) new `--plan-only` (`npm run go-live:plan`) terraform preview that stops before apply/DNS/secrets; (6) Vault-secret create is now re-run safe; preflight also checks SSH key files + warns on missing k6.
+- **Branch:** `claude/oci-single-vm-production-9971bf` (fast-forwarded to OCI tip `d2ce4ce`; changes on top for review — not merged).
+- **Verify:** `node --check` both scripts, `oxlint` clean; redaction unit test (real helpers) → `***`; `--plan-only` proven to short-circuit before cloud steps; origin guard proven to abort before terraform; preflight surfaces new checks; `package.json` parses.
+- **No behavior change** to the app, backend, or terraform resources — orchestration safety only.
+
 ## 2026-07-09 — Infra — Autonomous session verification pass
 
 - **Scope:** `docs/AUTONOMOUS-SESSION.md`; refreshed cutover dump; verified build (exit 0), backend tests (24/24), terraform validate, compose config.
