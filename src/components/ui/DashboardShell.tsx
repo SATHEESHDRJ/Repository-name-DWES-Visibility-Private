@@ -72,22 +72,26 @@ export default function DashboardShell({
       <PageContainer variant={widthVariant} className="dashboard-shell-root flex flex-col gap-4">
         {!hideHero && (
         <section className={`dashboard-hero${heroClassName ? ` ${heroClassName}` : ''}`}>
-          <div className="dashboard-hero-copy min-w-0">
+          <div className="dashboard-hero-copy">
             <div className="dashboard-hero-title-row">
-              {heroLive && (
-                <span className="tech-live-dot dashboard-hero-live-dot" data-live="true" aria-hidden="true" />
-              )}
-              <h1 className="section-title">{title}</h1>
-              {badge && <span className={`badge badge-${badgeVariant} dashboard-hero-badge`}>{badge}</span>}
+              <div className="dashboard-hero-title-wrap">
+                {heroLive && (
+                  <span className="tech-live-dot dashboard-hero-live-dot" data-live="true" aria-hidden="true" />
+                )}
+                <h1 className="section-title dashboard-hero-title">{title}</h1>
+              </div>
+              {badge ? (
+                <span className={`badge badge-${badgeVariant} dashboard-hero-badge`}>{badge}</span>
+              ) : null}
             </div>
             {subtitle ? <p className="section-sub dashboard-hero-subtitle">{subtitle}</p> : null}
           </div>
-          {heroAside ? <div className="dashboard-hero-aside shrink-0">{heroAside}</div> : null}
+          {heroAside ? <div className="dashboard-hero-aside">{heroAside}</div> : null}
         </section>
         )}
 
         {kpis.length > 0 && (
-          <div className={`${kpiGridClass} dashboard-kpis`}>
+          <div className={`bento-grid bento-grid--kpis ${kpiGridClass} dashboard-kpis`}>
             {kpis.map((kpi, i) => (
               <KpiCard
                 key={i}

@@ -7,13 +7,12 @@ import Modal from '../Modal';
 import ReportPreviewModal from '../ui/ReportPreviewModal';
 import ProjectPdfPreviewModal from './ProjectPdfPreviewModal';
 import { useAppDialog } from '../AppDialogProvider';
-import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import { projectsApi, supervisorApi } from '../../services/api';
 import type { Project } from '../../types';
 import { compactPanelDisplayName, resolveProjectCardDetails } from '../../utils/projectDisplay';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
-
-const STATUS_POLL_MS = 12000;
+import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned' | 'pending_approval';
 type StatusBucket = 'completed' | 'in_progress' | 'pending_review' | 'not_started';
@@ -158,21 +157,19 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
     void loadWorkspaceData({ silent });
   }, [isActive, loadWorkspaceData]);
 
-  useReadOnlyPoll(() => {
+  useDwesRefresh(() => {
     if (!isActive) return;
     return loadWorkspaceData({ silent: true });
-  }, STATUS_POLL_MS);
+  }, { enabled: isActive });
 
   useEffect(() => {
     return onFramesChanged((detail) => {
       if (detail.action === 'deleted' && detail.frameId) {
         setFrames(prev => prev.filter(f => !(f.project_code === detail.projectCode && f.id === detail.frameId)));
         setAssignments(prev => prev.filter(a => !(a.project_code === detail.projectCode && a.frame_id === detail.frameId)));
-        return;
       }
-      void loadWorkspaceData({ silent: true });
     });
-  }, [loadWorkspaceData]);
+  }, []);
 
   const assignmentByFrame = useMemo(() => {
     const m = new Map<string, any>();
@@ -298,6 +295,7 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
     setActionError('');
     try {
       await supervisorApi.approve(id);
+      emitWorkflowChanged({ scope: 'approval' });
       await loadWorkspaceData({ silent: true });
     } catch (e: any) {
       setActionError(e?.response?.data?.message || 'Approval failed');
@@ -317,6 +315,7 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
     setActionError('');
     try {
       await projectsApi.submitToDirector(code);
+      emitWorkflowChanged({ scope: 'general', projectCode: code });
       await loadWorkspaceData({ silent: true });
     } catch (e: any) {
       setActionError(e?.response?.data?.message || 'Submission failed');
@@ -675,6 +674,7 @@ function ReviewDecisionModal({
     setError('');
     try {
       await supervisorApi.review(panel.assignmentId, status, notes);
+      emitWorkflowChanged({ scope: 'approval', projectCode: panel.projectCode, frameId: panel.frameId });
       onSaved();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Review failed');
@@ -742,6 +742,7 @@ function ReworkRequestModal({
     setError('');
     try {
       await supervisorApi.rework(panel.assignmentId, reason);
+      emitWorkflowChanged({ scope: 'approval', projectCode: panel.projectCode, frameId: panel.frameId });
       onSaved();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Request failed');

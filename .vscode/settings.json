@@ -1,0 +1,102 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "Get-Command": true
+  },
+  "[git]": {
+    "editor.rulers": [72, 100]
+  },
+  "git.autofetch": true,
+  "git.autofetchPeriod": 180,
+  "git.confirmSync": true,
+  "git.ignoreLimitWarning": false,
+  "git.untrackedChanges": "all",
+  "git.detectSubmodules": false,
+
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.tabSize": 2,
+  "editor.detectIndentation": false,
+  "editor.rulers": [100],
+  "editor.linkedEditing": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  "oxc.enable": true,
+  "oxc.configPath": ".oxlintrc.json",
+
+  "eslint.enable": false,
+  "prettier.enable": false,
+
+  "tailwindCSS.experimental.classRegex": [],
+  "tailwindCSS.includeLanguages": {
+    "typescriptreact": "html",
+    "typescript": "html"
+  },
+  "css.validate": false,
+
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/.vite": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/Backup": true,
+    "**/uploads": true,
+    "**/backend/dist": true,
+    "**/backend/data": true,
+    "**/.vite": true,
+    "**/coverage": true,
+    "**/.design-sync": true,
+    "**/logs": true,
+    "**/certs": true,
+    "**/package-lock.json": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/Backup/**": true,
+    "**/uploads/**": true,
+    "**/.vite/**": true,
+    "**/logs/**": true,
+    "**/backend/data/**": true
+  },
+
+  "[javascript]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+  "[typescript]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+  "[typescriptreact]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+  "[json]": {
+    "editor.formatOnSave": false
+  },
+  "[jsonc]": {
+    "editor.formatOnSave": false
+  },
+  "[css]": {
+    "editor.formatOnSave": false
+  },
+  "[prisma]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "Prisma.prisma"
+  },
+
+  "debug.javascript.autoAttachFilter": "smart",
+  "npm.packageManager": "npm",
+  "terminal.integrated.cwd": "${workspaceFolder}"
+}

@@ -66,6 +66,24 @@ export class FramesService {
     return !!a;
   }
 
+  /** True if the technician is assigned to this specific frame/panel. */
+  async technicianAssignedToFrame(projectCode: string, frameId: string, technicianId: number): Promise<boolean> {
+    const a = await this.prisma.tech_assignments.findFirst({
+      where: { project_code: projectCode, frame_id: frameId, technician_id: technicianId },
+      select: { id: true },
+    });
+    return !!a;
+  }
+
+  /** Frame ids the technician may access within a project (read-only). */
+  async technicianAssignedFrameIds(projectCode: string, technicianId: number): Promise<string[]> {
+    const rows = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, technician_id: technicianId },
+      select: { frame_id: true },
+    });
+    return [...new Set(rows.map(r => r.frame_id))];
+  }
+
   /** Resolve a drawing's bytes for streaming — from MockStore (this session) or disk (post-restart).
    *  Returns null if the id doesn't exist for this project or the file is missing. */
   getDrawingFile(projectCode: string, drawingId: string): { buffer: Buffer; filename: string; contentType: string } | null {
@@ -215,6 +233,7 @@ export class FramesService {
     return {
       panel_name: f.panel_name, original_filename: f.original_filename, sheet_name: f.sheet_name,
       mapping: f.mapping || {}, excel_headers: excelHeaders, cables: cablesList,
+      cable_count: f.cable_count ?? cablesList.length,
       validation: buildValidation(cablesList), compare_status: f.compare_status, has_source_excel: hasSourceExcel,
     };
   }
@@ -415,6 +434,19 @@ export class FramesService {
   }
 
   getDrawings(projectCode: string) {
+    // Drop in-memory rows whose files were removed from disk (prevents stale re-list after delete).
+    for (let i = MockStore.drawings.length - 1; i >= 0; i--) {
+      const d = MockStore.drawings[i];
+      if (d.project_code === projectCode && !FrameStore.getDrawingFilePath(projectCode, d.id)) {
+        MockStore.drawings.splice(i, 1);
+      }
+    }
+    // Rehydrate MockStore from disk after restart (files persist; in-memory list does not).
+    for (const disk of FrameStore.listDrawingsFromDisk(projectCode)) {
+      if (!MockStore.drawings.some(d => d.id === disk.id && d.project_code === projectCode)) {
+        MockStore.drawings.push(disk);
+      }
+    }
     return MockStore.findDrawingsByProject(projectCode).map(d => ({
       id: d.id, project_code: d.project_code, filename: d.filename,
       original_name: d.original_name, content_type: d.content_type, uploaded_at: d.uploaded_at, size: d.size,

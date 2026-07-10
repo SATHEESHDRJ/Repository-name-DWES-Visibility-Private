@@ -1,7 +1,7 @@
 {
   "projectRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
-  "backupRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES_backups",
-  "backupFolderPrefix": "DWES_backup",
+  "backupRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES\\Backup",
+  "backupFolderPrefix": null,
   "schedule": {
     "mode": "daily",
     "dailyTime": "02:00",
@@ -10,11 +10,34 @@
   "excludeDirectories": [
     "node_modules",
     ".git",
-    "backend\\node_modules"
+    "Backup",
+    "dist",
+    "backend\\node_modules",
+    "backend\\dist",
+    "logs",
+    ".vite",
+    "coverage",
+    "backend\\data"
   ],
   "retention": {
-    "maxCount": null,
-    "maxAgeDays": null
+    "maxCount": 21,
+    "maxAgeDays": 30
+  },
+  "diskSpace": {
+    "minFreeGb": 5,
+    "reserveMultiplier": 1.15
+  },
+  "verification": {
+    "requiredPaths": [
+      "package.json",
+      "backend\\src",
+      "src",
+      "scripts\\backup.ps1"
+    ],
+    "optionalPaths": [
+      "backend\\uploads",
+      "public"
+    ]
   },
   "database": {
     "enabled": true,

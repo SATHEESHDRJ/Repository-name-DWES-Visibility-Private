@@ -85,7 +85,7 @@ export class DevService {
       },
       reseed_projects: CANONICAL_SEED_PROJECTS.length,
       backup_note:
-        'pg_dump of WiringSchemeDB + uploads/<CODE>/ archive to uploads/backups/ before wipe. User accounts preserved; session log and WebAuthn credentials cleared.',
+        'Full project backup (Backup/YYYY-MM-DD_HH-mm) + pg_dump of WiringSchemeDB + uploads/<CODE>/ archive to uploads/backups/ before wipe. User accounts preserved; session log and WebAuthn credentials cleared.',
       confirm_phrase: HARD_RESET_PHRASE,
       preserved: ['users (accounts not deleted)', 'uploads/backups/ (existing archives)'],
     };
@@ -95,6 +95,13 @@ export class DevService {
     if ((confirmedPhrase || '').trim() !== HARD_RESET_PHRASE) {
       return {
         error: `Confirmation phrase does not match — type exactly: ${HARD_RESET_PHRASE}`,
+      };
+    }
+
+    const preOpBackup = this._runPreOperationBackup();
+    if (!preOpBackup.ok) {
+      return {
+        error: `Pre-operation project backup failed — aborting reset. ${preOpBackup.message}`,
       };
     }
 
@@ -228,5 +235,32 @@ export class DevService {
   private _resolveUploadDir(): string {
     const raw = process.env.UPLOAD_DIR || 'uploads';
     return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  }
+
+  /** Full DWES backup via scripts/run-pre-operation-backup.mjs before destructive dev reset. */
+  private _runPreOperationBackup(): { ok: boolean; message: string } {
+    const projectRoot = path.resolve(__dirname, '..', '..', '..');
+    const script = path.join(projectRoot, 'scripts', 'run-pre-operation-backup.mjs');
+    if (!fs.existsSync(script)) {
+      return { ok: false, message: `Backup script not found: ${script}` };
+    }
+
+    const result = spawnSync(process.execPath, [script], {
+      cwd: projectRoot,
+      env: { ...process.env, DWES_PROJECT_ROOT: projectRoot, DWES_BACKUP_TRIGGER: 'pre-operation' },
+      timeout: 600_000,
+      encoding: 'utf8',
+    });
+
+    if (result.status === 0 || result.status === 2) {
+      return { ok: true, message: result.stderr?.slice(0, 200) || 'backup completed' };
+    }
+
+    const detail =
+      result.stderr?.trim() ||
+      result.stdout?.trim() ||
+      result.error?.message ||
+      `exit code ${result.status ?? 'unknown'}`;
+    return { ok: false, message: detail.slice(0, 400) };
   }
 }

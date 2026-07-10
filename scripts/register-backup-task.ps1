@@ -101,7 +101,7 @@ $settings = New-ScheduledTaskSettingsSet `
     -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit (New-TimeSpan -Hours 4)
 
-$description = "Automated DWES project backup ($scheduleMode). Config: $configPath"
+$description = "Automated DWES project backup ($scheduleMode) to Backup/ folder. Config: $configPath"
 
 if ($RunWhenLoggedOff) {
     if (-not $User) {
@@ -144,5 +144,7 @@ if ($RunWhenLoggedOff) {
 
 Write-Host ''
 Write-Host "Manual test: npm run backup"
+Write-Host "Verify latest: npm run backup:verify"
 Write-Host "Config file: $configPath"
+Write-Host "Backup root: $($config.backupRoot)"
 Write-Host "Schedule mode: $scheduleMode (set schedule.mode or env DWES_BACKUP_SCHEDULE, then re-register)"

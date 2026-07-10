@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, RefreshCw } from '../../../components/ui/icons';
 import { projectsApi, supervisorApi } from '../../../services/api';
 import type { Project } from '../../../types';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 
 /* Granular per-panel status (maps real columns → display state). */
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned';
@@ -125,11 +126,9 @@ export default function SummaryTab({
     supervisorApi.allPanels().then(setAssignments).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    loadAssignments();
-    const id = setInterval(loadAssignments, 12000);
-    return () => clearInterval(id);
-  }, [loadAssignments]);
+  useEffect(() => { loadAssignments(); }, [loadAssignments]);
+
+  useDwesRefresh(loadAssignments, { listenFrames: false });
 
   useEffect(() => {
     setActiveBucket(null);

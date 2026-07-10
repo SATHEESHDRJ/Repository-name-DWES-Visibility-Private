@@ -3,8 +3,7 @@ import { Zap } from '../../components/ui/icons';
 import DashboardShell from '../../components/ui/DashboardShell';
 import { techApi } from '../../services/api';
 import { useLiveWiringStore } from '../../store/useLiveWiringStore';
-import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
-import { onFramesChanged } from '../../utils/projectFramesEvents';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import PanelsTab from './tabs/PanelsTab';
 import WiringTab from './tabs/WiringTab';
 
@@ -40,11 +39,14 @@ export default function TechnicianDashboard() {
 
   useEffect(() => { loadPanels(); }, [loadPanels]);
 
-  useReadOnlyPoll(loadPanels, 4000);
+  useDwesRefresh(loadPanels);
 
   useEffect(() => {
-    return onFramesChanged(() => { loadPanels(); });
-  }, [loadPanels]);
+    if (!wiringOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [wiringOpen]);
 
   const handleSelectPanel = (panel: any) => {
     setSelectedPanel(panel);
@@ -89,11 +91,13 @@ export default function TechnicianDashboard() {
     >
       <section className="dash-module dash-module--wide tech-dash-module">
         {wiringOpen && selectedLive ? (
-          <WiringTab
-            panel={selectedLive}
-            onPanelUpdate={handlePanelUpdate}
-            onExit={handleExitWiring}
-          />
+          <div className="tech-wiring-shell" aria-live="polite">
+            <WiringTab
+              panel={selectedLive}
+              onPanelUpdate={handlePanelUpdate}
+              onExit={handleExitWiring}
+            />
+          </div>
         ) : (
           <PanelsTab
             panels={panels}

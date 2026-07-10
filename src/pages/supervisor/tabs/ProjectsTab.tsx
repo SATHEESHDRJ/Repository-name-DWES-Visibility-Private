@@ -6,16 +6,23 @@ import Modal from '../../../components/Modal';
 import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PdfDrawingUploadModal from '../../../components/supervisor/PdfDrawingUploadModal';
+import PanelDrawingViewModal from '../../../components/supervisor/PanelDrawingViewModal';
+import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
 import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
+import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelConfirmModal';
+import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
+import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
+import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
 import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
+import { emitDocumentsChanged, onDocumentsChanged } from '../../../utils/projectDocumentsEvents';
 import {
   buildProjectReferenceTitle,
   encodeProjectMeta,
@@ -185,6 +192,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [showWiringUpload, setShowWiringUpload] = useState(false);
   const [showDrawingPicker, setShowDrawingPicker] = useState(false);
   const [drawingUploadType, setDrawingUploadType] = useState<'pdf' | 'dwg' | null>(null);
+  const [showDrawingView, setShowDrawingView] = useState(false);
+  const [showWiringView, setShowWiringView] = useState(false);
   const [reportMenuOpen, setReportMenuOpen] = useState(false);
   const reportMenuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
@@ -194,6 +203,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [showEditPanel, setShowEditPanel] = useState<FramePanel | null>(null);
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [deletingPanelId, setDeletingPanelId] = useState<string | null>(null);
+  const [deletePanelTarget, setDeletePanelTarget] = useState<FramePanel | null>(null);
+  const [softRemoveTarget, setSoftRemoveTarget] = useState<Project | null>(null);
   const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
   const createModalScrollRef = useRef<HTMLFormElement>(null);
   const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
@@ -231,26 +242,32 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }).catch(() => {});
   }, []);
 
-  const reloadProjectPanels = useCallback((projectCode: string) => {
-    setLoadingPanels(true);
+  const reloadProjectPanels = useCallback((projectCode: string, options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoadingPanels(true);
     return projectsApi.frames(projectCode)
       .then(data => {
         const list = data as FramePanel[];
         setProjectPanels(list);
-        setSelectedPanelId(prev => (prev && list.some(p => p.id === prev) ? prev : ''));
+        setSelectedPanelId(prev => {
+          if (prev && list.some(p => p.id === prev)) return prev;
+          if (list.length === 1) return list[0].id;
+          return '';
+        });
       })
       .catch(() => {
         setProjectPanels([]);
         setSelectedPanelId('');
       })
-      .finally(() => setLoadingPanels(false));
+      .finally(() => {
+        if (!options?.silent) setLoadingPanels(false);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useReadOnlyPoll(() => {
+  useDwesRefresh(() => {
     pollProjects();
-    if (selectedProject?.code) reloadProjectPanels(selectedProject.code);
-  }, 4000);
+    if (selectedProject?.code) reloadProjectPanels(selectedProject.code, { silent: true });
+  });
 
   useEffect(() => {
     if (!reportMenuOpen) return;
@@ -275,6 +292,19 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       }
     });
   }, [selectedProject?.code]);
+
+  useEffect(() => {
+    if (!selectedProject?.code) return;
+    return onDocumentsChanged((detail) => {
+      if (detail.projectCode !== selectedProject.code) return;
+      if (detail.kind === 'drawing' && detail.action === 'deleted') {
+        setShowDrawingView(false);
+      }
+      if (detail.kind === 'wiring' || detail.kind === 'both') {
+        void reloadProjectPanels(selectedProject.code, { silent: true });
+      }
+    });
+  }, [selectedProject?.code, reloadProjectPanels]);
 
   const handleDismissDuplicateWarning = useCallback(() => {
     setDuplicateBannerDismissed(true);
@@ -307,7 +337,11 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         if (cancelled) return;
         const list = data as FramePanel[];
         setProjectPanels(list);
-        setSelectedPanelId(prev => (prev && list.some(p => p.id === prev) ? prev : ''));
+        setSelectedPanelId(prev => {
+          if (prev && list.some(p => p.id === prev)) return prev;
+          if (list.length === 1) return list[0].id;
+          return '';
+        });
       })
       .catch(() => {
         if (!cancelled) setProjectPanels([]);
@@ -415,6 +449,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       setLoadingPanels(false);
       return;
     }
+    if (selectedProject?.code === code) return;
     const project = projects.find(p => p.code === code);
     if (!project) return;
     setLoadingPanels(true);
@@ -538,16 +573,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setProjects(prev => prev.map(p => (p.code === updated.code ? updated : p)));
   };
 
-  const handleDelete = async (project: Project) => {
-    const confirmed = await dialog.confirm({
-      title: 'Remove Project from List',
-      message: `Remove "${project.name}" (${project.code}) from the active project list? Wiring history, assignments, and files are preserved. A System Administrator can permanently delete the project if needed.`,
-      tone: 'warning',
-      confirmText: 'Remove',
-      cancelText: 'Cancel',
-    });
-    if (!confirmed) return;
+  const handleDelete = (project: Project) => {
+    setSoftRemoveTarget(project);
+  };
 
+  const handleSoftRemoveConfirm = async (_scope: DeleteScopeId) => {
+    if (!softRemoveTarget) return;
+    const project = softRemoveTarget;
     setDeleting(true);
     try {
       await projectsApi.remove(project.code);
@@ -555,6 +587,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       emitFramesChanged({ projectCode: project.code, action: 'deleted' });
       setSelectedProject(prev => (prev?.code === project.code ? null : prev));
       if (selectedProject?.code === project.code) setSelectedPanelId('');
+      setSoftRemoveTarget(null);
       setToast({ message: 'Project removed from list.', tone: 'success' });
     } catch (e: any) {
       await dialog.alert({
@@ -567,53 +600,42 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }
   };
 
-  const handleDeletePanel = async (panel: FramePanel) => {
+  const handleDeletePanel = (panel: FramePanel) => {
     if (!selectedProject) return;
-    try {
-      const precheck = await projectsApi.deleteFramePrecheck(selectedProject.code, panel.id);
-      const phrase = await dialog.prompt({
-        title: 'Delete Panel',
-        message: `Remove only panel "${panel.panel_name}" from project "${selectedProject.name}"? The project will remain in the system. Type the confirmation phrase exactly to proceed.`,
-        placeholder: precheck.confirm_phrase,
-        defaultValue: '',
-        tone: 'warning',
-        confirmText: 'Delete Panel',
-        cancelText: 'Cancel',
-      });
-      if (!phrase || phrase.trim() !== precheck.confirm_phrase) {
-        if (phrase !== null) {
-          await dialog.alert({
-            title: 'Confirmation Failed',
-            message: `Phrase did not match. Required: ${precheck.confirm_phrase}`,
-            tone: 'error',
-          });
-        }
-        return;
-      }
-      setDeletingPanelId(panel.id);
-      const result = await projectsApi.deleteFrameGuarded(selectedProject.code, panel.id, phrase.trim());
-      if (result?.error) {
-        await dialog.alert({ title: 'Delete Failed', message: result.error, tone: 'error' });
-        return;
-      }
-      setProjectPanels(prev => prev.filter(p => p.id !== panel.id));
-      setSelectedPanelId(prev => (prev === panel.id ? '' : prev));
-      emitFramesChanged({ projectCode: selectedProject.code, frameId: panel.id, action: 'deleted' });
-      await reloadProjectPanels(selectedProject.code);
-      setToast({ message: `Panel "${panel.panel_name}" deleted.`, tone: 'success' });
-    } catch (e: any) {
-      await dialog.alert({
-        title: 'Delete Failed',
-        message: e?.response?.data?.message || 'Could not delete panel.',
-        tone: 'error',
-      });
-    } finally {
-      setDeletingPanelId(null);
-    }
+    setDeletingPanelId(panel.id);
+    setDeletePanelTarget(panel);
+  };
+
+  const handlePanelDeleted = async (panelId: string) => {
+    if (!selectedProject) return;
+    const panel = projectPanels.find(p => p.id === panelId);
+    setProjectPanels(prev => prev.filter(p => p.id !== panelId));
+    setSelectedPanelId(prev => (prev === panelId ? '' : prev));
+    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, action: 'deleted' });
+    await reloadProjectPanels(selectedProject.code);
+    closeDeletePanelModal();
+    setToast({
+      message: panel ? `Panel "${panel.panel_name}" deleted.` : 'Panel deleted.',
+      tone: 'success',
+    });
+  };
+
+  const closeDeletePanelModal = () => {
+    setDeletePanelTarget(null);
+    setDeletingPanelId(null);
   };
 
   const selectedPanel = projectPanels.find(p => p.id === selectedPanelId)
     ?? activePanelOptions.find(p => p.id === selectedPanelId);
+  const {
+    drawing: drawingDoc,
+    wiring: wiringDoc,
+    refresh,
+  } = useProjectPanelDocumentStatus(selectedProject?.code, selectedPanelId || undefined);
+  const drawingReady = drawingDoc.availability === 'available' && !!drawingDoc.drawing;
+  const drawingLoading = drawingDoc.availability === 'loading';
+  const wiringReady = wiringDoc.availability === 'available';
+  const wiringLoading = wiringDoc.availability === 'loading';
   const projectDetails = selectedProject ? resolveProjectCardDetails(selectedProject) : null;
   const {
     duplicateKeys,
@@ -822,19 +844,76 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               </div>
             </div>
             {perms.canManageProjects && (
-              <div className="pj-project-info-card-actions">
+              <div className="pj-project-info-card-actions-wrap">
+                <div className="pj-doc-status-row" aria-label="Document availability">
+                  <DocumentAvailabilityBadge label="Drawing" status={drawingDoc} />
+                  <DocumentAvailabilityBadge label="Wiring Schedule" status={wiringDoc} />
+                </div>
+                <div className="pj-project-info-card-actions" role="group" aria-label="Project actions">
                 <button
                   type="button"
-                  className="pj-btn-secondary"
+                  className="pj-info-action pj-info-action--secondary"
                   onClick={() => setShowAddPanel(true)}
                   title="Add a new panel to this project"
                 >
-                  <Plus size={16} strokeWidth={1.5} />
+                  <Plus size={16} strokeWidth={1.75} aria-hidden />
                   <span>Add Panel</span>
                 </button>
                 <button
                   type="button"
-                  className="pj-btn-secondary"
+                  className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}${!drawingReady && !drawingLoading ? ' pj-info-action--unavailable' : ''}`}
+                  onClick={() => {
+                    if (drawingDoc.availability === 'error') {
+                      setToast({ message: drawingDoc.message ?? 'Failed to open drawing.', tone: 'warn' });
+                      return;
+                    }
+                    if (drawingReady) setShowDrawingView(true);
+                  }}
+                  disabled={!drawingReady || drawingLoading}
+                  aria-busy={drawingLoading || undefined}
+                  title={
+                    drawingLoading
+                      ? 'Checking drawings…'
+                      : drawingDoc.availability === 'error'
+                        ? drawingDoc.message ?? 'Drawing check failed'
+                        : drawingReady
+                          ? `View drawing: ${drawingDoc.drawing!.original_name}`
+                          : 'No Drawing Uploaded'
+                  }
+                >
+                  {drawingLoading ? <span className="btn-spinner" aria-hidden /> : <FileText size={16} strokeWidth={1.75} aria-hidden />}
+                  <span>View Drawing</span>
+                </button>
+                <button
+                  type="button"
+                  className={`pj-info-action pj-info-action--wiring${wiringLoading ? ' btn--loading' : ''}${!wiringReady && !wiringLoading ? ' pj-info-action--unavailable' : ''}`}
+                  onClick={() => {
+                    if (wiringDoc.availability === 'error') {
+                      setToast({ message: wiringDoc.message ?? 'Failed to open wiring schedule.', tone: 'warn' });
+                      return;
+                    }
+                    if (wiringReady) setShowWiringView(true);
+                  }}
+                  disabled={!wiringReady || wiringLoading}
+                  aria-busy={wiringLoading || undefined}
+                  title={
+                    wiringLoading
+                      ? 'Checking wiring schedule…'
+                      : wiringDoc.availability === 'error'
+                        ? wiringDoc.message ?? 'Wiring schedule check failed'
+                        : wiringDoc.availability === 'missing' && wiringDoc.message === 'Select a panel first'
+                          ? 'Select a panel first'
+                          : !wiringReady
+                            ? 'No Wiring Schedule Uploaded'
+                            : `Open Digital Wiring Monitor for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
+                  }
+                >
+                  {wiringLoading ? <span className="btn-spinner" aria-hidden /> : <LayoutGrid size={16} strokeWidth={1.75} aria-hidden />}
+                  <span>Digital Wiring Monitor</span>
+                </button>
+                <button
+                  type="button"
+                  className="pj-info-action pj-info-action--secondary"
                   onClick={() => {
                     if (selectedPanel) setShowEditPanel(selectedPanel);
                     else setShowEdit(selectedProject);
@@ -842,22 +921,23 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                   disabled={!selectedPanel && loadingPanels}
                   title={selectedPanel ? 'Edit panel details' : 'Edit project'}
                 >
-                  <Pencil size={16} strokeWidth={1.5} />
+                  <Pencil size={16} strokeWidth={1.75} aria-hidden />
                   <span>{selectedPanel ? 'Edit' : 'Edit Project'}</span>
                 </button>
                 <button
                   type="button"
                   disabled={deleting || deletingPanelId !== null || (!selectedPanel && loadingPanels)}
-                  className="pj-btn-danger-ghost disabled:opacity-50"
+                  className={`pj-info-action pj-info-action--danger${(deleting || deletingPanelId !== null) ? ' btn--loading' : ''}`}
                   onClick={() => {
                     if (selectedPanel) handleDeletePanel(selectedPanel);
                     else handleDelete(selectedProject);
                   }}
                   title={selectedPanel ? 'Delete selected panel' : 'Remove project'}
                 >
-                  <Trash2 size={16} strokeWidth={1.5} />
+                  {(deleting || deletingPanelId !== null) ? <span className="btn-spinner" aria-hidden /> : <Trash2 size={16} strokeWidth={1.75} aria-hidden />}
                   <span>{selectedPanel ? 'Delete' : 'Remove'}</span>
                 </button>
+                </div>
               </div>
             )}
           </div>
@@ -1023,6 +1103,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           onUploaded={() => {
             setToast({ message: `Wiring schedule uploaded for ${selectedPanel?.panel_name ?? 'panel'}.`, tone: 'success' });
             emitFramesChanged({ projectCode: selectedProject.code, frameId: selectedPanelId, action: 'updated' });
+            emitDocumentsChanged({
+              projectCode: selectedProject.code,
+              frameId: selectedPanelId,
+              kind: 'wiring',
+              action: 'uploaded',
+            });
+            refresh({ drawing: false, wiring: true, showLoading: false });
             reloadProjectPanels(selectedProject.code);
           }}
         />
@@ -1045,7 +1132,37 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           onSelectPanel={setSelectedPanelId}
           fileType={drawingUploadType}
           onClose={() => setDrawingUploadType(null)}
-          onUploaded={() => setToast({ message: `${drawingUploadType.toUpperCase()} drawing uploaded.`, tone: 'success' })}
+          onUploaded={() => {
+            setToast({ message: `${drawingUploadType.toUpperCase()} drawing uploaded.`, tone: 'success' });
+            if (selectedProject) {
+              emitDocumentsChanged({
+                projectCode: selectedProject.code,
+                frameId: selectedPanelId,
+                kind: 'drawing',
+                action: 'uploaded',
+              });
+              refresh({ drawing: true, wiring: false, showLoading: false });
+            }
+          }}
+        />
+      )}
+
+      {showDrawingView && selectedProject && drawingDoc.drawing && (
+        <PanelDrawingViewModal
+          projectCode={selectedProject.code}
+          drawing={drawingDoc.drawing}
+          panelLabel={selectedPanel?.panel_name ?? selectedProject.name}
+          canDownload={perms.canManageProjects}
+          onClose={() => setShowDrawingView(false)}
+        />
+      )}
+
+      {showWiringView && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelWiringViewModal
+          projectCode={selectedProject.code}
+          frameId={selectedPanelId}
+          panelLabel={selectedPanel.panel_name}
+          onClose={() => setShowWiringView(false)}
         />
       )}
 
@@ -1274,6 +1391,72 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             setShowEditPanel(null);
             setToast({ message: 'Panel updated.', tone: 'success' });
           }}
+        />
+      )}
+      {deletePanelTarget && selectedProject && (
+        <DeletePanelConfirmModal
+          panel={deletePanelTarget}
+          project={selectedProject}
+          onClose={closeDeletePanelModal}
+          onDeleted={handlePanelDeleted}
+        />
+      )}
+      {softRemoveTarget && (
+        <DeleteConfirmModal
+          title="Remove Project from List"
+          subtitle="Soft remove — wiring history stays in the system."
+          resourceKind="project_soft"
+          itemLabel={softRemoveTarget.name}
+          parentProject={{ code: softRemoveTarget.code, name: softRemoveTarget.name }}
+          sections={[
+            {
+              id: 'removed',
+              title: 'Removed from active list',
+              icon: 'folder',
+              badge: 'list only',
+              items: [
+                `Project “${softRemoveTarget.name}” (${softRemoveTarget.code}) disappears from supervisor project lists`,
+                'Technicians no longer see it as an active selectable project in day-to-day lists',
+              ],
+            },
+            {
+              id: 'retained',
+              title: 'Preserved (not deleted)',
+              icon: 'shield',
+              badge: 'kept',
+              items: [
+                'Wiring history, cable progress, and assignments',
+                'Uploads folder, drawings, and frame files on disk',
+                'A System Administrator can permanently delete later if needed',
+              ],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_only',
+              label: 'Remove from list only',
+              description: 'Hides the project from active lists. Does not delete DB records or files.',
+            },
+            {
+              id: 'everything_related',
+              label: 'Delete everything related',
+              description: 'Permanent wipe requires System Admin → Permanently Delete Project.',
+              disabled: true,
+            },
+          ]}
+          defaultScope="item_only"
+          backup={{
+            status: 'skipped',
+            note: 'No destructive backup step — this soft remove does not delete database rows or files.',
+          }}
+          irreversible={false}
+          warningTitle="This is not a permanent delete"
+          warningText={`Remove “${softRemoveTarget.name}” (${softRemoveTarget.code}) from the active project list? Wiring history, assignments, and files are preserved.`}
+          confirmCheckboxLabel={`I understand this only removes “${softRemoveTarget.name}” from the active list and does not wipe wiring history.`}
+          confirmButtonLabel="Remove from List"
+          deleting={deleting}
+          onClose={() => { if (!deleting) setSoftRemoveTarget(null); }}
+          onConfirm={handleSoftRemoveConfirm}
         />
       )}
     </div>

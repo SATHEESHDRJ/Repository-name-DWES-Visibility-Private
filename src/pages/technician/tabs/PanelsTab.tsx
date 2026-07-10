@@ -2,8 +2,9 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
 import GaDrawingViewModal from '../../../components/technician/GaDrawingViewModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
-import { useAppDialog } from '../../../components/AppDialogProvider';
+import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
+import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 
 interface PanelsTabProps {
   panels: any[];
@@ -43,10 +44,10 @@ export default function PanelsTab({
   onSelectPanel,
   onOpenDigitalWiring,
 }: PanelsTabProps) {
-  const dialog = useAppDialog();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [submitPanel, setSubmitPanel] = useState<any | null>(null);
+  const [hideTarget, setHideTarget] = useState<any | null>(null);
   const [gaOpen, setGaOpen] = useState(false);
 
   const hasAssignment = panels.length > 0;
@@ -63,6 +64,7 @@ export default function PanelsTab({
     try {
       if (panel.status === 'in_progress') {
         await techApi.complete(panel.id);
+        emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
         onRefresh();
       }
       setSubmitPanel({ ...panel, status: 'completed' });
@@ -79,6 +81,7 @@ export default function PanelsTab({
     setError('');
     try {
       await techApi.submitReport(submitPanel.id, notes);
+      emitWorkflowChanged({ scope: 'general', projectCode: submitPanel.project_code, frameId: submitPanel.id });
       setSubmitPanel(null);
       onRefresh();
     } catch (e: any) {
@@ -88,18 +91,17 @@ export default function PanelsTab({
     }
   };
 
-  const handleDeleteCompleted = async (panel: any) => {
-    const ok = await dialog.confirm({
-      title: 'Delete completed record',
-      message: `Remove "${panel.panel_name}" from your dashboard? Wiring progress is kept in the system; this only hides the completed card from your list.`,
-      tone: 'delete',
-      confirmText: 'Delete',
-    });
-    if (!ok) return;
+  const handleDeleteCompleted = (panel: any) => {
+    setHideTarget(panel);
+  };
+
+  const confirmHideCompleted = async (_scope: DeleteScopeId) => {
+    if (!hideTarget) return;
     setSaving(true);
     setError('');
     try {
-      await techApi.hide(panel.id);
+      await techApi.hide(hideTarget.id);
+      setHideTarget(null);
       onRefresh();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not delete record');
@@ -123,7 +125,10 @@ export default function PanelsTab({
           disabled={!hasAssignment}
           title={hasAssignment ? 'Open digital wiring for the selected panel' : AWAITING_ASSIGNMENT}
           aria-label={hasAssignment ? 'Digital Wiring View' : AWAITING_ASSIGNMENT}
-          onClick={() => headerPanel && onOpenDigitalWiring(headerPanel)}
+          onClick={() => {
+            const panel = headerPanel ?? panels[0];
+            if (panel) onOpenDigitalWiring(panel);
+          }}
         >
           <Cable size={16} />
           Digital Wiring View
@@ -266,6 +271,62 @@ export default function PanelsTab({
           panelName={gaTarget.panel_name}
           projectLabel={gaTarget.project_name || gaTarget.project_code}
           onClose={() => setGaOpen(false)}
+        />
+      )}
+
+      {hideTarget && (
+        <DeleteConfirmModal
+          title="Remove from dashboard"
+          subtitle="Hides the completed card — wiring progress stays."
+          resourceKind="completed_record"
+          itemLabel={hideTarget.panel_name}
+          parentProject={{
+            code: hideTarget.project_code || '—',
+            name: hideTarget.project_name || hideTarget.project_code || '—',
+          }}
+          sections={[
+            {
+              id: 'removed',
+              title: 'Removed from your list',
+              icon: 'users',
+              badge: 'UI only',
+              items: [
+                `Completed card for “${hideTarget.panel_name}”`,
+                'No longer shown on your technician dashboard',
+              ],
+            },
+            {
+              id: 'retained',
+              title: 'Preserved in the system',
+              icon: 'shield',
+              badge: 'kept',
+              items: [
+                'Wiring progress and cable completion data',
+                'Supervisor / QA records for this panel',
+              ],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_only',
+              label: 'Hide selected completed card only',
+              description: 'Does not delete panel wiring history or project files.',
+            },
+          ]}
+          defaultScope="item_only"
+          backup={{
+            status: 'skipped',
+            note: 'This only hides the card from your list — no database wipe or file backup.',
+          }}
+          irreversible={false}
+          warningTitle="Not a permanent data delete"
+          warningText={`Remove “${hideTarget.panel_name}” from your dashboard? Wiring progress is kept in the system.`}
+          confirmCheckboxLabel={`I understand this only hides “${hideTarget.panel_name}” from my list.`}
+          confirmButtonLabel="Remove from List"
+          deleting={saving}
+          error={error}
+          onClose={() => { if (!saving) setHideTarget(null); }}
+          onConfirm={confirmHideCompleted}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal from '../Modal';
 import { useAppDialog } from '../AppDialogProvider';
 import { projectsApi, uploadApi } from '../../services/api';
+import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import { FileText, Upload, X, CheckCircle, TriangleAlert } from '../ui/icons';
 import UploadTargetHeader from '../supervisor/UploadTargetHeader';
 import DuplicatePanelWarning from '../supervisor/DuplicatePanelWarning';
@@ -217,6 +218,12 @@ export default function PdfDrawingUploadModal({
       setMode('populated');
       setFile(null);
       onUploaded?.();
+      emitDocumentsChanged({
+        projectCode,
+        frameId: panelId,
+        kind: 'drawing',
+        action: existingDrawing?.id ? 'replaced' : 'uploaded',
+      });
       await resolveExisting();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Upload failed. Please try again.');

@@ -1,5 +1,8 @@
 node_modules
 dist
 .env
-data/
+# Anchor to the backend root: ignore the runtime data dir (backend/data/, holds
+# dwes_auth.sqlite) only — NOT source dirs like backend/src/data/ (bare `data/` matched
+# at any depth and silently excluded mock-store.ts, imported by 26 files).
+/data/
 *.tsbuildinfo

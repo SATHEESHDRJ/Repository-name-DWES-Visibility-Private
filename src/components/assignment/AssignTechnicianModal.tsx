@@ -4,6 +4,7 @@ import { projectsApi, supervisorApi, usersApi } from '../../services/api';
 import type { Project } from '../../types';
 import ProjectPanelSelect, { type FramePanel } from './ProjectPanelSelect';
 import { ArrowRight, CheckCircle, TriangleAlert } from '../ui/icons';
+import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 
 export interface AssignTechnicianModalProps {
   onClose: () => void;
@@ -88,6 +89,7 @@ export default function AssignTechnicianModal({
         technician_id: parseInt(selTech, 10),
       });
       setResult(r);
+      emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
       onAssigned();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Assignment failed');
@@ -125,7 +127,9 @@ export default function AssignTechnicianModal({
           {lockSelection ? (
             <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-[10px]">
               <div className="text-[11px] font-bold uppercase tracking-wide text-emerald-600 mb-1">Panel</div>
-              <div className="text-[13px] font-semibold text-emerald-800">{lockedPanelName}</div>
+              <div className="text-[13px] font-semibold text-emerald-800 break-words" title={lockedPanelName ?? undefined}>
+                {lockedPanelName}
+              </div>
               <div className="text-[11px] text-emerald-600 mt-0.5">Project: {projectCode}</div>
             </div>
           ) : (
@@ -186,10 +190,10 @@ export default function AssignTechnicianModal({
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <CheckCircle size={40} className="text-green-500" />
           <p className="text-[15px] font-semibold text-slate-800">Technician assigned</p>
-          <p className="text-[13px] text-slate-500">
+          <p className="text-[13px] text-slate-600 break-words">
             {result?.technician?.full_name} can start wiring on {lockedPanelName || selectedPanel?.panel_name}.
           </p>
-          <ArrowRight size={16} className="text-slate-300" />
+          <ArrowRight size={16} className="text-slate-500" aria-hidden="true" />
         </div>
       )}
     </Modal>

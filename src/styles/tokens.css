@@ -67,6 +67,36 @@
 
     --role-tech-bg: #DCFCE7;
     --role-tech-text: #16A34A;
+
+    /* Liquid Glass — base fallbacks (theme overrides in theme-palettes.css) */
+    --glass-bg: rgba(255, 255, 255, 0.68);
+    --glass-bg-solid: rgba(255, 255, 255, 0.92);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.52);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --glass-border-strong: rgba(15, 23, 42, 0.10);
+    --glass-blur: 14px;
+    --glass-blur-subtle: 10px;
+    --glass-blur-overlay: 6px;
+    --glass-saturate: 165%;
+    --glass-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 8px 28px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    --glass-shadow-hover:
+      0 4px 12px rgba(15, 23, 42, 0.08),
+      0 16px 40px rgba(15, 23, 42, 0.11),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    --glass-radius: var(--radius-md, 12px);
+    --glass-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --glass-text: #0F172A;
+    --glass-text-muted: #334155;
+
+    /* Bento Grid — dashboard card layouts */
+    --bento-gap: clamp(0.75rem, 2vw, 1.25rem);
+    --bento-radius: var(--radius-lg, 16px);
+    --bento-columns: 12;
+    --bento-min-cell: 180px;
+    --bento-row-min: 5.5rem;
   }
 
   button, [role="button"] { 

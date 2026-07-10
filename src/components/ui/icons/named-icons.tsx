@@ -110,6 +110,7 @@ export const FolderOpen        = sym('folder_open');
 export const Paperclip         = sym('attach_file');
 export const ClipboardCheck    = sym('assignment_turned_in');
 export const ClipboardList     = sym('assignment');
+export const Copy              = sym('content_copy');
 export const ListChecks        = sym('checklist');
 
 /* ── Tools & hardware ──────────────────────────────────────────────────────── */

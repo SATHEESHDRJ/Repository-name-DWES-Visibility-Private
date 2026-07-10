@@ -18,6 +18,8 @@ already exists in this project — nothing else.
 **Related rules & skills (read when relevant):**
 - `.cursor/rules/dwes-profile.mdc` — discovered stack, structure, domain vocabulary
 - `.cursor/rules/change-management.mdc` — backup, scope, changelog (mandatory)
+- `.cursor/skills/dwes-project/SKILL.md` — project skill index
+- `.cursor/skills/dwes-project/improvement-review.md` — Continuous Project Improvement Review (CPI), mandatory after each completed task
 - `dwes-db-guard` skill — WiringSchemeDB integrity (trigger on any DB/data work)
 - `.cursor/rules/ui-refactor-smoke-test.mdc` — build + route smoke test after UI changes
 - `.cursor/rules/technician-wiring-workflow.mdc` — technician wiring UX constraints
@@ -209,5 +211,37 @@ the same scope-lock rules as everything else in this skill.
 3. Never send DWES source, schema, or data to MCP servers not listed in
    `.cursor/mcp.json`.
 4. If a needed MCP server isn't configured, tell the user what to add — don't guess.
+
+---
+
+## 9. Continuous Project Improvement Review (CPI)
+
+After the user's requested task is complete and verified, **before the final response**, run the built-in CPI protocol in **`.cursor/skills/dwes-project/improvement-review.md`**.
+
+### 9.1 Purpose
+
+Analyze **only verified implementation** in affected modules. Identify evidence-backed opportunities across architecture, structure, code quality, UI/UX, data/API, security, ops, config, docs, testing, and maintainability. **Never invent recommendations.**
+
+### 9.2 Rules
+
+1. **Read-only** — CPI does not authorize extra implementation beyond the user's request.
+2. **Evidence required** — every finding cites files, lines, search results, or command output.
+3. **Preserve production** — 100% of existing business logic, workflows, database schema, APIs, and production behavior remain unchanged unless the user explicitly requested otherwise.
+4. **No assumptions** — unverifiable items go to **Needs Confirmation** with a specific clarification request.
+5. **Do not auto-implement** — recommendations in **Recommended Future Improvements** stay recommendations until the user asks.
+
+### 9.3 Output
+
+Append a **Project Improvement Report** as the final section of the task response with these headings:
+
+- **Implemented Changes**
+- **Verified Improvements**
+- **Recommended Future Improvements**
+- **Needs Confirmation**
+- **No Issues Found**
+
+Each recommendation includes severity (Critical / High / Medium / Low / Optional), dimension, affected files, evidence, technical and business justification, implementation effort, and potential impact. Full template and dimension checklist: `improvement-review.md`.
+
+Skip CPI only for purely informational exchanges with no module inspection; state why.
 
 **This skill is permanent. Apply it to every interaction in this workspace.**

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Download, RefreshCw } from '../../../components/ui/icons';
 import { directorApi } from '../../../services/api';
-import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 
 interface PanelRow {
   panelName: string;
@@ -252,7 +252,7 @@ export default function SummaryReportTab() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useReadOnlyPoll(fetchData, 4000);
+  useDwesRefresh(fetchData);
 
   // Tick every 15 s so "N ago" label updates without a full fetch
   useEffect(() => {

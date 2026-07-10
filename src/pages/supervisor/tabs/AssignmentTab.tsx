@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { projectsApi, supervisorApi, techApi } from '../../../services/api';
 import type { Project } from '../../../types';
 import Modal from '../../../components/Modal';
-import { useAppDialog } from '../../../components/AppDialogProvider';
+import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import CompletionReport, { type CompletionReportData } from '../../../components/ui/CompletionReport';
 import AssignTechnicianModal from '../../../components/assignment/AssignTechnicianModal';
 import Toast from '../../../components/ui/Toast';
 import OverflowActionMenu from '../../../components/ui/OverflowActionMenu';
 import { TriangleAlert, CheckCircle, CheckCheck, RotateCcw, RefreshCw } from '../../../components/ui/icons';
+import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 
 type AssignmentView = 'assignments' | 'changeover';
 
@@ -39,7 +40,6 @@ export default function AssignmentTab({
   openAssignTick = 0,
   assignmentsOnly = false,
 }: AssignmentTabProps) {
-  const dialog = useAppDialog();
   const [view, setView] = useState<AssignmentView>(initialView);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [showAssign, setShowAssign] = useState(false);
@@ -47,6 +47,8 @@ export default function AssignmentTab({
   const [showReview, setShowReview] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [hasFrames, setHasFrames] = useState(false);
+  const [pendingDeassign, setPendingDeassign] = useState<any | null>(null);
+  const [deassigning, setDeassigning] = useState(false);
 
   const canAssign = Boolean(projectCode && panelId);
 
@@ -101,16 +103,28 @@ export default function AssignmentTab({
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleDeassign = async (id: number) => {
-    const ok = await dialog.confirm({
-      title: 'Remove Assignment',
-      message: 'Remove this assignment from the technician? This cannot be undone.',
-      tone: 'delete',
-      confirmText: 'Remove',
-    });
-    if (!ok) return;
-    await techApi.delete(id).catch(() => {});
-    loadData();
+  const handleDeassign = (id: number) => {
+    const target = assignments.find(a => a.id === id) || null;
+    if (!target) return;
+    setPendingDeassign(target);
+  };
+
+  const confirmDeassign = async (_scope: DeleteScopeId) => {
+    if (!pendingDeassign) return;
+    const removed = pendingDeassign;
+    setDeassigning(true);
+    try {
+      await techApi.delete(removed.id).catch(() => {});
+      emitWorkflowChanged({
+        scope: 'assignment',
+        projectCode: removed.project_code,
+        frameId: removed.frame_id,
+      });
+      setPendingDeassign(null);
+      loadData();
+    } finally {
+      setDeassigning(false);
+    }
   };
 
   const assignmentStatus = (raw: string | null | undefined): { label: string; tone: 'done' | 'progress' | 'idle' | 'paused' } => {
@@ -274,6 +288,64 @@ export default function AssignmentTab({
 
           {showReview && (
             <ReviewModal assignment={showReview} onClose={() => { setShowReview(null); loadData(); }} />
+          )}
+
+          {pendingDeassign && (
+            <DeleteConfirmModal
+              title="Remove Assignment"
+              subtitle="Technician loses access to this panel assignment."
+              resourceKind="assignment"
+              itemLabel={pendingDeassign.technician_name || 'Assignment'}
+              parentProject={{
+                code: pendingDeassign.project_code || projectCode,
+                name: pendingDeassign.project_code || projectCode,
+              }}
+              fields={[
+                { label: 'Panel', value: pendingDeassign.panel_name || pendingDeassign.frame_id || '—' },
+                { label: 'Status', value: String(pendingDeassign.status || 'assigned') },
+              ]}
+              sections={[
+                {
+                  id: 'removed',
+                  title: 'Removed',
+                  icon: 'users',
+                  badge: 'assignment',
+                  items: [
+                    `Assignment for ${pendingDeassign.technician_name || 'technician'}`,
+                    'Technician will no longer see this panel in their active work',
+                  ],
+                },
+                {
+                  id: 'retained',
+                  title: 'Not affected',
+                  icon: 'shield',
+                  defaultExpanded: false,
+                  badge: 'kept',
+                  items: [
+                    'Panel wiring schedule and cable progress history',
+                    'Project files and other technicians’ assignments',
+                  ],
+                },
+              ]}
+              scopes={[
+                {
+                  id: 'item_only',
+                  label: 'Delete selected assignment only',
+                  description: 'Removes this technician assignment. Panel data and files stay.',
+                },
+              ]}
+              defaultScope="item_only"
+              backup={{
+                status: 'skipped',
+                note: 'Assignment removal does not delete project files or run a DB dump.',
+              }}
+              warningText="Remove this assignment from the technician? Wiring progress on the panel is retained."
+              confirmCheckboxLabel={`I confirm removing the assignment for ${pendingDeassign.technician_name || 'this technician'}.`}
+              confirmButtonLabel="Remove Assignment"
+              deleting={deassigning}
+              onClose={() => { if (!deassigning) setPendingDeassign(null); }}
+              onConfirm={confirmDeassign}
+            />
           )}
         </>
       )}

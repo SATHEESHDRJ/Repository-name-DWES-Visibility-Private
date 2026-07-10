@@ -13,15 +13,15 @@ import ResetAllProjectsTab from './tabs/ResetAllProjectsTab';
  */
 export default function AdminSettingsPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="dash-module"><DeploymentModeTab /></div>
-      <div className="dash-module"><DbConfigTab /></div>
-      <div className="dash-module dash-module--wide"><DiagnosticsTab /></div>
-      <div className="dash-module"><SyncTab /></div>
-      <div className="dash-module"><DeleteProjectTab /></div>
-      <div className="dash-module"><HardResetTab /></div>
-      <div className="dash-module"><HardResetDbTab /></div>
-      <div className="dash-module"><ResetAllProjectsTab /></div>
+    <div className="bento-grid bento-grid--settings">
+      <div className="dash-module bento-cell bento-cell--span-6"><DeploymentModeTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-6"><DbConfigTab /></div>
+      <div className="dash-module dash-module--wide bento-cell bento-cell--span-12"><DiagnosticsTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-6"><SyncTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-6"><DeleteProjectTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-6"><HardResetTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-6"><HardResetDbTab /></div>
+      <div className="dash-module bento-cell bento-cell--span-12"><ResetAllProjectsTab /></div>
     </div>
   );
 }

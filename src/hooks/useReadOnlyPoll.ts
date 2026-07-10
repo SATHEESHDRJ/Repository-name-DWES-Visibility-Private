@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Lightweight read-only polling for dashboard data.
+ * Pass `intervalMs: null` to disable the timer (focus/visibility refresh only).
  * Pauses when the tab is hidden; skips overlapping requests; keeps last good state on failure.
  */
-export function useReadOnlyPoll(fetchFn: () => void | Promise<void>, intervalMs = 4000) {
+export function useReadOnlyPoll(
+  fetchFn: () => void | Promise<void>,
+  intervalMs: number | null = null,
+) {
   const inFlightRef = useRef(false);
   const fetchRef = useRef(fetchFn);
   fetchRef.current = fetchFn;
@@ -22,12 +26,17 @@ export function useReadOnlyPoll(fetchFn: () => void | Promise<void>, intervalMs 
       }
     };
 
-    const id = setInterval(tick, intervalMs);
     const onVis = () => { if (!document.hidden) void tick(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
+
+    let id: ReturnType<typeof setInterval> | undefined;
+    if (intervalMs != null && intervalMs > 0) {
+      id = setInterval(tick, intervalMs);
+    }
+
     return () => {
-      clearInterval(id);
+      if (id != null) clearInterval(id);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', onVis);
     };

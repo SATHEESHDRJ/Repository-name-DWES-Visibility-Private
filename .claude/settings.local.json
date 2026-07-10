@@ -36,7 +36,11 @@
       "Bash(python -m pip install pymupdf)",
       "Bash(curl -k -s -o /dev/null -w \"%{http_code}\" https://localhost:5173)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(echo \"tsc-exit:$?\")"
+      "Bash(echo \"tsc-exit:$?\")",
+      "Bash(git config *)",
+      "Bash(ls -la .vscode)",
+      "Bash(cat .vscode/settings.json)",
+      "Bash(xargs -0 du -a)"
     ]
   }
 }

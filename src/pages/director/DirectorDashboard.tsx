@@ -5,7 +5,7 @@ import {
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { directorApi } from '../../services/api';
-import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import SummaryReportTab from './tabs/SummaryReportTab';
 import ExportTab from './tabs/ExportTab';
 import ActivityTab from './tabs/ActivityTab';
@@ -35,7 +35,7 @@ export default function DirectorDashboard() {
     loadStats();
   }, []);
 
-  useReadOnlyPoll(loadStats, 4000);
+  useDwesRefresh(loadStats);
 
   return (
     <DashboardShell

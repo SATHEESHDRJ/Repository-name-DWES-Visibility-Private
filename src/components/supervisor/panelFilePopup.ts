@@ -47,9 +47,11 @@ export function inferViewerFileType(
 export function frameHasWiringSchedule(frame: {
   cable_count?: number;
   original_filename?: string;
+  compare_status?: string;
 } | null | undefined): boolean {
   if (!frame) return false;
   if ((frame.cable_count ?? 0) > 0) return true;
-  const name = frame.original_filename || '';
-  return /\.(xlsx?|xls)$/i.test(name) && name !== '(created with project)';
+  const name = (frame.original_filename || '').trim();
+  if (/\.(xlsx?|xlsm?)$/i.test(name) && name !== '(created with project)') return true;
+  return frame.compare_status === 'validated' || frame.compare_status === 'verified';
 }

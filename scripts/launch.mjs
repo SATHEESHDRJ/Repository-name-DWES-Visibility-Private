@@ -1,6 +1,6 @@
 /**
  * One-click DWES launcher (console-visible fallback for terminals).
- * On Windows, prefer Start DWES (Hidden).vbs for zero console windows.
+ * On Windows, prefer Start DWES (Hidden).vbs for zero console windows (Dev / HMR).
  */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -13,5 +13,5 @@ if (isWin) {
   const vbs = path.join(root, 'Start DWES (Hidden).vbs');
   spawn('wscript.exe', [vbs], { stdio: 'inherit', windowsHide: true });
 } else {
-  await import('./launch-hidden.mjs');
+  await import('./launch-dwes.mjs');
 }

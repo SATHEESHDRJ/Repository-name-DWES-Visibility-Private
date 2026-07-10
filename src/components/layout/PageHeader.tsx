@@ -7,17 +7,19 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, badge, actions }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="section-title">{title}</h1>
-          {badge && (
-            <span className="badge badge-blue text-[11px]">{badge}</span>
-          )}
+    <div className="page-header mb-6 flex items-start justify-between gap-4">
+      <div className="page-header-copy min-w-0 flex-1">
+        <div className="dashboard-hero-title-row">
+          <div className="dashboard-hero-title-wrap">
+            <h1 className="section-title dashboard-hero-title">{title}</h1>
+          </div>
+          {badge ? (
+            <span className="badge badge-blue dashboard-hero-badge">{badge}</span>
+          ) : null}
         </div>
-        {subtitle && <p className="section-sub">{subtitle}</p>}
+        {subtitle ? <p className="section-sub dashboard-hero-subtitle">{subtitle}</p> : null}
       </div>
-      {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+      {actions ? <div className="page-header-actions shrink-0">{actions}</div> : null}
     </div>
   );
 }

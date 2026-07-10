@@ -4,7 +4,7 @@ import type { Project } from '../../../types';
 import Modal from '../../../components/Modal';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 import ProjectPanelSelect from '../../../components/assignment/ProjectPanelSelect';
 import AssignTechnicianModal from '../../../components/assignment/AssignTechnicianModal';
 import {
@@ -24,7 +24,8 @@ import UnifiedUploadModal from '../../../components/supervisor/UnifiedUploadModa
 import WiringScheduleMappingGrid from '../../../components/supervisor/WiringScheduleMappingGrid';
 import { WIRING_SYSTEM_FIELDS, buildAutoWiringMapping, fieldKeyForHeader } from '../../../constants/wiringSystemFields';
 import { assertNoDuplicatePanels } from '../../../utils/panelDuplicates';
-import { onFramesChanged } from '../../../utils/projectFramesEvents';
+import { onFramesChanged, emitFramesChanged } from '../../../utils/projectFramesEvents';
+import { emitDocumentsChanged } from '../../../utils/projectDocumentsEvents';
 
 type UploadStep = 'file' | 'sheet' | 'mapping';
 
@@ -82,7 +83,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
     }).catch(() => {});
   }, [selectedProject]);
 
-  useReadOnlyPoll(loadFrames, 4000);
+  useDwesRefresh(loadFrames);
 
   useEffect(() => {
     return onFramesChanged((detail) => {
@@ -91,13 +92,18 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
         setFrames(prev => prev.filter(f => f.id !== detail.frameId));
         setAssignments(prev => prev.filter(a => a.frame_id !== detail.frameId));
         setSelectedPanelId(prev => (prev === detail.frameId ? '' : prev));
-        return;
       }
-      loadFrames();
     });
-  }, [selectedProject, loadFrames]);
+  }, [selectedProject]);
 
   const handleScheduleUploaded = (frameId: string) => {
+    emitFramesChanged({ projectCode: selectedProject, frameId, action: 'updated' });
+    emitDocumentsChanged({
+      projectCode: selectedProject,
+      frameId,
+      kind: 'wiring',
+      action: 'uploaded',
+    });
     loadFrames();
     setShowScheduleUpload(false);
     setShowAssign({ id: frameId });
@@ -200,7 +206,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
                       <td>
                         <div className="flex flex-col justify-center">
                           <span className="text-[13px] font-medium text-slate-700 truncate max-w-[220px]" title={frame.original_filename}>{frame.original_filename}</span>
-                          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{frame.cable_count} cables</span>
+                          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{frame.cable_count} cables</span>
                         </div>
                       </td>
                       <td className="font-medium text-slate-500 whitespace-nowrap">
@@ -212,7 +218,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
                         {asgn ? (
                           <div className="flex flex-col gap-0.5">
                             <span className={`frame-status-pill ${pillClass}`}>{pillLabel}</span>
-                            <span className="text-[11px] text-slate-400 truncate max-w-[200px]" title={asgn.technician_name}>
+                            <span className="text-[11px] text-slate-500 truncate max-w-[200px]" title={asgn.technician_name}>
                               {asgn.technician_name}
                             </span>
                           </div>

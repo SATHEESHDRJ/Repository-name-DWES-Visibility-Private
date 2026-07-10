@@ -107,11 +107,11 @@ export default function Modal({
         if (e.target === e.currentTarget) handleOverlayClick();
       }}
     >
-      <div className={boxClass} onClick={e => e.stopPropagation()}>
+      <div className={`${boxClass} glass-modal-shell`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-text">
-            <h2 id="modal-title" className="modal-title">{title}</h2>
-            {subtitle ? <p className="modal-subtitle">{subtitle}</p> : null}
+            <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>
+            {subtitle ? <p className="modal-subtitle" title={subtitle}>{subtitle}</p> : null}
           </div>
           <div className="modal-header-actions">
             {headerAction}

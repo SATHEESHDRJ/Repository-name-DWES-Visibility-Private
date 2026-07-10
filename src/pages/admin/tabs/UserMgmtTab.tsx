@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
+import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import {
   Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog,
   CheckCircle2, UserX, Phone, Calendar, Hash,
@@ -270,11 +271,49 @@ export default function UserMgmtTab() {
       )}
 
       {deleteUser && (
-        <DeleteUserModal
-          user={deleteUser}
-          saving={saving}
-          onClose={() => setDeleteUser(null)}
-          onConfirm={handleDelete}
+        <DeleteConfirmModal
+          title="Delete User"
+          subtitle="Permanent removal when allowed; otherwise deactivated."
+          resourceKind="user"
+          itemLabel={deleteUser.full_name || deleteUser.username}
+          fields={[
+            { label: 'Username', value: `@${deleteUser.username}` },
+            { label: 'Role', value: ROLE_LABELS[deleteUser.role] || deleteUser.role },
+          ]}
+          sections={[
+            {
+              id: 'impact',
+              title: 'Impact',
+              icon: 'users',
+              items: [
+                `Delete ${deleteUser.full_name} (@${deleteUser.username})`,
+                'Users with session or assignment history may be deactivated instead of deleted',
+              ],
+            },
+            {
+              id: 'retained',
+              title: 'Preserved when deactivated',
+              icon: 'shield',
+              defaultExpanded: false,
+              badge: 'history',
+              items: ['Session/assignment history stays for audit', 'Project wiring data is not wiped'],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_only',
+              label: 'Delete / deactivate selected user',
+              description: 'Does not delete project files or wiring records.',
+            },
+          ]}
+          defaultScope="item_only"
+          backup={{ status: 'skipped', note: 'User delete does not run a project file backup.' }}
+          warningText={`Permanently remove this account when allowed. Users with history may be blocked instead.`}
+          confirmCheckboxLabel={`I confirm deleting or deactivating “${deleteUser.full_name}”.`}
+          confirmButtonLabel="Delete User"
+          deleting={saving}
+          onClose={() => { if (!saving) setDeleteUser(null); }}
+          onConfirm={async (_scope: DeleteScopeId) => { await handleDelete(); }}
         />
       )}
 
@@ -518,7 +557,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
             {initials(user.full_name)}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[18px] font-bold text-slate-900 truncate">{user.full_name}</div>
+            <div className="text-[18px] font-bold text-slate-900 truncate" title={user.full_name}>{user.full_name}</div>
             <div className="text-[14px] font-mono text-blue-700 mt-0.5">@{user.username}</div>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${roleBadgeClass(user.role)}`}>
@@ -587,8 +626,8 @@ function MetaChip({ icon, label, value, mono }: { icon: ReactNode; label: string
     <div className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] bg-white">
       <div className="text-slate-400 shrink-0">{icon}</div>
       <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div>
-        <div className={`text-[13px] font-medium text-slate-800 truncate ${mono ? 'font-mono' : ''}`}>{value}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+        <div className={`text-[13px] font-medium text-slate-800 truncate ${mono ? 'font-mono' : ''}`} title={value}>{value}</div>
       </div>
     </div>
   );
@@ -646,43 +685,6 @@ function ResetPasswordModal({ user, saving, onClose, onReset }: {
           <div className="text-[13px] text-slate-500">{user.full_name} can now log in with the new password.</div>
         </div>
       )}
-    </Modal>
-  );
-}
-
-function DeleteUserModal({ user, saving, onClose, onConfirm }: {
-  user: any;
-  saving: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <Modal
-      title="Delete User"
-      onClose={onClose}
-      footer={(
-        <div className="flex items-center justify-end gap-3 w-full">
-          <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-          <button type="button" onClick={onConfirm} disabled={saving} className="btn-danger">
-            {saving ? 'Deleting…' : 'Delete User'}
-          </button>
-        </div>
-      )}
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start gap-3 p-4 rounded-[12px] border border-red-200 bg-red-50">
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-            <Trash2 size={18} className="text-red-600" />
-          </div>
-          <div>
-            <div className="text-[14px] font-semibold text-red-800">Permanently remove this account?</div>
-            <div className="text-[13px] text-red-700 mt-1 leading-relaxed">
-              Delete <strong>{user.full_name}</strong> (@{user.username})?
-              Users with session or assignment history may be deactivated instead of deleted.
-            </div>
-          </div>
-        </div>
-      </div>
     </Modal>
   );
 }

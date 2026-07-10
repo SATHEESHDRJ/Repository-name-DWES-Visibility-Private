@@ -5,6 +5,7 @@ import type { FramePanel } from '../../../components/assignment/ProjectPanelSele
 import Modal from '../../../components/Modal';
 import { InputField, SelectField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
+import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { usePermissions } from '../../../hooks/usePermissions';
 import {
   User, Lock, UserCog, Search, Plus, Pencil, KeyRound, ShieldCheck, ShieldOff,
@@ -351,6 +352,7 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
   const [savingProfile, setSavingProfile] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [statusError, setStatusError] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -430,20 +432,18 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
     }
   };
 
-  const handleDeleteUser = async () => {
-    const ok = await dialog.confirm({
-      title: 'Delete User',
-      message: `Delete ${form.full_name} (@${form.username})? If the account has assignment or session history, it will be deactivated instead of permanently removed.`,
-      tone: 'delete',
-      confirmText: 'Delete User',
-      cancelText: 'Cancel',
-    });
-    if (!ok) return;
+  const handleDeleteUser = () => {
+    setDeleteError('');
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async (_scope: DeleteScopeId) => {
     setDeleting(true);
     setDeleteError('');
     try {
       const result = await usersApi.remove(user.id);
       onSaved();
+      setShowDeleteConfirm(false);
       onClose();
       if (result?.deactivated) {
         await dialog.alert({
@@ -656,12 +656,65 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
           )}
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          title="Delete User"
+          subtitle="Permanent removal when allowed; otherwise deactivated."
+          resourceKind="user"
+          itemLabel={form.full_name || form.username}
+          fields={[
+            { label: 'Username', value: `@${form.username}` },
+            { label: 'Role', value: ROLES.find(r => r.value === form.role)?.label || form.role },
+          ]}
+          sections={[
+            {
+              id: 'impact',
+              title: 'Impact',
+              icon: 'users',
+              items: [
+                'Account removed when no assignment/session history exists',
+                'If history exists, the account is deactivated instead of deleted',
+              ],
+            },
+            {
+              id: 'retained',
+              title: 'Preserved when deactivated',
+              icon: 'shield',
+              defaultExpanded: false,
+              badge: 'history',
+              items: [
+                'Assignment and session history stay for audit',
+                'Wiring progress and project data are not wiped',
+              ],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_only',
+              label: 'Delete / deactivate selected user',
+              description: 'Does not delete project files or wiring records.',
+            },
+          ]}
+          defaultScope="item_only"
+          backup={{
+            status: 'skipped',
+            note: 'User delete does not run a project file backup.',
+          }}
+          warningText={`Delete ${form.full_name} (@${form.username})? If the account has assignment or session history, it will be deactivated instead of permanently removed.`}
+          confirmCheckboxLabel={`I confirm deleting or deactivating “${form.full_name}”.`}
+          confirmButtonLabel="Delete User"
+          deleting={deleting}
+          error={deleteError}
+          onClose={() => { if (!deleting) setShowDeleteConfirm(false); }}
+          onConfirm={confirmDeleteUser}
+        />
+      )}
     </Modal>
   );
 }
 
 function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChanged: () => void }) {
-  const dialog = useAppDialog();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectCode, setProjectCode] = useState('');
@@ -670,6 +723,7 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
   const [loadingPanels, setLoadingPanels] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<{ id: number; panelLabel: string } | null>(null);
   const [error, setError] = useState('');
 
   const loadAssignments = useCallback(() => {
@@ -728,18 +782,17 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
     }
   };
 
-  const handleRemove = async (assignmentId: number, panelLabel: string) => {
-    const ok = await dialog.confirm({
-      title: 'Remove Panel Assignment',
-      message: `Remove assignment to "${panelLabel}"? The technician will no longer see this panel.`,
-      tone: 'warning',
-      confirmText: 'Remove',
-    });
-    if (!ok) return;
-    setRemovingId(assignmentId);
+  const handleRemove = (assignmentId: number, panelLabel: string) => {
+    setPendingRemove({ id: assignmentId, panelLabel });
+  };
+
+  const confirmRemoveAssignment = async (_scope: DeleteScopeId) => {
+    if (!pendingRemove) return;
+    setRemovingId(pendingRemove.id);
     setError('');
     try {
-      await techApi.delete(assignmentId);
+      await techApi.delete(pendingRemove.id);
+      setPendingRemove(null);
       loadAssignments();
       onChanged();
     } catch (e: any) {
@@ -823,6 +876,50 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
         </button>
       </div>
       {error && <ErrorBanner message={error} />}
+
+      {pendingRemove && (
+        <DeleteConfirmModal
+          title="Remove Panel Assignment"
+          subtitle="Technician loses this panel from active work."
+          resourceKind="assignment"
+          itemLabel={pendingRemove.panelLabel}
+          sections={[
+            {
+              id: 'removed',
+              title: 'Removed',
+              icon: 'users',
+              items: [
+                `Assignment to “${pendingRemove.panelLabel}”`,
+                'Technician will no longer see this panel',
+              ],
+            },
+            {
+              id: 'retained',
+              title: 'Not affected',
+              icon: 'shield',
+              defaultExpanded: false,
+              badge: 'kept',
+              items: ['Panel wiring data and project files'],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_only',
+              label: 'Delete selected assignment only',
+              description: 'Removes this assignment row. Panel history stays.',
+            },
+          ]}
+          defaultScope="item_only"
+          backup={{ status: 'skipped', note: 'Assignment removal does not dump the database.' }}
+          warningText={`Remove assignment to “${pendingRemove.panelLabel}”? The technician will no longer see this panel.`}
+          confirmCheckboxLabel={`I confirm removing the assignment to “${pendingRemove.panelLabel}”.`}
+          confirmButtonLabel="Remove Assignment"
+          deleting={removingId === pendingRemove.id}
+          error={error}
+          onClose={() => { if (removingId == null) setPendingRemove(null); }}
+          onConfirm={confirmRemoveAssignment}
+        />
+      )}
     </UmSection>
   );
 }

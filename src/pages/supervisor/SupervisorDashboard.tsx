@@ -54,10 +54,7 @@ export default function SupervisorDashboard() {
       widthVariant="wide"
       hideTabSectionHeader
     >
-      <SupervisorAlertStrips
-        onNavigate={handleNavigate}
-        hideChangeover={tab === 'projects'}
-      />
+      <SupervisorAlertStrips onNavigate={handleNavigate} />
       {tab === 'projects' && (
         <div className="dash-module dash-module--wide flex flex-col gap-4 min-w-0">
           <SupervisorSectionHeader

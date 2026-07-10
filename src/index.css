@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @import "material-symbols/rounded.css";
+@import "./styles/tokens.css";
 @import "./styles/icons.css";
 @import "./styles/buttons.css";
 @import "./styles/design-system.css";
@@ -225,6 +226,24 @@
    Overrides the MD3 role tokens only — every tokenized component flips automatically.
    Soft dark surfaces (NOT pure black) per MD3. */
 [data-theme="dark"] {
+  --glass-bg:            rgba(27, 31, 36, 0.78);
+  --glass-bg-solid:      rgba(27, 31, 36, 0.94);
+  --glass-bg-subtle:     rgba(27, 31, 36, 0.62);
+  --glass-border:        rgba(255, 255, 255, 0.08);
+  --glass-border-strong: rgba(255, 255, 255, 0.12);
+  --glass-blur:          12px;
+  --glass-blur-subtle:   8px;
+  --glass-blur-overlay:  5px;
+  --glass-saturate:      140%;
+  --glass-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --glass-shadow-hover:
+    0 8px 24px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-text:          #F8FAFC;
+  --glass-text-muted:    #CBD5E1;
+
   --color-background:         #15181C;
   --color-surface:            #1B1F24;
   --color-surface-variant:    #22272E;

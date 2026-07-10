@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "bradlc.vscode-tailwindcss",
+    "Prisma.prisma",
+    "cweijan.vscode-postgresql-client2",
+    "christian-kohler.path-intellisense",
+    "streetsidesoftware.code-spell-checker",
+    "EditorConfig.EditorConfig"
+  ],
+  "unwantedRecommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint"
+  ]
+}

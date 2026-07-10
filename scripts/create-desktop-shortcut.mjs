@@ -1,8 +1,9 @@
 /**
- * Desktop launcher — creates exactly ONE DWES startup icon.
+ * Desktop launcher — creates DWES startup icon(s).
  *
- *   node scripts/create-desktop-shortcut.mjs          -> single launcher (default)
- *   node scripts/create-desktop-shortcut.mjs --lan    -> browser-only .url for LAN tablets (not on host desktop)
+ *   node scripts/create-desktop-shortcut.mjs              -> Dev (Vite HMR) DWES.lnk
+ *   node scripts/create-desktop-shortcut.mjs --prod       -> Dev + Prod desktop icons
+ *   node scripts/create-desktop-shortcut.mjs --lan        -> browser-only .url for LAN tablets
  */
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -22,6 +23,7 @@ if (process.platform !== 'win32') {
 
 const args = process.argv.slice(2);
 const wantLan = args.includes('--lan');
+const wantProd = args.includes('--prod') || args.includes('--include-prod');
 let url = args.find(a => a.startsWith('http'));
 
 if (wantLan || url) {
@@ -63,8 +65,7 @@ if (wantLan || url) {
   process.exit(0);
 }
 
-execFileSync(
-  'powershell.exe',
-  ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', fixScript],
-  { stdio: 'inherit' },
-);
+const psArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', fixScript];
+if (wantProd) psArgs.push('-IncludeProd');
+
+execFileSync('powershell.exe', psArgs, { stdio: 'inherit' });

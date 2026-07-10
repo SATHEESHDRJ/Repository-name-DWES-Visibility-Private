@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { qaqcApi } from '../../../services/api';
+import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 import { AlertTriangle, Check, X, Search, Plus } from '../../../components/ui/icons';
 
 interface InspectionFormTabProps {
@@ -176,6 +177,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
         inspection_notes: inspNotes,
         overall_result: result,
       });
+      emitWorkflowChanged({ scope: 'inspection', projectCode: panel.project_code, frameId: panel.id });
       setSaved(true);
       onInspectionDone();
     } catch (e: any) {

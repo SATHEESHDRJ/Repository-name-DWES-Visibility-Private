@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { qaqcApi } from '../../../services/api';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 import ProjectInfoCard from '../../../components/ui/ProjectInfoCard';
 import { RefreshCw, ClipboardCheck } from '../../../components/ui/icons';
 
@@ -12,18 +13,22 @@ export default function PanelsTab({ onSelectPanel }: PanelsTabProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ready' | 'all'>('ready');
 
-  const load = useCallback(() => {
-    setLoading(true);
+  const load = useCallback((options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     const request = filter === 'ready' ? qaqcApi.readyPanels() : qaqcApi.allCompleted();
     request.then(data => {
       setPanels(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+      if (!options?.silent) setLoading(false);
+    }).catch(() => {
+      if (!options?.silent) setLoading(false);
+    });
   }, [filter]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useDwesRefresh(() => load({ silent: true }), { listenFrames: false });
 
   if (loading) return <div className="empty-state"><p className="empty-text">Loading panels...</p></div>;
 
@@ -42,7 +47,7 @@ export default function PanelsTab({ onSelectPanel }: PanelsTabProps) {
             </button>
           ))}
         </div>
-        <button className="btn-secondary" onClick={load} type="button">
+        <button className="btn-secondary" onClick={() => load()} type="button">
           <RefreshCw size={16} />
           <span>Refresh</span>
         </button>

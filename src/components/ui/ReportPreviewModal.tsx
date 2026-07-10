@@ -3,7 +3,8 @@ import Modal from '../Modal';
 import PanelCompletionReportPreview, { type PanelCompletionReportPreviewData } from './PanelCompletionReportPreview';
 import { projectsApi, supervisorApi } from '../../services/api';
 import { buildPanelReportFilename } from '../../utils/reportFilename';
-import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { DWES_REPORT_PREVIEW_POLL_MS } from '../../constants/refreshIntervals';
 import { Download } from './icons';
 
 interface ReportPreviewModalProps {
@@ -41,7 +42,7 @@ export default function ReportPreviewModal({
     fetchReport().catch(() => setFailed(true));
   }, [fetchReport]);
 
-  useReadOnlyPoll(fetchReport, 6000);
+  useDwesRefresh(fetchReport, { pollMs: DWES_REPORT_PREVIEW_POLL_MS });
 
   const exportPdf = async () => {
     setExporting('pdf');
@@ -125,7 +126,7 @@ export default function ReportPreviewModal({
         <>
           <PanelCompletionReportPreview data={report} />
           <div className="pcr-live-hint">
-            Live preview · refreshes every 6s · assignment #{assignmentId}
+            Live preview · refreshes on changes · assignment #{assignmentId}
           </div>
         </>
       )}

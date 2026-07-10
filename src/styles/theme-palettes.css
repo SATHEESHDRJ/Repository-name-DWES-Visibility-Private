@@ -81,4 +81,32 @@
   --t-login-hero:       linear-gradient(145deg, #0B1220 0%, #0F2557 42%, #1D4ED8 100%);
   --t-login-hero-grid:  rgba(255, 255, 255, 0.04);
   --t-login-hero-glow:  rgba(59, 130, 246, 0.22);
+
+  /* Liquid Glass — Arctic light theme */
+  --t-glass-bg:            rgba(255, 255, 255, 0.72);
+  --t-glass-bg-solid:      rgba(255, 255, 255, 0.94);
+  --t-glass-bg-subtle:     rgba(255, 255, 255, 0.56);
+  --t-glass-border:        rgba(255, 255, 255, 0.52);
+  --t-glass-border-strong: rgba(15, 23, 42, 0.10);
+  --t-glass-blur:          14px;
+  --t-glass-blur-subtle:   10px;
+  --t-glass-blur-overlay:  6px;
+  --t-glass-saturate:      165%;
+  --t-glass-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 8px 28px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --t-glass-shadow-hover:
+    0 4px 14px rgba(15, 23, 42, 0.08),
+    0 16px 42px rgba(15, 23, 42, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --t-glass-text:          var(--t-text);
+  --t-glass-text-muted:    var(--t-muted);
+
+  /* Bento Grid — Arctic */
+  --t-bento-gap:       clamp(0.75rem, 2vw, 1.25rem);
+  --t-bento-radius:    16px;
+  --t-bento-columns:   12;
+  --t-bento-min-cell:  180px;
+  --t-bento-row-min:   5.5rem;
 }

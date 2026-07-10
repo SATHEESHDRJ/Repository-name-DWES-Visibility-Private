@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal from '../Modal';
 import { useAppDialog } from '../AppDialogProvider';
+import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal';
 import { projectsApi, uploadApi } from '../../services/api';
+import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import {
   FileText, SendHorizonal, Upload, Trash2, ExternalLink, CheckCircle, FileSpreadsheet,
 } from '../ui/icons';
@@ -118,7 +120,7 @@ function UploadSection({
         {error && <div className="form-error text-[12px]">{error}</div>}
 
         {files.length === 0 ? (
-          <p className="text-center text-[12px] text-slate-400 py-1">No files uploaded yet.</p>
+          <p className="text-center text-[12px] text-slate-500 py-1">No files uploaded yet.</p>
         ) : (
           <ul className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-0.5">
             {files.map(f => (
@@ -128,7 +130,7 @@ function UploadSection({
               >
                 <FileText size={18} className="text-red-500 shrink-0" strokeWidth={1.5} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold text-slate-800 truncate" title={f.original_name}>
+                  <div className="modal-filename" title={f.original_name}>
                     {f.original_name}
                   </div>
                   <div className="text-[11px] text-slate-500">
@@ -182,6 +184,8 @@ export default function UnifiedUploadModal({
   const [uploadingReport, setUploadingReport] = useState(false);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<{ kind: 'pdf' | 'report'; file: FileRecord } | null>(null);
+  const [deletingFile, setDeletingFile] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([
@@ -215,6 +219,7 @@ export default function UnifiedUploadModal({
       await uploadApi.drawing(projectCode, fd);
       load();
       onUpdated();
+      emitDocumentsChanged({ projectCode, kind: 'drawing', action: 'uploaded' });
       showToast('PDF document uploaded');
     } finally {
       setUploadingPdf(false);
@@ -254,25 +259,31 @@ export default function UnifiedUploadModal({
     }
   };
 
-  const deleteFile = async (kind: 'pdf' | 'report', file: FileRecord) => {
-    const ok = await dialog.confirm({
-      title: 'Delete file',
-      message: `Remove "${file.original_name}" from this project?`,
-      tone: 'delete',
-      confirmText: 'Delete',
-    });
-    if (!ok) return;
+  const requestDeleteFile = (kind: 'pdf' | 'report', file: FileRecord) => {
+    setPendingDelete({ kind, file });
+  };
+
+  const confirmDeleteFile = async (_scope: DeleteScopeId) => {
+    if (!pendingDelete) return;
+    const { kind, file } = pendingDelete;
+    setDeletingFile(true);
     try {
       if (kind === 'pdf') {
         await projectsApi.deleteDrawing(projectCode, file.id);
       } else {
         await projectsApi.deleteDirectorReport(projectCode, file.id);
       }
+      setPendingDelete(null);
       load();
       onUpdated();
+      if (kind === 'pdf') {
+        emitDocumentsChanged({ projectCode, kind: 'drawing', action: 'deleted' });
+      }
       showToast('File deleted');
     } catch (e: any) {
       await dialog.alert({ title: 'Delete failed', message: e?.response?.data?.message || 'Could not delete file.', tone: 'error' });
+    } finally {
+      setDeletingFile(false);
     }
   };
 
@@ -312,7 +323,7 @@ export default function UnifiedUploadModal({
             uploading={uploadingPdf}
             onUpload={uploadPdf}
             onView={f => openFile('pdf', f)}
-            onDelete={f => deleteFile('pdf', f)}
+            onDelete={f => requestDeleteFile('pdf', f)}
             viewingId={viewingId}
           />
           <UploadSection
@@ -326,7 +337,7 @@ export default function UnifiedUploadModal({
             uploading={uploadingReport}
             onUpload={uploadDirectorReport}
             onView={f => openFile('report', f)}
-            onDelete={f => deleteFile('report', f)}
+            onDelete={f => requestDeleteFile('report', f)}
             viewingId={viewingId}
           />
         </div>
@@ -338,6 +349,60 @@ export default function UnifiedUploadModal({
           </span>
         </div>
       </div>
+
+      {pendingDelete && (
+        <DeleteConfirmModal
+          title={pendingDelete.kind === 'pdf' ? 'Delete PDF Drawing' : 'Delete Director Report'}
+          subtitle="Removes this file from the project uploads."
+          resourceKind={pendingDelete.kind === 'pdf' ? 'drawing' : 'report'}
+          itemLabel={pendingDelete.file.original_name}
+          parentProject={{ code: projectCode, name: projectCode }}
+          fields={[
+            { label: 'File size', value: formatSize(pendingDelete.file.size) },
+            { label: 'Type', value: pendingDelete.kind === 'pdf' ? 'PDF drawing' : 'Director report' },
+          ]}
+          sections={[
+            {
+              id: 'files',
+              title: 'Related files',
+              icon: 'file',
+              badge: 'removed',
+              items: [`File: ${pendingDelete.file.original_name}`],
+            },
+            {
+              id: 'retained',
+              title: 'Not affected',
+              icon: 'shield',
+              defaultExpanded: false,
+              badge: 'kept',
+              items: [
+                `Project ${projectCode}`,
+                'Panels, wiring schedules, and other uploads',
+              ],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'item_and_files',
+              label: 'Delete selected file',
+              description: 'Removes this upload record and its file. Other project files stay.',
+            },
+          ]}
+          defaultScope="item_and_files"
+          backup={{
+            status: pendingDelete.kind === 'pdf' ? 'unavailable' : 'skipped',
+            note: pendingDelete.kind === 'pdf'
+              ? 'This upload dialog uses the simple drawing delete API (no guarded precheck). Prefer Drawings tab for backup-first delete when available.'
+              : 'Director report delete does not run a guarded backup-first flow.',
+          }}
+          warningText={`Remove “${pendingDelete.file.original_name}” from this project? This cannot be undone within DWES.`}
+          confirmCheckboxLabel={`I understand that “${pendingDelete.file.original_name}” will be permanently deleted.`}
+          confirmButtonLabel="Delete File"
+          deleting={deletingFile}
+          onClose={() => { if (!deletingFile) setPendingDelete(null); }}
+          onConfirm={confirmDeleteFile}
+        />
+      )}
     </Modal>
   );
 }

@@ -5,14 +5,16 @@
 
 .DESCRIPTION
   Reads scripts/backup.config.json. Override paths via env:
-    DWES_BACKUP_ROOT, DWES_PROJECT_ROOT, DWES_BACKUP_CONFIG
+    DWES_BACKUP_ROOT, DWES_PROJECT_ROOT, DWES_BACKUP_CONFIG, DWES_BACKUP_TRIGGER
 
   Env schedule overrides (used by register-backup-task.ps1 only):
     DWES_BACKUP_SCHEDULE=daily|twice-daily
 #>
 [CmdletBinding()]
 param(
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$PreOperation,
+    [switch]$VerifyOnly
 )
 
 Set-StrictMode -Version Latest
@@ -39,15 +41,28 @@ function Resolve-ConfigPath {
 
 $projectRoot = if ($env:DWES_PROJECT_ROOT) { $env:DWES_PROJECT_ROOT } else { $config.projectRoot }
 $backupRoot = if ($env:DWES_BACKUP_ROOT) { $env:DWES_BACKUP_ROOT } else { $config.backupRoot }
-$prefix = if ($config.backupFolderPrefix) { $config.backupFolderPrefix } else { 'DWES_backup' }
+$prefix = if ($null -ne $config.PSObject.Properties['backupFolderPrefix'] -and $config.backupFolderPrefix) {
+    [string]$config.backupFolderPrefix
+} else {
+    $null
+}
 
 if (-not (Test-Path -LiteralPath $projectRoot)) {
     Write-Error "Project root not found: $projectRoot"
 }
 
+if ($VerifyOnly) {
+    $verifyScript = Join-Path $scriptDir 'verify-backup.ps1'
+    if (-not (Test-Path -LiteralPath $verifyScript)) {
+        Write-Error "verify-backup.ps1 not found: $verifyScript"
+    }
+    & $verifyScript -ConfigPath $configPath
+    exit $LASTEXITCODE
+}
+
 $startTime = Get-Date
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm'
-$backupName = "${prefix}_$timestamp"
+$backupName = if ($prefix) { "${prefix}_$timestamp" } else { $timestamp }
 $backupDest = Join-Path $backupRoot $backupName
 $filesDest = Join-Path $backupDest 'files'
 $dbDest = Join-Path $backupDest 'database'
@@ -64,6 +79,7 @@ if (-not $DryRun) {
 
 $logFile = Join-Path $logDir 'backup.log'
 $runLog = [System.Collections.Generic.List[string]]::new()
+$reportErrors = [System.Collections.Generic.List[string]]::new()
 
 function Write-BackupLog {
     param(
@@ -154,6 +170,107 @@ function Find-PgDumpExecutable {
         }
     }
     return $null
+}
+
+function Get-DriveFreeGb {
+    param([string]$Path)
+    $resolved = $Path
+    if (-not (Test-Path -LiteralPath $resolved)) {
+        $resolved = Split-Path -Parent $resolved
+        if (-not $resolved) { $resolved = $Path }
+    }
+    try {
+        $vol = Get-Volume -FilePath $resolved -ErrorAction Stop
+        return [math]::Round($vol.SizeRemaining / 1GB, 2)
+    } catch {
+        $root = [System.IO.Path]::GetPathRoot($resolved)
+        $driveName = $root.TrimEnd('\').TrimEnd(':')
+        $psDrive = Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue
+        if ($psDrive) {
+            return [math]::Round($psDrive.Free / 1GB, 2)
+        }
+        return 0
+    }
+}
+
+function Test-PathExcluded {
+    param(
+        [string]$FullPath,
+        [string]$Root,
+        [string[]]$ExcludeDirs
+    )
+    $relative = $FullPath.Substring($Root.Length).TrimStart('\', '/')
+    foreach ($ex in $ExcludeDirs) {
+        $norm = $ex -replace '/', '\'
+        if ($relative -eq $norm -or $relative.StartsWith("$norm\")) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-EstimatedBackupSizeBytes {
+    param(
+        [string]$Root,
+        [string[]]$ExcludeDirs
+    )
+    $total = [int64]0
+    $queue = [System.Collections.Generic.Queue[string]]::new()
+    $queue.Enqueue($Root)
+
+    while ($queue.Count -gt 0) {
+        $current = $queue.Dequeue()
+        $children = Get-ChildItem -LiteralPath $current -Force -ErrorAction SilentlyContinue
+        foreach ($child in $children) {
+            if (Test-PathExcluded -FullPath $child.FullName -Root $Root -ExcludeDirs $ExcludeDirs) {
+                continue
+            }
+            if ($child.PSIsContainer) {
+                $queue.Enqueue($child.FullName)
+            } else {
+                $total += $child.Length
+            }
+        }
+    }
+    return $total
+}
+
+function Test-DiskSpaceForBackup {
+    param(
+        [string]$BackupRootPath,
+        [string]$ProjectRootPath,
+        [string[]]$ExcludeDirs,
+        [object]$DiskConfig
+    )
+
+    $minFreeGb = 5.0
+    $reserveMultiplier = 1.15
+    if ($DiskConfig) {
+        if ($null -ne $DiskConfig.minFreeGb) { $minFreeGb = [double]$DiskConfig.minFreeGb }
+        if ($null -ne $DiskConfig.reserveMultiplier) { $reserveMultiplier = [double]$DiskConfig.reserveMultiplier }
+    }
+
+    $freeGb = Get-DriveFreeGb -Path $BackupRootPath
+    Write-BackupLog "Disk free space before backup: ${freeGb} GB"
+
+    $estimateBytes = Get-EstimatedBackupSizeBytes -Root $ProjectRootPath -ExcludeDirs $ExcludeDirs
+    $estimateGb = $estimateBytes / 1GB
+    $requiredGb = [math]::Max($minFreeGb, $estimateGb * $reserveMultiplier)
+    $requiredGb = [math]::Round($requiredGb, 2)
+
+    Write-BackupLog "Estimated backup size: $([math]::Round($estimateGb, 2)) GB (required free: ${requiredGb} GB incl. reserve)"
+
+    if ($freeGb -lt $requiredGb) {
+        throw "Insufficient disk space: ${freeGb} GB free on backup drive, need at least ${requiredGb} GB (minFreeGb=$minFreeGb, estimate=$([math]::Round($estimateGb, 2)) GB)"
+    }
+
+    return @{
+        freeGbBefore = $freeGb
+        estimatedGb = [math]::Round($estimateGb, 2)
+        requiredGb = $requiredGb
+        minFreeGb = $minFreeGb
+        reserveMultiplier = $reserveMultiplier
+    }
 }
 
 function Invoke-RobocopyBackup {
@@ -272,6 +389,73 @@ function Export-DatabaseDump {
     return @{ Success = $true; Skipped = $false; DumpFile = $dumpFile; PgDump = $pgDump; SizeMb = $sizeMb }
 }
 
+function Invoke-BackupVerification {
+    param(
+        [string]$FilesDestination,
+        [object]$VerificationConfig
+    )
+
+    $requiredPaths = @()
+    $optionalPaths = @()
+    if ($VerificationConfig) {
+        if ($VerificationConfig.requiredPaths) {
+            $requiredPaths = @($VerificationConfig.requiredPaths | ForEach-Object { [string]$_ })
+        }
+        if ($VerificationConfig.optionalPaths) {
+            $optionalPaths = @($VerificationConfig.optionalPaths | ForEach-Object { [string]$_ })
+        }
+    }
+
+    $errors = [System.Collections.Generic.List[string]]::new()
+    $checks = [System.Collections.Generic.List[object]]::new()
+
+    foreach ($rel in $requiredPaths) {
+        $full = Join-Path $FilesDestination $rel
+        $exists = Test-Path -LiteralPath $full
+        $checks.Add([ordered]@{ path = $rel; required = $true; exists = $exists }) | Out-Null
+        if (-not $exists) {
+            $errors.Add("Missing required path: $rel") | Out-Null
+        }
+    }
+
+    foreach ($rel in $optionalPaths) {
+        $full = Join-Path $FilesDestination $rel
+        $exists = Test-Path -LiteralPath $full
+        $itemCount = $null
+        if ($exists -and (Test-Path -LiteralPath $full -PathType Container)) {
+            $itemCount = (Get-ChildItem -LiteralPath $full -Recurse -File -ErrorAction SilentlyContinue).Count
+        }
+        $checks.Add([ordered]@{
+            path = $rel
+            required = $false
+            exists = $exists
+            fileCount = $itemCount
+        }) | Out-Null
+    }
+
+    $allFiles = Get-ChildItem -LiteralPath $FilesDestination -Recurse -File -ErrorAction SilentlyContinue
+    $fileCount = $allFiles.Count
+    $totalBytes = if ($fileCount -gt 0) { ($allFiles | Measure-Object -Property Length -Sum).Sum } else { 0 }
+
+    $passed = ($errors.Count -eq 0)
+    if (-not $passed) {
+        foreach ($err in $errors) {
+            Write-BackupLog "Verification: $err" 'ERROR'
+        }
+    } else {
+        Write-BackupLog "Verification passed ($fileCount files, $([math]::Round($totalBytes / 1MB, 2)) MB in files/)"
+    }
+
+    return @{
+        passed = $passed
+        errors = @($errors)
+        checks = @($checks)
+        fileCount = $fileCount
+        totalSizeBytes = $totalBytes
+        totalSizeMb = [math]::Round($totalBytes / 1MB, 2)
+    }
+}
+
 function Invoke-RetentionPolicy {
     param(
         [string]$Root,
@@ -285,7 +469,10 @@ function Invoke-RetentionPolicy {
     if (-not $maxCount -and -not $maxAgeDays) { return @{ Removed = 0 } }
 
     $folders = Get-ChildItem -LiteralPath $Root -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like "${FolderPrefix}_*" } |
+        Where-Object {
+            $_.Name -match '^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$' -or
+            ($FolderPrefix -and $_.Name -like "${FolderPrefix}_*")
+        } |
         Sort-Object LastWriteTime -Descending
 
     $removed = 0
@@ -303,7 +490,7 @@ function Invoke-RetentionPolicy {
             $age = (Get-Date) - $folder.LastWriteTime
             if ($age.TotalDays -gt [double]$maxAgeDays) {
                 $remove = $true
-                $reason = "age > $maxAgeDays days"
+                $reason = if ($reason) { "$reason; age > $maxAgeDays days" } else { "age > $maxAgeDays days" }
             }
         }
 
@@ -322,24 +509,32 @@ function Invoke-RetentionPolicy {
 $overallSuccess = $true
 $dbResult = $null
 $robocopyCode = $null
+$diskSpace = $null
+$verification = $null
+$trigger = if ($env:DWES_BACKUP_TRIGGER) { $env:DWES_BACKUP_TRIGGER } elseif ($PreOperation) { 'pre-operation' } else { 'manual' }
 
-Write-BackupLog "Starting backup (dryRun=$DryRun)"
+Write-BackupLog "Starting backup (dryRun=$DryRun, trigger=$trigger)"
 Write-BackupLog "Project: $projectRoot"
 Write-BackupLog "Destination: $backupDest"
 
 try {
+    $excludeDirs = @()
+    if ($config.excludeDirectories) {
+        $excludeDirs = @($config.excludeDirectories | ForEach-Object { [string]$_ })
+    }
+    if ($excludeDirs -notcontains 'Backup') {
+        $excludeDirs += 'Backup'
+    }
+    Write-BackupLog ("Excluding directories: " + ($(if ($excludeDirs.Count) { $excludeDirs -join ', ' } else { '(none)' })))
+
+    $diskSpace = Test-DiskSpaceForBackup -BackupRootPath $backupRoot -ProjectRootPath $projectRoot -ExcludeDirs $excludeDirs -DiskConfig $config.diskSpace
+
     if (-not $DryRun) {
         New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
         New-Item -ItemType Directory -Force -Path $backupDest | Out-Null
         New-Item -ItemType Directory -Force -Path $filesDest | Out-Null
         New-Item -ItemType Directory -Force -Path $dbDest | Out-Null
     }
-
-    $excludeDirs = @()
-    if ($config.excludeDirectories) {
-        $excludeDirs = @($config.excludeDirectories | ForEach-Object { [string]$_ })
-    }
-    Write-BackupLog ("Excluding directories: " + ($(if ($excludeDirs.Count) { $excludeDirs -join ', ' } else { '(none)' })))
 
     $robocopy = Invoke-RobocopyBackup -Source $projectRoot -Destination $filesDest -ExcludeDirs $excludeDirs
     $robocopyCode = $robocopy.ExitCode
@@ -368,6 +563,27 @@ try {
         }
         Write-BackupLog 'Database export failed; file backup kept (failOnDbError=false).' 'WARN'
         $overallSuccess = $false
+        $reportErrors.Add('database_export_failed') | Out-Null
+    }
+
+    if (-not $DryRun) {
+        $verification = Invoke-BackupVerification -FilesDestination $filesDest -VerificationConfig $config.verification
+        if (-not $verification.passed) {
+            $overallSuccess = $false
+            foreach ($verr in $verification.errors) {
+                $reportErrors.Add($verr) | Out-Null
+            }
+        }
+    } else {
+        $verification = @{
+            passed = $true
+            skipped = $true
+            errors = @()
+            checks = @()
+            fileCount = $null
+            totalSizeMb = $null
+        }
+        Write-BackupLog 'Skipped post-backup verification (dry run).'
     }
 
     $retentionResult = Invoke-RetentionPolicy -Root $backupRoot -FolderPrefix $prefix -Retention $config.retention
@@ -375,16 +591,33 @@ try {
         Write-BackupLog "Retention removed $($retentionResult.Removed) old backup folder(s)."
     }
 
+    $freeGbAfter = Get-DriveFreeGb -Path $backupRoot
+    if ($diskSpace) {
+        $diskSpace['freeGbAfter'] = $freeGbAfter
+    }
+
     $durationSec = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-    $manifest = [ordered]@{
+    $report = [ordered]@{
         backupName = $backupName
         createdAt = (Get-Date).ToString('o')
         durationSeconds = $durationSec
         dryRun = [bool]$DryRun
+        trigger = $trigger
         projectRoot = $projectRoot
         backupDestination = $backupDest
-        excludedDirectories = $excludeDirs
-        robocopyExitCode = $robocopyCode
+        diskSpace = $diskSpace
+        files = @{
+            excludedDirectories = $excludeDirs
+            fileCount = if ($verification) { $verification.fileCount } else { $null }
+            totalSizeMb = if ($verification) { $verification.totalSizeMb } else { $null }
+            robocopyExitCode = $robocopyCode
+        }
+        verification = @{
+            passed = if ($verification) { [bool]$verification.passed } else { $false }
+            skipped = if ($verification -and $verification.ContainsKey('skipped')) { [bool]$verification.skipped } else { $false }
+            errors = if ($verification) { @($verification.errors) } else { @() }
+            checks = if ($verification) { @($verification.checks) } else { @() }
+        }
         database = @{
             enabled = [bool]$config.database.enabled
             success = if ($null -ne $dbResult -and $null -ne $dbResult.Success) { [bool]$dbResult.Success } else { $false }
@@ -392,13 +625,20 @@ try {
             dumpFile = if ($null -ne $dbResult -and $dbResult.ContainsKey('DumpFile')) { $dbResult.DumpFile } else { $null }
             pgDump = if ($null -ne $dbResult -and $dbResult.ContainsKey('PgDump')) { $dbResult.PgDump } else { $null }
             reason = if ($null -ne $dbResult -and $dbResult.ContainsKey('Reason')) { $dbResult.Reason } else { $null }
+            sizeMb = if ($null -ne $dbResult -and $dbResult.ContainsKey('SizeMb')) { $dbResult.SizeMb } else { $null }
         }
+        retention = @{
+            removed = $retentionResult.Removed
+            maxCount = if ($config.retention) { $config.retention.maxCount } else { $null }
+            maxAgeDays = if ($config.retention) { $config.retention.maxAgeDays } else { $null }
+        }
+        errors = @($reportErrors)
         success = $overallSuccess
     }
 
     if (-not $DryRun) {
-        $manifestPath = Join-Path $backupDest 'manifest.json'
-        $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+        $reportPath = Join-Path $backupDest 'backup-report.json'
+        $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding UTF8
     }
 
     foreach ($line in $runLog) {
@@ -418,12 +658,29 @@ try {
 catch {
     $durationSec = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
     Write-BackupLog "Backup FAILED after ${durationSec}s: $($_.Exception.Message)" 'ERROR'
+    $reportErrors.Add($_.Exception.Message) | Out-Null
+
+    $failReport = [ordered]@{
+        backupName = $backupName
+        createdAt = (Get-Date).ToString('o')
+        durationSeconds = $durationSec
+        dryRun = [bool]$DryRun
+        trigger = $trigger
+        projectRoot = $projectRoot
+        backupDestination = $backupDest
+        diskSpace = $diskSpace
+        errors = @($reportErrors)
+        success = $false
+    }
+
     foreach ($line in $runLog) {
         if (-not $DryRun) {
             Add-Content -LiteralPath $logFile -Value $line -Encoding UTF8
         }
     }
-    if (-not $DryRun) {
+    if (-not $DryRun -and (Test-Path -LiteralPath $backupDest)) {
+        $failReportPath = Join-Path $backupDest 'backup-report.json'
+        $failReport | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $failReportPath -Encoding UTF8
         Add-Content -LiteralPath $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [ERROR] Backup FAILED after ${durationSec}s: $($_.Exception.Message)" -Encoding UTF8
     }
     exit 1

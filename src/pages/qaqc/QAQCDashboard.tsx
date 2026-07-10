@@ -3,7 +3,7 @@ import { ClipboardCheck, ClipboardList, Clock3, CheckCheck, CircleX, TriangleAle
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { qaqcApi } from '../../services/api';
-import { useReadOnlyPoll } from '../../hooks/useReadOnlyPoll';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import PanelsTab from './tabs/PanelsTab';
 import InspectionFormTab from './tabs/InspectionFormTab';
 import HistoryTab from './tabs/HistoryTab';
@@ -28,7 +28,7 @@ export default function QAQCDashboard() {
 
   useEffect(() => { loadStats(); }, []);
 
-  useReadOnlyPoll(loadStats, 4000);
+  useDwesRefresh(loadStats);
 
   const handleSelectPanel = (p: any) => {
     setActivePanel(p);

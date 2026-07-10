@@ -1,17 +1,26 @@
-# Creates exactly ONE desktop shortcut: DWES.lnk
-# Removes duplicate DWES app-launch shortcuts only (never folders or unrelated apps).
+# Creates desktop shortcuts for DWES Dev (HMR) and optional Prod.
+# Default: single DWES.lnk → Start DWES (Hidden).vbs (Development Mode / Vite HMR).
+#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-desktop-shortcut.ps1
+#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-desktop-shortcut.ps1 -IncludeProd
+param(
+  [switch]$IncludeProd
+)
+
 $ErrorActionPreference = 'Stop'
 
 $desktop = [Environment]::GetFolderPath('Desktop')
 $sh = New-Object -ComObject WScript.Shell
 $root = Split-Path $PSScriptRoot -Parent
-$launcher = Join-Path $root 'Start DWES (Hidden).vbs'
+$launcherDev = Join-Path $root 'Start DWES (Hidden).vbs'
+$launcherProd = Join-Path $root 'Start DWES Prod (Hidden).vbs'
 $wscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
 $icon = Join-Path $root 'public\app-icon.ico'
 $primaryName = 'DWES.lnk'
 $primary = Join-Path $desktop $primaryName
+$prodName = 'DWES (Production).lnk'
+$prodShortcut = Join-Path $desktop $prodName
 
-if (-not (Test-Path $launcher)) { throw "Launcher not found: $launcher" }
+if (-not (Test-Path $launcherDev)) { throw "Dev launcher not found: $launcherDev" }
 if (-not (Test-Path $wscript)) { throw "wscript.exe not found: $wscript" }
 if (-not (Test-Path $icon)) { throw "Icon not found: $icon. Run: npm run icons:generate" }
 
@@ -57,22 +66,57 @@ Get-ChildItem $desktop -File -ErrorAction SilentlyContinue | Where-Object {
   }
 }
 
-# Create the single canonical shortcut (VBS opens via default wscript handler — no console).
+# Canonical Dev shortcut (Vite HMR — code changes appear without restart).
+# TargetPath = wscript.exe (windowless host) so no console flashes regardless of
+# how .vbs files are associated on this machine. Arguments = the hidden VBS launcher.
 $sc = $sh.CreateShortcut($primary)
-$sc.TargetPath = $launcher
-$sc.Arguments = ''
+$sc.TargetPath = $wscript
+$sc.Arguments = ('"{0}"' -f $launcherDev)
 $sc.WorkingDirectory = $root
 $sc.IconLocation = "$icon,0"
 $sc.WindowStyle = 1
-$sc.Description = 'DWES - start hidden (no console windows)'
+$sc.Description = 'DWES Development — Vite HMR on :5175 (no console windows)'
 $sc.Save()
 
+if ($IncludeProd) {
+  if (-not (Test-Path $launcherProd)) { throw "Prod launcher not found: $launcherProd" }
+  $scp = $sh.CreateShortcut($prodShortcut)
+  $scp.TargetPath = $wscript
+  $scp.Arguments = ('"{0}"' -f $launcherProd)
+  $scp.WorkingDirectory = $root
+  $scp.IconLocation = "$icon,0"
+  $scp.WindowStyle = 1
+  $scp.Description = 'DWES Production — vite preview (no HMR)'
+  $scp.Save()
+}
+
+# Start Menu shortcut (same windowless wscript → VBS target) so DWES launches
+# from Start Menu search as well as the Desktop icon.
+$startMenuDir = Join-Path ([Environment]::GetFolderPath('Programs')) 'DWES'
+New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
+$smShortcut = Join-Path $startMenuDir 'DWES.lnk'
+$sm = $sh.CreateShortcut($smShortcut)
+$sm.TargetPath = $wscript
+$sm.Arguments = ('"{0}"' -f $launcherDev)
+$sm.WorkingDirectory = $root
+$sm.IconLocation = "$icon,0"
+$sm.WindowStyle = 1
+$sm.Description = 'DWES Development — Vite HMR on :5175 (no console windows)'
+$sm.Save()
+
 Write-Host ''
-Write-Host '[DWES] Single desktop launcher ready'
+Write-Host '[DWES] Desktop launcher ready (Development Mode = default)'
 Write-Host "  Shortcut : $primary"
-Write-Host "  Target   : $launcher"
-Write-Host '  Opens    : http://localhost:5175/ (port from package.json dev script)'
+Write-Host "  Target   : $wscript"
+Write-Host "  Runs     : $launcherDev (windowless)"
+Write-Host "  StartMenu: $smShortcut"
+Write-Host '  Opens    : http://localhost:5175/ (Vite HMR — edit src/ and see live updates)'
+Write-Host '  Mode     : Dev (npm run dev + backend start:dev)'
+if ($IncludeProd) {
+  Write-Host "  Prod     : $prodShortcut → $launcherProd"
+}
 Write-Host '  Stop     : double-click Stop DWES.vbs in the repo folder'
+Write-Host '  Recreate : npm run shortcut:create'
 Write-Host ''
 if ($removed.Count) {
   Write-Host '  Deleted shortcuts:'

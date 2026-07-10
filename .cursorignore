@@ -1,0 +1,21 @@
+# Keep Cursor indexing focused on source - not build artifacts or data stores
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+.vite/
+coverage/
+Backup/
+backups/
+uploads/
+**/uploads/
+logs/
+certs/
+backend/data/
+.design-sync/
+_archive/
+_old_src_extract/
+*.tsbuildinfo
+package-lock.json
+backend/package-lock.json

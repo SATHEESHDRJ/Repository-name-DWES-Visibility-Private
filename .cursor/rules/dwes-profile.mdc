@@ -1,5 +1,5 @@
 ---
-description: DWES project profile — stack, folder map, conventions, and domain vocabulary (revalidated 2026-07-08)
+description: DWES project profile — stack, folder map, conventions, and domain vocabulary (revalidated 2026-07-09)
 alwaysApply: false
 ---
 
@@ -7,6 +7,27 @@ alwaysApply: false
 
 Maintained working model of the Digital Wiring Execution System. Update when stack,
 ports, or major structure changes.
+
+## CURSOR PROJECT CONFIG (official layout)
+
+Per [Cursor Rules](https://cursor.com/docs/rules), [Skills](https://cursor.com/docs/skills), and [MCP](https://cursor.com/docs/mcp):
+
+```
+.cursor/
+├── rules/*.mdc          # Project rules (frontmatter: description, alwaysApply, globs)
+├── skills/*/SKILL.md    # Project skills (frontmatter: name, description, paths)
+└── mcp.json             # MCP servers (mcpServers, type: stdio)
+```
+
+| Component | DWES status | Notes |
+|-----------|-------------|-------|
+| Rules | 6 `.mdc` files | Always-apply + glob-scoped |
+| Skills | 3 project skills | `dwes-project` index + 2 specialists |
+| MCP | `mcp.json` | `${workspaceFolder}` / `${env:DATABASE_URL}` |
+| Subagents | — | Not configured (built-in subagents sufficient) |
+| Hooks | — | Not configured (no automation requirement) |
+| Plugins | — | Not applicable (single-app repo, not a distributable plugin) |
+| Commands | — | Not configured (use skills + rules per Cursor 2.4+ guidance) |
 
 ## CURSOR RULES (repo)
 
@@ -18,6 +39,16 @@ ports, or major structure changes.
 | This profile | `dwes-profile.mdc` | on demand |
 | Technician wiring | `technician-wiring-workflow.mdc` | wiring files |
 | Report branding | `report-branding.mdc` | report files |
+
+## CURSOR SKILLS (project)
+
+| Skill | Path | When |
+|-------|------|------|
+| dwes-project | `.cursor/skills/dwes-project/SKILL.md` | Every DWES task; CPI via `improvement-review.md` |
+| dwes-db-guard | `.cursor/skills/dwes-db-guard/SKILL.md` | DB, schema, data, uploads |
+| dwes-reports-backup | `.cursor/skills/dwes-reports-backup/SKILL.md` | Reports, wiring UI, backup scripts |
+
+Project-wide guide: **`dwes-project-skill.mdc`** (always-apply rule) + **`.cursor/skills/dwes-project/`** (skill index and CPI reference).
 
 ## MCP SERVERS
 
@@ -37,16 +68,20 @@ Config: **`.cursor/mcp.json`** (reload Cursor after edits)
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 19 + TypeScript, Vite 8, React Router |
-| Backend | NestJS 10, Node.js |
+| Frontend | React 19 + TypeScript 6, Vite 8, React Router 7 |
+| Backend | NestJS 10, Node.js **≥22** (see `engines` / `.nvmrc`) |
 | Primary DB | PostgreSQL **WiringSchemeDB** via Prisma 7 (`prisma db pull` only — no migrations) |
 | Auth store | SQLite `backend/data/dwes_auth.sqlite` (WebAuthn credentials — app-managed) |
-| Styling | Tailwind v4 + `design-system.css`, `tokens.css`, `themes.css`, `buttons.css` |
+| Styling | Tailwind v4 (`@tailwindcss/vite`) + design-system CSS (`design-system.css`, `tokens.css`, `themes.css`, `buttons.css`) — **not** a Tailwind-primary rewrite target |
+| Lint | **oxlint** (`.oxlintrc.json`) — no Prettier / ESLint in repo |
 | Auth | JWT (localStorage `dwes_token`), Passport, optional WebAuthn |
 | 3D (optional) | `@react-three/fiber`, `@react-three/drei` |
 | Reports | PDFKit, pdf-lib, ExcelJS, xlsx |
+| Desktop | Browser shortcut launchers (`scripts/launch-dwes.mjs`) — **no Electron** |
 
-**Dev commands:** `npm run dev:all` (FE :5175, BE :3001) · `npm run build` · `npm run backup`
+**Dev commands:** `npm run dev:all` (FE :5175, BE :3001) · `npm run build` · `npm run typecheck` · `npm run lint` · `npm run backup`
+
+**IDE / DX:** `.vscode/` (extensions, settings, launch FE+BE, tasks) · `.editorconfig` · `.cursorignore` · `.nvmrc` (24)
 
 ## STRUCTURE
 
@@ -65,8 +100,11 @@ DWES/
 │   └── prisma/ → ../prisma/schema.prisma
 ├── backend/uploads/<PROJECT_CODE>/frames|drawings/   # Frame JSON + drawings (filesystem, not DB tables)
 ├── backend/prisma/schema.prisma  # WiringSchemeDB schema (read-only DDL)
-├── scripts/                      # backup, dev ports, certs, demo
-└── .cursor/rules/                # Project AI rules
+├── scripts/                      # backup, launch, dev ports, certs, demo
+├── .vscode/                      # Cursor/VS Code DX (debug, tasks, extensions)
+├── .cursor/rules/                # Project rules (.mdc)
+├── .cursor/skills/               # Project skills (SKILL.md)
+└── .cursor/mcp.json              # MCP server config
 ```
 
 ## CONVENTIONS
@@ -91,11 +129,3 @@ DWES/
 | **Frames** | JSON files under `uploads/<code>/frames/` — not a DB table |
 | **Drawings** | PDF/DWG under `uploads/<code>/drawings/` — not a DB table |
 | **Cable progress** | `(cables_src_done + cables_dst_done) / (cables_total * 2) * 100` |
-
-## AGENT SKILLS (user-level, trigger when relevant)
-
-| Skill | Path | When |
-|-------|------|------|
-| dwes-project | `~/.claude/skills/dwes-project/SKILL.md` | Any DWES workspace task |
-| dwes-db-guard | `~/.claude/skills/dwes-db-guard/SKILL.md` | DB, schema, data, uploads |
-| dwes-reports-backup | `~/.claude/skills/dwes-reports-backup/SKILL.md` | Reports, wiring UI, backup scripts |

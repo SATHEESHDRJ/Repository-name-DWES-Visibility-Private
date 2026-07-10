@@ -9,8 +9,8 @@ Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | ForEach-Object {
   $cmd = $_.CommandLine
   if (-not $cmd) { return }
   if ($cmd -notmatch $pattern) { return }
-  # Only DWES dev stack processes (vite, nest, npm scripts under this repo).
-  if ($cmd -notmatch 'vite|nest|dwes|dev:all|start:dev|launch-hidden') { return }
+  # Only DWES stack processes (vite, nest, preview, npm scripts under this repo).
+  if ($cmd -notmatch 'vite|nest|dwes|dev:all|start:dev|launch-hidden|launch-dwes|preview') { return }
   Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
   $killed += $_.ProcessId
 }

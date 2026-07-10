@@ -6,6 +6,8 @@ import {
 import { techApi } from '../../../services/api';
 import { useAppDialog } from '../../AppDialogProvider';
 import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
+import { DWES_WIRING_SYNC_MS } from '../../../constants/refreshIntervals';
+import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 import Toast from '../../ui/Toast';
 import PauseReasonModal from '../PauseReasonModal';
 import AssignmentAcknowledgmentModal from '../AssignmentAcknowledgmentModal';
@@ -17,7 +19,7 @@ import {
   DEFAULT_CABLE_STATUS, ensureCableList, findNextPending, type ExtendedCableStatus,
 } from './wiring-utils';
 
-const SYNC_INTERVAL_MS = 6000;
+const SYNC_INTERVAL_MS = DWES_WIRING_SYNC_MS;
 /** One end checked for longer than this → status chip blinks as an alert (§9). */
 const PARTIAL_ALERT_MS = 120_000;
 
@@ -57,11 +59,32 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
   const [tabletMode, setTabletMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const workspaceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dwf-tablet-active', tabletMode);
     return () => document.documentElement.classList.remove('dwf-tablet-active');
   }, [tabletMode]);
+
+  useEffect(() => {
+    if (!onExit || tabletMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || showPause || showAck) return;
+      e.preventDefault();
+      onExit();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onExit, tabletMode, showPause, showAck]);
+
+  useEffect(() => {
+    if (tabletMode || !detail) return;
+    const root = workspaceRef.current;
+    const focusable = root?.querySelector<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    focusable?.focus();
+  }, [detail, tabletMode, panel?.id]);
 
   const load = useCallback((reset = true) => {
     if (!panel) return;
@@ -165,6 +188,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
     setStatus(updated);
     try {
       await techApi.cableAction(panel.id, activeIdx, action);
+      emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
       onPanelUpdate();
       if (advance && activeIdx < total - 1) {
         setActiveIdx(activeIdx + 1);
@@ -180,6 +204,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
     setSaving(true);
     try {
       await techApi.start(panel.id);
+      emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
       setLiveFromPanel({
         status: 'in_progress',
         project_name: panel.project_name,
@@ -203,6 +228,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
     setSaving(true);
     try {
       await techApi.resume(panel.id);
+      emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
       onPanelUpdate();
     } catch { /* stay */ }
     finally { setSaving(false); }
@@ -219,6 +245,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
     setSaving(true);
     try {
       await techApi.complete(panel.id);
+      emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
       onPanelUpdate();
       onExit?.();
     } catch { /* retry */ }
@@ -234,6 +261,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
     setSaving(true);
     try {
       await techApi.pause(panel.id, elapsed, reason);
+      emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
       onPanelUpdate();
       setShowPause(false);
       onExit?.();
@@ -243,7 +271,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
 
   if (!detail) {
     return (
-      <div className="dwf-workspace dwf-workspace--loading" aria-busy={!loadError}>
+      <div className="dwf-workspace wiring-workstation dwf-workspace--loading" aria-busy={!loadError}>
         {loadError ? (
           <div className="dwf-workspace-state">
             <AlertTriangle size={32} className="text-red-500" />
@@ -269,7 +297,7 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
 
   if (!detail.frame && (detail.assignment?.cables_total ?? 0) > 0) {
     return (
-      <div className="dwf-workspace dwf-workspace--loading">
+      <div className="dwf-workspace wiring-workstation dwf-workspace--loading">
         <div className="dwf-workspace-state">
           <AlertTriangle size={32} className="text-amber-500" />
           <p className="dwf-workspace-state-title">Wiring schedule file missing</p>
@@ -280,7 +308,14 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
   }
 
   const workspace = (
-    <div className={`dwf-workspace${tabletMode ? ' dwf-workspace--tablet-fullscreen' : ''}`}>
+    <div
+      ref={workspaceRef}
+      className={`dwf-workspace wiring-workstation${tabletMode ? ' dwf-workspace--tablet-fullscreen' : ''}`}
+      role="dialog"
+      aria-modal={tabletMode ? 'true' : undefined}
+      aria-label={`Digital Wiring View — ${panel.panel_name}`}
+      data-testid="digital-wiring-workspace"
+    >
       <header className={`dwf-workspace-header${tabletMode ? ' dwf-workspace-header--tablet' : ''}`}>
         <div className="dwf-workspace-header-main">
           {!tabletMode && (

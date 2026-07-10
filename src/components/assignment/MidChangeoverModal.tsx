@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Modal from '../Modal';
 import { supervisorApi, usersApi } from '../../services/api';
+import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import type { Project } from '../../types';
 import ProjectPanelSelect, { type FramePanel } from './ProjectPanelSelect';
 import { ArrowRight, CheckCircle, Info, TriangleAlert } from '../ui/icons';
@@ -148,6 +149,11 @@ export default function MidChangeoverModal({
         reason_notes: reasonNotes.trim() || undefined,
       });
       setResult(res);
+      emitWorkflowChanged({
+        scope: 'assignment',
+        projectCode: assignment.project_code,
+        frameId: assignment.frame_id,
+      });
       onComplete();
       onSuccess?.(`Changeover complete — ${res.new_tech} assigned to ${res.panel_name || panelName}`);
     } catch (e: any) {
@@ -225,11 +231,11 @@ export default function MidChangeoverModal({
 
               <div className="mb-4 grid grid-cols-2 gap-3">
                 <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed Cables</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Completed Cables</div>
                   <div className="text-[20px] font-bold text-emerald-600 mt-1">{assignment.completed_cables ?? 0}</div>
                 </div>
                 <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Remaining Cables</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Remaining Cables</div>
                   <div className="text-[20px] font-bold text-amber-600 mt-1">{assignment.remaining_cables ?? 0}</div>
                 </div>
               </div>
@@ -277,7 +283,7 @@ export default function MidChangeoverModal({
                     onChange={e => { setReasonNotes(e.target.value); setError(''); }}
                     rows={2}
                     placeholder={reason === 'Other' ? 'Describe the changeover reason…' : 'Optional notes…'}
-                    className="w-full text-[14px] border border-[#E2E8F0] rounded-[10px] bg-slate-50 focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-3 resize-none"
+                    className="form-input w-full min-h-[88px] resize-y"
                   />
                 </div>
               )}
@@ -295,8 +301,10 @@ export default function MidChangeoverModal({
         <div className="assignment-success-wrap">
           <div className="assignment-success-icon"><CheckCircle size={48} className="text-green-500" /></div>
           <div className="assignment-success-title">Changeover complete!</div>
-          <div className="assignment-success-copy mt-3 flex items-center justify-center gap-1 flex-wrap">
-            {result.old_tech} <ArrowRight size={14} className="text-slate-400" /> {result.new_tech}
+          <div className="assignment-success-copy mt-3 flex items-center justify-center gap-1 flex-wrap break-words">
+            <span title={result.old_tech}>{result.old_tech}</span>
+            <ArrowRight size={14} className="text-slate-500 shrink-0" aria-hidden="true" />
+            <span title={result.new_tech}>{result.new_tech}</span>
           </div>
           <div className="assignment-success-note mt-2">
             {result.completed_cables ?? 0} completed · {result.remaining_cables ?? 0} remaining cables transferred

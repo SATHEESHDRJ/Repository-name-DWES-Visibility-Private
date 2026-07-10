@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldAlert, Trash2 } from '../../../components/ui/icons';
-import Modal from '../../../components/Modal';
+import { AlertTriangle, Trash2 } from '../../../components/ui/icons';
+import DeleteConfirmModal, {
+  type DeleteResultSummary,
+  type DeleteScopeId,
+} from '../../../components/ui/DeleteConfirmModal';
 import { adminApi, projectsApi } from '../../../services/api';
 
 interface Precheck {
@@ -22,9 +25,8 @@ export default function DeleteProjectTab() {
   const [precheck, setPrecheck] = useState<Precheck | null>(null);
   const [precheckErr, setPrecheckErr] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [confirmCode, setConfirmCode] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<DeleteResultSummary | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -49,7 +51,6 @@ export default function DeleteProjectTab() {
   }, [selCode]);
 
   const openModal = () => {
-    setConfirmCode('');
     setError('');
     setResult(null);
     setShowModal(true);
@@ -58,7 +59,6 @@ export default function DeleteProjectTab() {
   const closeModal = () => {
     if (deleting) return;
     setShowModal(false);
-    setConfirmCode('');
     setError('');
     setResult(null);
   };
@@ -74,18 +74,31 @@ export default function DeleteProjectTab() {
       .catch(() => {});
   };
 
-  const handleDelete = async () => {
-    if (!selCode || confirmCode.trim() !== selCode.trim()) return;
+  const handleDelete = async (_scope: DeleteScopeId) => {
+    if (!selCode) return;
     setDeleting(true);
     setError('');
     try {
-      const r = await adminApi.hardDelete(selCode, confirmCode);
+      // API still requires confirmed_code — send project code after checkbox ack (hidden from UI).
+      const r = await adminApi.hardDelete(selCode, selCode);
       if (r.error) {
         setError(r.error);
         setDeleting(false);
         return;
       }
-      setResult(r);
+      setResult({
+        title: 'Project permanently deleted',
+        message: r.message || `${precheck?.project.name || selCode} was permanently removed.`,
+        removed: [
+          `Project ${precheck?.project.name || selCode} (${selCode})`,
+          `${r.deleted?.assignments ?? precheck?.counts.assignments ?? 0} assignments`,
+          `${r.deleted?.inspections ?? precheck?.counts.inspections ?? 0} inspections`,
+          `${r.deleted?.file_hashes ?? precheck?.counts.file_hashes ?? 0} hash records`,
+          `${r.deleted?.audit_logs ?? precheck?.counts.audit_logs ?? 0} audit entries`,
+          `uploads/${selCode}/ ${r.deleted?.folder_removed ? 'removed' : 'was not present'}`,
+        ],
+        retained: ['Other projects in WiringSchemeDB', 'System users and auth store'],
+      });
       refreshProjects();
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || 'Delete failed');
@@ -160,7 +173,7 @@ export default function DeleteProjectTab() {
                 </div>
 
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] text-red-800 font-medium flex items-start gap-2 mb-4">
-                  <ShieldAlert size={14} className="shrink-0 mt-0.5 text-red-600" />
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5 text-red-600" />
                   {precheck.delete_warning}
                 </div>
 
@@ -179,92 +192,66 @@ export default function DeleteProjectTab() {
       </div>
 
       {showModal && precheck && (
-        <Modal
+        <DeleteConfirmModal
           title="Confirm Permanent Delete"
+          subtitle="No backup — irreversible within DWES."
+          resourceKind="project_hard"
+          itemLabel={precheck.project.name}
+          parentProject={{ code: selCode, name: precheck.project.name }}
+          stats={[
+            { label: 'frames', count: precheck.counts.frames, tone: precheck.counts.frames > 0 ? 'danger' : 'neutral' },
+            { label: 'drawings', count: precheck.counts.drawings, tone: precheck.counts.drawings > 0 ? 'danger' : 'neutral' },
+            { label: 'assignments', count: precheck.counts.assignments, tone: precheck.counts.assignments > 0 ? 'warning' : 'neutral' },
+            { label: 'inspections', count: precheck.counts.inspections, tone: 'neutral' },
+          ]}
+          sections={[
+            {
+              id: 'db',
+              title: 'Database records',
+              icon: 'database',
+              badge: 'removed',
+              items: [
+                'Project row and related frames',
+                `${precheck.counts.assignments} assignments`,
+                `${precheck.counts.inspections} inspections`,
+                `${precheck.counts.file_hashes} file hashes`,
+                `${precheck.counts.audit_logs} audit entries`,
+              ],
+            },
+            {
+              id: 'files',
+              title: 'Disk / uploads',
+              icon: 'folder',
+              badge: 'removed',
+              items: [
+                `Entire uploads/${selCode}/ folder`,
+                `${precheck.counts.drawings} drawing file(s)`,
+                'Wiring schedules and generated artifacts for this project',
+              ],
+            },
+          ]}
+          scopes={[
+            {
+              id: 'everything_related',
+              label: 'Delete everything related',
+              description: 'Permanently deletes the project, all related DB records, and the uploads folder.',
+            },
+          ]}
+          defaultScope="everything_related"
+          backup={{
+            status: 'skipped',
+            note: 'No backup is created for permanent project delete. There is no restore path within DWES.',
+          }}
+          warningText={`This permanently deletes ${precheck.project.name} (${selCode}) from the database and disk. This cannot be undone within DWES.`}
+          confirmCheckboxLabel={`I understand that project “${precheck.project.name}” (${selCode}) and all related data will be permanently deleted with no backup.`}
+          confirmButtonLabel="Permanently Delete"
+          deleting={deleting}
+          error={error}
+          result={result}
           onClose={closeModal}
-          size="lg"
-          footer={result ? undefined : (
-            <div className="flex gap-3 w-full">
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={deleting}
-                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting || confirmCode.trim() !== selCode.trim()}
-                className="flex-1 h-[56px] rounded-xl bg-red-700 text-white font-bold text-[14px] hover:bg-red-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Deleting…
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Permanently Delete
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        >
-          {!result ? (
-            <>
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-start gap-2">
-                <AlertTriangle size={16} className="text-red-700 shrink-0 mt-0.5" />
-                <div className="text-[12px] text-red-700">
-                  This permanently deletes <strong>{precheck.project.name}</strong> ({selCode}) from the
-                  database and disk. No backup is created. This cannot be undone within DWES.
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5 mb-4">
-                <label className="text-[12px] font-medium text-slate-700">
-                  Type <span className="font-mono font-bold text-red-700">{selCode}</span> to confirm
-                </label>
-                <input
-                  type="text"
-                  value={confirmCode}
-                  onChange={e => { setConfirmCode(e.target.value); setError(''); }}
-                  placeholder={selCode}
-                  autoFocus
-                  disabled={deleting}
-                  className="w-full h-12 px-3 text-[14px] font-mono border-[1.5px] border-slate-200 rounded-xl focus:border-red-400 focus:ring-[3px] focus:ring-red-400/12 outline-none"
-                />
-              </div>
-
-              {error && <div className="form-error">{error}</div>}
-            </>
-          ) : (
-            <div className="text-center">
-              <CheckCircle2 size={48} className="text-green-500 mx-auto mb-3" />
-              <div className="text-[16px] font-bold text-slate-800 mb-2">Project permanently deleted</div>
-              <div className="text-[13px] text-slate-600 mb-4">{result.message}</div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-[12px] text-slate-600 mb-4 space-y-1">
-                <div>
-                  Deleted: {result.deleted.assignments} assignments, {result.deleted.inspections} inspections,{' '}
-                  {result.deleted.file_hashes} hash records, {result.deleted.audit_logs} audit entries
-                </div>
-                <div>
-                  Disk: uploads/{selCode}/ {result.deleted.folder_removed ? 'removed' : 'was not present'}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="h-11 px-8 rounded-xl bg-slate-800 text-white font-semibold text-[14px] hover:bg-slate-900 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          )}
-        </Modal>
+          onConfirm={handleDelete}
+          onDone={closeModal}
+        />
       )}
     </div>
   );

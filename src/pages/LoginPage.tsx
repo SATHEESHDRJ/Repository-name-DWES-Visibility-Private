@@ -79,6 +79,7 @@ export default function LoginPage() {
   const [, setDemoIdx] = useState(0);
   const [demoUsers, setDemoUsers] = useState<DemoUser[] | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [serverOk, setServerOk] = useState<boolean | null>(null);
   const demoPopoverRef = useRef<HTMLDivElement>(null);
   const pendingUserIdRef = useRef<number | null>(null);
 
@@ -110,7 +111,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     usernameRef.current?.focus();
-    authApi.health().catch(() => {});
+    const ping = () => {
+      authApi.health()
+        .then(() => setServerOk(true))
+        .catch(() => setServerOk(false));
+    };
+    ping();
+    const id = setInterval(ping, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     if (SHOW_DEMO_CREDENTIALS) {
       // Try to fetch full demo user list from backend (DEMO_MODE=true required)
       fetchDemoUsers().then(users => {
@@ -328,6 +339,16 @@ export default function LoginPage() {
                     </div>
                   </div>
 
+                  {serverOk === false && (
+                    <div className="login-error login-error--offline" role="status" aria-live="polite">
+                      <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Server is still starting.</strong>{' '}
+                        Automatic startup is in progress after system restart — this page will connect when the backend is ready.
+                      </span>
+                    </div>
+                  )}
+
                   {error && (
                     <div className="login-error" role="alert">
                       <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
@@ -337,7 +358,7 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    disabled={!username.trim() || !password.trim() || isLoading}
+                    disabled={!username.trim() || !password.trim() || isLoading || serverOk === false}
                     className="login-btn login-row-enter"
                     style={{ animationDelay: '0.15s', minHeight: '48px',}}
                   >

@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { projectsApi, uploadApi } from '../../../services/api';
+import { emitDocumentsChanged } from '../../../utils/projectDocumentsEvents';
 import type { Project } from '../../../types';
 import Modal from '../../../components/Modal';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { Upload, Trash2, FileText, FileImage, PenTool, Paperclip, Map, CheckCircle, CheckCircle2, ExternalLink, TriangleAlert, ShieldAlert } from '../../../components/ui/icons';
+import DeleteConfirmModal, {
+  type DeleteGuardedPrecheck,
+  type DeleteResultSummary,
+  type DeleteScopeId,
+} from '../../../components/ui/DeleteConfirmModal';
+import { Upload, Trash2, FileText, FileImage, PenTool, Paperclip, Map, CheckCircle, ExternalLink, TriangleAlert } from '../../../components/ui/icons';
 
 export default function DrawingsTab() {
   const perms = usePermissions();
@@ -134,7 +140,7 @@ export default function DrawingsTab() {
           drawing={drawingToDelete}
           projectCode={selProject}
           onClose={() => setDrawingToDelete(null)}
-          onDeleted={() => { setDrawingToDelete(null); loadDrawings(); }}
+          onDeleted={loadDrawings}
         />
       )}
     </div>
@@ -194,6 +200,11 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
       const fd = new FormData();
       fd.append('file', file);
       await uploadApi.drawing(projectCode, fd);
+      emitDocumentsChanged({
+        projectCode,
+        kind: 'drawing',
+        action: dupChoice === 'replace' ? 'replaced' : 'uploaded',
+      });
       setDone(true); onUploaded();
     } catch (e: any) { setError(e?.response?.data?.message || 'Upload failed'); }
     finally { setUploading(false); }
@@ -296,37 +307,84 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
   );
 }
 
-// ── Drawing Delete Modal (backup-first + type-to-confirm) ─────────────────────
+// ── Drawing Delete Modal (backup-first; phrase sent after checkbox ack) ───────
+
+function formatDrawingSize(bytes: number) {
+  return bytes > 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${(bytes / 1024).toFixed(0)} KB`;
+}
 
 export function DrawingDeleteModal({ drawing, projectCode, onClose, onDeleted }: {
   drawing: any; projectCode: string; onClose: () => void; onDeleted: () => void;
 }) {
-  const PHRASE = `DELETE DRAWING ${(drawing.original_name || '').trim()}`;
-  const [typed, setTyped] = useState('');
+  const fileName = (drawing.original_name || '').trim() || 'Drawing';
+  const fallbackPhrase = `DELETE DRAWING ${fileName}`;
+  const [precheck, setPrecheck] = useState<DeleteGuardedPrecheck | null>(null);
+  const [loadingPrecheck, setLoadingPrecheck] = useState(true);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<DeleteResultSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [precheck, setPrecheck] = useState<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const notifiedDeleted = useRef(false);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 80);
+    let cancelled = false;
+    setLoadingPrecheck(true);
+    setError('');
+    setResult(null);
+    notifiedDeleted.current = false;
     projectsApi.deleteDrawingPrecheck(projectCode, drawing.id)
-      .then(setPrecheck)
-      .catch(() => {});
+      .then(data => {
+        if (!cancelled) setPrecheck(data as DeleteGuardedPrecheck);
+      })
+      .catch(() => {
+        if (!cancelled) setPrecheck(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPrecheck(false);
+      });
+    return () => { cancelled = true; };
   }, [projectCode, drawing.id]);
 
-  const close = () => { if (!deleting) onClose(); };
+  const confirmPhrase =
+    (typeof precheck?.confirm_phrase === 'string' && precheck.confirm_phrase.trim())
+      ? precheck.confirm_phrase.trim()
+      : fallbackPhrase;
+  const sizeBytes = Number(precheck?.size ?? drawing.size ?? 0);
 
-  const handleConfirm = async () => {
-    if (typed.trim() !== PHRASE) return;
+  const handleConfirm = async (_scope: DeleteScopeId) => {
     setDeleting(true);
     setError('');
     try {
-      const r = await projectsApi.deleteDrawingGuarded(projectCode, drawing.id, typed);
-      if (r?.error) { setError(r.error); return; }
-      setResult(r);
-      onDeleted();
+      const r = await projectsApi.deleteDrawingGuarded(projectCode, drawing.id, confirmPhrase);
+      if (r?.error) {
+        setError(String(r.error));
+        return;
+      }
+      const backupPath =
+        typeof r?.backup?.dump === 'string'
+          ? r.backup.dump
+          : typeof r?.backup_path === 'string'
+            ? r.backup_path
+            : undefined;
+      setResult({
+        title: 'Drawing deleted',
+        message: r?.message || `${fileName} was permanently removed.`,
+        removed: [
+          `Drawing file: ${fileName}`,
+          ...(sizeBytes > 0 ? [`Size: ${formatDrawingSize(sizeBytes)}`] : []),
+        ],
+        retained: [
+          `Project ${projectCode}`,
+          'Panels, wiring schedules, and other drawings',
+        ],
+        backupPath,
+      });
+      if (!notifiedDeleted.current) {
+        notifiedDeleted.current = true;
+        emitDocumentsChanged({ projectCode, kind: 'drawing', action: 'deleted' });
+        onDeleted();
+      }
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || 'Failed to delete drawing');
     } finally {
@@ -334,97 +392,61 @@ export function DrawingDeleteModal({ drawing, projectCode, onClose, onDeleted }:
     }
   };
 
-  const formatSize = (bytes: number) =>
-    bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
-
   return (
-    <div className="modal-overlay z-[210]" onClick={close}>
-      <div className="modal-box overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-6 pt-6 pb-4 border-b border-red-200 bg-red-50">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldAlert size={18} className="text-red-700" />
-            <span className="text-[15px] font-bold text-red-900">Confirm: Delete Drawing</span>
-          </div>
-          <div className="text-[12px] text-red-700">This is permanent and cannot be undone.</div>
-        </div>
-
-        <div className="p-6 overflow-y-auto min-h-0">
-          {!result ? (
-            <>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-slate-700">
-                <div className="font-semibold text-slate-800 mb-2">The following will be permanently deleted:</div>
-                <ul className="space-y-1">
-                  <li>• Drawing file: <strong>{drawing.original_name}</strong></li>
-                  {(precheck?.size ?? drawing.size) && (
-                    <li>• Size: {formatSize(precheck?.size ?? drawing.size)}</li>
-                  )}
-                </ul>
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-medium flex items-start gap-2">
-                  <TriangleAlert size={14} className="shrink-0 mt-0.5 text-amber-600" />
-                  This drawing file will be permanently removed — technicians and supervisors will no longer be able to view it.
-                </div>
-                <div className="mt-3 text-[12px] text-emerald-700 flex items-start gap-1.5">
-                  <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
-                  pg_dump of WiringSchemeDB + drawing file archived to <strong>uploads/backups/</strong> before deletion.
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="form-label mb-1">
-                  Type{' '}
-                  <code className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded text-[13px]">{PHRASE}</code>{' '}
-                  to confirm
-                </label>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={typed}
-                  onChange={e => {
-                    const v = e.target.value;
-                    if (import.meta.env.DEV) console.log('[delete-drawing] typed:', JSON.stringify(v), 'match:', v.trim() === PHRASE);
-                    setTyped(v);
-                    setError('');
-                  }}
-                  placeholder={PHRASE}
-                  className="w-full h-12 px-3 border border-slate-200 rounded-xl text-[14px] font-mono focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none"
-                  onKeyDown={e => { if (e.key === 'Enter' && typed.trim() === PHRASE) handleConfirm(); }}
-                  disabled={deleting}
-                />
-              </div>
-
-              {error && <div className="form-error mb-3">{error}</div>}
-
-              <div className="flex gap-3">
-                <button type="button" onClick={close} disabled={deleting}
-                  className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50">
-                  Cancel
-                </button>
-                <button type="button" onClick={handleConfirm} disabled={deleting || typed.trim() !== PHRASE}
-                  className="flex-1 h-[56px] rounded-xl bg-red-700 text-white font-bold text-[14px] hover:bg-red-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {deleting ? (
-                    <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Deleting…</>
-                  ) : (
-                    <><Trash2 size={16} />Delete Drawing</>
-                  )}
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center">
-              <CheckCircle2 size={48} className="text-green-500 mx-auto mb-3" />
-              <div className="text-[16px] font-bold text-slate-800 mb-2">Drawing deleted</div>
-              <div className="text-[13px] text-slate-600 mb-4">{result.message}</div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-[12px] text-slate-600 mb-4 space-y-1">
-                <div className="text-green-700 font-medium break-all">Backup: {result.backup?.dump}</div>
-              </div>
-              <button type="button" onClick={onClose}
-                className="h-11 px-8 rounded-xl bg-slate-800 text-white font-semibold text-[14px] hover:bg-slate-900 transition-colors">
-                Close
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <DeleteConfirmModal
+      title="Delete Drawing"
+      subtitle="Permanent removal — project and other files are kept."
+      resourceKind="drawing"
+      itemLabel={fileName}
+      parentProject={{ code: projectCode, name: projectCode }}
+      fields={sizeBytes > 0 ? [{ label: 'File size', value: formatDrawingSize(sizeBytes) }] : []}
+      sections={[
+        {
+          id: 'files',
+          title: 'Related files',
+          icon: 'file',
+          badge: 'removed',
+          items: [
+            `PDF / drawing file: ${fileName}`,
+            'Technicians and supervisors will no longer be able to view this drawing',
+          ],
+        },
+        {
+          id: 'retained',
+          title: 'Not affected',
+          icon: 'shield',
+          defaultExpanded: false,
+          badge: 'kept',
+          items: [
+            `Parent project ${projectCode}`,
+            'Panels, wiring schedules, assignments, and other drawings',
+          ],
+        },
+      ]}
+      scopes={[
+        {
+          id: 'item_and_files',
+          label: 'Delete selected drawing + file',
+          description: 'Removes this drawing record and its file from disk. Other project files stay.',
+        },
+      ]}
+      defaultScope="item_and_files"
+      backup={{
+        status: 'ready',
+        note:
+          (typeof precheck?.backup_note === 'string' && precheck.backup_note)
+          || 'pg_dump of WiringSchemeDB + drawing file archived to uploads/backups/ before deletion.',
+      }}
+      warningText="This drawing file will be permanently removed. This cannot be undone within DWES except via backup restore."
+      confirmCheckboxLabel={`I understand that drawing “${fileName}” will be permanently deleted.`}
+      confirmButtonLabel="Delete Drawing"
+      loading={loadingPrecheck}
+      deleting={deleting}
+      error={error}
+      result={result}
+      onClose={() => { if (!deleting) onClose(); }}
+      onConfirm={handleConfirm}
+      onDone={onClose}
+    />
   );
 }

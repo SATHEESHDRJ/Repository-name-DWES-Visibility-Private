@@ -95,6 +95,68 @@ export const FrameStore = {
     return { buffer: fs.readFileSync(path.join(dir, match)), filename: match.slice(prefix.length) };
   },
 
+  /**
+   * List drawing metadata from disk (`uploads/<code>/drawings/<id>_<original>`).
+   * Used to rehydrate MockStore after restart so GET /drawings is not empty
+   * while files still exist on disk (false "No Drawing Uploaded" in UI).
+   */
+  listDrawingsFromDisk(projectCode: string): Array<{
+    id: string;
+    project_code: string;
+    filename: string;
+    original_name: string;
+    content_type: string;
+    uploaded_at: string;
+    size: number;
+  }> {
+    const dir = drawingsDir(projectCode);
+    if (!fs.existsSync(dir)) return [];
+    const out: Array<{
+      id: string;
+      project_code: string;
+      filename: string;
+      original_name: string;
+      content_type: string;
+      uploaded_at: string;
+      size: number;
+    }> = [];
+    for (const file of fs.readdirSync(dir)) {
+      if (file.startsWith('.')) continue;
+      // IDs are `drw_<timestamp>` — split after the timestamp, not the first underscore.
+      const m = file.match(/^(drw_\d+)_(.+)$/);
+      if (!m) continue;
+      const id = m[1];
+      const original_name = m[2];
+      if (!id || !original_name) continue;
+      const full = path.join(dir, file);
+      let size = 0;
+      let uploaded_at = new Date().toISOString();
+      try {
+        const st = fs.statSync(full);
+        if (!st.isFile()) continue;
+        size = st.size;
+        uploaded_at = st.mtime.toISOString();
+      } catch {
+        continue;
+      }
+      const ext = original_name.split('.').pop()?.toLowerCase() ?? '';
+      const content_type =
+        ext === 'pdf' ? 'application/pdf'
+          : ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext) ? `image/${ext === 'jpg' ? 'jpeg' : ext}`
+            : 'application/octet-stream';
+      out.push({
+        id,
+        project_code: projectCode,
+        filename: file,
+        original_name,
+        content_type,
+        uploaded_at,
+        size,
+      });
+    }
+    return out;
+  },
+
   /** Read a single frame JSON directly from disk — fallback when MockStore is cold.
    *  After a restart, FrameStore.loadAll() repopulates MockStore; this covers the gap
    *  if a frame was written between loadAll() and this request. */
@@ -104,10 +166,15 @@ export const FrameStore = {
     try { return JSON.parse(fs.readFileSync(p, 'utf-8')) as FrameData; } catch { return null; }
   },
 
-  /** Delete a drawing from disk */
+  /** Delete a drawing from disk (prefix match — original_name may differ from on-disk suffix). */
   removeDrawing(projectCode: string, drawingId: string, filename: string) {
-    const p = path.join(drawingsDir(projectCode), `${drawingId}_${filename}`);
-    if (fs.existsSync(p)) fs.unlinkSync(p);
+    const exact = path.join(drawingsDir(projectCode), `${drawingId}_${filename}`);
+    if (fs.existsSync(exact)) {
+      fs.unlinkSync(exact);
+      return;
+    }
+    const found = this.getDrawingFilePath(projectCode, drawingId);
+    if (found && fs.existsSync(found)) fs.unlinkSync(found);
   },
 
   /** Return absolute paths of existing frame files (.json and .xlsx) */

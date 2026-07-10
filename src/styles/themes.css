@@ -11,6 +11,28 @@
    PART 2 — MD3 MAPPING: role vars + status/role tints ← --t-*
    ─────────────────────────────────────────────────────────────────────────── */
 [data-theme] {
+  /* Liquid Glass — theme-aware tokens */
+  --glass-bg:            var(--t-glass-bg, rgba(255, 255, 255, 0.72));
+  --glass-bg-solid:      var(--t-glass-bg-solid, rgba(255, 255, 255, 0.94));
+  --glass-bg-subtle:     var(--t-glass-bg-subtle, rgba(255, 255, 255, 0.56));
+  --glass-border:        var(--t-glass-border, rgba(255, 255, 255, 0.52));
+  --glass-border-strong: var(--t-glass-border-strong, rgba(15, 23, 42, 0.10));
+  --glass-blur:          var(--t-glass-blur, 14px);
+  --glass-blur-subtle:   var(--t-glass-blur-subtle, 10px);
+  --glass-blur-overlay:  var(--t-glass-blur-overlay, 6px);
+  --glass-saturate:      var(--t-glass-saturate, 165%);
+  --glass-shadow:        var(--t-glass-shadow);
+  --glass-shadow-hover:  var(--t-glass-shadow-hover);
+  --glass-text:          var(--t-glass-text, var(--t-text));
+  --glass-text-muted:    var(--t-glass-text-muted, var(--t-muted));
+
+  /* Bento Grid — theme-aware */
+  --bento-gap:       var(--t-bento-gap, clamp(0.75rem, 2vw, 1.25rem));
+  --bento-radius:    var(--t-bento-radius, 16px);
+  --bento-columns:   var(--t-bento-columns, 12);
+  --bento-min-cell:  var(--t-bento-min-cell, 180px);
+  --bento-row-min:   var(--t-bento-row-min, 5.5rem);
+
   --color-background:            var(--t-bg);
   --color-surface:               var(--t-card);
   --color-surface-variant:       var(--t-surface-3);
@@ -151,9 +173,14 @@
 }
 [data-theme] .dash-module,
 [data-theme] .dashboard-hero,
-[data-theme] .app-section-header {
-  border-color: var(--t-card-border, #CBD5E1);
-  box-shadow: var(--t-card-shadow);
+[data-theme] .app-section-header,
+[data-theme] .kpi-card,
+[data-theme] .kpi-top-card,
+[data-theme] .chart-card,
+[data-theme] .export-card,
+[data-theme] .workforce-summary-card {
+  border-color: var(--glass-border-strong, var(--t-card-border, #CBD5E1));
+  box-shadow: var(--glass-shadow, var(--t-card-shadow));
 }
 [data-theme] .app-section-title { color: var(--t-text); }
 [data-theme] .app-section-desc { color: var(--t-muted); }
@@ -410,6 +437,16 @@
 [data-theme] .data-table tbody tr:nth-child(even) { background: var(--t-table-row-alt); }
 [data-theme] .data-table tbody tr:hover { background: var(--t-accent-soft); }
 [data-theme] .data-table td { color: var(--t-text); }
+/* Glass wrappers — keep dense tables opaque (no stacked blur) */
+[data-theme] :is(.dash-module, .card, .modal-body, .dashboard-content) :is(
+  .data-table, .data-table thead, .data-table tbody tr, .data-table td, .data-table th,
+  .wu-grid-wrap, .wu-grid-table, .file-viewer-spreadsheet, .file-viewer-spreadsheet td, .file-viewer-spreadsheet th
+) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-theme] :is(.dash-module, .card, .modal-body) .data-table thead { background: var(--t-table-head); }
+[data-theme] :is(.dash-module, .card, .modal-body) .data-table tbody tr { background: var(--t-table); }
 
 /* Modals (design-system Modal component) */
 [data-theme] .modal-overlay { background: rgba(2,6,16,0.62); }
@@ -425,7 +462,22 @@
 }
 [data-theme] .modal-header { border-color: var(--t-border); }
 [data-theme] .modal-title { color: var(--t-text); }
+[data-theme] .modal-subtitle { color: var(--t-muted); }
+[data-theme] .modal-body { color: var(--t-text); }
+[data-theme] .modal-close-btn {
+  color: var(--t-muted);
+  border-color: var(--t-border);
+  background: var(--t-surface);
+}
+[data-theme] .modal-close-btn:hover {
+  color: var(--t-text);
+  background: var(--t-surface-2);
+  border-color: var(--t-border-strong);
+}
 [data-theme] .modal-footer { border-color: var(--t-border); }
+[data-theme] .modal-overlay .modal-filename { color: var(--t-text); }
+[data-theme] .modal-overlay .modal-meta,
+[data-theme] .modal-overlay .modal-kicker { color: var(--t-muted); }
 
 /* Upload menu + dropzone */
 [data-theme] .upload-menu { background: var(--t-elev); border-color: var(--t-border-strong); color: var(--t-text); }
@@ -763,6 +815,73 @@
   color: var(--t-danger); 
   border-color: rgba(251,113,133,0.38);
   box-shadow: var(--t-shadow-1);
+}
+
+/* Project information action group — card-scoped; beats global button:disabled */
+[data-theme] .pj-project-info-card-actions .pj-info-action:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:not(:disabled) {
+  background: var(--t-btn-secondary-bg);
+  color: var(--t-text);
+  border-color: var(--t-btn-secondary-border);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:hover:not(:disabled) {
+  background: var(--t-surface-3);
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:not(:disabled) {
+  background: linear-gradient(180deg, #0F766E 0%, #0D9488 55%, #0F766E 100%);
+  color: #FFFFFF;
+  border-color: #115E59;
+  box-shadow: var(--t-shadow-1);
+  filter: none;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:not(:disabled) {
+  background: linear-gradient(180deg, #4338CA 0%, #4F46E5 55%, #4338CA 100%);
+  color: #FFFFFF;
+  border-color: #3730A3;
+  box-shadow: var(--t-shadow-1);
+  filter: none;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--danger:not(:disabled) {
+  background: var(--t-btn-secondary-bg);
+  color: var(--t-text);
+  border-color: var(--t-btn-secondary-border);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--danger:hover:not(:disabled) {
+  background: var(--t-danger-soft);
+  color: var(--t-danger);
+  border-color: rgba(251, 113, 133, 0.38);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
+[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+  background: var(--t-surface-2, #E2E8F0);
+  color: var(--t-muted, #64748B);
+  border-color: var(--t-outline, #CBD5E1);
+  opacity: 0.72;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:disabled:not(.btn--loading),
+[data-theme] .pj-project-info-card-actions .pj-info-action--danger:disabled:not(.btn--loading) {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: auto;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -1201,6 +1320,7 @@
   .btn-primary, .btn-primary-lg, .btn-secondary, .btn-ghost, .btn-sm,
   .btn-success, .btn-warning, .btn-danger,
   .pj-btn-primary, .pj-btn-secondary, .pj-btn-danger-ghost,
+  .pj-info-action,
   .frame-pill-btn,
   .tc-cta-btn, .tc-cta-neutral,
   .dr-btn-refresh, .dr-export-btn
