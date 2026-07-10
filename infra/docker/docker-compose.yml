@@ -11,7 +11,12 @@ x-data-root: &data_root ${DATA_ROOT:-/mnt/dwes-data}
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # PostgreSQL 18 to match the source WiringSchemeDB dumps (v18.3) — a v18 dump cannot be
+    # restored into a v16 server. Verified end-to-end (restore + /api/health=db:connected).
+    # Per the official postgres image, 18+ stores data in a major-version subdirectory and the
+    # data volume must mount at /var/lib/postgresql (NOT /var/lib/postgresql/data); the old
+    # path makes 18+ refuse to start. Refs: docker-library/postgres PR #1259, issue #37.
+    image: postgres:18-alpine
     restart: unless-stopped
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     environment:
@@ -19,7 +24,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-WiringSchemeDB}
     volumes:
-      - ${DATA_ROOT:-/mnt/dwes-data}/postgres:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/mnt/dwes-data}/postgres:/var/lib/postgresql
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     networks:
       - internal
@@ -104,7 +109,8 @@ services:
       DWES_DOMAIN: ${DWES_DOMAIN:-localhost}
 
   backup:
-    image: postgres:16-alpine
+    # Must be >= the server version (18) so pg_dump can dump the postgres:18 server.
+    image: postgres:18-alpine
     profiles: ["backup"]
     environment:
       PGHOST: postgres

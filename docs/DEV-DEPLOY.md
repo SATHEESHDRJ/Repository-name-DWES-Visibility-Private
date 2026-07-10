@@ -60,10 +60,14 @@ cd /opt/dwes
 docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env up -d postgres
 # wait until healthy:
 docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env ps
-# restore the provided pg_dump (custom -Fc format) into the container DB:
+# restore the provided dump into the container DB (postgres:18 — dumps are v18.3).
+# Custom-format (-Fc, e.g. backend/backups/*.dump) -> pg_restore:
 docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env \
   exec -T postgres pg_restore -U postgres -d WiringSchemeDB --clean --if-exists --no-owner \
   < /path/to/cutover.dump
+# Plain-SQL (.sql, e.g. backups/*.sql) -> psql (verified in the integration smoke):
+docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env \
+  exec -T postgres psql -U postgres -d WiringSchemeDB -v ON_ERROR_STOP=0 < /path/to/dump.sql
 ```
 This targets only the **container** DB on the VM. It never runs schema migrations
 (WiringSchemeDB is read-only for schema) and never touches your local dev database.
