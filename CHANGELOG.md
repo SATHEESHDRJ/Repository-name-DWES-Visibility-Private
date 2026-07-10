@@ -6,6 +6,18 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-10 — Infra — Audit fixes: deploy health-gate, TLS renewal, env quoting + canonical values
+
+- **Scope:** `infra/oci/scripts/redeploy-dev.sh`, `infra/docker/docker-compose.yml`, `infra/docker/.env.{dev,production}.example`, `docs/{DEV-DEPLOY,BACKUP-RESTORE-OCI,OCI-RUNBOOK}.md`, `.dockerignore`. Applies the production-readiness audit's active-path findings.
+- **H1 (High) — `redeploy-dev.sh` false SUCCESS:** the nginx cutover was unguarded and unverified, so a crash-looping public edge still reported SUCCESS with no rollback. Now `compose up -d --no-deps nginx || return 1` **and** an active `/healthz` probe of the nginx edge before success — a broken edge triggers auto-rollback.
+- **H2 (High) — TLS renewal never ran:** the certbot renew loop is `profiles: [\"certbot\"]` and the push-to-main deploy never starts it (certs would expire ~90 days). Added `restart: unless-stopped` to the certbot service and a documented VM cron (`certbot renew --dry-run`-verified form) that runs `renew` + `sync-letsencrypt-to-nginx.sh` (copy + `nginx -s reload`).
+- **M1 (Medium) — env `source` abort:** `RP_NAME=DWES (Dev)` unquoted aborted `init-letsencrypt.sh`/`verify-migration.sh` under `set -euo pipefail`. Now `RP_NAME='DWES (Dev)'` (verified: `.env` sources cleanly).
+- **M2 (Medium) — DR restore not runnable:** `BACKUP-RESTORE-OCI.md` used host-side `pg_restore -h postgres` (unresolvable) + hardcoded `/mnt/dwes-data`. Rewritten to restore through the container (`docker compose exec -T postgres pg_restore … < …`) using `${DATA_ROOT}`.
+- **M3 (Medium) — cert-reload cron missing on push-to-main path:** documented the renewal+reload cron in DEV-DEPLOY ops.
+- **Canonical values:** `CERTBOT_EMAIL=dwes@ingenious-network.com` and `dwes.ingenious-network.com` set across both env templates + docs (production email/domain; not secrets). Also: `.dockerignore` now excludes `**/.env`/`infra/docker/.env` (keeps `.env` out of the on-VM build cache); OCI-RUNBOOK cert-path corrected to `${DATA_ROOT}/ssl/nginx`.
+- **Secure Auto Mode:** no secret values generated/embedded.
+- **Verify:** `.env` sources clean; `redeploy-dev.sh` syntax + guards present; `docker compose config` valid; 3/3 workflows valid; backend 24/24; no secrets in tree; full-stack smoke re-run PASS.
+
 ## 2026-07-10 — Infra — Production hardening (log rotation, TLS http2, ops docs)
 
 - **Scope:** `infra/docker/docker-compose.yml`, `infra/nginx/conf.d/dwes.conf`, `infra/docker/.env.{dev,production}.example`, `docs/OCI-RUNBOOK.md`, `docs/DEV-DEPLOY.md`. Hardens the simplified single-VM path for production; preserves the existing architecture (adapts only what is necessary).

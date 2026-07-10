@@ -10,6 +10,8 @@ logs
 *.log
 .env
 backend/.env
+**/.env
+infra/docker/.env
 backend/data
 backend/uploads
 DWES-backup

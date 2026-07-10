@@ -128,7 +128,17 @@ ssh <user>@<vm> 'cd /opt/dwes && git reset --hard <last-good-sha> \
   also push them to OCI Object Storage; otherwise they stay on the VM disk.
 - **Log rotation** is built in (compose `x-logging`: 10 MB × 5 files/container; override with
   `LOG_MAX_SIZE` / `LOG_MAX_FILE` in `.env`).
-- **TLS contact:** set `CERTBOT_EMAIL` in `.env` to your admin email (blank falls back to
-  `admin@$DWES_DOMAIN`).
+- **TLS contact:** `CERTBOT_EMAIL` is set to `dwes@ingenious-network.com` in the env template
+  (the Let's Encrypt registration/expiry contact; not a secret).
+- **TLS auto-renewal (REQUIRED — the push-to-main deploy does NOT start the certbot renew loop).**
+  `init-letsencrypt.sh` issues the cert once; certs expire in ~90 days. Add this cron on the VM so
+  renewal actually runs and nginx is reloaded with the new cert:
+  ```cron
+  0 3 * * * cd /opt/dwes && docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env --profile certbot run --rm certbot renew --webroot -w /var/www/certbot && bash infra/docker/scripts/sync-letsencrypt-to-nginx.sh
+  ```
+  `certbot renew` is idempotent (only renews within 30 days of expiry); `sync-letsencrypt-to-nginx.sh`
+  copies the renewed PEMs into the nginx mount and runs `nginx -s reload`. Verify once with
+  `docker compose ... --profile certbot run --rm certbot renew --dry-run`.
 - **Monitoring/self-healing:** every container has a healthcheck + `restart: unless-stopped`; the
-  deploy health-gate + auto-rollback covers releases. Full ops procedures: [OCI-RUNBOOK.md](OCI-RUNBOOK.md).
+  deploy health-gate (API `db:connected` **and** nginx `/healthz` probe) + auto-rollback covers
+  releases. Full ops procedures: [OCI-RUNBOOK.md](OCI-RUNBOOK.md).

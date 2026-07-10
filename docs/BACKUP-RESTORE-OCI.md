@@ -12,20 +12,28 @@ Local retention: 14 days. Optional upload to OCI Object Storage when `OCI_BUCKET
 
 ## Restore (disaster recovery)
 
-1. Provision replacement VM (Terraform) or stop stack on existing VM.
-2. Restore Postgres:
+1. Provision replacement VM or use the existing one; bring up the DB container first:
+   `docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env up -d postgres`.
+   (`postgres` is only a Compose-network service alias on the `internal` network with no host
+   port, so restore must run *through the container*, not with a host-side `-h postgres`.)
+2. Restore Postgres (custom-format dump, piped into the container via stdin):
 
 ```bash
-pg_restore -h postgres -U postgres -d WiringSchemeDB --clean --if-exists /backups/TIMESTAMP/wiring-scheme.dump
+docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env \
+  exec -T postgres pg_restore -U postgres -d WiringSchemeDB --clean --if-exists --no-owner \
+  < ${DATA_ROOT:-/opt/dwes-data}/backups/TIMESTAMP/wiring-scheme.dump
 ```
 
-3. Restore uploads:
+3. Restore uploads into the same `DATA_ROOT` the app mounts (`/opt/dwes-data` on the dev VM,
+   `/mnt/dwes-data` on the block-volume prod VM — do not hardcode):
 
 ```bash
-tar -xzf /backups/TIMESTAMP/uploads.tar.gz -C /mnt/dwes-data/uploads
+tar -xzf ${DATA_ROOT:-/opt/dwes-data}/backups/TIMESTAMP/uploads.tar.gz \
+  -C ${DATA_ROOT:-/opt/dwes-data}/uploads
 ```
 
-4. `docker compose up -d` and verify `/api/health`.
+4. `docker compose ... up -d` and verify `/api/health` returns `db:connected`. No Prisma
+   migrations are run (WiringSchemeDB schema is restored from the dump).
 
 ## DR target
 

@@ -104,6 +104,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     profiles: ["certbot"]
+    restart: unless-stopped   # revive the 12h renew loop after reboot/crash (when the profile is run)
     logging: *default-logging
     volumes:
       - ${DATA_ROOT:-/mnt/dwes-data}/ssl/letsencrypt:/etc/letsencrypt

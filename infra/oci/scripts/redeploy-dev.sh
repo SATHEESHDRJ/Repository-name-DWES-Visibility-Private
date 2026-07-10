@@ -5,7 +5,8 @@
 # Guarantees:
 #   - Idempotent: matches the VM working tree to origin/main and rebuilds.
 #   - Native build on the VM (correct arch for OCI A1.Flex / arm64) — no registry.
-#   - Health-gated: nginx is only (re)started after the API reports db:connected.
+#   - Health-gated: nginx starts only after the API reports db:connected, and the public
+#     edge is probed (/healthz) before success — a broken edge triggers rollback too.
 #   - Auto-rollback: on health failure, resets to the previous commit and rebuilds.
 #   - Data-safe: never touches the postgres/uploads/auth bind mounts under DATA_ROOT.
 #     No schema migrations are run (WiringSchemeDB is read-only for schema).
@@ -46,9 +47,20 @@ bring_up() {
   for _ in $(seq 1 "$HEALTH_RETRIES"); do
     if compose exec -T api wget -qO- http://127.0.0.1:3001/api/health 2>/dev/null \
         | grep -q '"db":"connected"'; then
-      echo "[redeploy] API healthy"
-      compose up -d --no-deps nginx
-      return 0
+      echo "[redeploy] API healthy — starting nginx (public tier)"
+      compose up -d --no-deps nginx || return 1
+      # `docker compose up -d` exits 0 once nginx is *started*, even if a bad cert mount or
+      # nginx.conf makes it crash-loop. Actively verify the public edge serves /healthz on
+      # port 80 (no cert needed) before declaring success, so a broken edge triggers rollback.
+      for _ in $(seq 1 20); do
+        if compose exec -T nginx curl -fsS -o /dev/null http://127.0.0.1/healthz 2>/dev/null; then
+          echo "[redeploy] nginx serving public edge"
+          return 0
+        fi
+        sleep 3
+      done
+      echo "[redeploy] nginx failed to serve /healthz after start" >&2
+      return 1
     fi
     sleep 3
   done
