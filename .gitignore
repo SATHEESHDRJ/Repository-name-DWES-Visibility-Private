@@ -11,6 +11,7 @@ docs/go-live-artifacts/
 !**/.env.example
 !infra/docker/.env.production.example
 !infra/docker/.env.e2e.example
+!infra/docker/.env.dev.example
 infra/docker/.env
 infra/docker/.env.e2e
 infra/docker/.e2e-data/

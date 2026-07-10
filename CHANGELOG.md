@@ -6,6 +6,15 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-10 — Infra — Continuous dev/demo deploy pipeline (dwes.ingenious-network.com)
+
+- **Scope:** Push-to-main CI/CD to a simplified OCI VM for a live dev/demo environment the Director reviews. Reuses the existing Docker Compose stack unchanged (services/env/networking/volumes/health).
+- **Boot-blocker fixes (from the pre-prod audit):** `infra/docker/Dockerfile.api` now ships the generated Prisma client (`.prisma` + `@prisma/client` from the build stage) — previously the API crashed on boot; `infra/docker/Dockerfile.nginx` now copies `infra/nginx/snippets/` — previously `nginx -t` failed and nginx wouldn't start.
+- **New:** `.github/workflows/deploy-dev.yml` (push→build+test→SSH deploy), `infra/oci/scripts/redeploy-dev.sh` (native on-VM build, health-gate on `db:connected`, auto-rollback to prior commit, data-safe), `infra/docker/.env.dev.example`, `docs/DEV-DEPLOY.md` (one-time VM/DNS/secrets/DB-restore runbook).
+- **Data safety:** DB restore is `pg_restore` into the VM container DB only; no Prisma migrations; postgres/uploads/auth bind mounts preserved across deploys. Verified per `dwes-db-guard`.
+- **Verify:** both images built (exit 0); nginx snippet present + `nginx -t`; Prisma client instantiates in the prod image; workflow + scripts lint-clean.
+- **Human prerequisites (not automatable here):** provision VM, DNS A record, GitHub repo + `origin` + Secrets, provide DB dump — see `docs/DEV-DEPLOY.md`.
+
 ## 2026-07-10 — Infra — Harden go-live orchestrator (pre-go-live audit)
 
 - **Scope:** `scripts/go-live.mjs`, `scripts/go-live-preflight.mjs`, `package.json`, `docs/GO-LIVE-REPORT.md`, `docs/HUMAN-ACTIONS.md`, `docs/OCI-RUNBOOK.md`. Audit of the never-reviewed orchestrator (`cbbb100`, after the second-review range).

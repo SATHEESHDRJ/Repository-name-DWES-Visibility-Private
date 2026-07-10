@@ -11,7 +11,11 @@ RUN npm ci
 
 FROM be-deps AS be-build
 COPY backend/ ./
-RUN npx prisma generate && npm run build
+# prisma.config.ts eagerly resolves env('DATABASE_URL'); neither `prisma generate` nor the
+# `npm run build` script (which re-runs generate) connects to a DB, so a build-only placeholder
+# satisfies the config without baking a real URL in. The real DATABASE_URL is injected at runtime.
+RUN export DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+  && npm run build
 
 FROM node:22-bookworm-slim AS be-prod-deps
 WORKDIR /app/backend
@@ -26,6 +30,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=be-build /app/backend/dist ./dist
 COPY --from=be-prod-deps /app/backend/node_modules ./node_modules
+# Ship the Prisma client generated in be-build — the prod-deps stage runs `npm ci --omit=dev`
+# and never runs `prisma generate`, so without this the runtime `new PrismaClient()` throws.
+COPY --from=be-build /app/backend/node_modules/.prisma ./node_modules/.prisma
+COPY --from=be-build /app/backend/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=be-build /app/backend/package.json ./package.json
 COPY --from=be-build /app/backend/prisma ./prisma
 RUN mkdir -p /app/uploads /app/data && chown -R dwes:dwes /app

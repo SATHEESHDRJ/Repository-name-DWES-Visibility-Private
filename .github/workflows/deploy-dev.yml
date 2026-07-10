@@ -1,0 +1,78 @@
+name: Deploy Dev (main)
+
+# Every push to main builds + validates, then deploys to the OCI VM hosting
+# https://dwes.ingenious-network.com. The on-VM redeploy script health-checks the
+# new release and auto-rolls-back to the last working commit if it fails.
+#
+# Required GitHub Secrets:
+#   DEPLOY_SSH_HOST   - VM public IP or hostname
+#   DEPLOY_SSH_USER   - SSH user (e.g. opc / ubuntu / dwes)
+#   DEPLOY_SSH_KEY    - SSH private key (PEM) authorized on the VM
+#   DEPLOY_SSH_PORT   - (optional) SSH port, defaults to 22
+#   DWES_ENV_FILE     - full contents of infra/docker/.env (all app secrets)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys touch the VM at once; queue them instead.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Frontend install + build
+        run: |
+          npm ci
+          npm run build
+      - name: Backend install + build + test
+        run: |
+          npm --prefix backend ci
+          npm --prefix backend run build
+          npm --prefix backend test
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync environment file to VM
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DWES_ENV_FILE: ${{ secrets.DWES_ENV_FILE }}
+        run: |
+          printf '%s' "$DWES_ENV_FILE" | ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" \
+            "$SSH_USER@$SSH_HOST" \
+            'umask 077 && mkdir -p /opt/dwes/infra/docker && cat > /opt/dwes/infra/docker/.env'
+
+      - name: Deploy (build, health-check, auto-rollback)
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            'bash /opt/dwes/infra/oci/scripts/redeploy-dev.sh'

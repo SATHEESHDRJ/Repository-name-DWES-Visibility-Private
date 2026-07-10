@@ -15,6 +15,7 @@
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) |
 | Go-live command | `npm run go-live:plan` (preview) → `npm run go-live:preflight` → `npm run go-live` |
 | Orchestrator | **Hardened 2026-07-10** — secret redaction, origin/gh fail-fast, `--plan-only`, health-gated post-deploy ([CHANGELOG](CHANGELOG.md)) |
+| Dev/demo deploy | **Added 2026-07-10** — push-to-main CI/CD to OCI VM `dwes.ingenious-network.com`; native on-VM build, health-gate + auto-rollback ([docs/DEV-DEPLOY.md](docs/DEV-DEPLOY.md)) |
 | Autonomous log | [docs/AUTONOMOUS-SESSION.md](docs/AUTONOMOUS-SESSION.md) |
 | Checkpoint | `PREFLIGHT_BLOCKED` — fill secrets in `deploy-secrets.local.env` |
 | Decisions log | [docs/DEPLOY-DECISIONS.md](docs/DEPLOY-DECISIONS.md) |
