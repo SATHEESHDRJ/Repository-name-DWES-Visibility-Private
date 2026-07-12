@@ -192,6 +192,7 @@ export function TeamManagementModal({ onClose }: { onClose: () => void }) {
         title={modalTitle}
         onClose={onClose}
         size="team"
+        typography="user-management"
         bodyClassName="modal-body-flush"
         footer={
           <div className="um-footer">
@@ -464,6 +465,7 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
       title={`Edit User — ${user.full_name}`}
       onClose={onClose}
       size="wide"
+      typography="user-management"
       bodyClassName="modal-body-flush"
       footer={
         <div className="um-footer">
@@ -661,6 +663,7 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
         <DeleteConfirmModal
           title="Delete User"
           subtitle="Permanent removal when allowed; otherwise deactivated."
+          typography="user-management"
           resourceKind="user"
           itemLabel={form.full_name || form.username}
           fields={[
@@ -881,6 +884,7 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
         <DeleteConfirmModal
           title="Remove Panel Assignment"
           subtitle="Technician loses this panel from active work."
+          typography="user-management"
           resourceKind="assignment"
           itemLabel={pendingRemove.panelLabel}
           sections={[
@@ -1014,6 +1018,7 @@ function UserFormModal({ mode, user, onClose, onSaved, techniciansOnly = false }
       title={mode === 'create' ? (techniciansOnly ? 'New Technician' : 'New User') : `Edit — ${user?.full_name}`}
       onClose={onClose}
       size="lg"
+      typography="user-management"
       footer={(
         <div className="um-footer">
           <button type="button" onClick={onClose} className="pj-btn-secondary">Cancel</button>

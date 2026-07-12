@@ -204,18 +204,24 @@ function appUrl() {
 }
 
 function openBrowser(url) {
-  log(`opening browser → ${url}`);
   const browser = findBrowser();
-  if (browser && !isProd) {
-    const child = spawn(browser, [
-      '--new-window',
-      '--disable-http-cache',
-      '--disable-application-cache',
-      url,
-    ], { detached: true, stdio: 'ignore', windowsHide: true });
+  // Open DWES as a standalone, chromeless "app" window (no tabs / address bar) so
+  // only the application UI is visible — a seamless desktop-app experience.
+  //   • DWES_APP_ID set → launch the installed Chrome PWA (exact icon/identity).
+  //   • otherwise → open the URL via --app=<url> (ad-hoc chromeless window).
+  const appId = (process.env.DWES_APP_ID || '').trim();
+  if (browser) {
+    const args = appId
+      ? ['--profile-directory=Default', `--app-id=${appId}`]
+      : [`--app=${url}`];
+    if (!isProd) args.push('--disable-http-cache');
+    log(`opening app window → ${appId ? `app-id ${appId}` : url}`);
+    const child = spawn(browser, args, { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
     return;
   }
+  // No Chrome/Edge located — fall back to the default browser (normal window).
+  log(`opening browser (default) → ${url}`);
   spawn('cmd', ['/c', 'start', '', url], {
     detached: true,
     stdio: 'ignore',
@@ -270,6 +276,18 @@ function runHiddenLogged(command, args, cwd, logName) {
 
 function runHiddenNpm(npmArgs, cwd, logName) {
   return runHiddenLogged(npmRunner.command, [...npmRunner.prefixArgs, ...npmArgs], cwd, logName);
+}
+
+/**
+ * Resolve a local CLI's JS entry (under node_modules) so the dev servers can be
+ * started by running node.exe directly — bypassing the `npm → cmd.exe → <cli>`
+ * shell chain. Because node.exe is spawned with windowsHide + file stdio +
+ * detached, no console window ever appears. Returns null if the entry is absent
+ * (callers fall back to the npm script).
+ */
+function resolveCliJs(...segmentsFromRoot) {
+  const p = path.join(root, ...segmentsFromRoot);
+  return fs.existsSync(p) ? p : null;
 }
 
 function writeLock() {
@@ -327,7 +345,13 @@ function spawnBackend() {
     return true;
   }
   log('starting backend (Nest start:dev watch)');
-  runHiddenNpm(['run', 'start:dev'], path.join(root, 'backend'), 'backend.log');
+  const nestJs = resolveCliJs('backend', 'node_modules', '@nestjs', 'cli', 'bin', 'nest.js');
+  if (nestJs) {
+    runHiddenLogged(process.execPath, [nestJs, 'start', '--watch'], path.join(root, 'backend'), 'backend.log');
+  } else {
+    log('nest CLI entry not found — falling back to npm run start:dev', 'WARN');
+    runHiddenNpm(['run', 'start:dev'], path.join(root, 'backend'), 'backend.log');
+  }
   return true;
 }
 
@@ -372,10 +396,20 @@ async function ensureFrontend() {
       return { error: 'missing dist' };
     }
     log('starting frontend (vite preview)');
-    runHiddenNpm(['run', 'preview:lan'], root, 'frontend.log');
+    const viteJs = resolveCliJs('node_modules', 'vite', 'bin', 'vite.js');
+    if (viteJs) {
+      runHiddenLogged(process.execPath, [viteJs, 'preview', '--host'], root, 'frontend.log');
+    } else {
+      runHiddenNpm(['run', 'preview:lan'], root, 'frontend.log');
+    }
   } else {
     log(`starting frontend (vite :${FE_PORT})`);
-    runHiddenNpm(['run', 'dev'], root, 'frontend.log');
+    const viteJs = resolveCliJs('node_modules', 'vite', 'bin', 'vite.js');
+    if (viteJs) {
+      runHiddenLogged(process.execPath, [viteJs, '--host', '--port', String(FE_PORT)], root, 'frontend.log');
+    } else {
+      runHiddenNpm(['run', 'dev'], root, 'frontend.log');
+    }
   }
   return { spawned: true };
 }

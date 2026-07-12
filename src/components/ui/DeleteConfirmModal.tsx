@@ -63,6 +63,7 @@ export interface DeleteConfirmModalProps {
   onConfirm: (scope: DeleteScopeId) => void | Promise<void>;
   onDone?: () => void;
   size?: 'default' | 'lg';
+  typography?: 'standard' | 'user-management';
 }
 
 function SectionIcon({ icon }: { icon?: DeleteImpactSection['icon'] }) {
@@ -152,6 +153,7 @@ export default function DeleteConfirmModal({
   onConfirm,
   onDone,
   size = 'lg',
+  typography = 'standard',
 }: DeleteConfirmModalProps) {
   const checkboxId = useId();
   const enabledScopes = useMemo(
@@ -234,6 +236,7 @@ export default function DeleteConfirmModal({
       subtitle={subtitle}
       onClose={handleClose}
       size={size}
+      typography={typography}
       closeOnBackdrop={!deleting}
       closeOnEscape={!deleting}
       footer={footer}

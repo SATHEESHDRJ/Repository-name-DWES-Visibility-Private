@@ -56,6 +56,11 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true,
     https,
+    watch: {
+      // Never watch git worktrees under .claude/ — they are full repo copies whose
+      // builds/installs would otherwise churn this dev server (phantom HMR / reloads).
+      ignored: ['**/.claude/**'],
+    },
     proxy: {
       '/api': {
         target: proxyTarget,

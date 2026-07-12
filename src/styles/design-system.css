@@ -271,19 +271,32 @@
     min-height: 100dvh;
     background: var(--color-background);
     color: var(--color-on-surface);
-    /* Topbar sticky block — used so sidebar + main fill the viewport below it */
+    /* Real topbar height, measured at runtime by AppShell (ResizeObserver) and
+       written here as px. The rem values below are only the pre-hydration
+       fallback — the sticky topbar is a flex-wrap bar whose height varies with
+       width/content (≈93px → 151px when it wraps on tablet portrait), so no
+       hardcoded number is correct. Layout fill is done with flexbox (below), NOT
+       calc(100dvh - this); this var now only positions the mobile drawer. */
     --dash-topbar-height: 5.5rem;
   }
   @media (min-width: 1024px) {
     .app-shell { --dash-topbar-height: 5.75rem; }
   }
+  /* Height model: .app-shell is min-height:100dvh flex-column; the sticky topbar
+     takes its natural (variable) height in-flow, and .dash-layout fills the rest
+     via flex-1 — so the viewport-fill is exact at every resolution without any
+     magic-number calc. (The old min-height: calc(100dvh - var(--dash-topbar-height))
+     under-measured the wrapped topbar by ~63px on tablet portrait.) */
   .dash-layout {
     @apply flex flex-1 w-full min-w-0 items-stretch;
-    min-height: calc(100dvh - var(--dash-topbar-height));
     align-items: stretch;
   }
-  .dash-main     { @apply flex flex-col flex-1 min-w-0 overflow-x-hidden; min-height: calc(100dvh - var(--dash-topbar-height)); }
-  .dash-main--flush { @apply flex flex-col flex-1; min-height: calc(100dvh - var(--dash-topbar-height)); }
+  .dash-main     {
+    @apply flex flex-col flex-1 min-w-0 overflow-x-hidden;
+    /* Create a new stacking context to contain z-indexes and prevent layout breaks from children. */
+    isolation: isolate;
+  }
+  .dash-main--flush { @apply flex flex-col flex-1; }
   .dash-layout--locked { @apply overflow-hidden; }
   .project-gate-main-placeholder {
     @apply w-full h-full min-h-[calc(100vh-7rem)];
@@ -482,7 +495,7 @@
     opacity: 0.88;
     transition: opacity var(--transition-base), transform var(--transition-base);
   }
-  .topbar-nav-btn.active svg { 
+  .topbar-nav-btn.active svg {
     opacity: 1;
     transform: scale(1.05);
   }
@@ -806,9 +819,10 @@
   }
   .dash-sidebar {
     @apply hidden tablet-land:flex flex-col shrink-0 border-r;
+    /* align-self: stretch fills the sidebar to .dash-layout's height (which is
+       the exact viewport-minus-topbar via flex) — no magic-number min-height. */
     align-self: stretch;
     flex: 0 0 auto;
-    min-height: calc(100dvh - var(--dash-topbar-height));
     height: auto;
     width: 17rem;
     background: var(--glass-bg-solid, var(--color-surface));
@@ -824,7 +838,11 @@
     pointer-events: none;
   }
   .dash-sidebar--mobile-open {
-    @apply flex fixed left-0 top-16 bottom-0 z-50;
+    @apply flex fixed left-0 bottom-0 z-50;
+    /* Start exactly at the bottom of the real topbar (measured var), not a
+       hardcoded 64px — otherwise the wrapped tablet topbar (≈151px) overlapped
+       the drawer's top ~87px. */
+    top: var(--dash-topbar-height);
     width: 16rem;
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.12);
   }
@@ -878,7 +896,7 @@
     color: var(--color-primary-800, #1E40AF);
     font-weight: 700;
   }
-  .dash-sidebar-icon { 
+  .dash-sidebar-icon {
     @apply shrink-0 flex items-center justify-center w-6 h-6;
     transition: transform var(--transition-base);
   }
@@ -3974,6 +3992,12 @@
   .pdf-viewer-error {
     @apply flex flex-1 flex-col items-center justify-center p-8 text-center;
   }
+  /* Loading / error overlay — sits above the always-mounted viewport so the
+     canvas host and ResizeObserver stay bound to the live node. */
+  .pdf-viewer-overlay {
+    @apply absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center text-[14px] text-slate-500;
+    background: rgba(226, 232, 240, 0.94);
+  }
   .pdf-viewer-search-bar {
     @apply flex flex-wrap items-center gap-2 shrink-0 border-b border-slate-200 bg-slate-50 px-3 py-2;
   }
@@ -5357,7 +5381,7 @@
     box-shadow: var(--glass-shadow, var(--shadow-sm));
     transition: all var(--transition-base);
   }
-  .kpi-top-card:hover { 
+  .kpi-top-card:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
   }

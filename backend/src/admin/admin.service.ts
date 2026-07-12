@@ -377,6 +377,7 @@ export class AdminService {
     const assnDel  = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
     const hashDel  = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
     const auditDel = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
+    const sessionDel = await this.prisma.session_log.deleteMany({ where: { project_code: code } });
 
     await this.prisma.projects.delete({ where: { code } });
 
@@ -397,10 +398,12 @@ export class AdminService {
         assignments: assnDel.count,
         file_hashes: hashDel.count,
         audit_logs:  auditDel.count,
+        session_logs: sessionDel.count,
         project_row: 1,
+        uploads_removed: folderRemoved,
         folder_removed: folderRemoved,
       },
-      message: `Project "${code}" permanently deleted from the system.`,
+      message: `Project "${code}" permanently deleted from database and storage.`,
       ts: new Date().toISOString(),
     };
   }

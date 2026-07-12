@@ -84,6 +84,8 @@ desktop.ini
 coverage/
 .nyc_output/
 .smoke-shots/
+test-results/
+**/test-results/
 
 # ===== Project-specific (from prior .gitignore) =====
 certs/

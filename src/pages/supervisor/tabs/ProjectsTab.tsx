@@ -17,12 +17,17 @@ import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanel
 import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelConfirmModal';
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
-import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
 import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
 import { emitDocumentsChanged, onDocumentsChanged } from '../../../utils/projectDocumentsEvents';
+import {
+  PROJECT_DELETE_CONFIRM_BUTTON,
+  PROJECT_DELETE_CONFIRM_LABEL,
+  PROJECT_DELETE_MODAL_TITLE,
+  PROJECT_DELETE_WARNING,
+} from '../../../constants/projectDeletion';
 import {
   buildProjectReferenceTitle,
   encodeProjectMeta,
@@ -204,7 +209,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [deletingPanelId, setDeletingPanelId] = useState<string | null>(null);
   const [deletePanelTarget, setDeletePanelTarget] = useState<FramePanel | null>(null);
-  const [softRemoveTarget, setSoftRemoveTarget] = useState<Project | null>(null);
+  const [deleteProjectTarget, setDeleteProjectTarget] = useState<Project | null>(null);
+  const [deleteProjectConfirmed, setDeleteProjectConfirmed] = useState(false);
   const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
   const createModalScrollRef = useRef<HTMLFormElement>(null);
   const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
@@ -574,12 +580,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   };
 
   const handleDelete = (project: Project) => {
-    setSoftRemoveTarget(project);
+    setDeleteProjectTarget(project);
+    setDeleteProjectConfirmed(false);
   };
 
-  const handleSoftRemoveConfirm = async (_scope: DeleteScopeId) => {
-    if (!softRemoveTarget) return;
-    const project = softRemoveTarget;
+  const handlePermanentDeleteConfirm = async () => {
+    if (!deleteProjectTarget || !deleteProjectConfirmed) return;
+    const project = deleteProjectTarget;
     setDeleting(true);
     try {
       await projectsApi.remove(project.code);
@@ -587,12 +594,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       emitFramesChanged({ projectCode: project.code, action: 'deleted' });
       setSelectedProject(prev => (prev?.code === project.code ? null : prev));
       if (selectedProject?.code === project.code) setSelectedPanelId('');
-      setSoftRemoveTarget(null);
-      setToast({ message: 'Project removed from list.', tone: 'success' });
+      setDeleteProjectTarget(null);
+      setDeleteProjectConfirmed(false);
+      setToast({ message: 'Project permanently deleted.', tone: 'success' });
     } catch (e: any) {
       await dialog.alert({
-        title: 'Remove Failed',
-        message: e?.response?.data?.message || 'Could not remove project. Please try again.',
+        title: 'Delete Failed',
+        message: e?.response?.data?.message || 'Could not permanently delete project. Please try again.',
         tone: 'error',
       });
     } finally {
@@ -1065,7 +1073,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-[48px]"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
               onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('pdf'); }}
             >
               <FileText size={24} className="text-red-500" />
@@ -1073,7 +1081,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             </button>
             <button
               type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-[48px]"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
               onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('dwg'); }}
             >
               <FileText size={24} className="text-blue-600" />
@@ -1401,63 +1409,58 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           onDeleted={handlePanelDeleted}
         />
       )}
-      {softRemoveTarget && (
-        <DeleteConfirmModal
-          title="Remove Project from List"
-          subtitle="Soft remove — wiring history stays in the system."
-          resourceKind="project_soft"
-          itemLabel={softRemoveTarget.name}
-          parentProject={{ code: softRemoveTarget.code, name: softRemoveTarget.name }}
-          sections={[
-            {
-              id: 'removed',
-              title: 'Removed from active list',
-              icon: 'folder',
-              badge: 'list only',
-              items: [
-                `Project “${softRemoveTarget.name}” (${softRemoveTarget.code}) disappears from supervisor project lists`,
-                'Technicians no longer see it as an active selectable project in day-to-day lists',
-              ],
-            },
-            {
-              id: 'retained',
-              title: 'Preserved (not deleted)',
-              icon: 'shield',
-              badge: 'kept',
-              items: [
-                'Wiring history, cable progress, and assignments',
-                'Uploads folder, drawings, and frame files on disk',
-                'A System Administrator can permanently delete later if needed',
-              ],
-            },
-          ]}
-          scopes={[
-            {
-              id: 'item_only',
-              label: 'Remove from list only',
-              description: 'Hides the project from active lists. Does not delete DB records or files.',
-            },
-            {
-              id: 'everything_related',
-              label: 'Delete everything related',
-              description: 'Permanent wipe requires System Admin → Permanently Delete Project.',
-              disabled: true,
-            },
-          ]}
-          defaultScope="item_only"
-          backup={{
-            status: 'skipped',
-            note: 'No destructive backup step — this soft remove does not delete database rows or files.',
+      {deleteProjectTarget && (
+        <Modal
+          title={PROJECT_DELETE_MODAL_TITLE}
+          onClose={() => {
+            if (deleting) return;
+            setDeleteProjectTarget(null);
+            setDeleteProjectConfirmed(false);
           }}
-          irreversible={false}
-          warningTitle="This is not a permanent delete"
-          warningText={`Remove “${softRemoveTarget.name}” (${softRemoveTarget.code}) from the active project list? Wiring history, assignments, and files are preserved.`}
-          confirmCheckboxLabel={`I understand this only removes “${softRemoveTarget.name}” from the active list and does not wipe wiring history.`}
-          confirmButtonLabel="Remove from List"
-          deleting={deleting}
-          onClose={() => { if (!deleting) setSoftRemoveTarget(null); }}
-          onConfirm={handleSoftRemoveConfirm}
-        />
+          size="default"
+          closeOnBackdrop={!deleting}
+          closeOnEscape={!deleting}
+          footer={(
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                onClick={() => {
+                  if (deleting) return;
+                  setDeleteProjectTarget(null);
+                  setDeleteProjectConfirmed(false);
+                }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger flex-1"
+                onClick={() => void handlePermanentDeleteConfirm()}
+                disabled={deleting || !deleteProjectConfirmed}
+              >
+                {deleting ? 'Deleting…' : PROJECT_DELETE_CONFIRM_BUTTON}
+              </button>
+            </div>
+          )}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[13px] text-red-800">
+              {PROJECT_DELETE_WARNING}
+            </div>
+            <label className="flex items-start gap-2 text-[13px] text-slate-700">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={deleteProjectConfirmed}
+                disabled={deleting}
+                onChange={e => setDeleteProjectConfirmed(e.target.checked)}
+              />
+              <span>{PROJECT_DELETE_CONFIRM_LABEL}</span>
+            </label>
+          </div>
+        </Modal>
       )}
     </div>
   );

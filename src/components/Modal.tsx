@@ -18,6 +18,8 @@ interface ModalProps {
   closeOnEscape?: boolean;
   /** Optional action button in header (e.g., fullscreen toggle) */
   headerAction?: ReactNode;
+  /** Keeps the established User Management presentation isolated from shared dialog polish. */
+  typography?: 'standard' | 'user-management';
 }
 
 const MODAL_ROOT_ID = 'modal-root';
@@ -45,6 +47,7 @@ export default function Modal({
   closeOnBackdrop = true,
   closeOnEscape = true,
   headerAction,
+  typography = 'standard',
 }: ModalProps) {
   const openedAt = useRef(Date.now());
   const onCloseRef = useRef(onClose);
@@ -107,7 +110,7 @@ export default function Modal({
         if (e.target === e.currentTarget) handleOverlayClick();
       }}
     >
-      <div className={`${boxClass} glass-modal-shell`} onClick={e => e.stopPropagation()}>
+      <div className={`${boxClass} glass-modal-shell modal-typography${typography === 'user-management' ? ' modal-typography--user-management' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-text">
             <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>

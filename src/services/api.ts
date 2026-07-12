@@ -447,7 +447,7 @@ export const adminApi = {
   hardDeletePrecheck: (code: string) =>
     api.get(`/admin/projects/${code}/hard-delete`).then(r => r.data),
 
-  hardDelete: (code: string, confirmedCode: string) =>
+  hardDelete: (code: string, confirmedCode = code) =>
     api.post(`/admin/projects/${code}/hard-delete`, { confirmed_code: confirmedCode }).then(r => r.data),
 
   resetAllPrecheck: () =>

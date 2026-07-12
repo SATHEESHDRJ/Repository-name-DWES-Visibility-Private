@@ -75,6 +75,9 @@ export default function PdfDocumentViewer({
   const [rendering, setRendering] = useState(false);
   const [renderError, setRenderError] = useState('');
   const [pages, setPages] = useState<RenderedPage[]>([]);
+  // True once the first page canvas has painted — clears the loading overlay so
+  // multi-page docs are readable immediately while the rest render in.
+  const [firstPagePainted, setFirstPagePainted] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -92,9 +95,14 @@ export default function PdfDocumentViewer({
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
+    // Seed the size synchronously so the first page render doesn't have to wait
+    // for the async ResizeObserver callback (avoids a blank first paint).
+    const rect0 = el.getBoundingClientRect();
+    if (rect0.width > 0) setContainerWidth(rect0.width);
+    if (rect0.height > 0) setContainerHeight(rect0.height);
     const ro = new ResizeObserver(entries => {
       const rect = entries[0]?.contentRect;
-      if (!rect) return;
+      if (!rect || rect.width <= 0) return;
       setContainerWidth(rect.width);
       setContainerHeight(rect.height);
     });
@@ -107,6 +115,10 @@ export default function PdfDocumentViewer({
       setNumPages(0);
       setPages([]);
       setRenderError('');
+      setFirstPagePainted(false);
+      // Host stays mounted now, so clear any previously rendered canvases.
+      pagesHostRef.current?.replaceChildren();
+      pageRefs.current.clear();
       if (docRef.current) {
         void docRef.current.destroy();
         docRef.current = null;
@@ -121,6 +133,7 @@ export default function PdfDocumentViewer({
       try {
         setRendering(true);
         setRenderError('');
+        setFirstPagePainted(false);
         if (docRef.current) {
           await docRef.current.destroy();
           docRef.current = null;
@@ -206,6 +219,10 @@ export default function PdfDocumentViewer({
           pageRefs.current.set(pageNum, wrapper);
 
           await pg.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+
+          // Reveal the document as soon as the first page paints — remaining
+          // pages of a multi-page drawing keep rendering behind the scenes.
+          if (pageNum === 1) setFirstPagePainted(true);
 
           rendered.push({ pageNum, width: viewport.width, height: viewport.height });
         }
@@ -459,8 +476,19 @@ export default function PdfDocumentViewer({
       )}
 
       <div className="pdf-viewer-body">
+        {/*
+          The viewport stays mounted for the component's whole lifetime so the
+          ResizeObserver stays bound to the live node and the canvas mount point
+          (pagesHostRef) is always available. Loading/error render as overlays on
+          top — never as a replacement — otherwise unmounting the viewport during
+          load detaches the observer, leaves containerWidth at 0, and the page
+          render bails (blank viewer).
+        */}
+        <div ref={viewportRef} className="pdf-viewer-viewport" onWheel={onViewportWheel}>
+          <div ref={pagesHostRef} className="pdf-viewer-pages" style={pagesStyle} />
+        </div>
         {displayError && (
-          <div className="pdf-viewer-error">
+          <div className="pdf-viewer-overlay">
             <p className="form-error m-0">{displayError}</p>
             {onRetry && (
               <button type="button" className="btn-secondary mt-3" onClick={onRetry}>
@@ -469,13 +497,8 @@ export default function PdfDocumentViewer({
             )}
           </div>
         )}
-        {busy && !displayError && (
-          <div className="pdf-viewer-loading">Loading document…</div>
-        )}
-        {!busy && !displayError && blob && (
-          <div ref={viewportRef} className="pdf-viewer-viewport" onWheel={onViewportWheel}>
-            <div ref={pagesHostRef} className="pdf-viewer-pages" style={pagesStyle} />
-          </div>
+        {busy && !displayError && !firstPagePainted && (
+          <div className="pdf-viewer-overlay">Loading document…</div>
         )}
       </div>
     </div>

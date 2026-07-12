@@ -51,6 +51,12 @@ export interface PanelCompletionReportData {
   compositeKpi: number;
   projectDurationDays: number;
   rework: { count: number; status: string; reason: string };
+  approval: {
+    approved: boolean;
+    approvedAt: Date | null;
+    approvedBy: { fullName: string } | null;
+    reviewStatus: string | null;
+  };
   technicianRemarks: string[];
   supervisorRemarks: string;
   generatedBy: string;
@@ -145,6 +151,8 @@ export async function collectPanelCompletionReportData(
   if (assignment?.technician_id) userIds.add(assignment.technician_id);
   if (assignment?.assigned_by) userIds.add(assignment.assigned_by);
   if (assignment?.handover_from_id) userIds.add(assignment.handover_from_id);
+  if (assignment?.approved_by) userIds.add(assignment.approved_by);
+  if (assignment?.reviewed_by) userIds.add(assignment.reviewed_by);
   for (const a of assignments) {
     if (a.technician_id) userIds.add(a.technician_id);
     if (a.assigned_by) userIds.add(a.assigned_by);
@@ -157,6 +165,7 @@ export async function collectPanelCompletionReportData(
 
   const tech = assignment ? userMap.get(assignment.technician_id) : null;
   const assignedBy = assignment?.assigned_by ? userMap.get(assignment.assigned_by) : null;
+  const approvedByUser = assignment?.approved_by ? userMap.get(assignment.approved_by) : null;
 
   let midChangeTechnician: { fullName: string; username: string } | null = null;
   if (assignments.length > 1) {
@@ -316,6 +325,16 @@ export async function collectPanelCompletionReportData(
           : 'None',
       reason: assignment?.rework_reason || '',
     },
+    approval: {
+      // `supervisor_approved` defaults to true in the schema, so `approved_at`
+      // is the reliable signal that a supervisor explicitly signed off.
+      approved: !!assignment?.approved_at,
+      approvedAt: assignment?.approved_at || null,
+      approvedBy: approvedByUser
+        ? { fullName: approvedByUser.full_name || approvedByUser.username || '' }
+        : null,
+      reviewStatus: assignment?.review_status || null,
+    },
     technicianRemarks: technicianNotes,
     supervisorRemarks: assignment?.review_notes || '',
     generatedBy: generatedBy || 'Production Supervisor',
@@ -340,6 +359,10 @@ export function serializePanelCompletionReportForApi(data: PanelCompletionReport
       loginAt: s.loginAt.toISOString(),
       logoutAt: s.logoutAt?.toISOString() ?? null,
     })),
+    approval: {
+      ...data.approval,
+      approvedAt: data.approval.approvedAt?.toISOString() ?? null,
+    },
     generatedAt: data.generatedAt.toISOString(),
   };
 }

@@ -479,6 +479,147 @@
 [data-theme] .modal-overlay .modal-meta,
 [data-theme] .modal-overlay .modal-kicker { color: var(--t-muted); }
 
+/* ── Shared popup typography ────────────────────────────────────────────────
+   The modal-box selectors are intentional: shared Modal dialogs inherit these
+   automatically, as do the few legacy dialogs that use a modal box directly.
+   This keeps future popup work centralized. User Management carries the opt-out
+   class because it already has an approved visual language. */
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) {
+  font-family: var(--font-family-sans, Inter, Roboto, system-ui, sans-serif);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  font-weight: 500;
+  letter-spacing: 0.002em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-title {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-subtitle {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(h3, h4, h5, h6) {
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.form-label, label:not(.btn-primary):not(.btn-secondary):not(.btn-danger):not(.btn-warning)) {
+  font-weight: 600;
+  line-height: 1.4;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.form-input, .form-input-lg, .form-select, .form-textarea, input, select, textarea) {
+  font-weight: 500;
+  line-height: 1.45;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management)
+  :is(.modal-footer button, .modal-body button, .btn, .btn-primary, .btn-primary-lg, .btn-secondary, .btn-danger, .btn-warning, .btn-success) {
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.005em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.text-slate-400, .text-slate-500, .modal-meta, .modal-kicker) {
+  color: var(--t-muted);
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is([role="alert"], .form-error) {
+  font-weight: 600;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(label:has(input[type="checkbox"]), label:has(input[type="radio"])) {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body :is(th, [role="columnheader"]) {
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body :is(td, [role="cell"]) {
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* These project-level dialogs do not use the shared Modal component. */
+[data-theme] :is(.project-gate-dialog, .dwf-modal, .dwf-tablet-root, .dwf-workspace) {
+  font-family: var(--font-family-sans, Inter, Roboto, system-ui, sans-serif);
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(.project-gate-title, .dwf-modal-title, .dwf-workspace-title) {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+[data-theme] :is(.project-gate-subtitle, .dwf-modal-sub, .dwf-modal-kicker, .dwf-workspace-kicker, .dwf-workspace-sub) {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] .dwf-workspace :is(.dwf-table thead th, .dwf-table tbody td) {
+  line-height: 1.4;
+}
+[data-theme] .dwf-workspace .dwf-table thead th {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+[data-theme] .dwf-workspace .dwf-table tbody td {
+  font-weight: 500;
+}
+
 /* Upload menu + dropzone */
 [data-theme] .upload-menu { background: var(--t-elev); border-color: var(--t-border-strong); color: var(--t-text); }
 [data-theme] .upload-menu-item:hover { background: var(--t-surface-2); }

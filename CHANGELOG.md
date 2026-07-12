@@ -6,6 +6,57 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-11 — Fix — Layout stability: decouple layout from hardcoded topbar height (root cause), measure it at runtime
+
+- **Scope:** `src/styles/design-system.css`, `src/components/layout/AppShell.tsx` (+ read-only probes `scripts/layout-stability-probe.mjs`, `layout-tablet-shots.mjs`, `layout-crossmodule-verify.mjs`). Fixes recurring layout instability (overlap/mis-sized fill) across the app, worst on tablet-portrait.
+- **Verified root cause (measured, not assumed):** the whole layout height model was pinned to a hardcoded magic number `--dash-topbar-height: 5.5rem/5.75rem` (88–92px), and the mobile nav drawer to a hardcoded `top: 64px` — but `.topbar` is a **sticky flex-wrap bar whose real height varies** with width/content: it wraps to **151px on tablet portrait (≤834px)**. Probe evidence: at 768px the topbar was 151px while the var said 88px (**63px error** in every `min-height: calc(100dvh - var(--dash-topbar-height))` on `.dash-layout`/`.dash-main`/`.dash-sidebar`), and the mobile drawer overlapped the topbar by **87px** (drawerTop 64 vs topbarBottom 151). Not transforms/z-index/overflow — those measured clean (0 horizontal overflow at all resolutions; no `position:fixed` trapped under a transform).
+- **Permanent fix (not a workaround):**
+  - Removed the fragile `min-height: calc(100dvh - var(--dash-topbar-height))` from `.dash-layout`, `.dash-main`, `.dash-main--flush`, `.dash-sidebar`. The viewport-fill is now pure flexbox — `.app-shell{min-height:100dvh;flex-column}` + sticky topbar (natural in-flow height) + `.dash-layout{flex:1}` + children `flex:1`/`align-self:stretch` — so it fills exactly at **every** resolution with no magic number.
+  - `AppShell` now measures the real topbar height with a `ResizeObserver` and writes it to `--dash-topbar-height` (px) on `.app-shell`, so the var always equals reality (updates on wrap/resize/content change). The rem values remain only as pre-hydration fallback.
+  - Mobile drawer `.dash-sidebar--mobile-open` now starts at `top: var(--dash-topbar-height)` (real height) instead of `top-16`.
+- **Result (re-measured live):** var accurate at all sizes (93px desktop / 151px tablet, ≤1px), **drawer overlap 0px** (was 87), **0 horizontal overflow** and **0 trapped-fixed** across admin/supervisor/technician/qaqc at 1440 & 768; load CLS on `/supervisor` improved 0.032 → 0.019, zero CLS on tab-switch/idle/resize.
+- **Reviewed, left as-is (evidence-backed):** z-index (no measured conflict; the topbar↔drawer overlap was positional, now resolved); the `.rwa-panel-head` sticky in a `backdrop-filter` `.rwa-project-card` is flagged by the probe but is a **tolerant** case (backdrop-filter ancestors don't break sticky-within-scroll like they break `position:fixed`) — no functional break; `admin` dashboard shows async-content CLS in `.dashboard-content` (data loading, not the layout system) — logged as a separate follow-up.
+- **Also in this session:** popup typography modernization (previous entry) confirmed still in place.
+- **Verify:** `npm run build` exit 0; live probes above; `background-attachment: fixed` and glass unchanged.
+- **Restore point:** clean `main` @ `7813073`.
+
+## 2026-07-11 — UI — Popup typography modernization (clearer weight/contrast; User Management untouched)
+
+- **Scope:** `src/styles/themes.css` (+ `scripts/modal-typography-shots.mjs`, read-only visual helper). Popup dialog text read too thin/faint; this lifts weight and contrast without touching layout or functionality.
+- **Root cause:** modal body copy inherited weight-400, and much of the secondary text used a very light grey (Tailwind `text-slate-400`/`text-slate-500`, e.g. `#94A3B8`), so descriptions/meta/help lines were hard to read (e.g. the New Project modal's "Each panel has its own name…" and "Special characters…" hints).
+- **Fix:** a scoped, unlayered block in `themes.css` (wins over Tailwind's utility layer) that (1) sets modal body copy to a medium weight (500) so unset-weight text is no longer thin, and (2) remaps the lightest greys inside dialogs to the theme's readable muted tone `--t-muted` (arctic `#334155`, slate-700). Header subtitles (which sit outside `.modal-body`) strengthened directly. Weight/colour only — **no layout, spacing, or functional change**; explicit weights (bold titles, semibold labels/buttons) are preserved.
+- **Scope guard:** applies to form/confirm dialog sizes (`.modal-box`, `-sm`, `-lg`, `-form`, `-wide`, `-xl`) which all route through the shared `Modal` component (incl. `AppDialogProvider` confirms and `DeleteConfirmModal`). **User Management is excluded** — its list modal `.modal-box-team` is omitted and its sub-dialogs (`.um-shell`/`.um-edit`/`.um-create-form`) are dropped via `:not(:has(...))`. Dense workspace modals (`.modal-box-full`/`.modal-box-fullscreen` — PDF viewer, Excel wiring grid) and non-dialog portals (toasts, popovers, tablet wiring workspace) are untouched.
+- **Verify:** `npm run build` exit 0 (CSS compiles, `:is()`/`:not(:has())` fine); before/after screenshots — New Project dialog descriptions go from faint slate-400 to clearly readable `--t-muted`; **User Management modal pixel-identical before/after** (confirmed excluded).
+- **Restore point:** clean `main` @ `7813073`.
+
+## 2026-07-11 — Bugfix — Backend/frontend run fully hidden: launcher spawns Vite/Nest directly as node (no cmd.exe window)
+
+- **Scope:** `scripts/launch-dwes.mjs`. Removes the last visible terminal from the desktop-app startup so only the app UI is shown; backend + frontend run as detached background processes.
+- **Root cause (empirically confirmed):** the launcher started the dev servers with `npm run dev` / `npm run start:dev`, which on Windows chains `node → npm-cli → cmd.exe → vite/nest`. `windowsHide` applies only to the immediate child, so the `cmd.exe` shell allocated a **visible console window** (reproduced: the npm-shell spawn created 1 new visible `cmd.exe`; direct-node spawn created 0). The retired `DWES-startup.bat` had the same issue plus an explicit persistent `start "…" cmd /k "npm run dev"` frontend window.
+- **Fix:** the launcher now resolves the local CLI entry points and spawns them **directly as `node`** — `node node_modules/vite/bin/vite.js …` (frontend dev/preview) and `node backend/node_modules/@nestjs/cli/bin/nest.js start --watch` (backend dev) — bypassing the `npm→cmd.exe` shell. Each is spawned `detached`, `windowsHide: true`, stdio → `logs/*.log`, and `unref()`'d, so no console appears and the servers survive the launcher (and wscript) exiting — there is no terminal to keep open or close. Prod backend was already direct `node dist/main.js`. Falls back to the npm script if a CLI entry is missing.
+- **Wiring (already in place, verified this session):** autostart = `DWES App` scheduled task (`AtLogOn`, 60 s delay) → `start-dwes-silent.vbs` → `launch-dwes.mjs`; desktop `DWES.lnk` → `Start DWES (Hidden).vbs` → same launcher. Legacy `DWES-startup.bat` and the separate `DWES Backend` prod task are retired/unregistered (they were the source of the visible frontend console).
+- **No behavior change** to ports, health-gating, recovery, logging, or the app window; only the process-spawn transport changed.
+- **Verify:** `node --check scripts/launch-dwes.mjs` OK; `node …/@nestjs/cli/bin/nest.js --version` → `10.4.9` (direct invocation works); empirical Win32 `IsWindowVisible` test — direct-node Vite spawn = **0 new visible windows (PASS)**, old npm-shell spawn = **1 new `cmd.exe` window (FAIL)**; live stack (`:3001`/`:5175`) untouched; throwaway test ports cleaned up.
+- **Restore point:** clean `main` @ `7813073`.
+
+## 2026-07-11 — App-wide — Project removal redesigned to one permanent-delete workflow
+
+- **Scope:** `src/constants/projectDeletion.ts`, `src/pages/supervisor/tabs/ProjectsTab.tsx`, `src/pages/admin/tabs/DeleteProjectTab.tsx`, `src/services/api.ts`, `backend/src/projects/projects.service.ts`, `backend/src/admin/admin.controller.ts`, `backend/src/admin/admin.service.ts`.
+- **UI change (all project-delete screens):** project deletion now uses one simple modal with only: (1) a clear permanent-delete warning, (2) one confirmation checkbox, and (3) buttons **Cancel** + **Delete Project Permanently**.
+- **Removed from app delete UX:** soft-delete behavior, Remove from List option, Delete Everything Related option toggles, preservation messaging, backup messaging, precheck detail panels, and other multi-scope delete choices.
+- **Consistency update:** Supervisor and System Admin now share the same warning text and checkbox wording through a shared `projectDeletion` constants module.
+- **Backend deletion behavior:** both supervisor delete (`DELETE /api/projects/:code`) and admin hard delete (`POST /api/admin/projects/:code/hard-delete`) permanently remove project-related database rows and storage files, including `panel_inspections`, `tech_assignments`, `file_hashes`, `tech_audit_log`, `session_log`, project row/cache records, and `uploads/<PROJECT_CODE>/`.
+- **Result:** the default and only project deletion workflow in DWES is permanent deletion of the selected project and all related data/files.
+
+## 2026-07-11 — Bugfix — View Drawing renders blank: PdfDocumentViewer viewport measurement
+
+- **Scope:** `src/components/ui/PdfDocumentViewer.tsx`, `src/styles/design-system.css`, `scripts/drawing-viewer-smoke.mjs` (new read-only regression smoke). Fixes the Supervisor "View Drawing" popup (and the report/project PDF preview modals that share the viewer) showing a blank viewer instead of the PDF.
+- **Root cause:** the scroll viewport that hosts the rendered canvases was conditionally unmounted whenever `loading`/`rendering` was true, but the `ResizeObserver` measuring its width attached once on mount with `[]` deps. At mount the viewport was unmounted (busy), so the observer never bound to a live node, `containerWidth` stayed `0`, and the page-render effect bailed at its `containerWidth <= 0` guard — no canvases were ever appended (permanently blank; deterministic for the report preview modal which passes `loading=true`).
+- **Fix:** the viewport + canvas host now stay mounted for the component's lifetime (observer stays bound; size seeded synchronously via `getBoundingClientRect` so the first paint doesn't wait on the async RO callback); loading/error render as an overlay (`.pdf-viewer-overlay`) on top instead of replacing the viewport. Added `firstPagePainted` so multi-page drawings become readable as soon as page 1 paints (overlay no longer lingers over already-rendered pages), and the host is cleared on document teardown.
+- **Behavior preserved:** zoom in/out, fit width, fit page, page navigation, search, fullscreen, and download are unchanged; no API/schema change (drawing file endpoint `GET /projects/:code/drawings/:id/file` already worked).
+- **Verify:** `npm run build` exit 0; new `scripts/drawing-viewer-smoke.mjs` drives the real Supervisor flow against project `132KV33KV_KSA_RIYADH_2026_001` (37-page drawing) — 6/6 PASS: button enables, canvas renders non-blank (1366×965), page count `/ 37`, no error overlay, zoom keeps pages rendered, no PDF console errors; screenshot confirms the drawing content renders with no overlay.
+- **Restore point:** clean `main` @ `7813073`.
+
 ## 2026-07-10 — Infra — Audit fixes: deploy health-gate, TLS renewal, env quoting + canonical values
 
 - **Scope:** `infra/oci/scripts/redeploy-dev.sh`, `infra/docker/docker-compose.yml`, `infra/docker/.env.{dev,production}.example`, `docs/{DEV-DEPLOY,BACKUP-RESTORE-OCI,OCI-RUNBOOK}.md`, `.dockerignore`. Applies the production-readiness audit's active-path findings.
@@ -304,11 +355,11 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -332,11 +383,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -362,11 +413,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -390,11 +441,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -417,11 +468,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -451,11 +502,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -479,11 +530,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -507,11 +558,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -535,11 +586,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -565,11 +616,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -594,11 +645,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -622,11 +673,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 
 ## 2026-07-09 ? Maintenance ? Phase A workspace cleanup
@@ -650,11 +701,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? QA ? Final production-readiness verification pass
 
@@ -671,11 +722,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 - **Summary:** Replaced generic `dialog.prompt` delete flow on Supervisor Projects with a dedicated **Delete Panel** modal (`size="lg"`). Bento info card (panel, project, voltage, type), glass warning shell, highlighted confirmation phrase with **Copy** button, real-time phrase validation (valid/invalid states), disabled Delete until exact match, danger/secondary footer actions. Success state stays open until Close.
 - **Validation polish:** `design-system.css` ? `tech-panel-row` + extended `rwa-panel-*` cells exempt from blur; unified `kpi-card` hover (`-1px` + `glass-shadow-hover`); `dashboard-hero` / `rwa-project-card` border-radius ? `--bento-radius`; removed hover lift on non-interactive `dashboard-hero`.
@@ -689,11 +740,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UX ? Delete Panel confirmation dialog redesign
 
@@ -708,11 +759,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UX ? Premium Liquid Glass UI (app-wide, selective)
 
@@ -728,11 +779,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UX ? Premium Liquid Glass + Bento Grid design system
 
@@ -751,11 +802,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UX ? Workspace header layout fix
 
@@ -771,11 +822,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 - **Summary:** Added development-only **Hard Reset DB** ? wipes all projects, wiring data, uploads, session log, WebAuthn credentials, duplicate hash cache, and in-memory frame/drawing stores; re-seeds 5 canonical demo projects; clears client storage and reloads. Guarded by `DEMO_MODE=true` or `ALLOW_DEV_HARD_RESET=true`; UI visible only in Vite dev build + backend flag. Backup-first (`pg_dump` + uploads archive). User accounts preserved.
 - **Endpoints:** `GET/POST /api/dev/hard-reset` (system_admin; 404/403 when gated off)
@@ -790,11 +841,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UX ? Duplicate panel warning dismiss (?)
 
@@ -809,11 +860,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Duplicate panel resolver (rename/select/clear)
 
@@ -830,11 +881,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? QA ? Master bundle verify ? debug ? harden (`DWES_MASTER_verify_debug_harden.md`)
 
@@ -855,11 +906,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Feature ? Global duplicate panel name guard
 
@@ -874,11 +925,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Refactor ? Wiring & Drawing popup unified View/Replace
 
@@ -894,11 +945,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Spec ? Wiring & Drawing module compliance (`DWES_Wiring_Drawing_Module_Spec.md`)
 
@@ -914,11 +965,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Duplicate panel delete propagation
 
@@ -934,11 +985,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Feature ? Replace upload guards (wiring + drawing)
 
@@ -954,11 +1005,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Feature ? Supervisor Upload+View merged modals
 
@@ -974,11 +1025,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Status workspace live data refresh
 
@@ -994,11 +1045,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Feature ? Supervisor View Wiring schedule (superseded)
 
@@ -1012,11 +1063,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Excel Wiring Upload parses all worksheet rows
 
@@ -1034,11 +1085,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Project Report pdf.js inline renderer
 
@@ -1056,11 +1107,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Supervisor Projects Active Panel dropdown
 
@@ -1076,11 +1127,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Project Report inline PDF viewer
 
@@ -1096,11 +1147,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Excel Wiring Upload full-view rendering
 
@@ -1115,11 +1166,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? QA ? Stabilization pass (verify ? debug ? test ? harden)
 
@@ -1134,11 +1185,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Brand ? App icon matched to canonical Ingenious logo
 
@@ -1154,11 +1205,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Global popup/modal shell redesign
 
@@ -1173,11 +1224,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Report ? Project Completion Report spec alignment (panel PDF + preview)
 
@@ -1193,11 +1244,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Excel Wiring Upload full-view Excel-like redesign
 
@@ -1211,11 +1262,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Brand ? Premium desktop app icon redesign
 
@@ -1229,11 +1280,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Excel Wiring Upload full view + hidden column filter
 
@@ -1247,11 +1298,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Supervisor Projects toolbar shorter action labels
 
@@ -1265,11 +1316,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Workspace shell & design-system modernization
 
@@ -1283,11 +1334,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Excel Wiring Upload unified design system
 
@@ -1301,11 +1352,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Excel Wiring Upload compact column selection + contrast
 
@@ -1319,11 +1370,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Technician Workflow dashboard-scoped selection
 
@@ -1337,11 +1388,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Status workspace collapsible project cards
 
@@ -1355,11 +1406,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? User Management premium redesign
 
@@ -1373,11 +1424,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Technician Workflow simplification + Status tab
 
@@ -1391,11 +1442,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Review & Approval unified workspace
 
@@ -1409,11 +1460,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Technician Workflow consolidated modal
 
@@ -1427,11 +1478,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Excel Wiring Upload full-screen worksheet grid
 
@@ -1445,11 +1496,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Report ? Project Completion PDF executive redesign
 
@@ -1463,11 +1514,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Panel report download filename (Windows-safe)
 
@@ -1481,11 +1532,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Project Information Card structured layout
 
@@ -1499,11 +1550,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Per-panel metadata on create, add panel, info card
 
@@ -1517,11 +1568,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Fix ? Supervisor panel list loading race
 
@@ -1535,11 +1586,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? New Project popup redesign (supervisor)
 
@@ -1553,11 +1604,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Branding ? Desktop icon (premium compact mark)
 
@@ -1571,11 +1622,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Projects single info card (panel-scoped metadata)
 
@@ -1589,11 +1640,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? Projects panel list identity + empty state
 
@@ -1606,11 +1657,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? User Management table column balance
 
@@ -1623,11 +1674,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FEAT ? Panel Project Completion Report (live PDF)
 
@@ -1641,11 +1692,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? User Management table + unified Edit popup
 
@@ -1659,11 +1710,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? UI ? User Management modal responsive redesign
 
@@ -1677,11 +1728,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FEAT ? Projects panel list, duplicate guard, upload headers
 
@@ -1695,11 +1746,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FIX ? Topbar project/user pill text contrast
 
@@ -1713,11 +1764,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FEAT ? Supervisor Projects panel selector + DWES icon refresh
 
@@ -1731,11 +1782,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FIX ? supervisor Projects action toolbar sizing
 
@@ -1749,11 +1800,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FIX ? Supervisor hero matches admin/director
 
@@ -1767,11 +1818,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? MCP config + Section 8 (files sync)
 
@@ -1785,11 +1836,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Revalidate project skills (artifact sync)
 
@@ -1802,11 +1853,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? Project skills sync (`dwes-project-skill.mdc`)
 
@@ -1820,11 +1871,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 - **Summary:** Reorganized All Projects action buttons into a compact flex toolbar (consistent 40px height, even spacing). Added supervisor-scoped gradient hero header (`dashboard-hero--supervisor`). Hid mid-changeover alert strips on the Projects tab; Mid-Changeover tab unchanged.
 - **Files:** `SupervisorDashboard.tsx`, `ProjectsTab.tsx`, `SupervisorAlertStrips.tsx`, `design-system.css`, `PROJECT_STATUS.md`, `CHANGELOG.md`
@@ -1837,11 +1888,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FIX ? Workspace sidebar height (reinforced)
 
@@ -1855,11 +1906,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-08 ? FIX ? Workspace sidebar height alignment
 
@@ -1873,11 +1924,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? FIX ? stale Vite proxy 502 (login "Can't reach server")
 
@@ -1891,11 +1942,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? FIX ? backend autostart VBS syntax error
 
@@ -1909,11 +1960,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? REVERT ? tech-ui-v2 layout redesign + dwes-modern-ui
 
@@ -1926,11 +1977,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Technician Dashboard layout redesign (`.tech-ui-v2`)
 
@@ -1945,11 +1996,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? dwes_general_modern_ui_prompt ? technician scoped modern UI
 
@@ -1964,11 +2015,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? REVERT ? Prompt 07 technician-surface styling
 
@@ -1981,11 +2032,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? REVERT ? Prompt.md vibrant color system
 
@@ -1998,11 +2049,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? pause modal reason-only
 
@@ -2017,11 +2068,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? streamlined wiring workflow + full schedule reference
 
@@ -2036,11 +2087,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? tablet-optimized wiring execution UI
 
@@ -2055,11 +2106,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? embedded Digital Wiring workspace (no popup)
 
@@ -2075,11 +2126,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? single-wire Digital Wiring View (technician)
 
@@ -2094,11 +2145,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt 06 ? revert technician header to original
 
@@ -2114,11 +2165,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? restore Actual Wiring View (full schedule)
 
@@ -2133,11 +2184,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? unified dashboard hero (technician)
 
@@ -2152,11 +2203,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Change-management protocol adopted
 
@@ -2172,11 +2223,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompt.md ? single-wire Digital Wiring View only
 
@@ -2192,11 +2243,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompts 4 & 5 ? dashboard buttons + focused flow refinements
 
@@ -2212,11 +2263,11 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-09 — Maintenance — Phase A disk cleanup
 
 - **Source:** User-approved Phase A cleanup (retry; dist/ remained after partial prior run).
-- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo, 
-ode_modules/.tmp/tsconfig.app.tsbuildinfo, 
+- **Removed:** dist/, ackend/tsconfig.build.tsbuildinfo,
+ode_modules/.tmp/tsconfig.app.tsbuildinfo,
 ode_modules/.tmp/tsconfig.node.tsbuildinfo. All other Phase A targets were already absent (logs/, ackend/dist/, root/backend logs, check_db.*, .design-sync/.cache/, etc.).
 - **Reclaimed:** ~9.10 MB measured before deletion (9,095,712 bytes).
-- **Verify:** 
+- **Verify:**
 pm run build exit 0 (frontend dist/ regenerated by build).
 ## 2026-07-07 ? Prompts 1?3 ? technician restructure, top bar live, wiring focus
 

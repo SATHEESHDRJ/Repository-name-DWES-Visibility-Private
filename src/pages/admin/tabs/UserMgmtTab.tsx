@@ -274,6 +274,7 @@ export default function UserMgmtTab() {
         <DeleteConfirmModal
           title="Delete User"
           subtitle="Permanent removal when allowed; otherwise deactivated."
+          typography="user-management"
           resourceKind="user"
           itemLabel={deleteUser.full_name || deleteUser.username}
           fields={[
@@ -525,6 +526,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
       title="User Details"
       onClose={onClose}
       size="lg"
+      typography="user-management"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-2">
@@ -656,6 +658,7 @@ function ResetPasswordModal({ user, saving, onClose, onReset }: {
     <Modal
       title={`Reset Password — ${user.full_name}`}
       onClose={onClose}
+      typography="user-management"
       footer={!done ? (
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
@@ -703,6 +706,7 @@ function AddUserModal({ newUser, setNewUser, saving, onClose, onCreate }: {
       title="Add New User"
       onClose={onClose}
       size="lg"
+      typography="user-management"
       footer={(
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

@@ -6,7 +6,8 @@ import { FrameStore } from '../frames/frame-store';
 import * as XLSX from 'xlsx';
 import * as ExcelJS from 'exceljs';
 import { buildCompletionReport } from '../common/completion-report.helper';
-import { getReportLogoBuffer, prependExcelReportHeader } from '../common/report-branding';
+import { getReportLogoBuffer, REPORT_COMPANY, REPORT_SYSTEM } from '../common/report-branding';
+import { collectPanelCompletionReportData } from '../common/panel-completion-report.helper';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 
 interface AnyUser { id: number; role: string | null; full_name: string | null; }
@@ -306,8 +307,14 @@ export class SupervisorService {
     };
   }
 
+  /**
+   * Panel Completion Report — professional, management-quality Excel export.
+   * Live data (project status, KPIs, timeline, working hours, approval) from the
+   * DB via collectPanelCompletionReportData, plus a fully-styled cable execution
+   * table. Branded, print-friendly (landscape, fit-to-width, repeating header).
+   */
   async panelReportXlsx(projectCode: string, frameId: string): Promise<Buffer> {
-    assertPanelNameUniqueForWrite(projectCode, frameId);
+    const data = await collectPanelCompletionReportData(this.prisma, projectCode, frameId, 'Production Supervisor');
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
@@ -316,40 +323,180 @@ export class SupervisorService {
     const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
     const techMap = new Map(techs.map(t => [t.id, t]));
 
-    const headers = ['S.No', 'Ferrule', 'Source', 'Destination', 'Color', 'Size', 'Src Done', 'Dst Done', 'Note', 'Technician'];
+    // ── palette (ARGB) ──
+    const A = (hex: string) => `FF${hex}`;
+    const NAVY = A('0F2557'), BLUE = A('2563EB'), INK = A('0F172A'), SLATE = A('475569');
+    const LABEL = A('64748B'), BORDER = A('CBD5E1'), ZEBRA = A('F5F8FC'), HEAD_BG = A('1E293B'), WHITE = A('FFFFFF');
+    const GREEN = A('15803D'), GREENBG = A('DCFCE7'), AMBER = A('B45309'), AMBERBG = A('FEF3C7'), BLUEBG = A('EFF6FF');
+    const thin = { style: 'thin' as const, color: { argb: BORDER } };
+    const boxBorder = { top: thin, left: thin, right: thin, bottom: thin };
+
+    const fmt = (d: Date | null | undefined): string => {
+      if (!d) return '—';
+      const dt = d instanceof Date ? d : new Date(d);
+      if (isNaN(dt.getTime())) return '—';
+      const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()];
+      return `${String(dt.getUTCDate()).padStart(2, '0')} ${mon} ${dt.getUTCFullYear()} ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')} UTC`;
+    };
+
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'DWES — Digital Wiring Execution System';
-    const sheetName = (frame.panel_name || frameId).replace(/[\\/*?[\]:]/g, '').slice(0, 31);
-    const ws = wb.addWorksheet(sheetName);
-    ws.columns = [8, 14, 22, 22, 8, 8, 10, 10, 20, 20].map(w => ({ width: w }));
-    const dataStart = await prependExcelReportHeader(wb, ws, {
-      title: `Panel Report — ${frame.panel_name || frameId}`,
-      subtitle: `${projectCode} · ${frame.cable_count || frame.cables.length} cables`,
-      colCount: headers.length,
+    wb.creator = REPORT_COMPANY;
+    wb.created = new Date();
+    const sheetName = (frame.panel_name || frameId).replace(/[\\/*?[\]:]/g, '').slice(0, 28) || 'Panel Report';
+    const ws = wb.addWorksheet(sheetName, {
+      pageSetup: {
+        orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+        margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+      },
     });
-    const hdr = ws.getRow(dataStart);
-    headers.forEach((label, i) => {
-      const cell = hdr.getCell(i + 1);
-      cell.value = label;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    const COLS = 11;
+    const LAST = 'K';
+    ws.columns = [6, 16, 22, 22, 14, 10, 8, 8, 14, 22, 34].map(w => ({ width: w }));
+    const mergeRow = (r: number) => { try { ws.mergeCells(`A${r}:${LAST}${r}`); } catch { /* merged */ } };
+
+    // ── Header: logo on WHITE, company on the right, then navy title band ──
+    try { ws.mergeCells('A1:D1'); } catch { /* */ }
+    try { ws.mergeCells('E1:K1'); } catch { /* */ }
+    ws.getRow(1).height = 44;
+    for (const col of ['A', 'E']) {
+      ws.getCell(`${col}1`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WHITE } };
+    }
+    const logoBuf = getReportLogoBuffer();
+    if (logoBuf) {
+      const id = wb.addImage({ buffer: logoBuf as any, extension: 'png' });
+      const h = 38, w = Math.round((h * 332) / 175); // aspect-correct (native 332×175)
+      ws.addImage(id, { tl: { col: 0.1, row: 0.15 }, ext: { width: w, height: h } });
+    }
+    const co = ws.getCell('E1');
+    co.value = `${REPORT_COMPANY}\n${REPORT_SYSTEM}`;
+    co.font = { bold: true, size: 11, color: { argb: NAVY } };
+    co.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true, indent: 1 };
+
+    mergeRow(2); ws.getRow(2).height = 22;
+    const t2 = ws.getCell('A2');
+    t2.value = `PANEL COMPLETION REPORT — ${data.panel.name}`;
+    t2.font = { bold: true, size: 12, color: { argb: WHITE } };
+    t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+    t2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+    mergeRow(3); ws.getRow(3).height = 16;
+    const t3 = ws.getCell('A3');
+    t3.value = `${projectCode.replace(/_/g, ' ')}  ·  Client: ${data.project.client || '—'}  ·  Generated ${fmt(data.generatedAt)}`;
+    t3.font = { size: 9, color: { argb: SLATE } };
+    t3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUEBG } };
+    t3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+    // ── Summary section ──
+    const bar = (r: number, text: string) => {
+      mergeRow(r); ws.getRow(r).height = 18;
+      const c = ws.getCell(`A${r}`);
+      c.value = text;
+      c.font = { bold: true, size: 9, color: { argb: WHITE } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+      c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    };
+    const pair = (r: number, l1: string, v1: string, l2: string, v2: string) => {
+      ws.getRow(r).height = 15;
+      const put = (lCell: string, vStart: string, vEnd: string, label: string, value: string) => {
+        const lc = ws.getCell(`${lCell}${r}`);
+        lc.value = label.toUpperCase();
+        lc.font = { bold: true, size: 7.5, color: { argb: LABEL } };
+        lc.alignment = { vertical: 'middle', indent: 1 };
+        try { ws.mergeCells(`${vStart}${r}:${vEnd}${r}`); } catch { /* */ }
+        const vc = ws.getCell(`${vStart}${r}`);
+        vc.value = value;
+        vc.font = { size: 9, color: { argb: INK } };
+        vc.alignment = { vertical: 'middle', indent: 1 };
+      };
+      try { ws.mergeCells(`A${r}:B${r}`); } catch { /* */ }
+      put('A', 'C', 'E', l1, v1);
+      try { ws.mergeCells(`F${r}:G${r}`); } catch { /* */ }
+      put('F', 'H', 'K', l2, v2);
+    };
+
+    const reworkLabel = data.rework.count > 0 ? `${data.rework.count} · ${data.rework.status}` : 'None';
+    const approvalText = data.approval.approved
+      ? `Approved · ${fmt(data.approval.approvedAt)}`
+      : data.technician ? 'Pending supervisor approval' : 'Not yet submitted';
+
+    // Substation = first segment of the composite project name (matches the PDF).
+    const substation = (data.project.name || '').split(/\s+[–—-]\s+/)[0].trim() || data.project.name || '—';
+    bar(5, 'EXECUTION SUMMARY');
+    pair(6, 'Project', substation, 'Final status', data.reportStatusLabel);
+    pair(7, 'Panel / subpanel', data.panel.name, 'Completion', `${data.completionPercent}%`);
+    pair(8, 'Client', data.project.client || '—', 'Cables (done / total)', `${data.cables.completed} / ${data.cables.total}`);
+    pair(9, 'Region / location', data.project.locationRegion || '—', 'Wiring KPI', `${data.kpi}%`);
+    pair(10, 'Voltage', data.panel.voltageLevel || '—', 'Rework', reworkLabel);
+    pair(11, 'Assigned technician', data.technician?.fullName || '—', 'Production supervisor', data.supervisor?.fullName || '—');
+    pair(12, 'Wiring start', fmt(data.wiring.startedAt), 'Wiring completion', fmt(data.wiring.completedAt));
+    pair(13, 'Working hours', data.totalWorkingHours, 'Project duration', `${data.projectDurationDays} day(s)`);
+    pair(14, 'Approval', approvalText, 'Approved by', data.approval.approvedBy?.fullName || '—');
+
+    // ── Cable execution detail table ──
+    bar(16, 'CABLE EXECUTION DETAIL');
+    const headerRow = 17;
+    const headers = ['#', 'Ferrule', 'Source', 'Destination', 'Wire Color', 'Size', 'Src', 'Dst', 'Status', 'Technician', 'Remarks'];
+    const hr = ws.getRow(headerRow); hr.height = 22;
+    headers.forEach((h, i) => {
+      const c = hr.getCell(i + 1);
+      c.value = h;
+      c.font = { bold: true, size: 9, color: { argb: WHITE } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_BG } };
+      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      c.border = boxBorder;
     });
-    let rowNum = dataStart + 1;
+
+    const centerCols = new Set([1, 6, 7, 8, 9]);
+    let r = headerRow + 1;
     frame.cables.forEach((cable, idx) => {
-      let found: any = null;
+      let cs: any = null; let techId: number | undefined;
       for (const a of assignments) {
-        const cs = parseCS(a.cable_status);
-        const st = cs[String(idx)];
-        if (st) { found = { ...st, techId: a.technician_id }; break; }
+        const parsed = parseCS(a.cable_status);
+        if (parsed[String(idx)]) { cs = parsed[String(idx)]; techId = a.technician_id; break; }
       }
-      const tech = found ? techMap.get(found.techId) : null;
-      ws.getRow(rowNum).values = [
-        cable.sno, cable.ferrule, cable.source, cable.destination, cable.color || '', cable.size || '',
-        found?.src ? 'YES' : 'NO', found?.dst ? 'YES' : 'NO', found?.note || '', tech?.full_name || '',
+      const src = !!cs?.src, dst = !!cs?.dst, issue = !!cs?.issue;
+      const status = issue ? 'Issue' : (src && dst) ? 'Completed' : (src || dst) ? 'In Progress' : 'Pending';
+      const tech = techId ? techMap.get(techId) : null;
+      const row = ws.getRow(r);
+      row.values = [
+        cable.sno ?? idx + 1, cable.ferrule || '', cable.source || '', cable.destination || '',
+        cable.color || '', cable.size || '', src ? 'YES' : '—', dst ? 'YES' : '—',
+        status, tech?.full_name || '—', cs?.note || '',
       ];
-      rowNum++;
+      row.height = 15;
+      const zebra = (r - headerRow) % 2 === 0;
+      row.eachCell({ includeEmpty: true }, (c, col) => {
+        if (col > COLS) return;
+        c.border = boxBorder;
+        c.font = { size: 8.5, color: { argb: INK } };
+        c.alignment = { vertical: 'middle', horizontal: centerCols.has(col) ? 'center' : 'left', wrapText: col === 11, indent: centerCols.has(col) ? 0 : 1 };
+        if (zebra) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
+      });
+      const sc = row.getCell(9);
+      const stStyle = status === 'Completed' ? { fg: GREEN, bg: GREENBG }
+        : status === 'Issue' ? { fg: AMBER, bg: AMBERBG }
+          : status === 'In Progress' ? { fg: BLUE, bg: BLUEBG }
+            : { fg: SLATE, bg: null as string | null };
+      sc.font = { size: 8.5, bold: true, color: { argb: stStyle.fg } };
+      if (stStyle.bg) sc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: stStyle.bg } };
+      r++;
     });
+    if (frame.cables.length === 0) {
+      mergeRow(r);
+      const c = ws.getCell(`A${r}`);
+      c.value = 'No cables in this panel schedule.';
+      c.font = { italic: true, size: 9, color: { argb: LABEL } };
+      c.alignment = { horizontal: 'center', vertical: 'middle' };
+      c.border = boxBorder;
+    }
+
+    // ── Freeze header, filter, print titles, footer ──
+    ws.views = [{ state: 'frozen', ySplit: headerRow, showGridLines: false }];
+    ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow, column: COLS } };
+    ws.pageSetup.printTitlesRow = `${headerRow}:${headerRow}`;
+    ws.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Panel Completion Report&R&8Page &P of &N`;
+
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 

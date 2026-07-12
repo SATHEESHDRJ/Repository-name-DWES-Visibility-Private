@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore, FrameData } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
@@ -112,13 +114,50 @@ export class ProjectsService {
   async remove(code: string) {
     const p = await this.prisma.projects.findUnique({ where: { code } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
-    if (p.is_active === false) return { message: 'Project already deleted' };
-    // Data-safe SOFT delete: hide the project but PRESERVE all real history —
-    // tech_assignments, file_hashes, panel_inspections and frame/drawing files are
-    // left untouched. findAll() filters is_active=true so it disappears from the list.
-    // (Avoids destroying wiring history and avoids FK errors from panel_inspections.)
-    await this.prisma.projects.update({ where: { code }, data: { is_active: false } });
-    return { message: 'Project deleted' };
+
+    const uploadBase = process.env.UPLOAD_ROOT || path.resolve(process.cwd(), 'uploads');
+    const projectUploadsDir = path.join(uploadBase, code);
+
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: code },
+      select: { id: true },
+    });
+    const assignmentIds = assignments.map(a => a.id);
+
+    const inspectionDelete = assignmentIds.length
+      ? await this.prisma.panel_inspections.deleteMany({
+          where: { assignment_id: { in: assignmentIds } },
+        })
+      : { count: 0 };
+
+    const assignmentDelete = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
+    const hashDelete = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
+    const auditDelete = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
+    const sessionDelete = await this.prisma.session_log.deleteMany({ where: { project_code: code } });
+
+    await this.prisma.projects.delete({ where: { code } });
+
+    MockStore.frames = MockStore.frames.filter(frame => frame.project_code !== code);
+    MockStore.drawings = MockStore.drawings.filter(drawing => drawing.project_code !== code);
+
+    let uploadsRemoved = false;
+    if (fs.existsSync(projectUploadsDir)) {
+      fs.rmSync(projectUploadsDir, { recursive: true, force: true });
+      uploadsRemoved = true;
+    }
+
+    return {
+      message: `Project "${code}" permanently deleted.`,
+      deleted: {
+        inspections: inspectionDelete.count,
+        assignments: assignmentDelete.count,
+        file_hashes: hashDelete.count,
+        audit_logs: auditDelete.count,
+        session_logs: sessionDelete.count,
+        project_row: 1,
+        uploads_removed: uploadsRemoved,
+      },
+    };
   }
 
   async setState(code: string, state: string) {

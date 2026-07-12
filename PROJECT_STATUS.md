@@ -1,7 +1,7 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-10 (audit fixes H1/H2/M1/M2/M3 + canonical email/domain)  
-**Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
+**Last updated:** 2026-07-11 (app-wide project removal redesigned to one permanent-delete workflow)
+**Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
 ---
@@ -70,11 +70,15 @@
 | **App-wide** — Liquid Glass design system (selective glassmorphism on shells, cards, modals, forms) | **DONE** (2026-07-08) |
 | **App-wide** — Bento Grid layouts (role dashboards, KPI strips, user mgmt, upload sections) | **DONE** (2026-07-08) |
 | **App-wide** — Dense data tables/grids exempt from glass blur (wrappers only) | **DONE** (2026-07-08) |
+| **App-wide** — Popup typography modernized (medium-weight body + readable `--t-muted` secondary text) on all dialogs except User Management + workspace modals; unlayered rule in `themes.css` | **DONE** (2026-07-11) |
+| **App-wide** — Layout stability: viewport-fill is now pure flexbox (removed `calc(100dvh - --dash-topbar-height)` magic numbers); `--dash-topbar-height` measured live by `AppShell` ResizeObserver; mobile drawer offset from the real topbar height. Fixes tablet-portrait topbar-wrap overlap (was 87px) + height mismatch (was 63px). Verified 0 h-overflow / 0 trapped-fixed across roles @1440 & 768 | **DONE** (2026-07-11) |
 | **App-wide** — Dashboard data refresh: event-driven (`dwes:frames-changed`, `dwes:workflow-changed`, `dwes:documents-changed`) + 45 s idle poll; no 4 s rogue intervals | **DONE** (2026-07-09) |
+| **App-wide** — Project removal uses one permanent-delete workflow across Supervisor and System Admin (single warning + one checkbox + Cancel/Delete Project Permanently) | **DONE** (2026-07-11) |
 | **Supervisor** — Delete Panel confirmation modal (unified `DeleteConfirmModal`, checkbox ack, backup-first API) | **DONE** (2026-07-09) |
+| **Supervisor** — Remove Project now uses permanent delete only (single warning + checkbox + Cancel/Delete Project Permanently) | **DONE** (2026-07-11) |
 | **Supervisor** — Digital Wiring Monitor (fullscreen read-only schedule grid + cable inspector + KPI dashboard) | **DONE** (2026-07-09) |
 | **App-wide** — Unified delete confirmation (`DeleteConfirmModal`: impact, scopes, backup status, checkbox; no type-phrase) | **DONE** (2026-07-09) |
-| **Admin** — Permanent project delete uses unified modal (still sends `confirmed_code` after checkbox) | **DONE** (2026-07-09) |
+| **Admin** — Project deletion now uses the same minimal permanent-delete modal as Supervisor (no precheck matrix/options) | **DONE** (2026-07-11) |
 | **Admin** — Hard Reset / Hard Reset DB / Reset All Projects remain phrase-gated exceptions | **DEFERRED** (2026-07-09) |
 | **Supervisor** — hero header matches admin/director (default `dashboard-hero`) | **DONE** |
 | **Supervisor** — Projects tab View Drawing / Digital Wiring View auto-enable after upload (API-validated, `documents-changed` event) | **DONE** (2026-07-09) |
@@ -182,12 +186,12 @@
 | Item | Status |
 |------|--------|
 | Default desktop shortcut = **Dev** (Vite HMR `:5175` + Nest `start:dev`) | **DONE** |
-| Silent VBS / no CMD windows | **DONE** |
+| Silent VBS / no CMD windows — launcher spawns Vite/Nest **directly as `node <cli.js>`** (no `npm→cmd.exe` shell) | **DONE** (2026-07-11 — hardened; empirically verified 0 visible windows vs. 1 `cmd.exe` for the old npm-shell path) |
 | Prod launcher (`Start DWES Prod (Hidden).vbs`, `npm run launch:prod`) | **DONE** |
 | Health wait (`GET /api/health`) before browser | **DONE** |
 | Duplicate prevention (reuse healthy stack; free wrong-mode FE only) | **DONE** |
 | Logs under `logs/` (`launcher.log`, `backend.log`, `frontend.log`) | **DONE** |
-| Autostart Task Scheduler (`npm run autostart:register`) | **READY** (author must register) |
+| Autostart Task Scheduler (`DWES App` task → `start-dwes-silent.vbs` → hidden launcher; both BE+FE detached) | **REGISTERED** (2026-07-11; desktop `DWES.lnk` → `Start DWES (Hidden).vbs`; legacy visible-frontend `DWES-startup.bat` + `DWES Backend` task retired) |
 | Docs | `scripts/LAUNCH.md`, `README.md` How to start |
 
 ---

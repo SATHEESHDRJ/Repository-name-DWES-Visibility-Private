@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
 import type { NavItem } from './Topbar';
@@ -24,8 +24,26 @@ export default function AppShell({
   sidebarNav = true,
 }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
   const { selectedProject, ownerUserId, initializeForUser } = useProjectSelectionStore();
+
+  // Keep --dash-topbar-height equal to the topbar's REAL height at all times.
+  // The topbar is a sticky flex-wrap bar whose height changes with viewport
+  // width and content (project pill, wrapping to 2 rows on tablet portrait), so
+  // any hardcoded value is wrong at some resolution. Measuring it here makes the
+  // mobile drawer offset (and any other consumer) track reality — no magic number.
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const topbar = shell.querySelector<HTMLElement>('.topbar');
+    if (!topbar || typeof ResizeObserver === 'undefined') return;
+    const apply = () => shell.style.setProperty('--dash-topbar-height', `${topbar.offsetHeight}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(topbar);
+    return () => ro.disconnect();
+  }, []);
 
   const useSidebar = sidebarNav && navItems.length > 0;
   // Project context is surfaced in the header pill, not enforced by a blocking gate.
@@ -38,7 +56,7 @@ export default function AppShell({
   }, [initializeForUser, user?.id]);
 
   return (
-    <div className="app-shell" data-ui-polish="saas">
+    <div ref={shellRef} className="app-shell" data-ui-polish="saas">
       <Topbar
         navItems={useSidebar ? [] : navItems}
         activeTab={activeTab}

@@ -141,10 +141,10 @@ export class AdminController {
   @Post('projects/:code/hard-delete')
   hardDelete(
     @Param('code') code: string,
-    @Body('confirmed_code') confirmedCode: string,
+    @Body('confirmed_code') confirmedCode?: string,
   ) {
     if (!code || code.trim() === '') throw new BadRequestException('Project code required');
-    return this.svc.hardDeleteProject(code.trim(), (confirmedCode || '').trim());
+    return this.svc.hardDeleteProject(code.trim(), (confirmedCode || code).trim());
   }
 
   // ── Hard Reset (system_admin only; backup-first; single project) ──────────

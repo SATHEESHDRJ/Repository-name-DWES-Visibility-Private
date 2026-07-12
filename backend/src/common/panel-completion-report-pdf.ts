@@ -19,6 +19,7 @@ const PAGE_H = 841.89;
 const ML = 40;
 const MR = 555;
 const CW = MR - ML;
+const LOGO_ASPECT = 332 / 175; // native dimensions of logo-full.png (keep aspect faithful)
 
 const C = {
   navy: '#0F2557',
@@ -203,7 +204,12 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
 
   const logoY = 12;
   if (logoPath) {
-    try { doc.image(logoPath, ML, logoY, { height: 34 }); } catch { /* text fallback */ }
+    const logoH = 34;
+    const logoW = Math.round(logoH * LOGO_ASPECT); // aspect-correct — no stretch
+    // White rounded card so the full-colour company mark reads cleanly on the
+    // navy header band (its dark navy elements would otherwise disappear).
+    drawBox(doc, ML - 5, logoY - 5, logoW + 12, logoH + 10, { fill: C.white, radius: 6 });
+    try { doc.image(logoPath, ML + 1, logoY, { height: logoH }); } catch { /* text fallback */ }
   }
   const headerTextX = logoPath ? ML + 92 : ML;
   drawText(doc, REPORT_COMPANY, headerTextX, logoY + 2, { font: F.bold, size: 9, color: C.white }, { lineBreak: false });
@@ -317,13 +323,24 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
   // ── Zone 7: Approval / signature footer ───────────────────────────────────
   drawBox(doc, ML, y, CW, 18, { fill: C.navy, radius: 4 });
   drawText(doc, 'APPROVAL & SIGN-OFF', ML + 10, y + 5, { font: F.bold, size: 7, color: C.white }, { lineBreak: false });
+  // Live approval status chip (right-aligned in the section bar).
+  const approvalChip = data.approval.approved
+    ? `APPROVED${data.approval.approvedAt ? ` · ${fmtDateTime(data.approval.approvedAt)}` : ''}`
+    : data.technician ? 'PENDING SUPERVISOR APPROVAL' : 'NOT YET SUBMITTED';
+  const approvalChipColor = data.approval.approved ? '#4ADE80' : data.technician ? '#FBBF24' : '#93C5FD';
+  drawText(doc, approvalChip, MR - 270, y + 5, { font: F.bold, size: 7, color: approvalChipColor }, { width: 260, align: 'right', lineBreak: false });
   y += 22;
   const sigGap = 10;
   const sigW = (CW - 2 * sigGap) / 3;
   const sigH = 54;
-  const roles = [
+  const supervisorSignName = data.approval.approvedBy?.fullName || data.supervisor?.fullName || data.generatedBy;
+  const roles: { title: string; name: string; sub?: string }[] = [
     { title: 'Technician', name: data.technician?.fullName || '' },
-    { title: 'Production Supervisor', name: data.supervisor?.fullName || data.generatedBy },
+    {
+      title: 'Production Supervisor',
+      name: supervisorSignName,
+      sub: data.approval.approved && data.approval.approvedAt ? `Approved ${fmtDateTime(data.approval.approvedAt)}` : '',
+    },
     { title: 'Client / Management', name: '' },
   ];
   roles.forEach((r, i) => {
@@ -331,10 +348,13 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
     drawBox(doc, x, y, sigW, sigH, { fill: C.white, stroke: C.border, strokeWidth: 0.75, radius: 4 });
     drawText(doc, r.title.toUpperCase(), x + 8, y + 6, { font: F.bold, size: 6.5, color: C.slate500 }, { lineBreak: false });
     if (r.name) {
-      drawText(doc, clip(r.name, 28), x + 8, y + 20, { font: F.reg, size: 8, color: C.ink }, { width: sigW - 16, lineBreak: false, ellipsis: true });
+      drawText(doc, clip(r.name, 28), x + 8, y + 18, { font: F.reg, size: 8, color: C.ink }, { width: sigW - 16, lineBreak: false, ellipsis: true });
     }
-    drawDivider(doc, x + 8, x + sigW - 8, y + 36, { color: C.slate400 });
-    drawText(doc, 'Signature / Date', x + 8, y + 42, { font: F.reg, size: 6.5, color: C.slate400 }, { lineBreak: false });
+    if (r.sub) {
+      drawText(doc, clip(r.sub, 30), x + 8, y + 28, { font: F.reg, size: 6.5, color: C.success }, { width: sigW - 16, lineBreak: false, ellipsis: true });
+    }
+    drawDivider(doc, x + 8, x + sigW - 8, y + 40, { color: C.slate400 });
+    drawText(doc, 'Signature / Date', x + 8, y + 44, { font: F.reg, size: 6.5, color: C.slate400 }, { lineBreak: false });
   });
 
   // ── Zone 8: Page footer ───────────────────────────────────────────────────
