@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
-import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore, FrameData } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { prependExcelReportHeader } from '../common/report-branding';
-import { buildProjectReportPdf, ReportCable } from '../common/report-pdf';
+import { buildProjectReportPdf, ReportCable, ReportPanel } from '../common/report-pdf';
+import { permanentlyDeleteProject } from '../common/project-delete.util';
 
 export interface CreatePanelDto {
   name: string;
@@ -15,7 +15,6 @@ export interface CreatePanelDto {
   voltage_level?: string;
   system_type?: string;
 }
-
 function parseCS(raw: string | null | undefined): Record<string, { src?: boolean; dst?: boolean }> {
   if (!raw) return {};
   try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return {}; }
@@ -112,52 +111,11 @@ export class ProjectsService {
   }
 
   async remove(code: string) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
-    if (!p) throw new NotFoundException(`Project ${code} not found`);
+    const project = await this.prisma.projects.findUnique({ where: { code } });
+    if (!project) throw new NotFoundException(`Project ${code} not found`);
 
     const uploadBase = process.env.UPLOAD_ROOT || path.resolve(process.cwd(), 'uploads');
-    const projectUploadsDir = path.join(uploadBase, code);
-
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: { project_code: code },
-      select: { id: true },
-    });
-    const assignmentIds = assignments.map(a => a.id);
-
-    const inspectionDelete = assignmentIds.length
-      ? await this.prisma.panel_inspections.deleteMany({
-          where: { assignment_id: { in: assignmentIds } },
-        })
-      : { count: 0 };
-
-    const assignmentDelete = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
-    const hashDelete = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
-    const auditDelete = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
-    const sessionDelete = await this.prisma.session_log.deleteMany({ where: { project_code: code } });
-
-    await this.prisma.projects.delete({ where: { code } });
-
-    MockStore.frames = MockStore.frames.filter(frame => frame.project_code !== code);
-    MockStore.drawings = MockStore.drawings.filter(drawing => drawing.project_code !== code);
-
-    let uploadsRemoved = false;
-    if (fs.existsSync(projectUploadsDir)) {
-      fs.rmSync(projectUploadsDir, { recursive: true, force: true });
-      uploadsRemoved = true;
-    }
-
-    return {
-      message: `Project "${code}" permanently deleted.`,
-      deleted: {
-        inspections: inspectionDelete.count,
-        assignments: assignmentDelete.count,
-        file_hashes: hashDelete.count,
-        audit_logs: auditDelete.count,
-        session_logs: sessionDelete.count,
-        project_row: 1,
-        uploads_removed: uploadsRemoved,
-      },
-    };
+    return permanentlyDeleteProject(this.prisma, code, uploadBase);
   }
 
   async setState(code: string, state: string) {
@@ -214,10 +172,30 @@ export class ProjectsService {
     const rows = await this.prisma.tech_assignments.findMany({
       where: { project_code: code },
       orderBy: { assigned_at: 'asc' },
+      include: {
+        panel_inspections: {
+          orderBy: { created_at: 'desc' },
+          take: 1,
+          include: { users: true },
+        },
+      },
     });
-    const techIds = [...new Set(rows.map(r => r.technician_id))];
-    const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
+    const userIds = [...new Set(rows.flatMap(r => [
+      r.technician_id, r.assigned_by, r.reviewed_by, r.approved_by,
+      r.panel_inspections[0]?.qc_user_id,
+    ]).filter((id): id is number => typeof id === 'number'))];
+    const techs = userIds.length ? await this.prisma.users.findMany({ where: { id: { in: userIds } } }) : [];
     const techMap = new Map(techs.map(t => [t.id, t]));
+
+    const assignedFrameIds = new Set(rows.map(a => a.frame_id));
+    const frameById = new Map<string, FrameData>();
+    for (const frame of MockStore.findFramesByProject(code)) frameById.set(frame.id, frame);
+    for (const frameId of assignedFrameIds) {
+      if (!frameById.has(frameId)) {
+        const frame = FrameStore.getFrameFromDisk(code, frameId);
+        if (frame) frameById.set(frameId, frame);
+      }
+    }
 
     const panels = rows.map(a => {
       const tech = techMap.get(a.technician_id);
@@ -225,19 +203,20 @@ export class ProjectsService {
       const kpi = cables > 0
         ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / (cables * 2)) * 1000) / 10
         : 0;
-      return { assignment: a, tech, kpi };
+      return { assignment: a, tech, kpi, frame: frameById.get(a.frame_id) ?? null };
     });
 
-    return { project, panels };
+    const unassignedFrames = [...frameById.values()]
+      .filter(frame => !assignedFrameIds.has(frame.id));
+
+    return { project, panels, techMap, unassignedFrames };
   }
 
   /** Read-only project completion PDF — does not mutate project_state (DWES policy). */
   async generateReportPdf(code: string, generatedBy = ''): Promise<{ buffer: Buffer; filename: string }> {
-    const { project, panels } = await this.collectReportData(code);
+    const { project, panels, techMap, unassignedFrames } = await this.collectReportData(code);
 
-    const reportPanels = panels.map(({ assignment: a, tech, kpi }) => {
-      const frame = MockStore.findFrameByProjectAndId(code, a.frame_id)
-        ?? FrameStore.getFrameFromDisk(code, a.frame_id);
+    const reportPanels: ReportPanel[] = panels.map(({ assignment: a, tech, kpi, frame }) => {
       const frameCables = Array.isArray((frame as any)?.cables) ? (frame as any).cables as any[] : null;
       const cableStatus = parseCS(a.cable_status);
       const cables: ReportCable[] | null = frameCables
@@ -255,7 +234,13 @@ export class ProjectsService {
             };
           })
         : null;
+      const inspection = a.panel_inspections[0];
+      const liveSeconds = (a.total_wiring_seconds || 0)
+        + (a.status === 'in_progress' && a.started_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(a.started_at).getTime()) / 1000))
+          : 0);
       return {
+        frameId: a.frame_id,
         panelName: a.panel_name || '',
         technicianName: tech?.full_name || tech?.username || '',
         technicianUsername: tech?.username || '',
@@ -266,11 +251,38 @@ export class ProjectsService {
         cablesSrcDone: a.cables_src_done || 0,
         cablesDstDone: a.cables_dst_done || 0,
         kpi,
-        wiringSeconds: a.total_wiring_seconds || 0,
+        wiringSeconds: liveSeconds,
         assignedAt: a.assigned_at || null,
+        startedAt: a.started_at || null,
+        pausedAt: a.paused_at || null,
+        completedAt: a.completed_at || null,
+        reviewedAt: a.reviewed_at || null,
+        approvedAt: a.approved_at || null,
+        reportSubmittedAt: a.report_submitted_at || null,
+        reviewerName: a.reviewed_by ? techMap.get(a.reviewed_by)?.full_name || techMap.get(a.reviewed_by)?.username || '' : '',
+        approverName: a.approved_by ? techMap.get(a.approved_by)?.full_name || techMap.get(a.approved_by)?.username || '' : '',
+        inspectionResult: inspection?.overall_result || '',
+        inspectorName: inspection?.users?.full_name || inspection?.users?.username || '',
+        pauseReason: a.pause_reason || '',
+        supervisorApproved: !!a.supervisor_approved,
         cables,
       };
     });
+    for (const frame of unassignedFrames) {
+      const cables = Array.isArray(frame.cables)
+        ? frame.cables.map(c => ({
+            source: String(c.source ?? ''), destination: String(c.destination ?? ''),
+            status: 'pending' as const, size: c.size != null ? String(c.size) : undefined,
+            color: c.color != null ? String(c.color) : undefined,
+            ferrule: c.ferrule != null ? String(c.ferrule) : undefined,
+          }))
+        : [];
+      reportPanels.push({
+        frameId: frame.id, panelName: frame.panel_name || frame.id, technicianName: '',
+        status: 'not_started', reviewStatus: 'not_ready', cablesTotal: frame.cable_count || cables.length,
+        cablesSrcDone: 0, cablesDstDone: 0, kpi: 0, wiringSeconds: 0, supervisorApproved: false, cables,
+      });
+    }
 
     const buffer = await buildProjectReportPdf({
       project: {
@@ -279,6 +291,7 @@ export class ProjectsService {
         name: project.name,
         description: project.description,
         projectState: project.project_state,
+        createdAt: project.created_at,
       },
       panels: reportPanels,
       generatedBy,
@@ -291,81 +304,91 @@ export class ProjectsService {
 
   /** Read-only project completion Excel workbook — same data as the PDF report. */
   async generateReportXlsx(code: string, generatedBy = ''): Promise<{ buffer: Buffer; filename: string }> {
-    const { project, panels } = await this.collectReportData(code);
-
-    let totalCables = 0; let totalSrc = 0; let totalDst = 0; let totalTime = 0;
-    for (const { assignment: a } of panels) {
-      totalCables += a.cables_total || 0;
-      totalSrc += a.cables_src_done || 0;
-      totalDst += a.cables_dst_done || 0;
-      totalTime += a.total_wiring_seconds || 0;
+    const { project, panels, techMap, unassignedFrames } = await this.collectReportData(code);
+    const titleize = (value?: string | null) => (value || 'not_started').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const now = Date.now();
+    const exportPanels = panels.map(({ assignment: a, tech, kpi, frame }) => {
+      const inspection = a.panel_inspections[0];
+      const seconds = (a.total_wiring_seconds || 0) + (a.status === 'in_progress' && a.started_at
+        ? Math.max(0, Math.floor((now - new Date(a.started_at).getTime()) / 1000)) : 0);
+      const cables: ReportCable[] = Array.isArray(frame?.cables) ? frame!.cables.map((c: any, i: number) => {
+        const status = parseCS(a.cable_status)[String(i)] || {};
+        return { source: String(c.source || ''), destination: String(c.destination || ''), size: c.size ? String(c.size) : '', color: c.color ? String(c.color) : '', ferrule: c.ferrule ? String(c.ferrule) : '', status: status.src && status.dst ? 'done' : status.src || status.dst ? 'partial' : 'pending' };
+      }) : [];
+      return { frameId: a.frame_id, panel: a.panel_name || frame?.panel_name || a.frame_id, technician: tech?.full_name || tech?.username || 'Unassigned', status: a.status || 'not_started', review: a.review_status || 'not_ready', inspection: inspection?.overall_result || '', inspector: inspection?.users?.full_name || inspection?.users?.username || '', cablesTotal: a.cables_total || frame?.cable_count || cables.length, src: a.cables_src_done || 0, dst: a.cables_dst_done || 0, kpi, seconds, assignedAt: a.assigned_at, startedAt: a.started_at, pausedAt: a.paused_at, completedAt: a.completed_at, reviewedAt: a.reviewed_at, approvedAt: a.approved_at, reviewer: a.reviewed_by ? techMap.get(a.reviewed_by)?.full_name || techMap.get(a.reviewed_by)?.username || '' : '', approver: a.approved_by ? techMap.get(a.approved_by)?.full_name || techMap.get(a.approved_by)?.username || '' : '', pauseReason: a.pause_reason || '', submittedAt: a.report_submitted_at, supervisorApproved: !!a.supervisor_approved, notes: a.review_notes || '', cables };
+    });
+    for (const frame of unassignedFrames) {
+      const cables = Array.isArray(frame.cables) ? frame.cables.map((c: any) => ({ source: String(c.source || ''), destination: String(c.destination || ''), size: c.size ? String(c.size) : '', color: c.color ? String(c.color) : '', ferrule: c.ferrule ? String(c.ferrule) : '', status: 'pending' as const })) : [];
+      exportPanels.push({ frameId: frame.id, panel: frame.panel_name || frame.id, technician: 'Unassigned', status: 'not_started', review: 'not_ready', inspection: '', inspector: '', cablesTotal: frame.cable_count || cables.length, src: 0, dst: 0, kpi: 0, seconds: 0, assignedAt: null, startedAt: null, pausedAt: null, completedAt: null, reviewedAt: null, approvedAt: null, reviewer: '', approver: '', pauseReason: '', submittedAt: null, supervisorApproved: false, notes: '', cables });
     }
-    const overallKpi = totalCables > 0
-      ? Math.round(((totalSrc + totalDst) / (totalCables * 2)) * 1000) / 10
-      : 0;
+    const totalCables = exportPanels.reduce((sum, panel) => sum + panel.cablesTotal, 0);
+    const totalSrc = exportPanels.reduce((sum, panel) => sum + panel.src, 0);
+    const totalDst = exportPanels.reduce((sum, panel) => sum + panel.dst, 0);
+    const totalTime = exportPanels.reduce((sum, panel) => sum + panel.seconds, 0);
+    const overallKpi = totalCables ? Math.round(((totalSrc + totalDst) / (totalCables * 2)) * 1000) / 10 : 0;
+    const approved = exportPanels.filter(panel => panel.review === 'approved' || panel.inspection === 'PASS').length;
+    const completed = exportPanels.filter(panel => panel.status === 'completed').length;
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'DWES — Digital Wiring Execution System';
+    wb.creator = 'DWES - Digital Wiring Execution System';
     wb.created = new Date();
+    wb.modified = new Date();
+    const applySheetDefaults = (ws: ExcelJS.Worksheet) => {
+      ws.views = [{ state: 'frozen', ySplit: 6, showGridLines: false }];
+      ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, margins: { left: 0.25, right: 0.25, top: 0.4, bottom: 0.45, header: 0.15, footer: 0.2 } };
+      ws.headerFooter.oddFooter = '&L DWES - Confidential &C Project report &R Page &P of &N';
+    };
+    const styleHeader = (row: ExcelJS.Row) => {
+      row.height = 28;
+      row.eachCell(cell => { cell.font = { name: 'Aptos', bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0F2557' } }; cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; cell.border = { bottom: { style: 'medium', color: { argb: '2563EB' } } }; });
+    };
+    const styleData = (ws: ExcelJS.Worksheet, startRow: number, endRow: number) => {
+      for (let r = startRow; r <= endRow; r++) { const row = ws.getRow(r); row.height = 22; row.eachCell(cell => { cell.font = { name: 'Aptos', size: 10, color: { argb: '0F172A' } }; cell.alignment = { vertical: 'middle', wrapText: true }; cell.border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } }; if (r % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8FAFC' } }; }); }
+    };
 
-    const summaryWs = wb.addWorksheet('Summary');
-    summaryWs.columns = [{ width: 22 }, { width: 48 }];
-    const summaryStart = await prependExcelReportHeader(wb, summaryWs, {
-      title: 'Project Completion Report',
-      subtitle: `${code.replace(/_/g, ' ')} · ${project.client || ''}`,
-      colCount: 8,
-    });
-    const summaryRows: [string, string | number][] = [
-      ['Project Code', code],
-      ['Client', project.client || ''],
-      ['Name', project.name || ''],
-      ['Description', project.description || ''],
-      ['State', (project.project_state || '').replace(/_/g, ' ')],
-      ['Total Panels', panels.length],
-      ['Total Cables', totalCables],
-      ['Overall KPI %', overallKpi],
-      ['Total Wiring Time', `${Math.floor(totalTime / 3600)}h ${Math.floor((totalTime % 3600) / 60)}m`],
-      ['Generated By', generatedBy],
-    ];
-    summaryRows.forEach(([label, val], i) => {
-      const row = summaryWs.getRow(summaryStart + i);
-      row.getCell(1).value = label;
-      row.getCell(1).font = { bold: true };
-      row.getCell(2).value = val;
-    });
+    const summaryWs = wb.addWorksheet('Executive Summary');
+    applySheetDefaults(summaryWs);
+    summaryWs.columns = [20, 26, 20, 26, 20, 20, 20, 22].map(width => ({ width }));
+    const summaryStart = await prependExcelReportHeader(wb, summaryWs, { title: 'Project Engineering Report', subtitle: `${code.replace(/_/g, ' ')} | ${project.client || 'Client not recorded'}`, colCount: 8 });
+    const pairs: Array<[string, string | number]> = [['Project Code', code], ['Project State', titleize(project.project_state)], ['Client', project.client || 'Not recorded'], ['Project Name', project.name || code], ['Project Created', project.created_at ? new Date(project.created_at).toISOString() : 'Not recorded'], ['Panels', exportPanels.length], ['Completed Panels', completed], ['Approved / Passed', approved], ['Scheduled Cables', totalCables], ['Source Terminated', totalSrc], ['Destination Terminated', totalDst], ['Overall Completion', overallKpi / 100], ['Recorded Working Hours', totalTime / 3600], ['Generated By', generatedBy || 'DWES'], ['Generated At (UTC)', new Date().toISOString()], ['Description', project.description || 'No description recorded']];
+    for (let i = 0; i < pairs.length; i += 2) { const row = summaryWs.getRow(summaryStart + i / 2); for (const [offset, pair] of [pairs[i], pairs[i + 1]].entries()) { if (!pair) continue; const col = offset * 4 + 1; row.getCell(col).value = pair[0]; row.getCell(col).font = { name: 'Aptos', bold: true, size: 10, color: { argb: '475569' } }; row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EFF6FF' } }; row.getCell(col + 1).value = pair[1]; row.getCell(col + 1).font = { name: 'Aptos', bold: pair[0] === 'Overall Completion', size: 10, color: { argb: pair[0] === 'Overall Completion' ? '1D4ED8' : '0F172A' } }; row.getCell(col + 1).alignment = { vertical: 'middle', wrapText: true }; } row.height = 26; }
+    summaryWs.getCell(`F${summaryStart + 5}`).numFmt = '0.0%';
+    summaryWs.getCell(`B${summaryStart + 6}`).numFmt = '0.0';
+    summaryWs.mergeCells(`A${summaryStart + 8}:H${summaryStart + 8}`);
+    summaryWs.getCell(`A${summaryStart + 8}`).value = 'Live database snapshot: counts, KPIs, working time, approvals, and execution status are calculated at export time.';
+    summaryWs.getCell(`A${summaryStart + 8}`).font = { name: 'Aptos', italic: true, size: 9, color: { argb: '64748B' } };
 
-    const panelWs = wb.addWorksheet('Panels');
-    const panelHeaders = ['Panel', 'Technician', 'Status', 'Review', 'Cables Total', 'Source Done', 'Destination Done', 'KPI %', 'Wiring Time', 'Review Notes'];
-    panelWs.columns = panelHeaders.map(() => ({ width: 16 }));
-    const panelStart = await prependExcelReportHeader(wb, panelWs, {
-      title: 'Panel Summary',
-      subtitle: code.replace(/_/g, ' '),
-      colCount: panelHeaders.length,
-    });
-    const hdr = panelWs.getRow(panelStart);
-    panelHeaders.forEach((h, i) => {
-      const cell = hdr.getCell(i + 1);
-      cell.value = h;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
-    });
-    let pr = panelStart + 1;
-    for (const { assignment: a, tech, kpi } of panels) {
-      const secs = a.total_wiring_seconds || 0;
-      panelWs.getRow(pr).values = [
-        a.panel_name || '',
-        tech?.full_name || tech?.username || '',
-        (a.status || '').replace(/_/g, ' '),
-        (a.review_status || 'pending').replace(/_/g, ' '),
-        a.cables_total || 0,
-        a.cables_src_done || 0,
-        a.cables_dst_done || 0,
-        kpi,
-        `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`,
-        a.review_notes || '',
-      ];
-      pr++;
-    }
+    const panelWs = wb.addWorksheet('Panel Register');
+    applySheetDefaults(panelWs);
+    const panelHeaders = ['Panel', 'Technician', 'Execution Status', 'QC / Review', 'Inspection', 'Cables', 'Source Done', 'Destination Done', 'Completion', 'Working Hours', 'Assigned', 'Started', 'Completed', 'Supervisor Approval', 'Review Notes'];
+    panelWs.columns = [24, 22, 18, 16, 16, 11, 12, 14, 13, 14, 18, 18, 18, 20, 34].map(width => ({ width }));
+    const panelStart = await prependExcelReportHeader(wb, panelWs, { title: 'Panel Execution Register', subtitle: 'Live assignment, progress, QC and approval status', colCount: panelHeaders.length });
+    panelWs.getRow(panelStart).values = panelHeaders; styleHeader(panelWs.getRow(panelStart));
+    exportPanels.forEach(panel => panelWs.addRow([panel.panel, panel.technician, titleize(panel.status), titleize(panel.review), titleize(panel.inspection), panel.cablesTotal, panel.src, panel.dst, panel.kpi / 100, panel.seconds / 3600, panel.assignedAt ? new Date(panel.assignedAt) : null, panel.startedAt ? new Date(panel.startedAt) : null, panel.completedAt ? new Date(panel.completedAt) : null, panel.supervisorApproved ? `Approved${panel.approver ? ` - ${panel.approver}` : ''}` : 'Pending', panel.notes]));
+    styleData(panelWs, panelStart + 1, panelStart + exportPanels.length);
+    panelWs.getColumn(9).numFmt = '0.0%'; panelWs.getColumn(10).numFmt = '0.00'; [11, 12, 13].forEach(col => panelWs.getColumn(col).numFmt = 'yyyy-mm-dd hh:mm');
+    panelWs.autoFilter = { from: { row: panelStart, column: 1 }, to: { row: panelStart + exportPanels.length, column: panelHeaders.length } };
+
+    const cableWs = wb.addWorksheet('Cable Schedule');
+    applySheetDefaults(cableWs);
+    const cableHeaders = ['Panel', 'Wire No.', 'Source', 'Destination', 'Ferrule', 'Size', 'Colour', 'Live Status'];
+    cableWs.columns = [24, 12, 30, 30, 16, 12, 14, 16].map(width => ({ width }));
+    const cableStart = await prependExcelReportHeader(wb, cableWs, { title: 'Cable Completion Schedule', subtitle: 'Live cable termination status at time of export', colCount: cableHeaders.length });
+    cableWs.getRow(cableStart).values = cableHeaders; styleHeader(cableWs.getRow(cableStart));
+    exportPanels.forEach(panel => panel.cables.forEach((cable, index) => cableWs.addRow([panel.panel, index + 1, cable.source || '', cable.destination || '', cable.ferrule || '', cable.size || '', cable.color || '', titleize(cable.status)])));
+    const cableEnd = cableWs.rowCount; if (cableEnd > cableStart) styleData(cableWs, cableStart + 1, cableEnd);
+    cableWs.autoFilter = { from: { row: cableStart, column: 1 }, to: { row: Math.max(cableStart, cableEnd), column: cableHeaders.length } };
+
+    const timelineWs = wb.addWorksheet('Execution Timeline');
+    applySheetDefaults(timelineWs);
+    const timelineHeaders = ['Panel', 'Technician', 'Assigned', 'Started', 'Paused', 'Completed', 'Report Submitted', 'Reviewed', 'Approved', 'Pause Reason', 'QC Inspector'];
+    timelineWs.columns = [24, 22, 18, 18, 18, 18, 20, 18, 18, 30, 22].map(width => ({ width }));
+    const timelineStart = await prependExcelReportHeader(wb, timelineWs, { title: 'Execution & Approval Timeline', subtitle: 'Database timestamps and accountability trail', colCount: timelineHeaders.length });
+    timelineWs.getRow(timelineStart).values = timelineHeaders; styleHeader(timelineWs.getRow(timelineStart));
+    exportPanels.forEach(panel => timelineWs.addRow([panel.panel, panel.technician, panel.assignedAt ? new Date(panel.assignedAt) : null, panel.startedAt ? new Date(panel.startedAt) : null, panel.pausedAt ? new Date(panel.pausedAt) : null, panel.completedAt ? new Date(panel.completedAt) : null, panel.submittedAt ? new Date(panel.submittedAt) : null, panel.reviewedAt ? new Date(panel.reviewedAt) : null, panel.approvedAt ? new Date(panel.approvedAt) : null, panel.pauseReason, panel.inspector]));
+    styleData(timelineWs, timelineStart + 1, timelineStart + exportPanels.length);
+    for (let col = 3; col <= 9; col++) timelineWs.getColumn(col).numFmt = 'yyyy-mm-dd hh:mm';
+    timelineWs.autoFilter = { from: { row: timelineStart, column: 1 }, to: { row: timelineStart + exportPanels.length, column: timelineHeaders.length } };
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);

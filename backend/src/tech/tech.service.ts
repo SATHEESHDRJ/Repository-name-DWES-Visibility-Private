@@ -60,10 +60,14 @@ export class TechService {
     if (!tech || tech.role !== 'wiring_technician') throw new BadRequestException('Invalid technician');
 
     const existing = await this.prisma.tech_assignments.findFirst({
-      where: { project_code: dto.project_code, frame_id: dto.frame_id,
-                technician_id: dto.technician_id, status: { not: 'completed' } },
+      where: {
+        project_code: dto.project_code,
+        frame_id: dto.frame_id,
+        status: { in: ['assigned', 'in_progress', 'paused'] },
+        changeover_locked: { not: true },
+      },
     });
-    if (existing) throw new ConflictException('Technician already assigned to this frame');
+    if (existing) throw new ConflictException('This panel already has an active technician assignment');
 
     assertPanelNameUniqueForWrite(dto.project_code, dto.frame_id);
 
@@ -549,7 +553,7 @@ export class TechService {
     // Removal is only allowed until the technician starts. Once started (started_at set —
     // covers in_progress, started-then-paused, and completed), the panel can only be handed
     // over via mid-changeover, which preserves the work already done.
-    if (a.started_at != null) {
+    if (a.status !== 'assigned' || a.started_at != null || a.handover_from_id != null || a.changeover_locked) {
       throw new BadRequestException('Cannot remove this assignment — work has already started. Use mid-changeover to hand over to another technician.');
     }
     await this.prisma.tech_assignments.delete({ where: { id: assignmentId } });
@@ -580,8 +584,9 @@ export class TechService {
   ) {
     let old = await this.prisma.tech_assignments.findUnique({ where: { id: oldAssignmentId } });
     if (!old) throw new NotFoundException('Old assignment not found');
-    if (!['paused', 'in_progress'].includes(old.status || '')) {
-      throw new BadRequestException('Assignment must be in progress or paused for changeover');
+    const isStartedHandover = old.status === 'assigned' && old.handover_from_id != null;
+    if (!['paused', 'in_progress'].includes(old.status || '') && !isStartedHandover) {
+      throw new BadRequestException('Work must have started before a mid-changeover');
     }
     if (old.changeover_locked) throw new BadRequestException('Changeover already initiated');
 
@@ -590,49 +595,64 @@ export class TechService {
     const reason = (changeoverReason || '').trim();
     if (!reason) throw new BadRequestException('Changeover reason is required');
 
-    if (old.status === 'in_progress') {
-      old = await this.prisma.tech_assignments.update({
-        where: { id: oldAssignmentId },
-        data: {
-          status: 'paused',
-          paused_at: new Date(),
-          pause_reason: `Mid-changeover: ${reason}${reasonNotes.trim() ? ` — ${reasonNotes.trim()}` : ''}`,
-        },
-      });
-    }
-
     const newTech = await this.prisma.users.findUnique({ where: { id: newTechId } });
     if (!newTech || newTech.role !== 'wiring_technician') throw new BadRequestException('Invalid new technician');
     if (newTechId === old.technician_id) throw new BadRequestException('New technician must be different');
 
-    const newActive = await this.prisma.tech_assignments.findFirst({ where: { technician_id: newTechId, status: 'in_progress' } });
-    if (newActive) throw new BadRequestException('New technician already has an active panel');
-
-    const cableCounts = this.countCableProgress(old.cable_status, old.cables_total);
     const changeoverAt = new Date().toISOString();
 
     const newOtp = generateOtpCode();
     const newQr = generateQrIdentity();
     const otpExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const newAssignment = await this.prisma.tech_assignments.create({
-      data: {
-        project_code: old.project_code, frame_id: old.frame_id, panel_name: old.panel_name,
-        technician_id: newTechId, assigned_by: supervisorId, status: 'assigned',
-        cables_total: old.cables_total, cables_src_done: old.cables_src_done, cables_dst_done: old.cables_dst_done,
-        cable_status: old.cable_status, total_wiring_seconds: old.total_wiring_seconds,
-        supervisor_approved: true, approved_at: new Date(), approved_by: supervisorId,
-        handover_from_id: old.id, is_hidden: false, report_submitted: false,
-        rework_requested: false, rework_reason: '', changeover_locked: false, qc_status: 'not_ready',
-        otp_code: newOtp, qr_code: newQr, otp_verified: false, qr_panel_verified: false,
-        otp_expires_at: otpExpires, otp_attempts: 0,
-      },
-    });
+    const transfer = await this.prisma.$transaction(async tx => {
+      let source = await tx.tech_assignments.findUnique({ where: { id: oldAssignmentId } });
+      if (!source) throw new NotFoundException('Old assignment not found');
+      const sourceIsStartedHandover = source.status === 'assigned' && source.handover_from_id != null;
+      if (!['paused', 'in_progress'].includes(source.status || '') && !sourceIsStartedHandover) {
+        throw new BadRequestException('Work must have started before a mid-changeover');
+      }
+      if (source.changeover_locked) throw new BadRequestException('Changeover already initiated');
 
-    await this.prisma.tech_assignments.update({
-      where: { id: oldAssignmentId },
-      data: { changeover_locked: true, handover_to_id: newAssignment.id },
+      const newActive = await tx.tech_assignments.findFirst({
+        where: { technician_id: newTechId, status: 'in_progress' },
+      });
+      if (newActive) throw new BadRequestException('New technician already has an active panel');
+
+      if (source.status === 'in_progress') {
+        source = await tx.tech_assignments.update({
+          where: { id: oldAssignmentId },
+          data: {
+            status: 'paused',
+            paused_at: new Date(),
+            pause_reason: `Mid-changeover: ${reason}${reasonNotes.trim() ? ` — ${reasonNotes.trim()}` : ''}`,
+          },
+        });
+      }
+
+      const created = await tx.tech_assignments.create({
+        data: {
+          project_code: source.project_code, frame_id: source.frame_id, panel_name: source.panel_name,
+          technician_id: newTechId, assigned_by: supervisorId, status: 'assigned',
+          cables_total: source.cables_total, cables_src_done: source.cables_src_done, cables_dst_done: source.cables_dst_done,
+          cable_status: source.cable_status, total_wiring_seconds: source.total_wiring_seconds,
+          supervisor_approved: true, approved_at: new Date(), approved_by: supervisorId,
+          handover_from_id: source.id, is_hidden: false, report_submitted: false,
+          rework_requested: false, rework_reason: '', changeover_locked: false, qc_status: 'not_ready',
+          otp_code: newOtp, qr_code: newQr, otp_verified: false, qr_panel_verified: false,
+          otp_expires_at: otpExpires, otp_attempts: 0,
+        },
+      });
+
+      await tx.tech_assignments.update({
+        where: { id: oldAssignmentId },
+        data: { changeover_locked: true, handover_to_id: created.id },
+      });
+      return { source, created };
     });
+    old = transfer.source;
+    const newAssignment = transfer.created;
+    const cableCounts = this.countCableProgress(old.cable_status, old.cables_total);
 
     const oldTech = await this.prisma.users.findUnique({ where: { id: old.technician_id } });
     const notesSuffix = reasonNotes.trim() ? ` | notes=${reasonNotes.trim()}` : '';
@@ -677,7 +697,7 @@ export class TechService {
     if (!storedOtp && !storedQr) return { verified: true, message: 'No verification required' };
 
     if (a.otp_expires_at && new Date() > a.otp_expires_at) {
-      throw new BadRequestException('OTP has expired. Ask your supervisor to reassign the panel.');
+      throw new BadRequestException('OTP has expired. Ask your supervisor to initiate a mid-changeover.');
     }
     const attempts = a.otp_attempts || 0;
     if (attempts >= OTP_MAX_ATTEMPTS) {

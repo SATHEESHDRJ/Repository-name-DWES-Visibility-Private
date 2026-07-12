@@ -3,9 +3,7 @@ import SyncTab from './tabs/SyncTab';
 import DbConfigTab from './tabs/DbConfigTab';
 import DeploymentModeTab from './tabs/DeploymentModeTab';
 import DeleteProjectTab from './tabs/DeleteProjectTab';
-import HardResetTab from './tabs/HardResetTab';
 import HardResetDbTab from './tabs/HardResetDbTab';
-import ResetAllProjectsTab from './tabs/ResetAllProjectsTab';
 
 /**
  * System Settings — its own route (/admin/settings).
@@ -19,9 +17,7 @@ export default function AdminSettingsPage() {
       <div className="dash-module dash-module--wide bento-cell bento-cell--span-12"><DiagnosticsTab /></div>
       <div className="dash-module bento-cell bento-cell--span-6"><SyncTab /></div>
       <div className="dash-module bento-cell bento-cell--span-6"><DeleteProjectTab /></div>
-      <div className="dash-module bento-cell bento-cell--span-6"><HardResetTab /></div>
       <div className="dash-module bento-cell bento-cell--span-6"><HardResetDbTab /></div>
-      <div className="dash-module bento-cell bento-cell--span-12"><ResetAllProjectsTab /></div>
     </div>
   );
 }

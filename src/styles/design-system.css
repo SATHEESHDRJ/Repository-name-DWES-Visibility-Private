@@ -151,7 +151,10 @@
     .rwa-panel-pct,
     .tech-panel-row,
     .rwa-project-body,
-    .rwa-report-section
+    .rwa-report-section,
+    /* Status cards contain sticky table headers. Keep this shell solid so it
+       cannot create a compositing/stacking boundary around those headers. */
+    .rwa-project-card
   ) {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -694,6 +697,15 @@
     border: 1px solid transparent;
     background: transparent;
     transition: all var(--transition-base);
+  }
+  /* Placeholder for the async biometric capability check. It prevents the
+     project, user, and clock controls from shifting when the real button mounts. */
+  .topbar-capsule-slot {
+    display: block;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    visibility: hidden;
   }
   .topbar-capsule-btn .ui-icon {
     display: flex;
@@ -3461,19 +3473,31 @@
   }
   .sac-avatar--sm { @apply w-6 h-6 text-[9px]; }
   .sac-avatar--available { @apply bg-emerald-200 text-emerald-900; }
-  .sac-avatar--working { @apply bg-amber-200 text-amber-950; }
-  .sac-avatar--on_break { @apply bg-slate-300 text-slate-800; }
-  .sac-avatar--material_delay { @apply bg-orange-200 text-orange-950; }
-  .sac-avatar--qa_qc { @apply bg-violet-200 text-violet-950; }
+  .sac-avatar--assigned { @apply bg-amber-200 text-amber-950; }
+  .sac-avatar--working { @apply bg-blue-200 text-blue-950; }
+  .sac-avatar--busy { @apply bg-red-200 text-red-950; }
   .sac-tech-status-dot {
     @apply absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white;
   }
   .sac-tech-status-dot--available { @apply bg-emerald-500; }
-  .sac-tech-status-dot--working { @apply bg-amber-500; }
-  .sac-tech-status-dot--on_break { @apply bg-slate-400; }
-  .sac-tech-status-dot--material_delay { @apply bg-orange-500; }
-  .sac-tech-status-dot--qa_qc { @apply bg-violet-500; }
-  .sac-tech-status-dot--offline { @apply bg-slate-300; }
+  .sac-tech-status-dot--assigned { @apply bg-amber-500; }
+  .sac-tech-status-dot--working { @apply bg-blue-500; }
+  .sac-tech-status-dot--busy { @apply bg-red-500; }
+  .tech-status-indicator {
+    @apply inline-flex min-w-[5.75rem] shrink-0 items-center justify-center gap-2 rounded-full px-3 py-2 text-[12px] font-bold uppercase tracking-wide leading-none;
+  }
+  .tech-status-indicator__dot { @apply h-4 w-4 shrink-0 rounded-full shadow-sm ring-2 ring-white; }
+  .tech-status-indicator--available { @apply min-w-0 px-2; }
+  .tech-status-indicator--available .tech-status-indicator__dot { @apply bg-emerald-500; }
+  .tech-status-indicator--assigned { @apply bg-amber-50 text-amber-800; }
+  .tech-status-indicator--assigned .tech-status-indicator__dot { @apply bg-amber-500; }
+  .tech-status-indicator--working { @apply bg-blue-50 text-blue-800; }
+  .tech-status-indicator--working .tech-status-indicator__dot { @apply bg-blue-500; }
+  .tech-status-indicator--busy { @apply bg-red-50 text-red-800; }
+  .tech-status-indicator--busy .tech-status-indicator__dot { @apply bg-red-500; }
+  .tech-status-indicator.is-compact { @apply min-w-0 px-1.5 py-0.5 text-[9px]; }
+  .tech-status-indicator.is-compact.tech-status-indicator--available { @apply px-0.5; }
+  .tech-status-indicator.is-compact .tech-status-indicator__dot { @apply h-2.5 w-2.5 ring-1; }
   .sac-tech-name { @apply text-[12px] font-bold text-slate-900 truncate leading-tight; }
   .sac-tech-id { @apply text-[9px] text-slate-500 truncate font-mono; }
   .sac-tech-context-row {
@@ -3522,11 +3546,9 @@
   }
 
   .twf-status-badge.sac-status--available { @apply bg-emerald-100 text-emerald-800 border-emerald-300; }
-  .twf-status-badge.sac-status--working { @apply bg-amber-100 text-amber-900 border-amber-300; }
-  .twf-status-badge.sac-status--break { @apply bg-slate-200 text-slate-800 border-slate-400; }
-  .twf-status-badge.sac-status--material { @apply bg-orange-100 text-orange-900 border-orange-300; }
-  .twf-status-badge.sac-status--qa { @apply bg-violet-100 text-violet-900 border-violet-300; }
-  .twf-status-badge.sac-status--offline { @apply bg-slate-100 text-slate-500 border-slate-300; }
+  .twf-status-badge.sac-status--assigned { @apply bg-amber-100 text-amber-900 border-amber-300; }
+  .twf-status-badge.sac-status--working { @apply bg-blue-100 text-blue-900 border-blue-300; }
+  .twf-status-badge.sac-status--busy { @apply bg-red-100 text-red-800 border-red-300; }
 
   /* Assignment board */
   .sac-pane--board { @apply overflow-hidden; }
@@ -5641,7 +5663,6 @@
     @apply text-[10px] font-semibold uppercase tracking-wide text-slate-500;
   }
 }
-
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LOGIN PAGE â€” keyframe animations (global scope, outside @layer)
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */

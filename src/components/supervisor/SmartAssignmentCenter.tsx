@@ -6,6 +6,7 @@ import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import Toast from '../ui/Toast';
+import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
   CHANGEOVER_REASONS,
   type ChangeoverAssignment,
@@ -89,10 +90,9 @@ const STATUS_META: Record<WorkflowStatus, { label: string; chip: string }> = {
 const STATUS_FILTERS: Array<{ key: TechResourceStatus | 'all'; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'available', label: 'Free' },
+  { key: 'assigned', label: 'Assigned' },
   { key: 'working', label: 'Working' },
-  { key: 'on_break', label: 'Break' },
-  { key: 'material_delay', label: 'Material' },
-  { key: 'qa_qc', label: 'QA/QC' },
+  { key: 'busy', label: 'Busy' },
 ];
 
 const BOARD_LANES: Array<{ id: BoardLaneId; label: string; shortLabel: string; hint: string }> = [
@@ -855,14 +855,12 @@ export default function SmartAssignmentCenter({
                         <div className="sac-selected-chip">
                           <span className="sac-avatar sac-avatar--sm">{selectedTechResource.initials}</span>
                           <span className="sac-selected-chip-name">{selectedTechResource.full_name}</span>
-                          <span className={`twf-status-badge ${selectedTechResource.statusChip}`}>
-                            {selectedTechResource.statusLabel}
-                          </span>
+                          <TechnicianStatusIndicator status={selectedTechResource.status} compact />
                           {selectedTechResource.parallelMode === 'parallel_ok' && (
                             <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
                           )}
-                          {selectedTechResource.parallelMode === 'reassign_required' && (
-                            <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+                          {selectedTechResource.parallelMode === 'handover_required' && (
+                            <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
                           )}
                         </div>
                       ) : (
@@ -1300,7 +1298,7 @@ function TechnicianResourceCard({
             {tech.employee_id || `@${tech.username}`}
           </div>
         </div>
-        <span className={`twf-status-badge ${tech.statusChip}`}>{tech.statusLabel}</span>
+        <TechnicianStatusIndicator status={tech.status} compact />
       </div>
 
       <div className="sac-tech-context-row">
@@ -1340,8 +1338,8 @@ function TechnicianResourceCard({
         {tech.parallelMode === 'parallel_ok' && (
           <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
         )}
-        {tech.parallelMode === 'reassign_required' && (
-          <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+        {tech.parallelMode === 'handover_required' && (
+          <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
         )}
         {tech.skillTag === 'experienced' && (
           <span className="sac-skill-badge">Exp</span>

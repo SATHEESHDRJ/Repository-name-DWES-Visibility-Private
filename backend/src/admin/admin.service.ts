@@ -12,6 +12,7 @@ import {
   DeploymentMode,
 } from './deployment-config';
 import { Client } from 'pg';
+import { permanentlyDeleteProject } from '../common/project-delete.util';
 
 const APP_START = Date.now();
 const errorRingBuffer: { ts: string; message: string; context: string }[] = [];
@@ -20,7 +21,6 @@ export function recordError(message: string, context: string) {
   errorRingBuffer.unshift({ ts: new Date().toISOString(), message, context });
   if (errorRingBuffer.length > 50) errorRingBuffer.pop();
 }
-
 export function clearErrorRingBuffer() {
   errorRingBuffer.length = 0;
 }
@@ -353,59 +353,13 @@ export class AdminService {
     };
   }
 
-  async hardDeleteProject(code: string, confirmedCode: string) {
+  async hardDeleteProject(code: string) {
     if (!code) return { error: 'Project code required' };
-    if (code !== confirmedCode) {
-      return { error: 'Confirmation code does not match — type the exact project code' };
-    }
 
     const project = await this.prisma.projects.findUnique({ where: { code } });
     if (!project) return { error: `Project "${code}" not found` };
 
-    const uploadBase = this._resolveUploadDir();
-    const projectUploadsDir = path.join(uploadBase, code);
-
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: { project_code: code }, select: { id: true },
-    });
-    const assignmentIds = assignments.map(a => a.id);
-
-    const inspDel = assignmentIds.length
-      ? await this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
-      : { count: 0 };
-
-    const assnDel  = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
-    const hashDel  = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
-    const auditDel = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
-    const sessionDel = await this.prisma.session_log.deleteMany({ where: { project_code: code } });
-
-    await this.prisma.projects.delete({ where: { code } });
-
-    MockStore.frames   = MockStore.frames.filter(f => f.project_code !== code);
-    MockStore.drawings = MockStore.drawings.filter(d => d.project_code !== code);
-
-    let folderRemoved = false;
-    if (fs.existsSync(projectUploadsDir)) {
-      fs.rmSync(projectUploadsDir, { recursive: true, force: true });
-      folderRemoved = true;
-    }
-
-    return {
-      success: true,
-      project_code: code,
-      deleted: {
-        inspections: inspDel.count,
-        assignments: assnDel.count,
-        file_hashes: hashDel.count,
-        audit_logs:  auditDel.count,
-        session_logs: sessionDel.count,
-        project_row: 1,
-        uploads_removed: folderRemoved,
-        folder_removed: folderRemoved,
-      },
-      message: `Project "${code}" permanently deleted from database and storage.`,
-      ts: new Date().toISOString(),
-    };
+    return permanentlyDeleteProject(this.prisma, code, this._resolveUploadDir());
   }
 
   async hardResetProject(code: string, confirmedCode: string) {

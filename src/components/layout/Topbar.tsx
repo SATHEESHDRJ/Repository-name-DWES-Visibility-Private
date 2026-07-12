@@ -226,6 +226,11 @@ export default function Topbar({
                 )}
               </div>
             )}
+            {!showBioSettings && (
+              /* The capability check resolves asynchronously. Reserve the button's
+                 footprint from the first paint so header controls never reflow. */
+              <span className="topbar-capsule-slot" aria-hidden="true" />
+            )}
 
             <button
               className="topbar-capsule-btn topbar-capsule-btn--logout"

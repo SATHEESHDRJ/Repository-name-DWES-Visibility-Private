@@ -1,10 +1,18 @@
-﻿# DWES Changelog
+# DWES Changelog
 
 Append-only log of scoped changes. Each entry includes a restore-point reference when git is in use.
 
 Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
+
+## 2026-07-12 — Supervisor — Unified technician assignment status indicators
+
+- Replaced the visible `Available` label with an accessible 16 px green indicator and standardized assignment-resource states as yellow **Assigned**, blue **Working**, and red **Busy**.
+- Centralized status derivation in `assignmentCenterUtils.ts` and rendering in `TechnicianStatusIndicator.tsx`; both the compact Panel Assignment modal and Smart Assignment Center now share the same semantics and presentation.
+- Enforced the three-action workflow in the backend: one active technician per panel, removal only for original pre-start assignments, atomic mid-changeover with linked history and preserved cable progress/time, and no Reassign wording.
+- Verified production build, typecheck, lint (existing warnings only), 31 backend tests, and live desktop/tablet popup layout with no horizontal overflow or application console errors.
+- Restore branch: `change/complete-current-pass-2026-07-12` from `main` at `5401763`.
 
 ## 2026-07-12 — Supervisor — Digital Wiring Monitor converted-view-only + compact Panel Assignment modal (interlocked)
 

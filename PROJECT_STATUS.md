@@ -66,6 +66,7 @@
 |------|--------|
 | **Supervisor** — All Projects action toolbar (compact buttons, even spacing) | **DONE** |
 | **Supervisor** — Projects toolbar shorter action labels (Wiring Upload, Workflow, Drawing, Reports, Users) | **DONE** |
+| **Supervisor** — Three-action technician workflow (Assign, pre-start Remove, post-start Mid-Changeover) + green/yellow/blue/red status indicators; backend interlocks and progress/history preservation covered by tests | **DONE** (2026-07-12) |
 | **App-wide** — Workspace hero header layout (title/subtitle/badge spacing, no ascender clipping) | **DONE** (2026-07-08) |
 | **App-wide** — Liquid Glass design system (selective glassmorphism on shells, cards, modals, forms) | **DONE** (2026-07-08) |
 | **App-wide** — Bento Grid layouts (role dashboards, KPI strips, user mgmt, upload sections) | **DONE** (2026-07-08) |
@@ -107,7 +108,7 @@
 | **Supervisor** — Excel Wiring Upload full-screen worksheet grid | **DONE** |
 | **UI** — Global modal/popup shell redesign (shared `Modal`, unified backdrop/sizes/motion) | **DONE** |
 | **Supervisor** — Technician Workflow modal (assign / deassign / changeover) | **SUPERSEDED** — Smart Assignment Center (2026-07-09) |
-| **Supervisor** — Smart Assignment Center (dense MES workspace: KPI strip, assignment board, compact tech cards, Assign Best, filters, auto-next queue, parallel/reassign badges) | **DONE** (2026-07-09) |
+| **Supervisor** — Smart Assignment Center (dense MES workspace: KPI strip, assignment board, compact tech cards, Assign Best, filters, auto-next queue, parallel/mid-changeover badges) | **DONE** (2026-07-09) |
 | **Supervisor** — Assignments + Mid-Changeover removed from sidebar | **DONE** |
 | **Supervisor** — Review & Approval unified workspace (panel status consolidated) | **DONE** |
 | **Supervisor** — Panel Status sidebar tab removed | **DONE** |

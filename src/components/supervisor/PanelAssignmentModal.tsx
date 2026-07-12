@@ -5,6 +5,7 @@ import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import Toast, { type ToastTone } from '../ui/Toast';
+import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
   CHANGEOVER_REASONS,
   type ChangeoverReason,
@@ -14,7 +15,6 @@ import {
   isActiveAssignment,
   type AssignmentRow,
   type TechResource,
-  type TechResourceStatus,
   type TechUser,
 } from '../../utils/assignmentCenterUtils';
 import {
@@ -41,14 +41,6 @@ export interface TechnicianWorkflowModalProps {
 
 type PanelState = 'unassigned' | 'assigned' | 'started';
 
-const STATUS_DOT: Record<TechResourceStatus, string> = {
-  available: 'bg-emerald-500',
-  working: 'bg-blue-500',
-  on_break: 'bg-amber-500',
-  material_delay: 'bg-orange-500',
-  qa_qc: 'bg-violet-500',
-  offline: 'bg-slate-400',
-};
 
 function techEngagementLabel(assigned: number, active: number): string {
   const total = assigned + active;
@@ -126,7 +118,9 @@ export default function PanelAssignmentModal({
   }, [allAssignments, projectCode, panelId]);
 
   const started = currentAssignment
-    ? (currentAssignment.started_at != null || String(currentAssignment.status) !== 'assigned')
+    ? (currentAssignment.started_at != null
+      || currentAssignment.handover_from_id != null
+      || String(currentAssignment.status) !== 'assigned')
     : false;
 
   const panelState: PanelState = !currentAssignment
@@ -286,7 +280,7 @@ export default function PanelAssignmentModal({
               className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
               type="button"
             >
-              {busy ? 'Processing…' : 'Confirm changeover'}
+              {busy ? 'Processing…' : 'Confirm Mid-Changeover'}
             </button>
           </>
         )
@@ -391,10 +385,7 @@ export default function PanelAssignmentModal({
                           {techEngagementLabel(eng.assigned, eng.active)}
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[t.status]}`} aria-hidden />
-                        <span className="text-[11px] font-medium text-slate-600">{t.statusLabel}</span>
-                      </span>
+                      <TechnicianStatusIndicator status={t.status} />
                     </button>
                   </li>
                 );

@@ -2,22 +2,18 @@
 
 export type TechResourceStatus =
   | 'available'
+  | 'assigned'
   | 'working'
-  | 'on_break'
-  | 'qa_qc'
-  | 'material_delay'
-  | 'offline';
+  | 'busy';
 
 export const TECH_STATUS_META: Record<
   TechResourceStatus,
-  { label: string; chip: string; sort: number }
+  { label: string; chip: string; dot: string; sort: number }
 > = {
-  available: { label: 'Available', chip: 'sac-status--available', sort: 0 },
-  working: { label: 'Working', chip: 'sac-status--working', sort: 1 },
-  on_break: { label: 'On Break', chip: 'sac-status--break', sort: 2 },
-  material_delay: { label: 'Material Delay', chip: 'sac-status--material', sort: 3 },
-  qa_qc: { label: 'QA/QC', chip: 'sac-status--qa', sort: 4 },
-  offline: { label: 'Offline', chip: 'sac-status--offline', sort: 5 },
+  available: { label: '', chip: 'sac-status--available', dot: 'bg-emerald-500', sort: 0 },
+  assigned: { label: 'Assigned', chip: 'sac-status--assigned', dot: 'bg-amber-500', sort: 1 },
+  working: { label: 'Working', chip: 'sac-status--working', dot: 'bg-blue-500', sort: 2 },
+  busy: { label: 'Busy', chip: 'sac-status--busy', dot: 'bg-red-500', sort: 3 },
 };
 
 export type AssignmentRow = {
@@ -39,6 +35,7 @@ export type AssignmentRow = {
   report_submitted?: boolean | null;
   review_status?: string | null;
   changeover_locked?: boolean | null;
+  handover_from_id?: number | null;
 };
 
 export type TechUser = {
@@ -61,7 +58,7 @@ export type FrameMeta = {
   system_type?: string | null;
 };
 
-export type ParallelMode = 'none' | 'parallel_ok' | 'reassign_required';
+export type ParallelMode = 'none' | 'parallel_ok' | 'handover_required';
 
 export type TechResource = {
   id: number;
@@ -218,21 +215,21 @@ export function estimateEtaLabel(a: AssignmentRow | null): string {
 
 export function workloadTone(pct: number, status: TechResourceStatus): 'idle' | 'normal' | 'overloaded' {
   if (status === 'available' || pct <= IDLE_LOAD_MAX) return 'idle';
-  if (pct >= OVERLOAD_LOAD_MIN || status === 'material_delay') return 'overloaded';
+  if (pct >= OVERLOAD_LOAD_MIN || status === 'busy') return 'overloaded';
   return 'normal';
 }
 
 export function deriveParallelMode(activeCount: number): ParallelMode {
   if (activeCount <= 0) return 'none';
   if (activeCount === 1) return 'parallel_ok';
-  return 'reassign_required';
+  return 'handover_required';
 }
 
 export function deriveTechResourceStatus(
   tech: TechUser,
   assignments: AssignmentRow[],
 ): TechResourceStatus {
-  if (tech.is_active === false) return 'offline';
+  if (tech.is_active === false) return 'busy';
 
   const mine = assignments.filter(a => a.technician_id === tech.id);
 
@@ -240,20 +237,17 @@ export function deriveTechResourceStatus(
   if (inProgress) return 'working';
 
   const paused = mine.find(a => a.status === 'paused');
-  if (paused) {
-    const reason = String(paused.pause_reason || '').toLowerCase();
-    if (reason.includes('material') || reason.includes('parts') || reason.includes('supply')) {
-      return 'material_delay';
-    }
-    return 'on_break';
-  }
+  if (paused) return 'busy';
+
+  const assigned = mine.find(a => a.status === 'assigned');
+  if (assigned) return 'assigned';
 
   const qaPending = mine.find(
     a => a.status === 'completed'
       && a.report_submitted
       && (!a.review_status || a.review_status === 'pending'),
   );
-  if (qaPending) return 'qa_qc';
+  if (qaPending) return 'busy';
 
   return 'available';
 }
@@ -401,12 +395,16 @@ export function buildRecommendations(
 
       if (tech.status === 'available') {
         score += 35;
-        reasons.push('Available now');
+        reasons.push('Free now');
+      } else if (tech.status === 'assigned') {
+        score += 15;
+        reasons.push('Assigned but not started');
       } else if (tech.status === 'working') {
         score += 10;
         reasons.push('Currently wiring — check workload');
       } else {
         score -= 20;
+        reasons.push('Busy or unavailable');
       }
 
       if (tech.readyForAssignment) {
@@ -434,7 +432,7 @@ export function buildRecommendations(
         reasons.push('Parallel OK (1 active)');
       } else if (tech.activeAssignments >= 2) {
         score -= 15;
-        reasons.push('Reassignment preferred');
+        reasons.push('Mid-changeover required');
       }
 
       return {
@@ -509,7 +507,9 @@ export function buildShopFloorKpis(
 ): ShopFloorKpis {
   return {
     availableTechs: techResources.filter(t => t.status === 'available').length,
-    working: techResources.filter(t => t.status === 'working').length,
+    working: new Set(
+      allAssignments.filter(a => a.status === 'in_progress').map(a => a.technician_id),
+    ).size,
     waiting: queue.length,
     unassignedPanels: availablePanelCount,
     completedToday: allAssignments.filter(
