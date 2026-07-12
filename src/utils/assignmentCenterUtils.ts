@@ -38,6 +38,7 @@ export type AssignmentRow = {
   pause_reason?: string | null;
   report_submitted?: boolean | null;
   review_status?: string | null;
+  changeover_locked?: boolean | null;
 };
 
 export type TechUser = {
@@ -188,7 +189,7 @@ export function calcKpi(a: AssignmentRow): number {
   return Math.round(((src + dst) / (total * 2)) * 100);
 }
 
-function isActiveAssignment(a: AssignmentRow): boolean {
+export function isActiveAssignment(a: AssignmentRow): boolean {
   const s = String(a.status || '');
   return s === 'assigned' || s === 'in_progress' || s === 'paused';
 }

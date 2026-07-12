@@ -1,10 +1,10 @@
 /**
- * Technician Workflow entry point — delegates to Smart Assignment Center.
+ * Technician Workflow entry point — delegates to the compact Panel Assignment modal.
  * Preserves existing import paths and prop types for SupervisorDashboard / ProjectsTab.
  */
 export type {
   TechnicianWorkflowSection,
   TechnicianWorkflowModalProps,
-} from './SmartAssignmentCenter';
+} from './PanelAssignmentModal';
 
-export { default } from './SmartAssignmentCenter';
+export { default } from './PanelAssignmentModal';

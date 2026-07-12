@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-10 (audit fixes H1/H2/M1/M2/M3 + canonical email/domain)  
+**Last updated:** 2026-07-12 (supervisor: monitor converted-view-only + compact interlocked Panel Assignment modal — see CHANGELOG)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
