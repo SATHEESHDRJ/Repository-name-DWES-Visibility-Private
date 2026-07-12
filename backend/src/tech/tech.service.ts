@@ -546,8 +546,11 @@ export class TechService {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException('Assignment not found');
     assertPanelNameUniqueForWrite(a.project_code, a.frame_id);
-    if (a.status === 'in_progress') {
-      throw new BadRequestException('Cannot deassign while work is in progress. Ask technician to pause first.');
+    // Removal is only allowed until the technician starts. Once started (started_at set —
+    // covers in_progress, started-then-paused, and completed), the panel can only be handed
+    // over via mid-changeover, which preserves the work already done.
+    if (a.started_at != null) {
+      throw new BadRequestException('Cannot remove this assignment — work has already started. Use mid-changeover to hand over to another technician.');
     }
     await this.prisma.tech_assignments.delete({ where: { id: assignmentId } });
     return { message: 'Assignment deleted' };

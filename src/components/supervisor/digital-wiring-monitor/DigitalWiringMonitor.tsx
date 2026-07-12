@@ -1,33 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Search, X, FileDown, FileSpreadsheet, LayoutGrid, CheckCircle2,
-  Clock, AlertTriangle, ClipboardList, UserCog, ShieldCheck,
+  Search, X, FileDown, FileSpreadsheet, LayoutGrid,
 } from '../../ui/icons';
-import KpiCard from '../../ui/KpiCard';
 import { projectsApi, supervisorApi } from '../../../services/api';
-import { useReadOnlyPoll } from '../../../hooks/useReadOnlyPoll';
-import { DWES_WIRING_SYNC_MS } from '../../../constants/refreshIntervals';
 import type { Cable } from '../../../types';
 import {
   deriveExcelHeaders,
   ensureCableList,
   getCellValue,
-  DEFAULT_CABLE_STATUS,
   type ExtendedCableStatus,
 } from '../../technician/wiring/wiring-utils';
 import { buildPanelReportFilename } from '../../../utils/reportFilename';
 import WiringScheduleMonitorGrid from './WiringScheduleMonitorGrid';
 import CableInspectorPanel from './CableInspectorPanel';
 import {
-  computeMonitorSummary,
   filterCableIndices,
-  pickActiveAssignment,
   sortCableIndices,
   uniqueFacetValues,
-  type FrameProgressAssignment,
-  type MonitorAssignmentContext,
   type SortState,
-  type StatusChipFilter,
 } from './monitorUtils';
 import * as XLSX from 'xlsx';
 
@@ -45,6 +35,9 @@ interface VerifyPayload {
   original_filename?: string;
   panel_name?: string;
 }
+
+/** The monitor renders the converted schedule only — no execution status is merged. */
+const EMPTY_STATUS: Record<string, ExtendedCableStatus> = {};
 
 function FacetMultiSelect({
   label,
@@ -121,13 +114,8 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [verify, setVerify] = useState<VerifyPayload | null>(null);
-  const [status, setStatus] = useState<Record<string, ExtendedCableStatus>>({});
-  const [assignmentCtx, setAssignmentCtx] = useState<MonitorAssignmentContext | null>(null);
-  const [assignments, setAssignments] = useState<FrameProgressAssignment[]>([]);
-  const [auditByCable, setAuditByCable] = useState<Record<string, string>>({});
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusChipFilter>('all');
   const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
   const [sizeFilter, setSizeFilter] = useState<Set<string>>(new Set());
   const [deviceFilter, setDeviceFilter] = useState<Set<string>>(new Set());
@@ -144,53 +132,6 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
     [verify?.cables, verify?.cable_count, mapping],
   );
 
-  const loadExecution = useCallback(async () => {
-    try {
-      const prog = await supervisorApi.frameProgress(projectCode, frameId);
-      const list: FrameProgressAssignment[] = Array.isArray(prog?.assignments) ? prog.assignments : [];
-      setAssignments(list);
-      const active = pickActiveAssignment(list);
-      if (!active) {
-        setAssignmentCtx(null);
-        setStatus({});
-        setAuditByCable({});
-        return;
-      }
-      const detail = await supervisorApi.panelDetail(active.id);
-      const next: Record<string, ExtendedCableStatus> = {};
-      Object.entries(detail?.assignment?.cable_status || {}).forEach(([k, v]: [string, unknown]) => {
-        const row = v as { src?: boolean; dst?: boolean; note?: string; issue?: boolean };
-        next[k] = {
-          src: !!row.src,
-          dst: !!row.dst,
-          note: row.note || '',
-          issue: !!row.issue,
-        };
-      });
-      setStatus(next);
-      setAssignmentCtx({
-        id: active.id,
-        status: active.status,
-        technician_name: active.technician_name,
-        started_at: active.started_at,
-        completed_at: active.completed_at,
-        review_status: active.review_status,
-        qc_status: detail?.assignment?.qc_status ?? 'not_ready',
-        rework_requested: active.rework_requested,
-        rework_reason: detail?.assignment?.rework_reason,
-      });
-      const auditMap: Record<string, string> = {};
-      for (const entry of detail?.audit_trail || []) {
-        const idx = String((entry as { cable_index?: number }).cable_index ?? '');
-        const at = (entry as { created_at?: string }).created_at;
-        if (idx && at) auditMap[idx] = at;
-      }
-      setAuditByCable(auditMap);
-    } catch {
-      /* keep last good execution snapshot */
-    }
-  }, [projectCode, frameId]);
-
   useEffect(() => {
     const signal = { cancelled: false };
     setLoading(true);
@@ -206,7 +147,6 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
           original_filename: d?.original_filename,
           panel_name: d?.panel_name,
         });
-        return loadExecution();
       })
       .catch((err: unknown) => {
         if (signal.cancelled) return;
@@ -222,25 +162,18 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
         if (!signal.cancelled) setLoading(false);
       });
     return () => { signal.cancelled = true; };
-  }, [projectCode, frameId, loadExecution]);
-
-  useReadOnlyPoll(loadExecution, DWES_WIRING_SYNC_MS);
-
-  const summary = useMemo(
-    () => computeMonitorSummary(cables.length, status, assignmentCtx),
-    [cables.length, status, assignmentCtx],
-  );
+  }, [projectCode, frameId]);
 
   const visibleIndices = useMemo(() => {
-    const filtered = filterCableIndices(cables, status, {
+    const filtered = filterCableIndices(cables, EMPTY_STATUS, {
       search,
-      statusFilter,
+      statusFilter: 'all',
       colorFilter,
       sizeFilter,
       deviceFilter,
     });
-    return sortCableIndices(filtered, cables, mapping, sort, status);
-  }, [cables, status, search, statusFilter, colorFilter, sizeFilter, deviceFilter, sort, mapping]);
+    return sortCableIndices(filtered, cables, mapping, sort, EMPTY_STATUS);
+  }, [cables, search, colorFilter, sizeFilter, deviceFilter, sort, mapping]);
 
   useEffect(() => {
     if (selectedIndex == null && visibleIndices.length) {
@@ -259,19 +192,17 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
 
   const clearFilters = () => {
     setSearch('');
-    setStatusFilter('all');
     setColorFilter(new Set());
     setSizeFilter(new Set());
     setDeviceFilter(new Set());
   };
 
   const exportVisibleCsv = () => {
-    const headers = ['#', ...excelHeaders, 'Status'];
+    const headers = ['#', ...excelHeaders];
     const rows = visibleIndices.map((idx, i) => {
       const cable = cables[idx];
-      const st = status[String(idx)] ?? DEFAULT_CABLE_STATUS;
       const cells = excelHeaders.map(h => getCellValue(cable, h, mapping));
-      return [i + 1, ...cells, st.issue ? 'Issue' : st.src && st.dst ? 'Completed' : st.src || st.dst ? 'In Progress' : 'Pending'];
+      return [i + 1, ...cells];
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
@@ -313,7 +244,7 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
   const deviceOptions = useMemo(() => uniqueFacetValues(cables, 'device'), [cables]);
 
   const selectedCable = selectedIndex != null ? cables[selectedIndex] : null;
-  const filtersActive = !!search.trim() || statusFilter !== 'all'
+  const filtersActive = !!search.trim()
     || colorFilter.size > 0 || sizeFilter.size > 0 || deviceFilter.size > 0;
 
   if (loading) {
@@ -352,24 +283,10 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
           <h2 className="dwm-header-title">{panelLabel}</h2>
           <p className="dwm-header-sub">
             {verify?.original_filename || 'Wiring schedule'}
-            {assignmentCtx?.technician_name ? ` · ${assignmentCtx.technician_name}` : ' · No active assignment'}
             <span className="dwm-readonly-pill">Read-only</span>
           </p>
         </div>
-        <div className="dwm-progress-ring" aria-label={`Overall progress ${summary.overallPct}%`}>
-          <span className="dwm-progress-value">{summary.overallPct}%</span>
-          <span className="dwm-progress-label">Overall</span>
-        </div>
       </header>
-
-      <section className="dwm-kpi-strip bento-grid bento-grid--kpis kpi-grid-6" aria-label="Wiring summary">
-        <KpiCard label="Total wires" value={summary.total} icon={<LayoutGrid />} />
-        <KpiCard label="Completed" value={summary.completed} variant="green" icon={<CheckCircle2 />} />
-        <KpiCard label="In progress" value={summary.inProgress} variant="blue" icon={<Clock />} />
-        <KpiCard label="Pending" value={summary.pending} variant="amber" icon={<ClipboardList />} />
-        <KpiCard label="Verified" value={summary.verified} variant="green" icon={<ShieldCheck />} />
-        <KpiCard label="Rework / issues" value={summary.rework} variant="red" icon={<AlertTriangle />} />
-      </section>
 
       <div className="wsg-toolbar dwm-no-print">
         <div className="wsg-search">
@@ -387,24 +304,6 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
               <X size={12} />
             </button>
           )}
-        </div>
-        <div className="wsg-chips" role="group" aria-label="Status filter">
-          {([
-            ['all', 'All'],
-            ['pending', 'Pending'],
-            ['progress', 'In progress'],
-            ['done', 'Done'],
-            ['issue', 'Issues'],
-          ] as const).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`wsg-chip${statusFilter === key ? ' active' : ''}${key === 'issue' ? ' issue' : ''}`}
-              onClick={() => setStatusFilter(key)}
-            >
-              {label}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -439,7 +338,6 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
           cables={cables}
           excelHeaders={excelHeaders}
           mapping={mapping}
-          status={status}
           visibleIndices={visibleIndices}
           selectedIndex={selectedIndex}
           onSelect={setSelectedIndex}
@@ -450,21 +348,16 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
           <CableInspectorPanel
             cable={selectedCable}
             index={selectedIndex}
-            status={selectedIndex != null ? (status[String(selectedIndex)] ?? DEFAULT_CABLE_STATUS) : DEFAULT_CABLE_STATUS}
-            assignment={assignmentCtx}
-            cableUpdatedAt={selectedIndex != null ? auditByCable[String(selectedIndex)] : null}
             readOnly
           />
         </div>
       </div>
 
-      <footer className={`wsg-footer${assignments.length ? '' : ' warn'} dwm-no-print`}>
+      <footer className="wsg-footer dwm-no-print">
         <div className="wsg-footer-left">
-          <UserCog size={14} aria-hidden />
+          <LayoutGrid size={14} aria-hidden />
           <span>
-            {assignments.length
-              ? `${assignments.length} assignment record${assignments.length === 1 ? '' : 's'} on this panel`
-              : 'No technician assignment — schedule is available for review only'}
+            {cables.length} wire{cables.length === 1 ? '' : 's'} in converted schedule
           </span>
         </div>
         <div className="wsg-footer-keys">

@@ -1,7 +1,7 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-11 (app-wide project removal redesigned to one permanent-delete workflow)
-**Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`
+**Last updated:** 2026-07-12 (supervisor: monitor converted-view-only + compact interlocked Panel Assignment modal; Jul-11 layout/typography/launcher/project-delete/PDF work committed — see CHANGELOG)  
+**Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
 ---

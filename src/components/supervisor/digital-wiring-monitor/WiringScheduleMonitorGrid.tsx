@@ -1,19 +1,12 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { ChevronDown, ChevronUp } from '../../ui/icons';
 import type { Cable } from '../../../types';
-import {
-  cableStatusChip,
-  getCellValue,
-  wireColorHex,
-  DEFAULT_CABLE_STATUS,
-  type ExtendedCableStatus,
-} from '../../technician/wiring/wiring-utils';
+import { getCellValue, wireColorHex } from '../../technician/wiring/wiring-utils';
 import { fieldKeyForHeader } from '../../../constants/wiringSystemFields';
 import type { SortState } from './monitorUtils';
 
 const COL_WIDTH: Record<string, number> = {
   __idx: 44,
-  __status: 108,
 };
 const DEFAULT_COL_W = 112;
 
@@ -27,7 +20,6 @@ interface RowProps {
   displayNo: number;
   excelHeaders: string[];
   mapping: Record<string, string>;
-  status: ExtendedCableStatus;
   selected: boolean;
   zebra: boolean;
   onSelect: (index: number) => void;
@@ -39,17 +31,13 @@ const MonitorRow = memo(function MonitorRow({
   displayNo,
   excelHeaders,
   mapping,
-  status,
   selected,
   zebra,
   onSelect,
 }: RowProps) {
-  const chip = cableStatusChip(status);
   const rowClass = [
     'wsg-row',
     zebra ? 'zebra' : '',
-    chip.tone === 'done' ? 'done' : '',
-    chip.tone === 'issue' ? 'issue' : '',
     selected ? 'selected' : '',
   ].filter(Boolean).join(' ');
 
@@ -94,15 +82,6 @@ const MonitorRow = memo(function MonitorRow({
           </div>
         );
       })}
-      <div
-        className="wsg-cell chk frozen-r"
-        style={{ width: colWidth('__status'), right: 0 }}
-        role="cell"
-      >
-        <span className={`wsg-status-chip ${chip.tone === 'done' ? 'done' : chip.tone === 'issue' ? 'issue' : chip.tone === 'progress' ? 'dst' : ''}`}>
-          {chip.label}
-        </span>
-      </div>
     </div>
   );
 });
@@ -111,7 +90,6 @@ interface Props {
   cables: Cable[];
   excelHeaders: string[];
   mapping: Record<string, string>;
-  status: Record<string, ExtendedCableStatus>;
   visibleIndices: number[];
   selectedIndex: number | null;
   onSelect: (index: number) => void;
@@ -123,7 +101,6 @@ export default function WiringScheduleMonitorGrid({
   cables,
   excelHeaders,
   mapping,
-  status,
   visibleIndices,
   selectedIndex,
   onSelect,
@@ -189,7 +166,7 @@ export default function WiringScheduleMonitorGrid({
     return (
       <div className="wsg-nomatch">
         <p className="wsg-nomatch-title">No rows match the current filters</p>
-        <p className="wsg-empty-sub">Clear search or status filters to see the full schedule.</p>
+        <p className="wsg-empty-sub">Clear search or filters to see the full schedule.</p>
       </div>
     );
   }
@@ -201,7 +178,7 @@ export default function WiringScheduleMonitorGrid({
       tabIndex={0}
       role="grid"
       aria-rowcount={visibleIndices.length}
-      aria-colcount={excelHeaders.length + 2}
+      aria-colcount={excelHeaders.length + 1}
       onKeyDown={handleKeyDown}
     >
       <div className="wsg-hrow" role="row">
@@ -216,16 +193,6 @@ export default function WiringScheduleMonitorGrid({
           {sort?.key === '__idx' ? (sort.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : null}
         </button>
         {headerCells}
-        <button
-          type="button"
-          className="wsg-hcell sortable frozen-r"
-          style={{ width: colWidth('__status'), right: 0 }}
-          onClick={() => onSort('__status')}
-          aria-sort={sort?.key === '__status' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-        >
-          Status
-          {sort?.key === '__status' ? (sort.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : null}
-        </button>
       </div>
       {visibleIndices.map((index, displayIdx) => (
         <MonitorRow
@@ -235,7 +202,6 @@ export default function WiringScheduleMonitorGrid({
           displayNo={displayIdx + 1}
           excelHeaders={excelHeaders}
           mapping={mapping}
-          status={status[String(index)] ?? DEFAULT_CABLE_STATUS}
           selected={selectedIndex === index}
           zebra={displayIdx % 2 === 1}
           onSelect={onSelect}
