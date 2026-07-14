@@ -821,7 +821,8 @@
   }
   .bio-panel-dropdown-body { @apply overflow-y-auto overscroll-contain; }
 
-  /* Shared Deep Indigo workspace navigation — every dashboard role. */
+  /* Shared light workspace navigation — every dashboard role.
+     The backdrop stays dark: it dims the page behind the mobile drawer. */
   .sidebar-backdrop {
     @apply fixed inset-0 z-40;
     background: rgba(2, 6, 23, 0.68);
@@ -841,11 +842,13 @@
     max-height: none;
     width: 16.5rem;
     overflow: visible;
-    background: #17152E;
-    border-color: rgba(196, 181, 253, 0.14);
-    color: #F8FAFC;
+    /* Light workspace chrome: a crisp white rail against the light grey canvas,
+       separated by a hairline border and a subtle shadow rather than by darkness. */
+    background: var(--t-sidebar-bg, #FFFFFF);
+    border-color: var(--t-sidebar-border, #E2E8F0);
+    color: var(--t-sidebar-text, #334155);
     transition: width 220ms ease, box-shadow 180ms ease, transform 220ms ease;
-    box-shadow: 5px 0 24px rgba(16, 13, 40, 0.24), inset -1px 0 rgba(255, 255, 255, 0.035);
+    box-shadow: 1px 0 2px rgba(15, 23, 42, 0.04), 4px 0 16px rgba(15, 23, 42, 0.03);
   }
   .dash-sidebar--collapsed { width: 4.5rem; }
   .dash-sidebar--collapsed .dash-sidebar-label {
@@ -865,30 +868,30 @@
     height: auto;
     max-height: none;
     transform: translateX(0);
-    box-shadow: 12px 0 38px rgba(2, 6, 23, 0.34);
+    box-shadow: 12px 0 38px rgba(15, 23, 42, 0.16);
   }
   .dash-sidebar-head {
     @apply flex items-center justify-between gap-2 px-3 border-b shrink-0;
-    border-color: rgba(196, 181, 253, 0.12);
+    border-color: var(--t-sidebar-border, #E2E8F0);
     min-height: 54px;
   }
   .dash-sidebar-title {
     @apply text-[10px] font-extrabold uppercase select-none;
-    color: #C4B5FD;
+    color: var(--t-sidebar-muted, #64748B);
     letter-spacing: 0.14em;
   }
   .dash-sidebar-toggle {
     @apply h-9 w-9 rounded-lg flex items-center justify-center transition-all;
-    color: #AAA7C3;
-    border: 1px solid rgba(196, 181, 253, 0.12);
-    background: rgba(var(--t-surface-white-rgb), 0.035);
+    color: var(--t-sidebar-muted, #64748B);
+    border: 1px solid var(--t-sidebar-border, #E2E8F0);
+    background: var(--t-sidebar-hover, #F1F5F9);
     min-width: 36px;
     min-height: 36px;
   }
   .dash-sidebar-toggle:hover {
-    background: #29264A;
-    color: #F8FAFC;
-    border-color: rgba(255, 255, 255, 0.14);
+    background: #E2E8F0;
+    color: var(--t-sidebar-strong, #0F172A);
+    border-color: #CBD5E1;
     transform: translateY(-1px);
   }
   .dash-sidebar-toggle:active {
@@ -908,23 +911,25 @@
     min-height: 46px;
     font-size: 13.5px;
     font-weight: 650;
-    color: #AAA7C3;
+    color: var(--t-sidebar-text, #475569);
     position: relative;
     overflow: hidden;
     border: 1px solid transparent;
     transition: background-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
   }
   .dash-sidebar-link:hover {
-    background: #29264A;
-    color: #F8FAFC;
+    background: var(--t-sidebar-hover, #F1F5F9);
+    color: var(--t-sidebar-strong, #0F172A);
     transform: translateX(2px);
   }
+  /* The active pill keeps the existing brand gradient; only its glow is softened
+     so it sits correctly on a light rail instead of a dark one. */
   .dash-sidebar-link.is-active {
     background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
     color: #FFFFFF;
     font-weight: 750;
-    border-color: rgba(221, 214, 254, 0.24);
-    box-shadow: 0 8px 22px rgba(91, 33, 182, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    border-color: rgba(79, 70, 229, 0.30);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
   .dash-sidebar-link.is-active::before {
     content: '';
@@ -941,9 +946,11 @@
     @apply shrink-0 flex items-center justify-center;
     width: 20px;
     height: 20px;
-    color: #AAA7C3;
+    color: var(--t-sidebar-muted, #64748B);
     transition: transform var(--transition-base);
   }
+  .dash-sidebar-link:hover .dash-sidebar-icon { color: var(--t-sidebar-strong, #0F172A); }
+  .dash-sidebar-link.is-active .dash-sidebar-icon { color: #FFFFFF; }
   .dash-sidebar-icon svg,
   .dash-sidebar-icon .ui-icon,
   .dash-sidebar-icon .material-symbols-rounded {
