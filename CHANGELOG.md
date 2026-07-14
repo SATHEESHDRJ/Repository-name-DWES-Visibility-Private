@@ -6,6 +6,16 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-14 — Security/Hardening — Block private files over HTTP; make SSE proxy-safe; document ops constraints
+
+Verification of the login / project-management / wiring-upload / live-sync work surfaced one real leak and two operational gaps, all fixed here.
+
+- **Security (real leak, fixed):** the Vite dev/preview server serves any file under the project root, so `backend/seeds/demo-accounts.local.json` (plaintext demo passwords) and `backend/.env` were reachable over HTTP (`GET /backend/seeds/demo-accounts.local.json` → 200). Added `server.fs.deny` in `vite.config.ts` covering demo `*.local.json`, `.env*`, `certs/**`, `*.pem`/`*.key`, `uploads/**`, `backups/**`, `*.sqlite`, and `backend/data/**`. Both now return **403**. (`preview` serves only built `dist/`, which never contains these, so the guard is dev-server only.)
+- **SSE proxy-safety (risk #1, now self-defending):** `/api/events/stream` sets `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform` from the backend, so a buffering proxy no longer silently delays live updates even where the operator did not add the nginx `proxy_buffering off` block (that block already exists in `infra/nginx/conf.d/dwes.conf`). Verified: first SSE frame arrives in 0 ms; headers present.
+- **Docs:** new `docs/LIVE-UPDATES.md` records the two live-update operational constraints for deployers — (1) reverse proxies must not buffer `/api/events/stream` (with the exact requirements and a `curl -N` check), and (2) the event bus is in-process, so **run one backend instance**; horizontal scaling requires Postgres `LISTEN/NOTIFY` or Redis Pub/Sub at the single `EventsService.publish()` touch point.
+- **Verify:** FE `tsc` + BE `tsc` clean; backend tests 72/72; state 4/4; oxlint 39 (pre-existing). Full requirement sweep **49/49** on a throwaway project: secure demo file present + private + not served + no API exposure; five roles authenticate and RBAC holds; project numbering is the sole identifier with duplicate rejected before save; wiring schedule verifies on upload then shows only a compact re-upload status; SSE hardened + role-filtered; login shows Install App and no demo section; PWA manifest is standalone with a served service worker; supervisor actions are the four compact controls with Delete Project inside Edit; New Project popup gates Add Panel behind Name+Client, overlay has no System Type, and shows only the final project name.
+- **Not fixed (unchanged, as instructed):** the demo file's own passwords do not all match the already-seeded database (4/8 differ) — that is the maintainer's private reference to reconcile, not something to guess; and the wiring-parser first-row bug still needs a genuine ENOWA schedule to fix safely.
+
 ## 2026-07-14 — Feature — Silent live sync: no flashing, no lost selection, role-filtered SSE
 
 Completes the live-update requirement. The SSE channel existed, but every screen still *reloaded* on each event: the shared loaders called `setLoading(true)` and blanked their lists, and `ProjectsTab.load()` additionally cleared the selected project and panel. So an event (or the 45 s poll) produced a visible flash and dropped the user's selection.
@@ -239,7 +249,7 @@ Completes the live-update requirement. The SSE channel existed, but every screen
 
 - **Problem:** After reboot, Vite on `:5175` could run while Nest on `:3001` was dead or had drifted to `:3002+`; demo `@sysadmin` login showed "Can't reach the server" (502 via stale proxy).
 - **Fix:** `launch-dwes.mjs` frees stale `:3001` before starting backend and health-checks runtime port from `backend/.dwes-port`; Vite `/api` proxy uses dynamic `router()` to re-read that file; dev launcher sets `DWES_MODE=dev` → Nest binds `:3001` only (no port scan).
-- **Verify:** Backend restarted; `POST /api/auth/login` (`sysadmin`/`admin123`) via `:5175` proxy → OK.
+- **Verify:** Backend restarted; `POST /api/auth/login` with the private local administrator account via `:5175` proxy → OK.
 - **Files:** `scripts/launch-dwes.mjs`, `vite.config.ts`, `backend/src/main.ts`, `CHANGELOG.md`
 
 ## 2026-07-09 — Verify — Pass 2 multi-project + panel switch smoke (17/17)

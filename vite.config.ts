@@ -39,6 +39,25 @@ const proxyTarget = resolveProxyTarget()
 const vitePort = Number(process.env.VITE_INTERNAL_PORT) || 5175
 const viteHost = process.env.VITE_INTERNAL_HOST ?? true
 
+/**
+ * Paths the dev/preview server must never serve. Vite serves anything under the project
+ * root by default, which would expose the private demo-account file, certificates, env
+ * files, backups, and uploaded customer documents over HTTP.
+ */
+const DEV_SERVER_DENY = [
+  '**/seeds/demo-accounts.local.json',
+  '**/seeds/*.local.json',
+  '**/.env',
+  '**/.env.*',
+  '**/certs/**',
+  '**/*.pem',
+  '**/*.key',
+  '**/uploads/**',
+  '**/backups/**',
+  '**/*.sqlite',
+  '**/backend/data/**',
+]
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
@@ -56,6 +75,12 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true,
     https,
+    fs: {
+      // The dev server can otherwise serve any file under the project root. Demo
+      // credentials, private keys, env files, and backups must never be reachable
+      // over HTTP — they are internal references, not application assets.
+      deny: DEV_SERVER_DENY,
+    },
     watch: {
       // Never watch git worktrees under .claude/ — they are full repo copies whose
       // builds/installs would otherwise churn this dev server (phantom HMR / reloads).
@@ -69,6 +94,8 @@ export default defineConfig({
       },
     },
   },
+  // `preview` serves only the built dist/ output, which never contains backend seeds,
+  // env files, or uploads — so the fs.deny guard is needed on the dev `server` only.
   preview: {
     host: viteHost,
     port: vitePort,

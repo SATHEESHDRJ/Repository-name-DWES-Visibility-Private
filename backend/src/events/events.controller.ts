@@ -1,4 +1,4 @@
-import { Controller, Sse, UseGuards } from '@nestjs/common';
+import { Controller, Header, Sse, UseGuards } from '@nestjs/common';
 import { Observable, from, map, merge, mergeMap, filter, timer } from 'rxjs';
 import { EventsService, type DwesServerEvent } from './events.service';
 import { canReceiveEvent, type EventAudience } from './event-visibility';
@@ -31,6 +31,12 @@ export class EventsController {
    */
   @Sse('stream')
   @UseGuards(JwtAuthGuard)
+  // Tell reverse proxies not to buffer this response, so live updates are not held back
+  // until a buffer fills. nginx honours X-Accel-Buffering even without `proxy_buffering
+  // off`, which keeps the stream correct behind a proxy DWES does not control.
+  @Header('X-Accel-Buffering', 'no')
+  @Header('Cache-Control', 'no-cache, no-transform')
+  @Header('Connection', 'keep-alive')
   stream(@CurrentUser() user: User): Observable<SseMessage> {
     const audience = this.audienceFor(user);
 
