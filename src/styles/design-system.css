@@ -1842,7 +1842,87 @@
   }
   .pj-toolbar-dropdown-item {
     @apply flex items-center gap-2.5 w-full px-3.5 py-2.5 text-left text-[13px] font-semibold
-           text-slate-700 hover:bg-slate-50 transition-colors;
+           text-slate-700 hover:bg-slate-50 transition-colors
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent;
+  }
+  .pj-toolbar-dropdown-item--danger {
+    @apply text-red-600 hover:bg-red-50;
+  }
+
+  /* Project Information — compact Edit menu (project + panel management, permanent delete) */
+  .pj-info-action-menu { @apply relative shrink-0; }
+  .pj-info-action-caret { @apply transition-transform; }
+  .pj-info-action-caret.is-open { @apply rotate-180; }
+
+  .pj-edit-menu {
+    @apply left-auto right-0 min-w-[248px] py-1.5;
+  }
+  .pj-edit-menu-label {
+    @apply block px-3.5 pt-2 pb-1 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400;
+  }
+  .pj-edit-menu-divider {
+    @apply my-1 border-t border-slate-200;
+  }
+
+  /* Compact wiring-schedule status (post-upload; no Excel table on the info card) */
+  .pj-wiring-status {
+    @apply flex flex-wrap items-center gap-3 mt-4 px-3.5 py-3 rounded-xl border border-slate-200;
+    background: var(--t-surface-subtle, #F8FAFC);
+  }
+  .pj-wiring-status-dot {
+    @apply w-2.5 h-2.5 rounded-full shrink-0;
+    background: #CBD5E1;
+  }
+  .pj-wiring-status-dot--available { background: #10B981; }
+  .pj-wiring-status-dot--loading   { background: #60A5FA; }
+  .pj-wiring-status-dot--error     { background: #EF4444; }
+  .pj-wiring-status-copy { @apply flex flex-col gap-0.5 min-w-0 flex-1; }
+  .pj-wiring-status-title {
+    @apply m-0 text-[13px] font-semibold text-slate-700 truncate;
+  }
+  .pj-wiring-status-meta {
+    @apply m-0 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-slate-500 min-w-0;
+  }
+  .pj-wiring-status-meta > span { @apply truncate max-w-full; }
+  .pj-wiring-status-meta > span + span::before {
+    content: '·';
+    @apply mr-2 text-slate-300;
+  }
+  .pj-wiring-status-action {
+    @apply inline-flex items-center gap-1.5 shrink-0 h-9 px-3 rounded-lg border border-slate-300
+           bg-[var(--t-surface-white)] text-[12px] font-semibold text-slate-700
+           hover:bg-slate-50 hover:border-slate-400 transition-colors
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  /* New Project — compact pending panel list (added via the Add Panel overlay) */
+  .pj-panel-list { @apply flex flex-col gap-2 m-0 p-0 list-none; }
+  .pj-panel-list-empty {
+    @apply m-0 px-3.5 py-3 rounded-xl border border-dashed border-slate-300
+           text-[12px] text-slate-500 text-center;
+  }
+  .pj-panel-list-row {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200
+           bg-[var(--t-surface-white)];
+  }
+  .pj-panel-list-index {
+    @apply grid place-items-center w-6 h-6 shrink-0 rounded-md bg-slate-100
+           text-[11px] font-bold text-slate-600;
+  }
+  .pj-panel-list-copy { @apply flex flex-col min-w-0 flex-1 gap-0.5; }
+  .pj-panel-list-copy > strong { @apply text-[13px] font-semibold text-slate-800 truncate; }
+  .pj-panel-list-copy > span   { @apply text-[11px] text-slate-500 truncate; }
+  .pj-panel-list-actions { @apply flex items-center gap-1 shrink-0; }
+  .pj-panel-list-actions > button {
+    @apply grid place-items-center w-8 h-8 rounded-lg border border-slate-200
+           text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors;
+  }
+  .pj-panel-list-actions > button.is-danger {
+    @apply text-red-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200;
+  }
+
+  .pj-numbering-ok {
+    @apply m-0 self-end pb-2 text-[12px] font-medium text-emerald-700;
   }
 
   /* DEV helper bar â€” visible when useDemoMode (Vite dev + backend DEMO_MODE) */
@@ -6148,6 +6228,46 @@
   @media (min-width: 1024px) { .login-panel-topbar { padding: 1.25rem 2rem 0; } }
   @media (min-width: 1440px) { .login-panel-topbar { padding: 1.5rem 2.5rem 0; } }
 
+  /* Install DWES as a standalone app (PWA) */
+  .login-install-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .login-install-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--t-border-strong, rgba(15, 23, 42, 0.14));
+    border-radius: 12px;
+    background: var(--t-surface-white, #fff);
+    color: var(--t-text, #0f172a);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    transition: filter .15s ease, transform .15s ease;
+  }
+
+  .login-install-btn:hover:not(:disabled) { filter: brightness(0.97); transform: translateY(-1px); }
+  .login-install-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  .login-install-hint {
+    max-width: 260px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--t-border, rgba(15, 23, 42, 0.1));
+    border-radius: 10px;
+    background: var(--t-surface-white, #fff);
+    color: var(--t-text-muted, #475569);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
   .login-clock-widget {
     position: relative;
     isolation: isolate;
@@ -6263,6 +6383,23 @@
     letter-spacing: 0.04em;
     color: var(--t-faint, #64748B);
   }
+
+  /* Support information — always visible, on every breakpoint */
+  .login-support-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 1rem 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--t-border, rgba(15, 23, 42, 0.1));
+    border-radius: 12px;
+    background: var(--t-surface-subtle, #F8FAFC);
+    color: var(--t-text-muted, #475569);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .login-support-note svg { flex-shrink: 0; margin-top: 1px; }
+  .login-support-note strong { color: var(--t-text, #0F172A); font-weight: 600; }
 
   /* â”€â”€ Login: card entrance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .login-card-enter {

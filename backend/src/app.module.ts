@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { DevModule } from './dev/dev.module';
 import { DwesThrottlerGuard } from './common/guards/dwes-throttler.guard';
 import { HealthModule } from './common/health.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { HealthModule } from './common/health.module';
     }]),
     PrismaModule,
     HealthModule,
+    EventsModule,
     AuthModule,
     UsersModule,
     ProjectsModule,

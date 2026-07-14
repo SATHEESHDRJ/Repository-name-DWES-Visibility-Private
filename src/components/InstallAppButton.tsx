@@ -6,23 +6,45 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+/** True while DWES runs as an installed app rather than a browser tab. */
+function isStandalone(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as { standalone?: boolean }).standalone === true;
+}
+
+/** Browsers that never fire `beforeinstallprompt` but can still install from the share menu. */
+function manualInstallHint(): string | null {
+  const ua = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (iOS) return 'On iPad / iPhone: tap Share, then "Add to Home Screen" to install DWES.';
+  if (/Firefox\//.test(ua)) return 'In Firefox: open the browser menu, then "Install" or "Add to Home Screen".';
+  return null;
+}
+
 /**
- * "Install app" button shown only when the browser offers PWA installation
- * (Chrome / Edge fire `beforeinstallprompt`). Hidden once installed or when
- * already running as an installed app (standalone display mode).
+ * "Install app" action for the login page. DWES installs as a Progressive Web App so it
+ * opens standalone instead of as a browser page. Rendered only when installation is
+ * supported and the app is not already installed.
  */
 export default function InstallAppButton() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installing, setInstalling] = useState(false);
+  const [installed, setInstalled] = useState(() => isStandalone());
+  const [hintOpen, setHintOpen] = useState(false);
+  const hint = manualInstallHint();
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    if (isStandalone()) return;
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setPromptEvent(e as BeforeInstallPromptEvent);
     };
-    const onInstalled = () => setPromptEvent(null);
+    const onInstalled = () => {
+      setPromptEvent(null);
+      setInstalled(true);
+    };
 
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
@@ -32,9 +54,14 @@ export default function InstallAppButton() {
     };
   }, []);
 
-  if (!promptEvent) return null;
+  // Already installed, or a browser that offers no install path at all.
+  if (installed || (!promptEvent && !hint)) return null;
 
-  const handleInstall = async () => {
+  const handleClick = async () => {
+    if (!promptEvent) {
+      setHintOpen(open => !open);
+      return;
+    }
     setInstalling(true);
     try {
       await promptEvent.prompt();
@@ -46,15 +73,21 @@ export default function InstallAppButton() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleInstall}
-      disabled={installing}
-      title="Install DWES as a desktop app for quick access"
-      className="inline-flex items-center gap-2 self-start rounded-2xl border border-[var(--t-border-strong,rgba(15,23,42,0.14))] bg-[var(--t-card,#ffffff)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--t-text,#0F172A)] shadow-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-    >
-      <InstallDesktop size={16} strokeWidth={1.5} aria-hidden="true" />
-      <span>Install app</span>
-    </button>
+    <div className="login-install-wrap">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={installing}
+        className="login-install-btn"
+        title="Install DWES so it opens as a standalone app"
+        aria-expanded={hint && !promptEvent ? hintOpen : undefined}
+      >
+        <InstallDesktop size={16} strokeWidth={1.5} aria-hidden="true" />
+        <span>{installing ? 'Installing…' : 'Install app'}</span>
+      </button>
+      {hintOpen && hint && !promptEvent && (
+        <p className="login-install-hint" role="status">{hint}</p>
+      )}
+    </div>
   );
 }

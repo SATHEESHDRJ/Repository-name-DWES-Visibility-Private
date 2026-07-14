@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-14 (Quality pass over the pending refactor: fixed 3 floating-promise panel-drawing routes, consolidated KPI/parseCS/SVG-safety duplicates into shared utils, stabilized `useLatestRequest` identity, dead-code/lint cleanup — all builds green, backend 66/66 + state 4/4 tests pass. Prior: 2D Drawing → 3D Panel Model conversion; hosting assessment approval gate open — see CHANGELOG)  
+**Last updated:** 2026-07-14 (Login hardened for production — all demo credentials removed from UI, bundle, and API incl. the plaintext-password `login-hints` endpoint; PWA install; compact Project Information actions + Edit menu; project-first New Project with Add Panel overlay and backend numbering-uniqueness; compact post-upload wiring status + re-upload confirmation; SSE live sync for silent cross-user refresh. All builds green; 66/66 + 4/4 tests; live smoke 32/32. **Open bug:** wiring parser drops the first data row — see CHANGELOG)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 

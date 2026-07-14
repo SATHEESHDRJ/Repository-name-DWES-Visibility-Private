@@ -78,8 +78,6 @@ export const authApi = {
   health: () => api.get('/health').then(r => r.data),
 
   env: () => api.get('/env').then(r => r.data),
-
-  hints: () => api.get('/login-hints').then(r => r.data),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -109,6 +107,11 @@ export const projectsApi = {
   list: (signal?: AbortSignal) => api.get('/projects', { signal }).then(r => r.data),
 
   create: (dto: unknown) => api.post('/projects', dto).then(r => r.data),
+
+  /** Backend check that a project numbering is free (deleted codes stay reserved). */
+  codeAvailable: (code: string, signal?: AbortSignal) =>
+    api.get(`/projects/code-available/${encodeURIComponent(code)}`, { signal })
+      .then(r => r.data as { code: string; available: boolean; reason?: string }),
 
   update: (code: string, dto: unknown) => api.put(`/projects/${code}`, dto).then(r => r.data),
 

@@ -90,6 +90,7 @@ export function useProjectPanelDocumentStatus(
           availability: 'available',
           fileName: data?.original_filename || undefined,
           cableCount: cables.length,
+          uploadedAt: data?.uploaded_at || undefined,
         });
         return;
       }

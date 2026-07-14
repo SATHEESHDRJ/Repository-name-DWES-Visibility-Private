@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../data/mock-store';
-import { assertDemoMode, isDemoMode } from '../common/demo-mode.util';
+import { isDemoMode } from '../common/demo-mode.util';
 import { HealthService } from '../common/health.service';
 
 @Controller('api')
@@ -53,19 +53,6 @@ export class AuthController {
   ) {
     const ip = req.ip || '127.0.0.1';
     return this.authService.logout(user.id, user.role, ip, body?.refresh_token);
-  }
-
-  @Get('login-hints')
-  getHints() {
-    assertDemoMode();
-    return this.authService.getLoginHints();
-  }
-
-  // DEMO_MODE-gated: returns only username / full_name / role — no secrets.
-  @Get('auth/demo-users')
-  async demoUsers() {
-    assertDemoMode();
-    return this.authService.getDemoUsers();
   }
 
   @Get('health')

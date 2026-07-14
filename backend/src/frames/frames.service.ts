@@ -282,6 +282,7 @@ export class FramesService {
     const cablesList = Array.isArray(f.cables) ? f.cables : [];
     return {
       panel_name: f.panel_name, original_filename: f.original_filename, sheet_name: f.sheet_name,
+      uploaded_at: f.uploaded_at,
       mapping: f.mapping || {}, excel_headers: excelHeaders, cables: cablesList,
       cable_count: f.cable_count ?? cablesList.length,
       validation: buildValidation(cablesList), compare_status: f.compare_status, has_source_excel: hasSourceExcel,

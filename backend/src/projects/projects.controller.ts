@@ -15,6 +15,11 @@ export class ProjectsController {
   @Get()
   findAll() { return this.svc.findAll(); }
 
+  /** Declared before ':code' so the literal segment is not captured as a project code. */
+  @Get('code-available/:code')
+  @Roles('prod_supervisor')
+  codeAvailable(@Param('code') code: string) { return this.svc.codeAvailability(code); }
+
   @Get(':code')
   findOne(@Param('code') code: string) { return this.svc.findOne(code); }
 

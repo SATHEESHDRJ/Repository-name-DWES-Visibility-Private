@@ -32,6 +32,28 @@ export class ProjectsService {
     return p;
   }
 
+  /**
+   * Project-numbering availability for the New Project form. A code stays reserved
+   * after deletion (the row is tombstoned, not removed), so a number can never be
+   * reused for an active, deleted, archived, or tombstoned project.
+   */
+  async codeAvailability(code: string) {
+    const trimmed = String(code || '').trim().toUpperCase();
+    if (!trimmed) throw new BadRequestException('Project code is required');
+    const existing = await this.prisma.projects.findUnique({
+      where: { code: trimmed },
+      select: { code: true, is_active: true },
+    });
+    if (!existing) return { code: trimmed, available: true };
+    return {
+      code: trimmed,
+      available: false,
+      reason: existing.is_active
+        ? 'This project numbering is already used by an active project.'
+        : 'This project numbering belongs to a deleted project and stays permanently reserved.',
+    };
+  }
+
   async create(dto: {
     code: string;
     client: string;

@@ -9,6 +9,7 @@ import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 import { projectsApi, techApi } from '../../services/api';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { useServerEvents } from '../../hooks/useServerEvents';
 import type { ActiveProjectContext } from '../../store/useProjectSelectionStore';
 import { reconcileProjectSelection } from '../../utils/entityConsistency';
 
@@ -45,6 +46,9 @@ export default function AppShell({
   const [projectContextLoading, setProjectContextLoading] = useState(Boolean(user?.id));
   const [projectContextVerified, setProjectContextVerified] = useState(false);
   const { begin: beginProjectValidation, isLatest: isLatestProjectValidation } = useLatestRequest();
+
+  // Live change stream: silently refreshes only the affected data across users.
+  useServerEvents(Boolean(user?.id));
 
   // Keep --dash-topbar-height equal to the topbar's REAL height at all times.
   // The topbar is a sticky flex-wrap bar whose height changes with viewport

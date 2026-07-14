@@ -125,49 +125,4 @@ export class AuthService {
     });
     return { message: 'Logged out successfully' };
   }
-
-  // ── Demo-mode only: safe user list (username / name / role, NO secrets) ────
-
-  async getDemoUsers() {
-    const ROLE_ORDER: Record<string, number> = {
-      system_admin: 0, ops_director: 1, prod_supervisor: 2,
-      qaqc_engineer: 3, wiring_technician: 4,
-    };
-
-    const DEMO_USERNAMES = [
-      'sysadmin', 'director1', 'ops_director1', 'supervisor1',
-      'qa1', 'qa2',
-      'tech01', 'tech02', 'tech03', 'tech04', 'tech05',
-      'tech1',  'tech2',  'tech3',  'tech4',  'tech5',  'tech6',
-      'tech7',  'tech8',  'tech9',  'tech10', 'tech11', 'tech12',
-      'tech13', 'tech14', 'tech15', 'tech16', 'tech17', 'tech18',
-      'tech19', 'tech20', 'tech21', 'tech22', 'tech23', 'tech24',
-    ];
-
-    const rows = await this.prisma.users.findMany({
-      where: { username: { in: DEMO_USERNAMES }, is_active: true },
-      select: { username: true, full_name: true, role: true },
-    });
-
-    return rows.sort((a, b) => {
-      const ro = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
-      if (ro !== 0) return ro;
-      return a.username.localeCompare(b.username, undefined, { numeric: true, sensitivity: 'base' });
-    });
-  }
-
-  getLoginHints() {
-    return {
-      hint: 'Development seed credentials',
-      accounts: [
-        { role: 'system_admin',      username: 'sysadmin',      password: 'admin123'        },
-        { role: 'ops_director',      username: 'director1',     password: 'dir123'          },
-        { role: 'ops_director',      username: 'ops_director1', password: 'ops_director123' },
-        { role: 'prod_supervisor',   username: 'supervisor1',   password: 'super123'        },
-        { role: 'qaqc_engineer',     username: 'qa1',           password: 'qa1'             },
-        { role: 'qaqc_engineer',     username: 'qa2',           password: 'qa2'             },
-        { role: 'wiring_technician', username: 'tech1',         password: 'tech1'           },
-      ],
-    };
-  }
 }
