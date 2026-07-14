@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards, Res, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { FastifyReply } from 'fastify';
+import { DwesFileInterceptor, type DwesUploadedFile } from '../common/interceptors/fastify-file.interceptor';
 import { FramesService } from './frames.service';
 import { WiringDocumentService } from '../projects/wiring-document.service';
 import { PanelModelService, type PanelModelSpecPatch } from '../panel-model/panel-model.service';
@@ -167,10 +167,10 @@ export class FramesController {
   @Post('frames/:id/compare-source-file')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor', 'system_admin', 'ops_director', 'qaqc_engineer')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   compareSourceFile(
     @Param('code') code: string, @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
   ) {
     if (!file?.buffer) throw new BadRequestException('No file provided');
     return this.svc.compareSourceFile(code, id, file.buffer);

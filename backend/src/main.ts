@@ -6,7 +6,9 @@ import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyMultipart from '@fastify/multipart';
 import { AppModule } from './app.module';
+import { UPLOAD_LIMIT_BYTES } from './upload/upload-limits';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -210,6 +212,18 @@ async function bootstrap() {
   } catch {
     console.warn('[DWES] helmet not installed — security headers rely on reverse proxy');
   }
+
+  // Multipart uploads (wiring schedules, drawings, director reports).
+  // Limits mirror the previous Multer memory-storage setup: one file per
+  // request, DWES_MAX_UPLOAD_MB cap, 1MiB per text field (Multer's default).
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: UPLOAD_LIMIT_BYTES,
+      files: 1,
+      fields: 20,
+      fieldSize: 1024 * 1024,
+    },
+  });
 
   app.enableCors({
     origin: resolveCorsOrigins(),

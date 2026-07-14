@@ -2,7 +2,7 @@ import {
   Controller, Post, Put, Body, Param, UseGuards, UseInterceptors,
   UploadedFile, BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { DwesFileInterceptor, type DwesUploadedFile } from '../common/interceptors/fastify-file.interceptor';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -23,8 +23,8 @@ export class UploadController {
   @Post('upload/extract-metadata')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
-  extractMetadata(@UploadedFile() file: Express.Multer.File) {
+  @UseInterceptors(DwesFileInterceptor('file'))
+  extractMetadata(@UploadedFile() file: DwesUploadedFile) {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.svc.extractMetadata(file.buffer);
   }
@@ -32,10 +32,10 @@ export class UploadController {
   @Post('upload/read-headers/:code')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   readHeaders(
     @Param('code') code: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.svc.readHeaders(code, file.buffer, file.originalname);
@@ -44,10 +44,10 @@ export class UploadController {
   @Post('upload/preview-mapped/:code')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   previewMapped(
     @Param('code') code: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
     @Body() body: { sheet_name: string; mapping: string; header_row?: string },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
@@ -61,10 +61,10 @@ export class UploadController {
   @Post('upload/wiring-schedule-mapped/:code')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   uploadMapped(
     @Param('code') code: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
     @Body() body: { sheet_name: string; mapping: string; header_row?: string; frame_id?: string },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
@@ -78,10 +78,10 @@ export class UploadController {
   @Post('upload/drawing/:code')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   uploadDrawing(
     @Param('code') code: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
     @Body() body: { replace_drawing_id?: string; frame_id?: string },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
@@ -99,12 +99,12 @@ export class UploadController {
   @Put('projects/:code/frames/:frameId/drawing/:slot')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   uploadPanelDrawingAsset(
     @Param('code') code: string,
     @Param('frameId') frameId: string,
     @Param('slot') slot: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
     @CurrentUser() user: User,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
@@ -123,10 +123,10 @@ export class UploadController {
   @Post('upload/director-report/:code')
   @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(DwesFileInterceptor('file'))
   uploadDirectorReport(
     @Param('code') code: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: DwesUploadedFile,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.svc.uploadDirectorReport(code, file.buffer, file.originalname, file.mimetype);
