@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { projects as ProjectRow } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
 import { assignedCableKpiPercent, wiringKpiPercent, compositeKpiPercent } from '../common/kpi.constants';
@@ -7,17 +8,67 @@ import { drawEnterpriseFooter, drawEnterpriseHeader, pageBox } from '../common/p
 import * as XLSX from 'xlsx';
 import * as PDFDocument from 'pdfkit';
 
+interface DirectorAssignmentRow {
+  id: number; project_code: string; technician_id: number;
+  status: string | null; review_status: string | null; qc_status: string | null;
+  supervisor_approved: boolean | null; rework_requested: boolean | null;
+  total_wiring_seconds: number | null;
+  cables_total: number | null; cables_src_done: number | null; cables_dst_done: number | null;
+}
+interface DirectorTechRow {
+  id: number; full_name: string | null; employee_id: string | null;
+  is_active: boolean | null; whatsapp_number: string | null; last_login: Date | null;
+}
+interface DirectorInspectionRow { assignment_id: number; overall_result: string | null }
+interface DirectorCore {
+  projects: ProjectRow[];
+  assignments: DirectorAssignmentRow[];
+  techs: DirectorTechRow[];
+  inspections: DirectorInspectionRow[];
+}
+
 @Injectable()
 export class DirectorService {
   constructor(private prisma: PrismaService) {}
 
-  async stats() {
+  /**
+   * The stats/projects/workforce views aggregate the same four datasets; the
+   * exports render all three at once. Fetch each table exactly once and keep
+   * the payload to the columns the aggregations read — tech_assignments in
+   * particular carries the full cable_status JSON, which none of these use.
+   */
+  private async loadCore(): Promise<DirectorCore> {
     const [projects, assignments, techs, inspections] = await Promise.all([
       this.prisma.projects.findMany({ where: { is_active: true } }),
-      this.prisma.tech_assignments.findMany(),
-      this.prisma.users.findMany({ where: { role: 'wiring_technician', is_active: true } }),
-      this.prisma.panel_inspections.findMany(),
+      this.prisma.tech_assignments.findMany({
+        select: {
+          id: true, project_code: true, technician_id: true, status: true,
+          review_status: true, qc_status: true, supervisor_approved: true,
+          rework_requested: true, total_wiring_seconds: true,
+          cables_total: true, cables_src_done: true, cables_dst_done: true,
+        },
+      }),
+      this.prisma.users.findMany({
+        where: { role: 'wiring_technician' },
+        select: {
+          id: true, full_name: true, employee_id: true, is_active: true,
+          whatsapp_number: true, last_login: true,
+        },
+      }),
+      this.prisma.panel_inspections.findMany({
+        select: { assignment_id: true, overall_result: true },
+      }),
     ]);
+    return { projects, assignments, techs, inspections };
+  }
+
+  async stats() {
+    return this.statsFrom(await this.loadCore());
+  }
+
+  private statsFrom({ projects, assignments, techs: allTechs, inspections }: DirectorCore) {
+    // Same predicate the previous dedicated query used (is_active: true excludes null).
+    const techs = allTechs.filter(t => t.is_active === true);
 
     const totalCables = assignments.reduce((s, a) => s + (a.cables_total || 0), 0);
     const srcDone = assignments.reduce((s, a) => s + (a.cables_src_done || 0), 0);
@@ -55,9 +106,10 @@ export class DirectorService {
   }
 
   async projects() {
-    const projects = await this.prisma.projects.findMany({ where: { is_active: true } });
-    const assignments = await this.prisma.tech_assignments.findMany();
-    const inspections = await this.prisma.panel_inspections.findMany();
+    return this.projectsFrom(await this.loadCore());
+  }
+
+  private projectsFrom({ projects, assignments, inspections }: DirectorCore) {
     const assignMap: Record<string, any[]> = {};
     for (const a of assignments) {
       if (!assignMap[a.project_code]) assignMap[a.project_code] = [];
@@ -88,9 +140,10 @@ export class DirectorService {
   }
 
   async workforce() {
-    const techs = await this.prisma.users.findMany({ where: { role: 'wiring_technician' } });
-    const assignments = await this.prisma.tech_assignments.findMany();
-    const inspections = await this.prisma.panel_inspections.findMany();
+    return this.workforceFrom(await this.loadCore());
+  }
+
+  private workforceFrom({ techs, assignments, inspections }: DirectorCore) {
     const assignMap: Record<number, any[]> = {};
     for (const a of assignments) {
       if (!assignMap[a.technician_id]) assignMap[a.technician_id] = [];
@@ -205,8 +258,18 @@ export class DirectorService {
     });
   }
 
+  /** One shared table read per export request instead of one per section. */
+  private async exportSections() {
+    const core = await this.loadCore();
+    return {
+      stats: this.statsFrom(core),
+      projects: this.projectsFrom(core),
+      workforce: this.workforceFrom(core),
+    };
+  }
+
   async exportXlsx(): Promise<Buffer> {
-    const [stats, projects, workforce] = await Promise.all([this.stats(), this.projects(), this.workforce()]);
+    const { stats, projects, workforce } = await this.exportSections();
     const wb = XLSX.utils.book_new();
     const kpiSheet = XLSX.utils.aoa_to_sheet([
       ['DWES — Director KPI Export'], ['Generated', new Date().toISOString()], [],
@@ -234,7 +297,7 @@ export class DirectorService {
   }
 
   async exportCsv(): Promise<string> {
-    const [stats, projects, workforce] = await Promise.all([this.stats(), this.projects(), this.workforce()]);
+    const { stats, projects, workforce } = await this.exportSections();
     const lines = [
       'DWES Director Export', `Generated,${new Date().toISOString()}`, '',
       '== KPI SUMMARY ==', 'Metric,Value',
@@ -250,7 +313,7 @@ export class DirectorService {
   }
 
   async exportPdf(): Promise<Buffer> {
-    const [stats, projects, workforce] = await Promise.all([this.stats(), this.projects(), this.workforce()]);
+    const { stats, projects, workforce } = await this.exportSections();
     return new Promise<Buffer>((resolve, reject) => {
       const generatedAt = new Date();
       const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true, info: { Title: 'DWES Director Report', Author: 'DWES System' } });

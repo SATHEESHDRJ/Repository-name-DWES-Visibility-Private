@@ -148,10 +148,19 @@ export async function collectPanelCompletionReportData(
   frameId: string,
   generatedBy: string,
 ): Promise<PanelCompletionReportData> {
-  const project = await prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
+  // These three reads are independent of each other; run them together and
+  // keep the original error precedence by checking the results in order.
+  const [project, panelDeleted, assignments] = await Promise.all([
+    prisma.projects.findFirst({ where: { code: projectCode, is_active: true } }),
+    isPanelDeleted(prisma, projectCode, frameId),
+    prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    }),
+  ]);
   if (!project) throw new Error(`Project ${projectCode} not found`);
 
-  if (await isPanelDeleted(prisma, projectCode, frameId)) {
+  if (panelDeleted) {
     FrameStore.blockPanel(projectCode, frameId);
     throw new Error(`Frame ${frameId} not found`);
   }
@@ -159,11 +168,6 @@ export async function collectPanelCompletionReportData(
   const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
     ?? FrameStore.getFrameFromDisk(projectCode, frameId);
   if (!frame) throw new Error(`Frame ${frameId} not found`);
-
-  const assignments = await prisma.tech_assignments.findMany({
-    where: { project_code: projectCode, frame_id: frameId },
-    orderBy: { assigned_at: 'asc' },
-  });
   const assignment = assignments.length
     ? assignments[assignments.length - 1]
     : null;
@@ -179,9 +183,26 @@ export async function collectPanelCompletionReportData(
     if (a.assigned_by) userIds.add(a.assigned_by);
   }
 
-  const users = userIds.size
-    ? await prisma.users.findMany({ where: { id: { in: [...userIds] } } })
-    : [];
+  // The user, inspection and rework-audit lookups only depend on the
+  // assignment rows fetched above — batch them into one round trip.
+  const [users, assignmentInspections, reworkAudits] = await Promise.all([
+    userIds.size
+      ? prisma.users.findMany({ where: { id: { in: [...userIds] } } })
+      : Promise.resolve([]),
+    assignment
+      ? prisma.panel_inspections.findMany({ where: { assignment_id: assignment.id } })
+      : Promise.resolve([]),
+    assignment
+      ? prisma.tech_audit_log.findMany({
+          where: {
+            project_code: projectCode,
+            frame_id: frameId,
+            action: { in: ['rework', 'mid_changeover', 'changeover_locked'] },
+          },
+          orderBy: { created_at: 'asc' },
+        })
+      : Promise.resolve([]),
+  ]);
   const userMap = new Map(users.map(u => [u.id, u]));
 
   const tech = assignment ? userMap.get(assignment.technician_id) : null;
@@ -234,15 +255,10 @@ export async function collectPanelCompletionReportData(
   // A cable is complete only when both its source and destination are complete.
   const kpi = assignedCableKpiPercent(completed, total);
   let qcPassRate = 0;
-  if (assignment) {
-    const inspections = await prisma.panel_inspections.findMany({
-      where: { assignment_id: assignment.id },
-    });
-    if (inspections.length) {
-      qcPassRate = Math.round(
-        (inspections.filter(i => i.overall_result === 'PASS').length / inspections.length) * 100,
-      );
-    }
+  if (assignmentInspections.length) {
+    qcPassRate = Math.round(
+      (assignmentInspections.filter(i => i.overall_result === 'PASS').length / assignmentInspections.length) * 100,
+    );
   }
   const compositeKpi = compositeKpiPercent(kpi, qcPassRate);
   const completionPercent = kpi;
@@ -267,17 +283,6 @@ export async function collectPanelCompletionReportData(
   if (pendingLogin) {
     sessionLog.push({ loginAt: pendingLogin, logoutAt: null });
   }
-
-  const reworkAudits = assignment
-    ? await prisma.tech_audit_log.findMany({
-        where: {
-          project_code: projectCode,
-          frame_id: frameId,
-          action: { in: ['rework', 'mid_changeover', 'changeover_locked'] },
-        },
-        orderBy: { created_at: 'asc' },
-      })
-    : [];
 
   const technicianNotes = Object.entries(cableStatus)
     .filter(([, st]) => (st.note || '').trim().length > 0)

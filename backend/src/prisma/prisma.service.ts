@@ -12,7 +12,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     const url = DbConfigStore.getActiveUrl();
     const cfg = DbConfigStore.load();
     PrismaService.log.log(`DB mode: ${cfg.mode} — ${DbConfigStore.maskUrl(url)}`);
-    const pool = new Pool({ connectionString: url });
+    // Explicit pool bounds: reconnect churn was measurable with pg's 10s idle
+    // default; 5s connect timeout turns a dead DB into a fast error, not a hang.
+    const pool = new Pool({
+      connectionString: url,
+      max: Number(process.env.DWES_PG_POOL_MAX) || 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+    });
     const adapter = new PrismaPg(pool);
     super({ adapter });
   }

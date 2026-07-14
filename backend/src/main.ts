@@ -116,7 +116,12 @@ async function listenWithFallback(app: Awaited<ReturnType<typeof NestFactory.cre
 
 async function bootstrap() {
   assertProductionSecrets();
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: Number(process.env.DWES_PG_POOL_MAX) || 10,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 5_000,
+  });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
   await prisma.$connect();

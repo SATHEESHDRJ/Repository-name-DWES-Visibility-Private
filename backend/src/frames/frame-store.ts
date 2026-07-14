@@ -9,6 +9,10 @@ import {
   type PanelDrawingPackage,
 } from '../data/mock-store';
 import { PanelModelStore } from '../panel-model/panel-model-store';
+import { DirFreshnessCache } from '../common/metadata-cache';
+
+/** Skips the per-request package-manifest re-scan while the drawings dir is unchanged. */
+const packageScanCache = new DirFreshnessCache();
 
 function uploadDir() {
   return process.env.UPLOAD_DIR
@@ -233,11 +237,13 @@ export const FrameStore = {
       path.join(dir, `${drawingId}.meta.json`),
       JSON.stringify({ frame_id: frameId || null, ...metadata }, null, 2),
     );
+    packageScanCache.invalidate(projectCode);
   },
 
   saveDrawingPreview(projectCode: string, drawingId: string, format: 'pdf' | 'svg', buffer: Buffer) {
     const target = drawingPreviewPath(projectCode, drawingId, format);
     atomicWrite(target, buffer);
+    packageScanCache.invalidate(projectCode);
     return path.basename(target);
   },
 
@@ -369,6 +375,8 @@ export const FrameStore = {
   loadDrawingPackages(projectCode: string) {
     const dir = drawingsDir(projectCode);
     if (!fs.existsSync(dir)) return;
+    if (packageScanCache.isFresh(projectCode, dir)) return;
+    const scannedMtimeMs = fs.statSync(dir).mtimeMs;
     for (const file of fs.readdirSync(dir)) {
       if (!file.endsWith('.package.json')) continue;
       try {
@@ -379,6 +387,7 @@ export const FrameStore = {
         else if (MockStore.drawingPackages[idx].revision < parsed.revision) MockStore.drawingPackages[idx] = parsed;
       } catch { /* ignore malformed or partially-written manifests */ }
     }
+    packageScanCache.markFresh(projectCode, scannedMtimeMs);
   },
 
   /**
@@ -442,6 +451,7 @@ export const FrameStore = {
   /** Persist one package manifest with an atomic temporary-file rename. */
   persistDrawingPackage(record: PanelDrawingPackage) {
     atomicWrite(drawingPackagePath(record.project_code, record.id), JSON.stringify(record, null, 2));
+    packageScanCache.invalidate(record.project_code);
     const idx = MockStore.drawingPackages.findIndex(p => p.project_code === record.project_code && p.frame_id === record.frame_id);
     if (idx === -1) MockStore.drawingPackages.push(record);
     else MockStore.drawingPackages[idx] = record;
@@ -459,6 +469,7 @@ export const FrameStore = {
     const manifest = drawingPackagePath(projectCode, record.id);
     if (fs.existsSync(manifest)) fs.unlinkSync(manifest);
     MockStore.drawingPackages = MockStore.drawingPackages.filter(p => !(p.project_code === projectCode && p.frame_id === frameId));
+    packageScanCache.invalidate(projectCode);
   },
 
   /** Read a single frame JSON directly from disk — fallback when MockStore is cold.
@@ -483,6 +494,7 @@ export const FrameStore = {
     const meta = path.join(drawingsDir(projectCode), `${drawingId}.meta.json`);
     if (fs.existsSync(meta)) fs.unlinkSync(meta);
     for (const preview of this.getDrawingPreviewFilePaths(projectCode, drawingId)) fs.unlinkSync(preview);
+    packageScanCache.invalidate(projectCode);
   },
 
   /** Return absolute paths of existing frame files (.json and .xlsx) */
