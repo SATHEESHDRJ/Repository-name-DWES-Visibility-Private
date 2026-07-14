@@ -244,10 +244,11 @@
   border: 1px solid var(--t-header-float-border);
   box-shadow: var(--t-header-float-shadow);
 }
+/* Hover changes only the surface — no translateY lift, so the controls stay
+   seated in the header band instead of reading as floating cards. */
 [data-theme] .topbar-actions-capsule.topbar-float--dark:hover,
 [data-theme] .topbar-clock-card.topbar-float--dark:hover,
 [data-theme] .topbar-nav-card.topbar-float--dark:hover {
-  transform: translateY(-2px);
   box-shadow: var(--t-header-float-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-float-border) 70%, white);
 }
@@ -259,7 +260,6 @@
 }
 [data-theme] .topbar-project-pill.topbar-float--light:hover,
 [data-theme] .topbar-user-card.topbar-float--light:hover {
-  transform: translateY(-2px);
   box-shadow: var(--t-header-user-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-user-border) 70%, #0F172A);
 }

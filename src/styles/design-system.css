@@ -277,13 +277,13 @@
     /* Real topbar height, measured at runtime by AppShell (ResizeObserver) and
        written here as px. The rem values below are only the pre-hydration
        fallback — the sticky topbar is a flex-wrap bar whose height varies with
-       width/content (≈93px → 151px when it wraps on tablet portrait), so no
+       width/content (it grows when the row wraps on tablet portrait), so no
        hardcoded number is correct. Layout fill is done with flexbox (below), NOT
        calc(100dvh - this); this var now only positions the mobile drawer. */
-    --dash-topbar-height: 5.5rem;
+    --dash-topbar-height: 4rem;
   }
   @media (min-width: 1024px) {
-    .app-shell { --dash-topbar-height: 5.75rem; }
+    .app-shell { --dash-topbar-height: 4.5rem; }
   }
   /* Height model: .app-shell is min-height:100dvh flex-column; the sticky topbar
      takes its natural (variable) height in-flow, and .dash-layout fills the rest
@@ -338,20 +338,25 @@
     max-width: 100%;
   }
 
-  /* â”€â”€ Topbar â€” premium glass morphism (enterprise SaaS) â”€â”€ */
+  /* ── Topbar — balanced, flat application header ──
+     One row: brand, project, user, actions, clock. Every control sizes off
+     --topbar-control-h, so the row keeps equal control heights at every width.
+     Height lands between the old floating-card bar and a cramped one:
+     ~64px on tablet, ~72px from laptop up. */
   .topbar {
     @apply relative sticky top-0 z-50 shrink-0 min-w-0;
-    padding: 0.75rem 1rem;
+    --topbar-control-h: 44px;
+    padding: 0.625rem 1.125rem;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%);
     border-bottom: 1px solid rgba(56, 189, 248, 0.12);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 4px 20px rgba(2, 6, 23, 0.25);
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 2px 10px rgba(2, 6, 23, 0.24);
   }
   @media (min-width: 1024px) {
-    .topbar { padding: 0.875rem 1.5rem; }
+    .topbar { --topbar-control-h: 46px; padding: 0.75rem 1.5rem; }
   }
   .topbar::before {
     content: '';
@@ -375,25 +380,28 @@
     pointer-events: none;
   }
   .topbar-inner {
-    @apply relative z-[1] flex flex-wrap items-center gap-x-2 gap-y-1.5 tablet-land:gap-3 min-w-0;
-    min-height: 4rem;
+    @apply relative z-[1] flex flex-wrap items-center gap-x-2 gap-y-1.5 tablet-land:gap-2.5 min-w-0;
+    min-height: var(--topbar-control-h, 40px);
   }
   .topbar-brand-card {
-    @apply flex items-center gap-2 tablet-land:gap-3 shrink-0 min-w-0 px-2 tablet-land:px-3 py-2;
+    @apply flex items-center gap-2 tablet-land:gap-3 shrink-0 min-w-0 px-0 tablet-land:px-0.5 py-0;
   }
   .topbar-logo {
     @apply flex items-center gap-2 tablet-land:gap-3 shrink-0 min-w-0;
   }
   .topbar-logo-img-wrap {
-    @apply shrink-0 rounded-xl;
+    @apply shrink-0 rounded-xl flex items-center justify-center;
+    height: var(--topbar-control-h, 44px);
+    padding: 4px 7px;
     background: #FFFFFF;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-    transition: all var(--transition-base);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+    transition: box-shadow var(--transition-base), border-color var(--transition-base);
   }
+  .topbar-logo-img-wrap img { max-height: 100%; width: auto; }
   .topbar-logo-img-wrap:hover {
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
-    transform: translateY(-1px);
+    border-color: rgba(15, 23, 42, 0.16);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
   }
   .topbar-brand-text { @apply flex flex-col justify-center min-w-0 leading-tight; }
   .topbar-logo-icon { @apply w-10 h-10 rounded-xl bg-[#1A56DB] flex items-center justify-center text-white font-bold text-base shrink-0; }
@@ -407,54 +415,36 @@
     color: rgba(226, 232, 240, 0.58);
   }
 
-  /* Floating glass capsule â€” premium dark header variant (controls + nav) */
+  /* Header capsule — seated in the row (no lift), with a subtle depth cue. */
   .topbar-float {
     position: relative;
     z-index: 2;
-    border-radius: 16px;
-    transform: translateY(-1px);
+    border-radius: 12px;
+    height: var(--topbar-control-h, 44px);
     transition:
-      transform var(--transition-base),
       box-shadow var(--transition-base),
       border-color var(--transition-base),
       background var(--transition-base);
   }
-  .topbar-float:hover {
-    transform: translateY(-2px);
-  }
   .topbar-float--dark {
     background: rgba(var(--t-surface-white-rgb), 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.15),
-      0 8px 24px rgba(2, 6, 23, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
   .topbar-float--dark:hover {
     border-color: rgba(255, 255, 255, 0.22);
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.18),
-      0 12px 36px rgba(2, 6, 23, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    background: rgba(var(--t-surface-white-rgb), 0.12);
   }
   .topbar-float--light {
     --topbar-pill-text: var(--t-header-pill-text, var(--t-header-user-text, var(--color-on-surface, #0F172A)));
     --topbar-pill-muted: var(--t-header-pill-muted, var(--t-header-user-muted, var(--color-on-surface-variant, #64748B)));
-    background: rgba(var(--t-surface-white-rgb), 0.94);
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    backdrop-filter: blur(16px) saturate(150%);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
-    box-shadow:
-      0 2px 8px rgba(15, 23, 42, 0.10),
-      inset 0 1px 0 rgba(255, 255, 255, 0.90);
+    background: rgba(var(--t-surface-white-rgb), 0.96);
+    border: 1px solid rgba(15, 23, 42, 0.10);
+    box-shadow: 0 1px 3px rgba(2, 6, 23, 0.16);
   }
   .topbar-float--light:hover {
-    border-color: rgba(15, 23, 42, 0.16);
-    box-shadow:
-      0 4px 16px rgba(15, 23, 42, 0.14),
-      inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    border-color: rgba(15, 23, 42, 0.18);
+    background: var(--t-surface-white, #FFFFFF);
   }
   .topbar-project-pill.topbar-float--light .topbar-project-value,
   .topbar-user-card.topbar-float--light .topbar-user-name {
@@ -515,21 +505,18 @@
   .topbar-clock { @apply text-slate-400 text-xs font-mono; }
 
   .topbar-float-pill {
-    @apply text-[9px] tablet-land:text-[10px] font-bold uppercase tracking-[0.14em] rounded-full px-3 tablet-land:px-4 py-1.5 hidden tablet-xl:inline-flex items-center select-none shrink-0;
+    @apply text-[9px] tablet-land:text-[10px] font-bold uppercase tracking-[0.14em] rounded-full px-3 py-1 hidden tablet-xl:inline-flex items-center select-none shrink-0;
     color: #1D4ED8;
     background: rgba(var(--t-surface-white-rgb), 0.92);
     border: 1px solid rgba(37, 99, 235, 0.16);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
-    transform: translateY(-1px);
-    transition: all var(--transition-base);
+    box-shadow: none;
+    transition: background var(--transition-base), border-color var(--transition-base);
   }
   .topbar-float-pill:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+    background: var(--t-surface-white, #FFFFFF);
   }
   .topbar-project-pill {
-    @apply hidden xs:flex items-center gap-2 px-2 xs:px-3 tablet-land:px-4 py-2 min-h-[48px] min-w-0 max-w-[200px] xs:max-w-[240px] shrink-0;
+    @apply hidden xs:flex items-center gap-2 px-2.5 xs:px-3 tablet-land:px-3.5 py-0 min-w-0 max-w-[200px] xs:max-w-[240px] shrink-0;
   }
   .topbar-project-meta { @apply flex flex-col justify-center min-w-0; }
   .topbar-project-icon {
@@ -665,7 +652,7 @@
   }
 
   .topbar-user-card {
-    @apply flex items-center gap-2 px-3 tablet-land:px-4 py-2 cursor-default min-w-0 max-w-[56px] tablet-port:max-w-[150px] tablet-wide:max-w-[220px];
+    @apply flex items-center gap-2 px-3 tablet-land:px-3.5 py-0 cursor-default min-w-0 max-w-[60px] tablet-port:max-w-[150px] tablet-wide:max-w-[220px];
     transition: all var(--transition-base);
   }
   .topbar-user-card:hover {
@@ -689,10 +676,17 @@
   }
 
   .topbar-actions-capsule {
-    @apply flex items-center gap-1 p-1.5 shrink-0;
+    @apply flex items-center gap-1 shrink-0;
+    padding: 4px;
   }
+  /* Sized from the shared control height so the capsule matches the pills exactly,
+     while the buttons stay a comfortable tablet touch target. */
   .topbar-capsule-btn {
-    @apply h-10 w-10 min-h-[44px] min-w-[44px] p-0 rounded-xl text-sm font-medium flex items-center justify-center shrink-0;
+    @apply p-0 rounded-lg text-sm font-medium flex items-center justify-center shrink-0;
+    height: calc(var(--topbar-control-h, 44px) - 8px);
+    width: calc(var(--topbar-control-h, 44px) - 8px);
+    min-height: 36px;
+    min-width: 36px;
     color: rgba(226, 232, 240, 0.88);
     border: 1px solid transparent;
     background: transparent;
@@ -702,9 +696,9 @@
      project, user, and clock controls from shifting when the real button mounts. */
   .topbar-capsule-slot {
     display: block;
-    flex: 0 0 44px;
-    width: 44px;
-    height: 44px;
+    flex: 0 0 calc(var(--topbar-control-h, 44px) - 8px);
+    width: calc(var(--topbar-control-h, 44px) - 8px);
+    height: calc(var(--topbar-control-h, 44px) - 8px);
     visibility: hidden;
   }
   .topbar-capsule-btn .ui-icon {
@@ -743,7 +737,11 @@
   }
 
   .topbar-menu-btn {
-    @apply h-10 w-10 min-h-[44px] min-w-[44px] p-0 flex items-center justify-center shrink-0 rounded-xl;
+    @apply p-0 flex items-center justify-center shrink-0 rounded-xl;
+    height: var(--topbar-control-h, 44px);
+    width: var(--topbar-control-h, 44px);
+    min-height: 40px;
+    min-width: 40px;
     color: rgba(226, 232, 240, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(var(--t-surface-white-rgb), 0.06);
@@ -760,13 +758,12 @@
   }
 
   .topbar-clock-card {
-    @apply flex px-2 xs:px-3 py-2 self-center;
-    min-height: 48px;
+    @apply flex px-2.5 xs:px-3 py-0 self-center;
     flex: 0 0 auto;
   }
   .topbar-clock-digits {
     font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-    font-size: 24px;
+    font-size: 21px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: #F8FAFC;
