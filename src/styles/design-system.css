@@ -6228,11 +6228,11 @@
   @media (min-width: 1024px) { .login-panel-topbar { padding: 1.25rem 2rem 0; } }
   @media (min-width: 1440px) { .login-panel-topbar { padding: 1.5rem 2.5rem 0; } }
 
-  /* Install DWES as a standalone app (PWA) */
+  /* Install DWES as a standalone app (PWA) — compact blue-gradient pill by the clock */
   .login-install-wrap {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: 6px;
     min-width: 0;
   }
@@ -6240,24 +6240,46 @@
   .login-install-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 40px;
+    gap: 7px;
+    min-height: 38px;
     padding: 0 14px;
-    border: 1px solid var(--t-border-strong, rgba(15, 23, 42, 0.14));
+    border: 1px solid transparent;
     border-radius: 12px;
-    background: var(--t-surface-white, #fff);
-    color: var(--t-text, #0f172a);
+    background: var(--t-primary-grad, linear-gradient(180deg, #3B82F6 0%, #2563EB 100%));
+    color: var(--t-on-accent, #ffffff);
     font-size: 13px;
     font-weight: 600;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-    transition: filter .15s ease, transform .15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 5px 14px rgba(37, 99, 235, 0.22);
+    transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  .login-install-btn:hover:not(:disabled) { filter: brightness(0.97); transform: translateY(-1px); }
-  .login-install-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .login-install-btn:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .login-install-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35), 0 5px 14px rgba(37, 99, 235, 0.22);
+  }
+
+  .login-install-btn:active:not(:disabled) { transform: translateY(0); filter: brightness(0.98); }
+  .login-install-btn:disabled { opacity: 0.6; cursor: progress; }
+
+  /* Compact on small screens — icon stays, label hides to save top-bar space */
+  @media (max-width: 480px) {
+    .login-install-btn { min-height: 36px; padding: 0 11px; }
+    .login-install-btn .login-install-label { display: none; }
+  }
 
   .login-install-hint {
-    max-width: 260px;
+    max-width: 240px;
     margin: 0;
     padding: 8px 10px;
     border: 1px solid var(--t-border, rgba(15, 23, 42, 0.1));
@@ -6266,6 +6288,8 @@
     color: var(--t-text-muted, #475569);
     font-size: 12px;
     line-height: 1.45;
+    text-align: left;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
   }
 
   .login-clock-widget {

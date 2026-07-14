@@ -80,10 +80,11 @@ export default function InstallAppButton() {
         disabled={installing}
         className="login-install-btn"
         title="Install DWES so it opens as a standalone app"
+        aria-label={installing ? 'Installing DWES app' : 'Install DWES app'}
         aria-expanded={hint && !promptEvent ? hintOpen : undefined}
       >
         <InstallDesktop size={16} strokeWidth={1.5} aria-hidden="true" />
-        <span>{installing ? 'Installing…' : 'Install app'}</span>
+        <span className="login-install-label">{installing ? 'Installing…' : 'Install app'}</span>
       </button>
       {hintOpen && hint && !promptEvent && (
         <p className="login-install-hint" role="status">{hint}</p>
