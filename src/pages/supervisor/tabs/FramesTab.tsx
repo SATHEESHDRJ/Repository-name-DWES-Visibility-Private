@@ -12,7 +12,6 @@ import {
   Star, Search, Maximize,
 } from '../../../components/ui/icons';
 import PanelFileMetadataBar from '../../../components/supervisor/PanelFileMetadataBar';
-import FileViewer from '../../../components/ui/FileViewer';
 import {
   type PanelFileMetadata,
   type PanelFilePopupMode,
@@ -286,6 +285,7 @@ export function UploadFrameModal({
   targetFrameId,
   targetPanelName,
   existingCableCount = 0,
+  startInReplaceMode = false,
   siblingPanels = [],
   onEditPanel,
   onSelectPanel,
@@ -298,6 +298,8 @@ export function UploadFrameModal({
   targetPanelName?: string;
   /** When > 0, modal opens with View / Replace choice instead of upload-only. */
   existingCableCount?: number;
+  /** Parent has already shown the replacement warning and wants the file picker directly. */
+  startInReplaceMode?: boolean;
   /** All panels in the project — used for duplicate-name detection. */
   siblingPanels?: { id?: string; panel_name: string }[];
   onEditPanel?: (panelId: string) => void;
@@ -308,7 +310,6 @@ export function UploadFrameModal({
   const dialog = useAppDialog();
   const [mode, setMode] = useState<PanelFilePopupMode>('loading');
   const [metadata, setMetadata] = useState<PanelFileMetadata | null>(null);
-  const [sheetName, setResolvedSheetName] = useState('');
   const [step, setStep] = useState<UploadStep>('file');
   const [file, setFile] = useState<File | null>(null);
   const [dupInfo, setDupInfo] = useState<{ kind: 'same' | 'other'; file_name: string; project_code: string; uploaded_at: string } | null>(null);
@@ -335,9 +336,7 @@ export function UploadFrameModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [columnFilter, setColumnFilter] = useState<'all' | 'selected' | 'required' | 'unselected'>('all');
   const [fullViewOpen, setFullViewOpen] = useState(false);
-  const [viewBlob, setViewBlob] = useState<Blob | null>(null);
-  const [viewLoading, setViewLoading] = useState(false);
-  const [viewLoadError, setViewLoadError] = useState('');
+  const [replacementConfirmed, setReplacementConfirmed] = useState(startInReplaceMode);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -358,38 +357,19 @@ export function UploadFrameModal({
           uploadedAt: frame.uploaded_at ? String(frame.uploaded_at) : undefined,
           sheetName: frame.sheet_name ? String(frame.sheet_name) : undefined,
         });
-        setResolvedSheetName(frame.sheet_name ? String(frame.sheet_name) : '');
-        setMode('populated');
+        setMode(startInReplaceMode ? 'replacing' : 'populated');
       } else {
         setMetadata(null);
         setMode('empty');
       }
     } catch {
-      setMode(existingCableCount > 0 ? 'populated' : 'empty');
+      setMode(existingCableCount > 0 ? (startInReplaceMode ? 'replacing' : 'populated') : 'empty');
     }
-  }, [projectCode, targetFrameId, existingCableCount]);
+  }, [projectCode, targetFrameId, existingCableCount, startInReplaceMode]);
 
   useEffect(() => {
     void resolveFrameOnOpen();
   }, [resolveFrameOnOpen]);
-
-  const loadViewBlob = useCallback(() => {
-    if (!targetFrameId) return;
-    setViewLoading(true);
-    setViewLoadError('');
-    setViewBlob(null);
-    supervisorApi.wiringScheduleXlsx(projectCode, targetFrameId)
-      .then(blob => {
-        setViewBlob(blob);
-        setMetadata(prev => prev ? { ...prev, sizeBytes: blob.size } : prev);
-        setViewLoading(false);
-      })
-      .catch((err: { response?: { data?: { message?: string } }; message?: string }) => {
-        setViewLoadError(err?.response?.data?.message || err?.message || 'Failed to load wiring schedule file.');
-        setViewBlob(null);
-        setViewLoading(false);
-      });
-  }, [projectCode, targetFrameId]);
 
   const duplicateGuard = assertNoDuplicatePanels(
     siblingPanels,
@@ -406,21 +386,10 @@ export function UploadFrameModal({
     original_filename: 'original_filename' in p ? (p as { original_filename?: string }).original_filename : undefined,
   }));
 
-  useEffect(() => {
-    if (mode !== 'populated' || !targetFrameId || duplicateBlocked) return;
-    loadViewBlob();
-  }, [mode, targetFrameId, loadViewBlob, duplicateBlocked]);
-
   const finishUploadPopulated = useCallback(async (frameId: string) => {
-    setStep('file');
-    setFile(null);
-    setPreview(null);
-    setError('');
     onUploaded(frameId);
-    await resolveFrameOnOpen();
-    setMode('populated');
-    loadViewBlob();
-  }, [loadViewBlob, onUploaded, resolveFrameOnOpen]);
+    onClose();
+  }, [onClose, onUploaded]);
 
   const handleColumnResize = useCallback((header: string, width: number) => {
     setColumnWidths(prev => ({ ...prev, [header]: width }));
@@ -573,23 +542,8 @@ export function UploadFrameModal({
         setError('No cables parsed — check your column mapping and sheet selection');
         return;
       }
-      if (result.validation.error_count === 0) {
-        if (duplicateBlocked) return;
-        if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
-          const ok = await confirmReplaceSchedule();
-          if (!ok) return;
-        }
-        setPreview(result);
-        setProgress(0);
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-        uploadData.append('sheet_name', selSheet);
-        uploadData.append('mapping', JSON.stringify(effectiveMapping));
-        uploadData.append('header_row', String(headerRow));
-        const uploaded = await uploadApi.uploadMapped(projectCode, appendTargetFrame(uploadData), setProgress);
-        finishUploadPopulated(uploaded.id);
-        return;
-      }
+      // Preview is always a separate verification step. Even a clean workbook must
+      // remain on screen until the supervisor explicitly chooses Import.
       setPreview(result);
       if (result.validation.error_count > 0) {
         setColumnFilter('all');
@@ -603,9 +557,10 @@ export function UploadFrameModal({
 
   const handleImport = async () => {
     if (!file || duplicateBlocked) return;
-    if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
+    if ((mode === 'populated' || mode === 'replacing') && targetFrameId && !replacementConfirmed) {
       const ok = await confirmReplaceSchedule();
       if (!ok) return;
+      setReplacementConfirmed(true);
     }
 
     setUploading(true);
@@ -708,10 +663,10 @@ export function UploadFrameModal({
   };
 
   const inMappingUpload = (mode === 'empty' || mode === 'replacing') && step === 'mapping';
-  const showViewer = mode === 'populated' && step === 'file';
+  const showUploadedStatus = mode === 'populated' && step === 'file';
 
-  const modalTitle = showViewer
-    ? 'View Wiring Schedule'
+  const modalTitle = showUploadedStatus
+    ? 'Wiring Schedule Uploaded'
     : mode === 'replacing' && step === 'file'
       ? 'Replace Wiring Schedule'
       : inMappingUpload && fullViewOpen
@@ -731,6 +686,7 @@ export function UploadFrameModal({
   const startReplaceUpload = async () => {
     if (duplicateBlocked) return;
     if (!(await confirmReplaceSchedule())) return;
+    setReplacementConfirmed(true);
     setMode('replacing');
     setStep('file');
     setFile(null);
@@ -798,15 +754,10 @@ export function UploadFrameModal({
       title={modalTitle}
       onClose={handleModalClose}
       size={
-        showViewer || inMappingUpload
-          ? 'fullscreen'
-          : 'lg'
+        inMappingUpload ? 'fullscreen' : 'lg'
       }
       bodyClassName={
-        (showViewer && viewBlob && !viewLoading)
-        || inMappingUpload
-          ? 'modal-body-flush'
-          : undefined
+        inMappingUpload ? 'modal-body-flush' : undefined
       }
       closeOnBackdrop={
         !fullViewOpen || !inMappingUpload
@@ -814,7 +765,7 @@ export function UploadFrameModal({
       footer={
         mode === 'loading' ? (
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
-        ) : showViewer && !viewLoading && viewBlob ? (
+        ) : showUploadedStatus ? (
           <>
             <button
               type="button"
@@ -824,14 +775,14 @@ export function UploadFrameModal({
               title={duplicateBlocked ? duplicateBlockMessage : undefined}
             >
               <Upload size={16} strokeWidth={1.5} />
-              <span>Replace Upload</span>
+              <span>Re-upload Wiring Schedule</span>
             </button>
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
           </>
         ) : (mode === 'empty' || mode === 'replacing') && step === 'file' ? (
           <>
             {mode === 'replacing' && (
-              <button type="button" className="btn-secondary" onClick={() => { setMode('populated'); setStep('file'); }}>Cancel replace</button>
+              <button type="button" className="btn-secondary" onClick={() => { setReplacementConfirmed(false); setMode('populated'); setStep('file'); }}>Cancel replace</button>
             )}
             <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
             <button
@@ -866,7 +817,7 @@ export function UploadFrameModal({
               </button>
             ) : (
               <button onClick={runPreview} disabled={!requiredDone || uploading || duplicateBlocked} className="btn-primary" type="button">
-                {uploading ? 'Validating…' : 'Validate & Import'}
+                {uploading ? 'Validating…' : 'Validate & Preview'}
               </button>
             )}
           </>
@@ -882,8 +833,8 @@ export function UploadFrameModal({
           <TriangleAlert size={24} className="text-amber-500" />
           <p>Select a panel before uploading a wiring schedule.</p>
         </div>
-      ) : showViewer ? (
-        <div className="panel-file-popup flex flex-col gap-4 min-h-0">
+      ) : showUploadedStatus ? (
+        <div className="panel-file-popup flex flex-col gap-4">
           {(targetPanelName && projectName) && (
             <div className="px-4 pt-4">
               <UploadTargetHeader
@@ -909,21 +860,9 @@ export function UploadFrameModal({
             </div>
           )}
           {!duplicateBlocked && (
-          <FileViewer
-            blob={viewBlob}
-            fileType="excel"
-            panelLabel={
-              targetPanelName && targetFrameId
-                ? `${targetPanelName} · ID: ${targetFrameId}`
-                : targetPanelName || projectName || projectCode
-            }
-            fileName={metadata?.fileName}
-            sheetName={sheetName || metadata?.sheetName}
-            loading={viewLoading}
-            error={viewLoadError}
-            onRetry={loadViewBlob}
-            className="file-viewer--modal"
-          />
+            <div className="mx-4 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800" role="status">
+              The wiring schedule is saved for this panel. Use Re-upload Wiring Schedule only when a replacement is required.
+            </div>
           )}
         </div>
       ) : step === 'mapping' && !fullViewOpen ? (

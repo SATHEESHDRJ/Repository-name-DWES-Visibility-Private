@@ -111,7 +111,7 @@ export const projectsApi = {
 
   create: (dto: unknown) => api.post('/projects', dto).then(r => r.data),
 
-  /** Backend check that a project numbering is free (deleted codes stay reserved). */
+  /** Backend check that a project numbering is free (deleted numbering stays reserved). */
   codeAvailable: (code: string, signal?: AbortSignal) =>
     api.get(`/projects/code-available/${encodeURIComponent(code)}`, { signal })
       .then(r => r.data as { code: string; available: boolean; reason?: string }),

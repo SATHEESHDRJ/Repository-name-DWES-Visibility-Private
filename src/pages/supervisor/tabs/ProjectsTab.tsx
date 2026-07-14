@@ -97,9 +97,10 @@ function displayPanelMeta(value: string | null | undefined, fallback?: string): 
 }
 
 function panelVoltageDisplay(panel: FramePanel, projectCode: string): string {
+  const legacyVoltage = projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1];
   return displayPanelMeta(
     panel.voltage_level as string | null | undefined,
-    projectCode.split('_')[0] || undefined,
+    legacyVoltage,
   );
 }
 
@@ -144,6 +145,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
   const [loadingPanels, setLoadingPanels] = useState(false);
   const [showWiringUpload, setShowWiringUpload] = useState(false);
+  const [wiringUploadReplacing, setWiringUploadReplacing] = useState(false);
   const [showWiringView, setShowWiringView] = useState(false);
   const [showGaDrawingView, setShowGaDrawingView] = useState(false);
   const [confirmReupload, setConfirmReupload] = useState(false);
@@ -387,6 +389,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   // The supervisor-entered Project Numbering is the stable project identifier. DWES
   // no longer synthesizes a second voltage/location/year code behind the user's input.
   const projectNumbering = form.projectNumbering.trim().toUpperCase();
+  const projectNumberingFormatValid = /^[A-Z0-9][A-Z0-9._-]*$/.test(projectNumbering);
   const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim() && !!norm(p.voltageLevel));
   // Project details must be valid before any panel can be added (project-first workflow).
   const projectDetailsReady = !!form.displayName.trim() && !!form.client.trim();
@@ -394,7 +397,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const projectFieldsComplete = projectDetailsReady
     && !!form.location.trim()
     && !!form.region.trim()
-    && !!projectNumbering;
+    && projectNumberingFormatValid;
   const canCreate = projectFieldsComplete && panelsValid && !numberingTaken;
 
   const generatedName = projectFieldsComplete
@@ -415,6 +418,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     region: !form.region.trim() ? 'Required' : '',
     projectNumbering: !projectNumbering
       ? 'Required'
+      : !projectNumberingFormatValid
+        ? 'Use letters, numbers, periods, hyphens, or underscores only'
       : numberingTaken
         ? numberingCheck?.reason ?? 'This project numbering is already used'
         : '',
@@ -434,6 +439,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         if (!form.location.trim()) missing.push('location');
         if (!form.region.trim()) missing.push('region');
         if (!projectNumbering) missing.push('project numbering');
+        else if (!projectNumberingFormatValid) missing.push('a valid project numbering');
         if (numberingTaken) missing.push('a unique project numbering');
         return missing.length
           ? `Complete required fields: ${missing.join(', ')}.`
@@ -444,7 +450,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   // Project numbering must be unique across active, deleted, and tombstoned projects.
   // The backend stays authoritative on create; this only surfaces the clash early.
   useEffect(() => {
-    if (!showCreate || !projectNumbering) {
+    if (!showCreate || !projectNumberingFormatValid) {
       setNumberingCheck(null);
       return;
     }
@@ -458,7 +464,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [showCreate, projectNumbering, numberingRequests]);
+  }, [showCreate, projectNumbering, projectNumberingFormatValid, numberingRequests]);
 
   const openCreateModal = () => {
     resetCreateForm();
@@ -552,16 +558,17 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }
     setSaving(true);
     try {
-      const projectName = form.displayName.trim();
       const created = await projectsApi.create({
-        code: computedCode,
+        code: projectNumbering,
         client: form.client.trim(),
-        name: projectName,
+        name: generatedName,
         description: encodeProjectMeta({
-          locationRegion: form.locationRegion.trim(),
-          monthYear: form.monthYear.trim(),
+          substationName: form.displayName.trim(),
+          location: form.location.trim(),
+          region: form.region.trim(),
+          locationRegion: `${form.location.trim()} / ${form.region.trim()}`,
+          projectNumbering,
         }),
-        sequence: parseInt(seq3, 10) || 1,
         panels: panels.map(panelDraftToApiPayload),
       });
       setProjects(prev => [...prev, created]);
@@ -581,25 +588,12 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       }
       setShowCreate(false);
       resetCreateForm();
-      setToast({ message: `Project "${created.name}" created (${created.code}).`, tone: 'success' });
+      setToast({ message: `Project "${created.name}" created.`, tone: 'success' });
     } catch (apiError: unknown) {
       if ((apiError as { response?: { status?: number } })?.response?.status === 409) {
-        // Duplicate code: find the next free sequence from the loaded projects list
-        // so we can auto-bump the Sequence field and let the user retry immediately.
-        // The server's duplicate check remains authoritative; this is convenience only.
-        const prefix4 = codeSegs.slice(0, 4).join('_');  // VOLTAGE_REGION_LOCATION_YEAR
-        const usedSeqs = projects
-          .map(p => {
-            const parts = p.code.split('_');
-            if (parts.length < 5) return null;
-            const pPrefix = parts.slice(0, 4).join('_');
-            return pPrefix === prefix4 ? parseInt(parts[4] || '0', 10) : null;
-          })
-          .filter((n): n is number => n !== null && !Number.isNaN(n));
-        const maxSeq = usedSeqs.length > 0 ? Math.max(...usedSeqs) : parseInt(seq3, 10) || 1;
-        const nextSeq = String(maxSeq + 1).padStart(3, '0');
-        setError(`Code ${computedCode} already exists — project numbering auto-updated to ${nextSeq}. Review the preview and click Create again.`);
-        setForm(s => ({ ...s, seq: nextSeq }));
+        const reason = apiErrorMessage(apiError, 'This project numbering is already in use. Enter a unique project numbering.');
+        setNumberingCheck({ code: projectNumbering, available: false, reason });
+        setError(reason);
       } else {
         setError(apiErrorMessage(apiError, 'Failed to create project. Check your connection and try again.'));
       }
@@ -790,6 +784,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               type="button"
               onClick={() => {
                 setDuplicateBannerDismissed(false);
+                setWiringUploadReplacing(false);
                 setShowWiringUpload(true);
               }}
               disabled={!actionGated}
@@ -1082,16 +1077,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               <p className="pj-project-info-value">{projectDetails.locationRegion}</p>
             </div>
             <div className="pj-project-info-field">
-              <p className="pj-project-info-label">Month / Year</p>
-              <p className="pj-project-info-value">{projectDetails.monthYear}</p>
-            </div>
-            <div className="pj-project-info-field">
-              <p className="pj-project-info-label">Project code</p>
-              <p className="pj-project-info-value pj-project-info-code" title={projectDetails.projectCode}>
-                {projectDetails.projectCode}
-              </p>
-            </div>
-            <div className="pj-project-info-field">
               <p className="pj-project-info-label">Project numbering</p>
               <p className="pj-project-info-value">{projectDetails.projectNumbering}</p>
             </div>
@@ -1172,6 +1157,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               status={wiringDoc}
               onUpload={() => {
                 setDuplicateBannerDismissed(false);
+                setWiringUploadReplacing(false);
                 setShowWiringUpload(true);
               }}
               onReupload={() => setConfirmReupload(true)}
@@ -1191,16 +1177,21 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           targetFrameId={selectedPanelId}
           targetPanelName={selectedPanel?.panel_name}
           existingCableCount={selectedPanel?.cable_count ?? 0}
+          startInReplaceMode={wiringUploadReplacing}
           siblingPanels={projectPanels}
           onEditPanel={panelId => {
             const panel = projectPanels.find(p => p.id === panelId);
             if (panel) {
               setShowWiringUpload(false);
+              setWiringUploadReplacing(false);
               setShowEditPanel(panel);
             }
           }}
           onSelectPanel={setSelectedPanelId}
-          onClose={() => setShowWiringUpload(false)}
+          onClose={() => {
+            setShowWiringUpload(false);
+            setWiringUploadReplacing(false);
+          }}
           onUploaded={() => {
             setToast({ message: `Wiring schedule uploaded for ${selectedPanel?.panel_name ?? 'panel'}.`, tone: 'success' });
             emitFramesChanged({ projectCode: selectedProject.code, frameId: selectedPanelId, action: 'updated' });
@@ -1232,6 +1223,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                 onClick={() => {
                   setConfirmReupload(false);
                   setDuplicateBannerDismissed(false);
+                  setWiringUploadReplacing(true);
                   setShowWiringUpload(true);
                 }}
               >
@@ -1370,20 +1362,21 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       {projectDetailsReady
-                        ? 'Add each panel of this project. Panel 1 voltage is used in the project identifier.'
+                        ? 'Add each panel of this project. Panels remain separately linked to this project numbering.'
                         : 'Enter the Project / Substation Name and Client to start adding panels.'}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openPanelOverlay()}
-                    className="pj-btn-secondary shrink-0"
-                    disabled={!projectDetailsReady}
-                    title={projectDetailsReady ? 'Add a panel to this project' : 'Enter the project name and client first'}
-                  >
-                    <Plus size={14} strokeWidth={1.5} />
-                    Add Panel
-                  </button>
+                  {projectDetailsReady && (
+                    <button
+                      type="button"
+                      onClick={() => openPanelOverlay()}
+                      className="pj-btn-secondary shrink-0"
+                      title="Add a panel to this project"
+                    >
+                      <Plus size={14} strokeWidth={1.5} />
+                      Add Panel
+                    </button>
+                  )}
                 </div>
 
                 {fe.panels && (
@@ -1433,38 +1426,37 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               </div>
 
               <div className="pj-create-grid-2">
-                <ComboField
-                  label="Location / Region *"
+                <InputField
+                  label="Location *"
                   icon={<MapPin size={18} strokeWidth={1.5} />}
-                  value={form.locationRegion}
-                  onChange={value => setForm(s => ({ ...s, locationRegion: value }))}
-                  options={LOCATION_REGION_PRESETS}
-                  placeholder="DUBAI / UAE"
-                  error={fe.locationRegion}
+                  value={form.location}
+                  onChange={value => setForm(s => ({ ...s, location: value }))}
+                  placeholder="e.g. Riyadh"
+                  error={fe.location}
                 />
                 <ComboField
-                  label="Month / Year *"
-                  icon={<Calendar size={18} strokeWidth={1.5} />}
-                  value={form.monthYear}
-                  onChange={value => setForm(s => ({ ...s, monthYear: value }))}
-                  options={MONTH_YEAR_PRESETS}
-                  placeholder="July 2026"
-                  error={fe.monthYear}
+                  label="Region *"
+                  icon={<MapPin size={18} strokeWidth={1.5} />}
+                  value={form.region}
+                  onChange={value => setForm(s => ({ ...s, region: value }))}
+                  options={REGIONS}
+                  placeholder="e.g. KSA"
+                  error={fe.region}
                 />
               </div>
 
-              <div className="pj-create-grid-2">
+              <div className="pj-create-grid-2 pj-create-grid-2--single">
                 <InputField
                   label="Project Numbering *"
                   icon={<Hash size={18} strokeWidth={1.5} />}
-                  value={form.seq}
-                  onChange={value => setForm(s => ({ ...s, seq: value }))}
-                  placeholder="001"
-                  error={fe.seq}
+                  value={form.projectNumbering}
+                  onChange={value => setForm(s => ({ ...s, projectNumbering: value }))}
+                  placeholder="e.g. 001 or ENOWA-001"
+                  error={fe.projectNumbering}
                 />
-                {codeComplete && numberingCheck?.code === computedCode && numberingCheck.available && (
+                {projectNumbering && numberingCheck?.code === projectNumbering && numberingCheck.available && (
                   <p className="pj-numbering-ok" role="status">
-                    Project numbering {seq3} is available.
+                    Project numbering {projectNumbering} is available.
                   </p>
                 )}
               </div>
@@ -1479,7 +1471,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                 >
                   {generatedName || (
                     <span className="text-slate-400 italic font-normal text-[12px]">
-                      Complete the project details and add a panel to preview the final project name.
+                      Complete the project details to preview the final project name.
                     </span>
                   )}
                 </div>
@@ -1829,7 +1821,7 @@ function AddPanelModal({
   onSaved: (panelId: string) => void;
 }) {
   const [panel, setPanel] = useState<PanelDraft>(() => newPanelDraft({
-    voltageLevel: projectCode.split('_')[0] || '',
+    voltageLevel: projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] || '',
   }));
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1914,7 +1906,7 @@ function EditPanelModal({
   const [name, setName] = useState(panel.panel_name);
   const [panelType, setPanelType] = useState(String(panel.panel_type ?? ''));
   const [voltageLevel, setVoltageLevel] = useState(
-    String(panel.voltage_level ?? projectCode.split('_')[0] ?? ''),
+    String(panel.voltage_level ?? projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] ?? ''),
   );
   const [systemType, setSystemType] = useState(String(panel.system_type ?? ''));
   const [saving, setSaving] = useState(false);
@@ -2029,9 +2021,22 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
     setSaving(true);
     setError('');
     try {
+      const [legacyLocation = '', legacyRegion = ''] = (meta?.locationRegion || '')
+        .split(/\s*\/\s*/)
+        .map(part => part.trim());
+      const nextMeta = meta ? { ...meta, substationName: name.trim() } : null;
+      const savedName = nextMeta?.substationName
+        ? buildProjectFullName(
+            nextMeta.substationName,
+            project.client,
+            nextMeta.location || legacyLocation,
+            nextMeta.region || legacyRegion,
+            nextMeta.projectNumbering || project.code,
+          )
+        : name.trim();
       let updated: Project = await projectsApi.update(project.code, {
-        name: name.trim(),
-        description: mergeProjectDescription(meta, description),
+        name: savedName,
+        description: mergeProjectDescription(nextMeta, description),
       });
       if (state !== project.project_state) {
         updated = await projectsApi.setState(project.code, state);
@@ -2062,8 +2067,8 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
     >
       <div className="flex flex-col gap-4">
         <div className="form-group">
-          <label className="form-label">Project Code</label>
-          <input value={project.code} title="Project Code" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+          <label className="form-label">Project Numbering</label>
+          <input value={project.code} title="Project Numbering" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
         </div>
 
         <InputField label="Project / Substation Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />

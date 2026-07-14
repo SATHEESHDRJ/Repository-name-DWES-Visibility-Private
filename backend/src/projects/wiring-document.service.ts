@@ -84,13 +84,45 @@ function colorHex(name: string): string | null {
   return null;
 }
 
-function parseProjectSegments(code: string): { region: string; location: string; voltage: string } {
+function parseProjectSegments(
+  code: string,
+  description?: string | null,
+  panelVoltage?: string | null,
+): { region: string; location: string; voltage: string } {
   const parts = code.split('_');
-  // Legacy: PANELTYPE_VOLTAGE_REGION_LOCATION_YEAR_SEQ; current: VOLTAGE_REGION_LOCATION_YEAR_SEQ
+  // Legacy fallback: PANELTYPE_VOLTAGE_REGION_LOCATION_YEAR_SEQ or
+  // VOLTAGE_REGION_LOCATION_YEAR_SEQ. Current projects keep these values in metadata
+  // because code is now the supervisor-entered Project Numbering.
+  let legacy: { region: string; location: string; voltage: string };
   if (parts.length >= 6) {
-    return { voltage: parts[1] || '', region: parts[2] || '', location: parts[3] || '' };
+    legacy = { voltage: parts[1] || '', region: parts[2] || '', location: parts[3] || '' };
+  } else if (parts.length >= 5) {
+    legacy = { voltage: parts[0] || '', region: parts[1] || '', location: parts[2] || '' };
+  } else {
+    legacy = { voltage: '', region: '', location: '' };
   }
-  return { voltage: parts[0] || '', region: parts[1] || '', location: parts[2] || '' };
+
+  try {
+    const raw = String(description || '').trim();
+    if (raw.startsWith('@dwes-meta:')) {
+      const meta = JSON.parse(raw.slice('@dwes-meta:'.length)) as {
+        location?: string;
+        region?: string;
+        locationRegion?: string;
+      };
+      const locationRegion = String(meta.locationRegion || '')
+        .split(/\s*\/\s*/)
+        .map(value => value.trim());
+      return {
+        voltage: String(panelVoltage || '').trim() || legacy.voltage,
+        location: String(meta.location || locationRegion[0] || '').trim() || legacy.location,
+        region: String(meta.region || locationRegion[1] || '').trim() || legacy.region,
+      };
+    }
+  } catch {
+    // Malformed legacy descriptions fall back to the legacy code parser.
+  }
+  return { ...legacy, voltage: String(panelVoltage || '').trim() || legacy.voltage };
 }
 
 function findGaDrawing(projectCode: string, frameId: string): Drawing | null {
@@ -243,7 +275,7 @@ export class WiringDocumentService {
       cableStatus,
       generatedBy,
       techName,
-      segs: parseProjectSegments(projectCode),
+      segs: parseProjectSegments(projectCode, project.description, frame.voltage_level),
       wiringKpi,
       composite,
       qcPassRate,

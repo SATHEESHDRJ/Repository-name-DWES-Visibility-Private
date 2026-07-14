@@ -92,8 +92,8 @@ function decodeProjectMeta(description: string | null | undefined): { locationRe
   if (!raw.startsWith('@dwes-meta:')) return null;
   try {
     const meta = JSON.parse(raw.slice('@dwes-meta:'.length)) as { locationRegion?: string; monthYear?: string };
-    if (meta?.locationRegion && meta?.monthYear) {
-      return { locationRegion: meta.locationRegion, monthYear: meta.monthYear };
+    if (meta?.locationRegion) {
+      return { locationRegion: meta.locationRegion, monthYear: meta.monthYear || '' };
     }
   } catch { /* ignore */ }
   return null;

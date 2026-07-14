@@ -33,13 +33,17 @@ export class ProjectsService {
   }
 
   /**
-   * Project-numbering availability for the New Project form. A code stays reserved
+   * Project-numbering availability for the New Project form. The entered numbering
+   * is the project's stable identifier; DWES does not synthesize another code. It stays reserved
    * after deletion (the row is tombstoned, not removed), so a number can never be
    * reused for an active, deleted, archived, or tombstoned project.
    */
   async codeAvailability(code: string) {
     const trimmed = String(code || '').trim().toUpperCase();
-    if (!trimmed) throw new BadRequestException('Project code is required');
+    if (!trimmed) throw new BadRequestException('Project numbering is required');
+    if (trimmed.length > 150 || !/^[A-Z0-9][A-Z0-9._-]*$/.test(trimmed)) {
+      throw new BadRequestException('Project numbering may contain only letters, numbers, periods, hyphens, and underscores');
+    }
     const existing = await this.prisma.projects.findUnique({
       where: { code: trimmed },
       select: { code: true, is_active: true },
@@ -62,6 +66,21 @@ export class ProjectsService {
     sequence?: number;
     panels?: CreatePanelDto[];
   }) {
+    const projectNumbering = String(dto.code || '').trim().toUpperCase();
+    if (!projectNumbering) {
+      throw new BadRequestException('Project numbering is required');
+    }
+    if (projectNumbering.length > 150) {
+      throw new BadRequestException('Project numbering must be 150 characters or fewer');
+    }
+    if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(projectNumbering)) {
+      throw new BadRequestException('Project numbering may contain only letters, numbers, periods, hyphens, and underscores');
+    }
+    const client = String(dto.client || '').trim();
+    const projectName = String(dto.name || '').trim();
+    if (!client) throw new BadRequestException('Client is required');
+    if (!projectName) throw new BadRequestException('Full project name is required');
+
     const panels = Array.isArray(dto.panels) ? dto.panels : [];
     if (panels.length === 0) {
       throw new BadRequestException('At least one panel is required');
@@ -75,22 +94,32 @@ export class ProjectsService {
       }
     }
 
-    const existing = await this.prisma.projects.findUnique({ where: { code: dto.code } });
-    if (existing) throw new ConflictException('Project code already exists');
+    const existing = await this.prisma.projects.findUnique({ where: { code: projectNumbering } });
+    if (existing) throw new ConflictException('Project numbering already exists');
 
-    const project = await this.prisma.projects.create({
-      data: {
-        code: dto.code, client: dto.client, name: dto.name,
-        description: dto.description || '', sequence: dto.sequence || 1,
-        is_active: true, project_state: 'not_started', assigned_technicians: '',
-      },
-    });
+    let project;
+    try {
+      project = await this.prisma.projects.create({
+        data: {
+          code: projectNumbering, client, name: projectName,
+          description: dto.description || '', sequence: dto.sequence || 1,
+          is_active: true, project_state: 'not_started', assigned_technicians: '',
+        },
+      });
+    } catch (error: any) {
+      // Keep the uniqueness guarantee reliable when two supervisors submit the same
+      // numbering between the availability check and the database insert.
+      if (error?.code === 'P2002') {
+        throw new ConflictException('Project numbering already exists');
+      }
+      throw error;
+    }
 
     const createdPanels = panels.map((panel, idx) => {
       const frameId = `frame_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`;
       const frame: FrameData = {
         id: frameId,
-        project_code: dto.code,
+        project_code: projectNumbering,
         panel_name: panel.name.trim(),
         cables: [],
         uploaded_at: new Date().toISOString(),

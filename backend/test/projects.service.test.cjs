@@ -43,7 +43,7 @@ test('ProjectsService.create rejects empty panel list', async () => {
   );
 });
 
-test('ProjectsService.create rejects duplicate project code', async () => {
+test('ProjectsService.create rejects duplicate project numbering', async () => {
   const service = new ProjectsService(prismaForProjects({
     projects: { findUnique: async () => ({ code: 'P1' }) },
   }));
@@ -55,7 +55,36 @@ test('ProjectsService.create rejects duplicate project code', async () => {
       name: 'Project',
       panels: [{ name: 'Panel 1', voltage_level: '11kV' }],
     }),
-    (err) => err instanceof ConflictException && err.message === 'Project code already exists',
+    (err) => err instanceof ConflictException && err.message === 'Project numbering already exists',
+  );
+});
+
+test('ProjectsService.codeAvailability checks normalized project numbering', async () => {
+  let requestedCode = '';
+  const service = new ProjectsService(prismaForProjects({
+    projects: {
+      findUnique: async ({ where }) => {
+        requestedCode = where.code;
+        return null;
+      },
+    },
+  }));
+
+  const result = await service.codeAvailability(' enowa-001 ');
+  assert.equal(requestedCode, 'ENOWA-001');
+  assert.deepEqual(result, { code: 'ENOWA-001', available: true });
+});
+
+test('ProjectsService.create rejects route-unsafe project numbering', async () => {
+  const service = new ProjectsService(prismaForProjects());
+  await assert.rejects(
+    () => service.create({
+      code: 'ENOWA/001',
+      client: 'ENOWA',
+      name: 'ENOWA Project',
+      panels: [{ name: '=H001', voltage_level: '132KV' }],
+    }),
+    (err) => err instanceof BadRequestException && err.message.includes('Project numbering may contain only'),
   );
 });
 
@@ -72,7 +101,7 @@ test('ProjectsService.create persists initial panel metadata', async () => {
   }));
 
   const created = await service.create({
-    code: 'PRJ-CREATE',
+    code: ' prj-create ',
     client: 'Client',
     name: 'New Project',
     panels: [{
@@ -93,6 +122,25 @@ test('ProjectsService.create persists initial panel metadata', async () => {
 
   MockStore.frames = initialFrames;
   FrameStore.save = oldSave;
+});
+
+test('ProjectsService.create converts a concurrent unique constraint race into a numbering conflict', async () => {
+  const service = new ProjectsService(prismaForProjects({
+    projects: {
+      findUnique: async () => null,
+      create: async () => { throw { code: 'P2002' }; },
+    },
+  }));
+
+  await assert.rejects(
+    () => service.create({
+      code: 'ENOWA-001',
+      client: 'ENOWA',
+      name: 'ENOWA Project',
+      panels: [{ name: '=H001', voltage_level: '132KV' }],
+    }),
+    (err) => err instanceof ConflictException && err.message === 'Project numbering already exists',
+  );
 });
 
 test('ProjectsService.submitToDirector rejects unknown project', async () => {
