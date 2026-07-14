@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 import { ProjectsService } from './projects.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -55,29 +55,29 @@ export class ProjectsController {
   // (same policy as drawing file streaming in frames.controller.ts).
   @Get(':code/report-pdf')
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
-  async reportPdf(@Param('code') code: string, @CurrentUser() user: User, @Res() res: Response) {
+  async reportPdf(@Param('code') code: string, @CurrentUser() user: User, @Res() res: FastifyReply) {
     if (user.role === 'wiring_technician' && !(await this.svc.technicianAssignedToProject(code, user.id))) {
-      res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
+      res.status(403).send({ statusCode: 403, message: 'You are not assigned to this project' });
       return;
     }
     const { buffer, filename } = await this.svc.generateReportPdf(code, user.full_name || user.username || '');
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"` });
-    res.end(buffer);
+    res.headers({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"` });
+    res.send(buffer);
   }
 
   @Get(':code/report-xlsx')
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
-  async reportXlsx(@Param('code') code: string, @CurrentUser() user: User, @Res() res: Response) {
+  async reportXlsx(@Param('code') code: string, @CurrentUser() user: User, @Res() res: FastifyReply) {
     if (user.role === 'wiring_technician' && !(await this.svc.technicianAssignedToProject(code, user.id))) {
-      res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
+      res.status(403).send({ statusCode: 403, message: 'You are not assigned to this project' });
       return;
     }
     const { buffer, filename } = await this.svc.generateReportXlsx(code, user.full_name || user.username || '');
-    res.set({
+    res.headers({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,
     });
-    res.end(buffer);
+    res.send(buffer);
   }
 
   @Get(':code/stats')

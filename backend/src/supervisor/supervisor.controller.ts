@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Body, Param, ParseIntPipe, UseGuards, Res,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 import { SupervisorService } from './supervisor.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -99,23 +99,23 @@ export class SupervisorController {
   async wiringScheduleXlsx(
     @Param('code') code: string,
     @Param('frameId') frameId: string,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     const buffer = await this.svc.wiringScheduleXlsx(code, frameId) as Buffer;
     const filename = `${code}_${frameId}_wiring_schedule.xlsx`;
-    res.set({
+    res.headers({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.length,
+      'Content-Length': String(buffer.length),
     });
-    res.end(buffer);
+    res.send(buffer);
   }
 
   @Get('panel-report/:code/:frameId/xlsx')
   async panelReportXlsx(
     @Param('code') code: string,
     @Param('frameId') frameId: string,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     const buffer = await this.svc.panelReportXlsx(code, frameId);
     const frame = MockStore.findFrameByProjectAndId(code, frameId)
@@ -125,12 +125,12 @@ export class SupervisorController {
       panelName: frame?.panel_name || frameId,
       ext: 'xlsx',
     });
-    res.set({
+    res.headers({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.length,
+      'Content-Length': String(buffer.length),
     });
-    res.end(buffer);
+    res.send(buffer);
   }
 
   @Get('panel-report/:code/:frameId')

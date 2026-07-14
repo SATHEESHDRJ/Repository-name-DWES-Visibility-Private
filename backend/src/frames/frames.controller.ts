@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards, Res, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 import { FramesService } from './frames.service';
 import { WiringDocumentService } from '../projects/wiring-document.service';
 import { PanelModelService, type PanelModelSpecPatch } from '../panel-model/panel-model.service';
@@ -56,10 +56,10 @@ export class FramesController {
     @Param('code') code: string,
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     if (user.role === 'wiring_technician' && !(await this.svc.technicianAssignedToFrame(code, id, user.id))) {
-      res.status(403).json({ statusCode: 403, message: 'You are not assigned to this panel' });
+      res.status(403).send({ statusCode: 403, message: 'You are not assigned to this panel' });
       return;
     }
     const { buffer, filename } = await this.wiringDoc.generatePanelCompletionReport(
@@ -67,8 +67,8 @@ export class FramesController {
       id,
       user.full_name || user.username || '',
     );
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"` });
-    res.end(buffer);
+    res.headers({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"` });
+    res.send(buffer);
   }
 
   /** Live panel completion report data for on-screen executive preview. */
@@ -277,14 +277,14 @@ export class FramesController {
     @Param('id') id: string,
     @Param('slot') slot: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     await this.svc.findOne(code, id);
     await this.assertTechnicianFrameAccess(user, code, id);
     const kind = this.parseDrawingSlot(slot);
     const file = this.svc.getPanelDrawingAssetFile(code, id, kind);
     if (!file) {
-      res.status(404).json({ statusCode: 404, message: kind === '3d' ? '3D model not uploaded for this panel.' : '2D drawing not uploaded for this panel.' });
+      res.status(404).send({ statusCode: 404, message: kind === '3d' ? '3D model not uploaded for this panel.' : '2D drawing not uploaded for this panel.' });
       return;
     }
     this.sendDrawingAsset(res, file.buffer, file.filename, file.contentType, 'inline');
@@ -298,13 +298,13 @@ export class FramesController {
     @Param('code') code: string,
     @Param('id') id: string,
     @Param('slot') slot: string,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     await this.svc.findOne(code, id);
     const kind = this.parseDrawingSlot(slot);
     const file = this.svc.getPanelDrawingAssetSourceFile(code, id, kind);
     if (!file) {
-      res.status(404).json({ statusCode: 404, message: kind === '3d' ? '3D model not uploaded for this panel.' : '2D drawing not uploaded for this panel.' });
+      res.status(404).send({ statusCode: 404, message: kind === '3d' ? '3D model not uploaded for this panel.' : '2D drawing not uploaded for this panel.' });
       return;
     }
     this.sendDrawingAsset(res, file.buffer, file.filename, file.contentType, 'attachment');
@@ -319,20 +319,20 @@ export class FramesController {
     @Param('id') id: string,
     @Param('drawingId') drawingId: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     await this.assertTechnicianFrameAccess(user, code, id);
     const file = this.svc.getPanelDrawingFile(code, id, drawingId);
     if (!file) {
-      res.status(404).json({ statusCode: 404, message: 'Drawing is not available for this panel' });
+      res.status(404).send({ statusCode: 404, message: 'Drawing is not available for this panel' });
       return;
     }
-    res.set({
+    res.headers({
       'Content-Type': file.contentType,
       'Content-Disposition': `inline; filename="${file.filename.replace(/"/g, '')}"`,
       'Content-Length': String(file.buffer.length),
     });
-    res.end(file.buffer);
+    res.send(file.buffer);
   }
 
   // Additive read-only: stream a drawing file inline. Technicians may open it ONLY if they have an
@@ -342,12 +342,12 @@ export class FramesController {
     @Param('code') code: string,
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     try {
       await this.assertTechnicianProjectAccess(user, code);
     } catch {
-      res.status(403).json({ statusCode: 403, message: 'You are not assigned to this project' });
+      res.status(403).send({ statusCode: 403, message: 'You are not assigned to this project' });
       return;
     }
     let file;
@@ -359,15 +359,15 @@ export class FramesController {
       file = this.svc.getDrawingFile(code, id);
     }
     if (!file) {
-      res.status(404).json({ statusCode: 404, message: 'Drawing not found' });
+      res.status(404).send({ statusCode: 404, message: 'Drawing not found' });
       return;
     }
-    res.set({
+    res.headers({
       'Content-Type': file.contentType,
       'Content-Disposition': `inline; filename="${file.filename.replace(/"/g, '')}"`,
       'Content-Length': String(file.buffer.length),
     });
-    res.end(file.buffer);
+    res.send(file.buffer);
   }
 
   @Delete('drawings/:drawingId')
@@ -466,11 +466,11 @@ export class FramesController {
     @Param('id') id: string,
     @Param('modelId') modelId: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     await this.assertTechnicianFrameAccess(user, code, id);
     const file = this.panelModel.getModelFile(code, id, modelId, user);
-    res.set({
+    res.headers({
       'Content-Type': file.contentType,
       'Content-Disposition': `inline; filename="${file.filename.replace(/"/g, '')}"`,
       'Content-Length': String(file.buffer.length),
@@ -478,7 +478,7 @@ export class FramesController {
       'ETag': `"${file.sha256}"`,
       'X-Content-Type-Options': 'nosniff',
     });
-    res.end(file.buffer);
+    res.send(file.buffer);
   }
 
   @Get('director-reports')
@@ -492,20 +492,20 @@ export class FramesController {
     @Param('code') code: string,
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     this.assertTechnicianDenied(user);
     const file = this.svc.getDirectorReportFile(code, id);
     if (!file) {
-      res.status(404).json({ statusCode: 404, message: 'Director report not found' });
+      res.status(404).send({ statusCode: 404, message: 'Director report not found' });
       return;
     }
-    res.set({
+    res.headers({
       'Content-Type': file.contentType,
       'Content-Disposition': `inline; filename="${file.filename.replace(/"/g, '')}"`,
       'Content-Length': String(file.buffer.length),
     });
-    res.end(file.buffer);
+    res.send(file.buffer);
   }
 
   @Delete('director-reports/:reportId')
@@ -544,20 +544,20 @@ export class FramesController {
   }
 
   private sendDrawingAsset(
-    res: Response,
+    res: FastifyReply,
     buffer: Buffer,
     filename: string,
     contentType: string,
     disposition: 'inline' | 'attachment',
   ) {
     const fallback = filename.replace(/[\r\n"\\]/g, '_');
-    res.set({
+    res.headers({
       'Content-Type': contentType,
       'Content-Disposition': `${disposition}; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       'Content-Length': String(buffer.length),
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     });
-    res.end(buffer);
+    res.send(buffer);
   }
 }

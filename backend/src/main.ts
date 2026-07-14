@@ -4,6 +4,8 @@ import { writeFileSync } from 'fs';
 import { networkInterfaces } from 'os';
 import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import fastifyHelmet from '@fastify/helmet';
 import { AppModule } from './app.module';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -169,28 +171,42 @@ async function bootstrap() {
     deletedPanelIdsByProject,
   });
 
-  const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'] });
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      // Same semantics as Express `trust proxy: 1` — only honoured when the
+      // deployment explicitly opts in (nginx in front).
+      trustProxy: process.env.TRUST_PROXY === 'true' ? 1 : false,
+      // Express's JSON body-parser default was 100KB; Fastify's is 1MiB.
+      // 5MiB keeps headroom for large cable_status/mapping JSON payloads
+      // while remaining bounded. File uploads use multipart, not this limit.
+      bodyLimit: 5 * 1024 * 1024,
+    }),
+    { logger: ['error', 'warn', 'log'] },
+  );
 
-  app.use((req: any, res: any, next: () => void) => {
-    if (req.method === 'GET' && req.path?.startsWith('/api/')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+  const fastify = app.getHttpAdapter().getInstance();
+
+  // API responses are live production state — never cacheable. File endpoints
+  // that implement their own validation-based caching (ETag/Range) opt out
+  // here; everything else keeps the historical no-store contract.
+  const CACHE_EXEMPT_API_PATHS: RegExp[] = [];
+  fastify.addHook('onRequest', (req, reply, done) => {
+    // req.url includes the query string, unlike Express's req.path.
+    if (req.method === 'GET' && req.url.startsWith('/api/')
+        && !CACHE_EXEMPT_API_PATHS.some(rx => rx.test(req.url))) {
+      reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      reply.header('Pragma', 'no-cache');
+      reply.header('Expires', '0');
     }
-    next();
+    done();
   });
 
-  if (process.env.TRUST_PROXY === 'true') {
-    const http = app.getHttpAdapter().getInstance();
-    if (typeof http?.set === 'function') http.set('trust proxy', 1);
-  }
-
   try {
-    const helmet = (await import('helmet')).default;
-    app.use(helmet({
+    await app.register(fastifyHelmet, {
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
-    }));
+    });
   } catch {
     console.warn('[DWES] helmet not installed — security headers rely on reverse proxy');
   }

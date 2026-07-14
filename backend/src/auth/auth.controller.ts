@@ -23,7 +23,7 @@ export class AuthController {
     @Body() body: { username: string; password: string; project_code?: string },
     @Request() req,
   ) {
-    const ip = req.ip || req.connection?.remoteAddress || '127.0.0.1';
+    const ip = req.ip || req.raw?.socket?.remoteAddress || '127.0.0.1';
     return this.authService.login(
       body.username,
       body.password,
@@ -39,7 +39,7 @@ export class AuthController {
     @Body() body: { refresh_token: string },
     @Request() req,
   ) {
-    const ip = req.ip || req.connection?.remoteAddress || '127.0.0.1';
+    const ip = req.ip || req.raw?.socket?.remoteAddress || '127.0.0.1';
     return this.authService.refreshAccessToken(body.refresh_token, ip);
   }
 

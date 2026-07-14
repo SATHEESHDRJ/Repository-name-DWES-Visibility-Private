@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 import { DirectorService } from './director.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -43,25 +43,25 @@ export class DirectorController {
   @Get('export')
   @UseGuards(RolesGuard)
   @Roles(...DIR_ROLES)
-  async export(@Query('format') format: string, @Res() res: Response) {
+  async export(@Query('format') format: string, @Res() res: FastifyReply) {
     if (format === 'csv') {
       const csv = await this.svc.exportCsv();
-      res.set({ 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=dwes-director-export.csv' });
-      res.end(csv);
+      res.headers({ 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=dwes-director-export.csv' });
+      res.send(csv);
     } else if (format === 'pdf') {
       const buf = await this.svc.exportPdf();
-      res.set({
+      res.headers({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename=dwes-director-report-${new Date().toISOString().slice(0, 10)}.pdf`,
       });
-      res.end(buf);
+      res.send(buf);
     } else {
       const buf = await this.svc.exportXlsx();
-      res.set({
+      res.headers({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': 'attachment; filename=dwes-director-export.xlsx',
       });
-      res.end(buf);
+      res.send(buf);
     }
   }
 }

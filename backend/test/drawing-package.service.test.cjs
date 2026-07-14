@@ -214,24 +214,24 @@ test('controller keeps inline preview and supervisor original download paths dis
       return { buffer: source, filename: 'source.dwg', contentType: 'application/acad' };
     },
   };
+  // Fastify reply shape (the controllers write raw replies via FastifyReply).
   const response = () => ({
-    headers: null,
+    sentHeaders: null,
     body: null,
-    set(headers) { this.headers = headers; return this; },
-    end(body) { this.body = body; return this; },
+    headers(headers) { this.sentHeaders = headers; return this; },
+    send(body) { this.body = body; return this; },
     status() { return this; },
-    json() { return this; },
   });
   const controller = new FramesController(svc, {});
   const user = { role: 'prod_supervisor' };
   const inlineRes = response();
   await controller.panelDrawingAssetFile('PKG_SCOPE', 'frame_a', '2d', user, inlineRes);
   assert.deepEqual(inlineRes.body, preview);
-  assert.match(inlineRes.headers['Content-Disposition'], /^inline;/);
+  assert.match(inlineRes.sentHeaders['Content-Disposition'], /^inline;/);
   const downloadRes = response();
   await controller.panelDrawingAssetDownload('PKG_SCOPE', 'frame_a', '2d', downloadRes);
   assert.deepEqual(downloadRes.body, source);
-  assert.match(downloadRes.headers['Content-Disposition'], /^attachment;/);
+  assert.match(downloadRes.sentHeaders['Content-Disposition'], /^attachment;/);
   assert.equal(previewCalls, 1);
   assert.equal(sourceCalls, 1);
 });
