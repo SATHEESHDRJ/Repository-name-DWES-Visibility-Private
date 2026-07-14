@@ -15,8 +15,12 @@ docs/go-live-artifacts/
 infra/docker/.env
 infra/docker/.env.e2e
 infra/docker/.e2e-data/
-/backend/seeds/demo-accounts.local.json
-/backend/seeds/accounts.seed.json
+# Private / generated demo credentials — never commit (any location). The committed
+# demo-accounts.example.json placeholder template is kept via the negation below.
+**/demo-accounts.local.json
+**/demo-accounts.runtime.json
+**/accounts.seed.json
+!**/demo-accounts.example.json
 infra/docker/ssl/*.pem
 infra/docker/.previous-tag*
 .terraform/
