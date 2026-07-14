@@ -38,7 +38,9 @@ for pattern in "${blocked_paths[@]}"; do
 done
 
 # Block secrets (*.key, .env, *.pem, *.pfx, private demo manifests)
-if git diff --cached --name-only | grep -qE '\.(key|pem|pfx)$|^\.env|infra/docker/\.env$|backend/backups/.*\.(dump|sql)$|demo-accounts\.(local|runtime)\.json$|backend/seeds/accounts\.seed\.json$'; then
+# `.example` templates carry placeholders, never real values, and are meant to be tracked
+# (e.g. backend/.env.example) — so they are excluded before the secret patterns run.
+if git diff --cached --name-only | grep -vE '\.example$' | grep -qE '\.(key|pem|pfx)$|(^|/)\.env($|\.)|infra/docker/\.env$|backend/backups/.*\.(dump|sql)$|demo-accounts\.(local|runtime)\.json$|backend/seeds/accounts\.seed\.json$'; then
   echo "❌ ERROR: Attempting to commit secrets or DB dumps (.env, private account manifests, *.dump)"
   exit 1
 fi

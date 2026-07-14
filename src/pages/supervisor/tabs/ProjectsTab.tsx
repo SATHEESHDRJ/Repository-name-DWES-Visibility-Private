@@ -17,6 +17,7 @@ import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelC
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
 import type { DocumentStatus } from '../../../utils/documentAvailability';
+import { PANEL_3D_ENABLED } from '../../../config/features';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
@@ -966,7 +967,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                         : !selectedPanel
                           ? 'Select a panel first'
                           : drawingReady
-                            ? `2D drawing and 3D model for ${selectedPanel.panel_name}`
+                            ? `${PANEL_3D_ENABLED ? '2D drawing and 3D model' : '2D drawing'} for ${selectedPanel.panel_name}`
                             : `Upload or view drawings for ${selectedPanel.panel_name}`
                     }
                   >

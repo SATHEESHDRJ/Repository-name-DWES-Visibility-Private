@@ -20,6 +20,7 @@ import {
   type PanelModelView,
 } from '../../types/panelModel';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { PANEL_3D_ENABLED } from '../../config/features';
 import {
   firstInvalidPanelDimension,
   PANEL_DIMENSION_MAX_MM,
@@ -297,6 +298,14 @@ export default function PanelGaDrawingModal({
   }, [beginPackageRequest, frameId, isLatestPackageRequest, projectCode]);
 
   const loadModel = useCallback(async () => {
+    // 3D hidden: never call the generated-model API. The backend route and its data
+    // stay intact; the viewer simply does not consult them.
+    if (!PANEL_3D_ENABLED) {
+      setModel(null);
+      setModelError('');
+      setModelLoading(false);
+      return;
+    }
     const request = beginModelRequest();
     setModelLoading(true);
     setModelError('');
@@ -428,13 +437,17 @@ export default function PanelGaDrawingModal({
   const model3d = drawingPackage?.model_3d ?? null;
   const supervisor = Boolean(model?.permissions.can_convert || model?.permissions.can_correct || model?.permissions.can_approve);
 
+  // With the 3D feature off this is a 2D-only viewer: the generated-3D, uploaded-3D,
+  // and side-by-side verify tabs are hidden. Revisions stays (it shows the 2D history).
   const availableTabs: GaTab[] = useMemo(() => {
     const tabs: GaTab[] = [];
     if (drawing2d) tabs.push('2d');
-    tabs.push('generated');
-    if (model3d) tabs.push('3d');
+    if (PANEL_3D_ENABLED) {
+      tabs.push('generated');
+      if (model3d) tabs.push('3d');
+    }
     tabs.push('revisions');
-    if (supervisor) tabs.push('verify');
+    if (PANEL_3D_ENABLED && supervisor) tabs.push('verify');
     return tabs;
   }, [drawing2d, model3d, supervisor]);
 
@@ -472,9 +485,11 @@ export default function PanelGaDrawingModal({
     }
   };
 
+  // Only the 2D slot is offered while the 3D feature is hidden (no Upload/Replace 3D).
   const packageActions = useMemo(() => {
     if (!drawingPackage) return [];
-    return (['2d', '3d'] as PanelDrawingSlot[]).filter(slot => canUploadPanelDrawingSlot(drawingPackage, slot));
+    const slots: PanelDrawingSlot[] = PANEL_3D_ENABLED ? ['2d', '3d'] : ['2d'];
+    return slots.filter(slot => canUploadPanelDrawingSlot(drawingPackage, slot));
   }, [drawingPackage]);
 
   const markOptionalDirty = (field: OptionalSpecField) => {
@@ -743,7 +758,32 @@ export default function PanelGaDrawingModal({
   };
 
   const renderRevisionsTab = () => {
-    if (modelLoading || packageLoading) return <div className="ga-viewer-message">Loading revision history…</div>;
+    if (packageLoading || (PANEL_3D_ENABLED && modelLoading)) {
+      return <div className="ga-viewer-message">Loading revision history…</div>;
+    }
+    // 2D-only mode: the drawing package is the whole revision history.
+    if (!PANEL_3D_ENABLED) {
+      if (!drawingPackage) {
+        return <div className="ga-viewer-message" role="alert">{packageError || 'Revision history is unavailable.'}</div>;
+      }
+      return (
+        <div className="pm-revisions">
+          <section>
+            <h4>Drawing package · revision {drawingPackage.revision}</h4>
+            <table className="pm-table">
+              <thead><tr><th>Slot</th><th>File</th><th>Uploaded</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>2D drawing</td>
+                  <td>{drawing2d ? drawing2d.original_name : '—'}</td>
+                  <td>{formatDateTime(drawing2d?.uploaded_at)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      );
+    }
     if (!model) return <div className="ga-viewer-message" role="alert">{modelError || 'Revision history is unavailable.'}</div>;
     return (
       <div className="pm-revisions">
@@ -1057,8 +1097,8 @@ export default function PanelGaDrawingModal({
   return (
     <>
       <Modal
-        title="3D GA / 2D Drawing View"
-        subtitle={`${projectName || projectCode} · ${panelName} · Panel-specific · ${supervisor ? 'Supervisor review enabled' : 'Read-only viewer'}`}
+        title={PANEL_3D_ENABLED ? '3D GA / 2D Drawing View' : '2D Drawing View'}
+        subtitle={`${projectName || projectCode} · ${panelName} · Panel-specific · ${PANEL_3D_ENABLED && supervisor ? 'Supervisor review enabled' : 'Read-only viewer'}`}
         onClose={onClose}
         size="fullscreen"
         bodyClassName="modal-body-flush"
@@ -1084,7 +1124,7 @@ export default function PanelGaDrawingModal({
             ))}
 
             <div className="ga-drawing-tab-actions">
-              {model?.current && statusChip(model.current.status)}
+              {PANEL_3D_ENABLED && model?.current && statusChip(model.current.status)}
               {packageActions.map(slot => (
                 <button key={slot} type="button" className="ga-drawing-upload-action" onClick={() => setUploadSlot(slot)}>
                   <Upload size={15} />
@@ -1094,7 +1134,7 @@ export default function PanelGaDrawingModal({
             </div>
           </div>
 
-          {packageLoading && modelLoading ? (
+          {(PANEL_3D_ENABLED ? packageLoading && modelLoading : packageLoading) ? (
             <div className="ga-viewer-message">Loading this panel’s drawing record…</div>
           ) : packageError ? (
             <div className="ga-viewer-message" role="alert">
@@ -1103,7 +1143,7 @@ export default function PanelGaDrawingModal({
             </div>
           ) : (
             <div className="ga-drawing-panes">
-              {(['2d', '3d'] as PanelDrawingSlot[]).map(slot => {
+              {(PANEL_3D_ENABLED ? (['2d', '3d'] as PanelDrawingSlot[]) : (['2d'] as PanelDrawingSlot[])).map(slot => {
                 const asset = drawingPackage ? panelDrawingAssetForSlot(drawingPackage, slot) : null;
                 if (!asset || !visited.has(slot)) return null;
                 const state = files[slot];
@@ -1165,15 +1205,17 @@ export default function PanelGaDrawingModal({
                 );
               })}
 
-              <section
-                id="ga-panel-generated"
-                role="tabpanel"
-                aria-labelledby="ga-tab-generated"
-                aria-hidden={activeTab !== 'generated'}
-                className={`ga-drawing-pane${activeTab === 'generated' ? ' is-active' : ''}`}
-              >
-                {visited.has('generated') && renderGeneratedTab()}
-              </section>
+              {PANEL_3D_ENABLED && (
+                <section
+                  id="ga-panel-generated"
+                  role="tabpanel"
+                  aria-labelledby="ga-tab-generated"
+                  aria-hidden={activeTab !== 'generated'}
+                  className={`ga-drawing-pane${activeTab === 'generated' ? ' is-active' : ''}`}
+                >
+                  {visited.has('generated') && renderGeneratedTab()}
+                </section>
+              )}
 
               <section
                 id="ga-panel-revisions"
@@ -1185,7 +1227,7 @@ export default function PanelGaDrawingModal({
                 {visited.has('revisions') && renderRevisionsTab()}
               </section>
 
-              {supervisor && (
+              {PANEL_3D_ENABLED && supervisor && (
                 <section
                   id="ga-panel-verify"
                   role="tabpanel"
