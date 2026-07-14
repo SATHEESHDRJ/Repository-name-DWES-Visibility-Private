@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import { projectsApi, supervisorApi, techApi, usersApi } from '../../services/api';
 import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { useAppDialog } from '../AppDialogProvider';
 import Toast, { type ToastTone } from '../ui/Toast';
 import {
@@ -123,11 +123,12 @@ export default function PanelAssignmentModal({
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const requests = useLatestRequest();
 
-  const loadContext = useCallback(async () => {
+  const loadContext = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setPanels([]);
-    setAllAssignments([]);
+    if (!silent) setLoading(true);
+    if (!silent) setPanels([]);
+    if (!silent) setAllAssignments([]);
     try {
       const [techs, assignments, projectPanels] = await Promise.all([
         usersApi.technicians().catch(() => []),
@@ -143,8 +144,8 @@ export default function PanelAssignmentModal({
       if (!nextPanels.some(panel => panel.id === panelId)) onClose();
     } catch (requestError: any) {
       if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
-      setPanels([]);
-      setAllAssignments([]);
+      if (!silent) setPanels([]);
+      if (!silent) setAllAssignments([]);
       if (requestError?.response?.status === 404) onClose();
     } finally {
       if (requests.isLatest(request.id)) setLoading(false);

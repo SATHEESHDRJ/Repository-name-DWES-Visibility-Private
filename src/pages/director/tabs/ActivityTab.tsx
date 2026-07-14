@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { directorApi } from '../../../services/api';
 import { RefreshCw, ClipboardList } from '../../../components/ui/icons';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 const TYPE_LABEL: Record<string, string> = { session: 'SESSION', audit: 'WIRING' };
@@ -18,10 +18,11 @@ export default function ActivityTab() {
   const [limit, setLimit] = useState(50);
   const requests = useLatestRequest();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setActivity([]);
+    if (!silent) setLoading(true);
+    if (!silent) setActivity([]);
     try {
       const next = await directorApi.activity(limit, request.signal);
       if (requests.isLatest(request.id)) setActivity(next);
@@ -50,7 +51,7 @@ export default function ActivityTab() {
           <option value={100}>Last 100</option>
           <option value={200}>Last 200</option>
         </select>
-        <button onClick={load} className="btn-sm" type="button">
+        <button onClick={() => void load()} className="btn-sm" type="button">
           <RefreshCw size={14} />
           <span>Refresh</span>
         </button>

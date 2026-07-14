@@ -7,7 +7,7 @@ import Modal from '../Modal';
 import ReportPreviewModal from '../ui/ReportPreviewModal';
 import ProjectPdfPreviewModal from './ProjectPdfPreviewModal';
 import { useAppDialog } from '../AppDialogProvider';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { projectsApi, supervisorApi } from '../../services/api';
 import type { Project } from '../../types';
 import { compactPanelDisplayName, resolveProjectCardDetails } from '../../utils/projectDisplay';
@@ -125,12 +125,15 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set());
   const requests = useLatestRequest();
 
-  const loadWorkspaceData = useCallback(async (_opts?: { silent?: boolean }) => {
+  const loadWorkspaceData = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setProjects([]);
-    setFrames([]);
-    setAssignments([]);
+    if (!silent) {
+      setLoading(true);
+      setProjects([]);
+      setFrames([]);
+      setAssignments([]);
+    }
     try {
       const projs = await projectsApi.list(request.signal) as Project[];
       const [frameLists, panelAssignments] = await Promise.all([
@@ -153,13 +156,14 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
       setReworkPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
       setProjectPdf(current => current && validProjectCodes.has(current.code) ? current : null);
     } catch (error: any) {
-      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) {
+      // A failed silent refresh keeps the last good workspace on screen.
+      if (!silent && error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) {
         setProjects([]);
         setFrames([]);
         setAssignments([]);
       }
     } finally {
-      if (requests.isLatest(request.id)) setLoading(false);
+      if (!silent && requests.isLatest(request.id)) setLoading(false);
     }
   }, [requests]);
 
@@ -173,9 +177,9 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
     void loadWorkspaceData();
   }, [isActive, loadWorkspaceData]);
 
-  useDwesRefresh(() => {
+  useDwesRefresh(options => {
     if (!isActive) return;
-    return loadWorkspaceData();
+    return loadWorkspaceData(options);
   }, { enabled: isActive });
 
   useEffect(() => {

@@ -6,7 +6,7 @@ import Modal from '../../../components/Modal';
 import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
@@ -242,25 +242,34 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     resetCreateForm();
   }, [saving, resetCreateForm]);
 
-  const load = useCallback(async () => {
+  /**
+   * A silent refresh (server event, fallback poll, tab focus) swaps the project list in
+   * place: no spinner, no blanked list, and the selected project/panel is kept. Only an
+   * explicit load shows the loading state and resets the selection.
+   */
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = projectRequests.begin();
-    panelRequests.cancel();
-    setLoading(true);
-    setSelectedProject(null);
-    setProjectPanels([]);
-    setSelectedPanelId('');
-    setLoadingPanels(false);
+    if (!silent) {
+      panelRequests.cancel();
+      setLoading(true);
+      setSelectedProject(null);
+      setProjectPanels([]);
+      setSelectedPanelId('');
+      setLoadingPanels(false);
+    }
     try {
       const data = await projectsApi.list(request.signal) as Project[];
       if (!projectRequests.isLatest(request.id)) return;
       setProjects(data);
     } catch (requestError: any) {
-      if (requestError?.code !== 'ERR_CANCELED' && projectRequests.isLatest(request.id)) {
+      // A failed silent refresh keeps the last good data on screen.
+      if (!silent && requestError?.code !== 'ERR_CANCELED' && projectRequests.isLatest(request.id)) {
         setProjects([]);
       }
       return;
     } finally {
-      if (projectRequests.isLatest(request.id)) setLoading(false);
+      if (!silent && projectRequests.isLatest(request.id)) setLoading(false);
     }
   }, [panelRequests, projectRequests]);
 
@@ -287,10 +296,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       });
   }, [panelRequests]);
 
-  useEffect(() => { load(); }, [load]);
-  useDwesRefresh(() => {
-    return load();
-  });
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
 
   useEffect(() => {
     if (!reportMenuOpen) return;
@@ -338,16 +345,20 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         if (user?.id) clearSessionProject(user.id);
       }
     }
-    if (detail.projectCode === selectedProject?.code) {
+    if (selectedProject?.code && detail.projectCode === selectedProject.code) {
       setDuplicateBannerDismissed(false);
       if (detail.action === 'deleted' && detail.frameId) {
         setProjectPanels(current => current.filter(panel => panel.id !== detail.frameId));
         setSelectedPanelId(current => current === detail.frameId ? '' : current);
         setShowWiringView(false);
         setShowGaDrawingView(false);
+      } else if (detail.action !== 'deleted') {
+        // A panel added or edited elsewhere (another supervisor, another device) must
+        // appear here without a reload — swap the panel list in place, keeping selection.
+        void reloadProjectPanels(selectedProject.code, { silent: true });
       }
     }
-  }), [clearSessionProject, panelRequests, projectRequests, selectedProject?.code, user?.id]);
+  }), [clearSessionProject, panelRequests, projectRequests, reloadProjectPanels, selectedProject?.code, user?.id]);
 
   useEffect(() => {
     if (!selectedProject?.code) return;
@@ -383,7 +394,12 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       if (user?.id) clearSessionProject(user.id);
       return;
     }
-    if (selectedProject?.code === match.code && selectedProject === match) return;
+    // Same project, fresh object from a silent refetch: adopt the new metadata in place.
+    // Resetting the panel list here would blank the dropdown and drop the user's panel.
+    if (selectedProject?.code === match.code) {
+      if (selectedProject !== match) setSelectedProject(match);
+      return;
+    }
     setLoadingPanels(true);
     setProjectPanels([]);
     setSelectedPanelId('');

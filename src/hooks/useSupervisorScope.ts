@@ -4,7 +4,7 @@ import type { Project } from '../types';
 import type { FramePanel } from '../components/assignment/ProjectPanelSelect';
 import { isVerifiedFrame } from '../components/assignment/frameUtils';
 import { useLatestRequest } from './useLatestRequest';
-import { useDwesRefresh } from './useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from './useDwesRefresh';
 import { onFramesChanged } from '../utils/projectFramesEvents';
 
 export function useSupervisorScope() {
@@ -17,9 +17,10 @@ export function useSupervisorScope() {
   const [panelsRefreshKey, setPanelsRefreshKey] = useState(0);
   const projectRequests = useLatestRequest();
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = projectRequests.begin();
-    setProjects([]);
+    if (!silent) setProjects([]);
     try {
       const rows = await projectsApi.list(request.signal) as Project[];
       if (!projectRequests.isLatest(request.id)) return;

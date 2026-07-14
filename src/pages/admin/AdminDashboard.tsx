@@ -12,7 +12,7 @@ import {
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { adminApi } from '../../services/api';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
 
 // User Management + System Settings only. Logs & Audit admin page removed;
@@ -29,9 +29,10 @@ export default function AdminDashboard() {
   const [diag, setDiag] = useState<any>(null);
   const requests = useLatestRequest();
 
-  const loadDiagnostics = useCallback(async () => {
+  const loadDiagnostics = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setDiag(null);
+    if (!silent) setDiag(null);
     try {
       const next = await adminApi.diagnostics(request.signal);
       if (requests.isLatest(request.id)) setDiag(next);

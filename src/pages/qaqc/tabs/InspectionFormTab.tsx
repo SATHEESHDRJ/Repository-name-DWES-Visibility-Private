@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 import { AlertTriangle, Check, X, Search, Plus } from '../../../components/ui/icons';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 
 interface InspectionFormTabProps {
   panel: any | null;
@@ -97,20 +97,26 @@ export default function InspectionFormTab({ panel, onInspectionDone, onUnavailab
   const [issueLoc, setIssueLoc] = useState('');
   const requests = useLatestRequest();
 
-  const loadDetail = useCallback(async () => {
+  const loadDetail = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     if (!panel) {
-      setDetail(null);
+      if (!silent) setDetail(null);
       return;
     }
     const request = requests.begin();
-    setLoading(true);
-    setDetail(null);
-    setSaved(false);
-    setError('');
+    if (!silent) {
+      setLoading(true);
+      setDetail(null);
+      setSaved(false);
+      setError('');
+    }
     try {
       const d = await qaqcApi.panelDetail(panel.id, request.signal);
       if (!requests.isLatest(request.id)) return;
       setDetail(d);
+      // A background refresh updates the read-only panel detail only. Re-seeding the
+      // check/note/issue fields here would discard an inspection the engineer is typing.
+      if (silent) return;
       if (d.existing_inspection) {
         const i = d.existing_inspection;
         setVisual(i.visual_check || 'pass');
@@ -139,11 +145,11 @@ export default function InspectionFormTab({ panel, onInspectionDone, onUnavailab
         setComplianceNote('');
         setInspNotes('');
         setResult('PASS');
-        setIssues([]);
+        if (!silent) setIssues([]);
       }
     } catch (requestError: any) {
       if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
-      setDetail(null);
+      if (!silent) setDetail(null);
       if (requestError?.response?.status === 404) onUnavailable();
     } finally {
       if (requests.isLatest(request.id)) setLoading(false);

@@ -55,12 +55,14 @@ export class EventsInterceptor implements NestInterceptor {
         const scope = scopeFor(url);
         // Frames/panels routes are the only place a panel-scoped id is meaningful.
         const { projectCode, frameId } = locate(req?.params, req?.body);
+        const originId = req?.headers?.['x-dwes-client-id'];
         this.events.publish({
           scope,
           action: actionFor(method),
           projectCode,
           frameId,
           actorId: typeof req?.user?.id === 'number' ? req.user.id : undefined,
+          originId: typeof originId === 'string' ? originId : undefined,
         });
       }),
     );

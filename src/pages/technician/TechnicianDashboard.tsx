@@ -3,7 +3,7 @@ import { Zap } from '../../components/ui/icons';
 import DashboardShell from '../../components/ui/DashboardShell';
 import { techApi } from '../../services/api';
 import { useLiveWiringStore } from '../../store/useLiveWiringStore';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import PanelsTab from './tabs/PanelsTab';
 import WiringTab from './tabs/WiringTab';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
@@ -31,10 +31,18 @@ export default function TechnicianDashboard() {
 
   useEffect(() => { selectedPanelRef.current = selectedPanel; }, [selectedPanel]);
 
-  const loadPanels = useCallback(async () => {
+  /**
+   * A silent refresh keeps the technician's open panel and wiring view: it swaps the
+   * panel data in place, and only closes the workstation if the panel is genuinely gone
+   * (unassigned or deleted). A failed silent refresh keeps the last good data on screen.
+   */
+  const loadPanels = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = panelRequests.begin();
-    setPanelsLoading(true);
-    setPanels([]);
+    if (!silent) {
+      setPanelsLoading(true);
+      setPanels([]);
+    }
     try {
       const data = await techApi.myPanels(request.signal);
       if (!panelRequests.isLatest(request.id)) return;
@@ -44,22 +52,25 @@ export default function TechnicianDashboard() {
       const previous = selectedPanelRef.current;
       const stillAssigned = previous ? data.find((panel: any) => panel.id === previous.id) : null;
       if (previous && !stillAssigned) setWiringOpen(false);
-      const next = stillAssigned ?? pickDefaultPanel(data);
-      selectedPanelRef.current = next;
-      setSelectedPanel(next);
+      // Keep the panel the technician is working on; adopt its fresh data.
+      const next = stillAssigned ?? (silent && previous ? null : pickDefaultPanel(data));
+      if (next || !silent) {
+        selectedPanelRef.current = next;
+        setSelectedPanel(next);
+      }
     } catch (error: any) {
-      if (error?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
+      if (silent || error?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
       setPanels([]);
       setSelectedPanel(null);
       selectedPanelRef.current = null;
       setWiringOpen(false);
       setLiveFromPanel(null);
     } finally {
-      if (panelRequests.isLatest(request.id)) setPanelsLoading(false);
+      if (!silent && panelRequests.isLatest(request.id)) setPanelsLoading(false);
     }
   }, [panelRequests, setLiveFromPanel]);
 
-  useEffect(() => { loadPanels(); }, [loadPanels]);
+  useEffect(() => { void loadPanels(); }, [loadPanels]);
 
   useDwesRefresh(loadPanels);
 

@@ -3,7 +3,7 @@ import { ClipboardCheck, ClipboardList, Clock3, CheckCheck, CircleX, TriangleAle
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { qaqcApi } from '../../services/api';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import PanelsTab from './tabs/PanelsTab';
 import InspectionFormTab from './tabs/InspectionFormTab';
 import HistoryTab from './tabs/HistoryTab';
@@ -25,9 +25,11 @@ export default function QAQCDashboard() {
   const [stats, setStats] = useState({ total: 0, passed: 0, failed: 0, conditional: 0, ready_for_qc: 0 });
   const statsRequests = useLatestRequest();
 
-  const loadStats = useCallback(async () => {
+  const loadStats = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = statsRequests.begin();
-    setStats({ total: 0, passed: 0, failed: 0, conditional: 0, ready_for_qc: 0 });
+    // Never zero the KPI tiles on a background refresh — the new values swap in place.
+    if (!silent) setStats({ total: 0, passed: 0, failed: 0, conditional: 0, ready_for_qc: 0 });
     try {
       const next = await qaqcApi.stats(request.signal);
       if (statsRequests.isLatest(request.id)) setStats(next);

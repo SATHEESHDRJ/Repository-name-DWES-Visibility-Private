@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { PanelModelSpecPatchRequest } from '../types/panelModel';
+import { DWES_CLIENT_ID, DWES_CLIENT_ID_HEADER } from '../utils/clientId';
 
 const api = axios.create({
   baseURL: '/api',
@@ -10,6 +11,8 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('dwes_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Tags the mutation with this tab, so the live stream can skip its own echo.
+  config.headers[DWES_CLIENT_ID_HEADER] = DWES_CLIENT_ID;
   if (config.method?.toLowerCase() === 'get') {
     config.params = { ...(config.params ?? {}), _dwes_ts: Date.now() };
   }

@@ -48,6 +48,7 @@ export default function AppShell({
   const { begin: beginProjectValidation, isLatest: isLatestProjectValidation } = useLatestRequest();
 
   // Live change stream: silently refreshes only the affected data across users.
+  // This tab's own mutations already refresh locally, so only their echo is ignored.
   useServerEvents(Boolean(user?.id));
 
   // Keep --dash-topbar-height equal to the topbar's REAL height at all times.

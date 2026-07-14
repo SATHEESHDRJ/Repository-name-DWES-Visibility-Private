@@ -5,7 +5,7 @@ import {
 import Modal from '../../../components/Modal';
 import ReportPreviewModal from '../../../components/ui/ReportPreviewModal';
 import { directorApi, projectsApi } from '../../../services/api';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
 import { onFramesChanged } from '../../../utils/projectFramesEvents';
 
@@ -84,10 +84,11 @@ export default function SummaryReportTab() {
   const [downloadingProject, setDownloadingProject] = useState<string | null>(null);
   const requests = useLatestRequest();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setData([]);
+    if (!silent) setLoading(true);
+    if (!silent) setData([]);
     try {
       const result: ProjectStatus[] = await directorApi.projectsSummary(request.signal);
       if (!requests.isLatest(request.id)) return;
@@ -111,7 +112,7 @@ export default function SummaryReportTab() {
       });
     } catch (error: any) {
       if (error?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
-      setData([]);
+      if (!silent) setData([]);
     } finally {
       if (requests.isLatest(request.id)) setLoading(false);
     }

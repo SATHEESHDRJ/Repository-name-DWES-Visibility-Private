@@ -4,7 +4,7 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal
 import { projectsApi, supervisorApi, techApi, usersApi } from '../../services/api';
 import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import Toast from '../ui/Toast';
 import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
@@ -205,8 +205,9 @@ export default function SmartAssignmentCenter({
     setToast(message);
   };
 
-  const loadContext = useCallback(async () => {
-    setLoading(true);
+  const loadContext = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const [frames, panels, changeovers, audit] = await Promise.all([
         projectsApi.frames(projectCode).catch(() => []),
@@ -254,7 +255,7 @@ export default function SmartAssignmentCenter({
           }),
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [projectCode, panelId]);
 

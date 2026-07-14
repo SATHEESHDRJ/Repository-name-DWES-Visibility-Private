@@ -9,7 +9,7 @@ import {
   PROJECT_DELETE_WARNING,
 } from '../../../constants/projectDeletion';
 import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 export default function DeleteProjectTab() {
@@ -28,9 +28,10 @@ export default function DeleteProjectTab() {
     [projects, selCode],
   );
 
-  const refreshProjects = useCallback((deletedCode?: string) => {
+  const refreshProjects = useCallback((deletedCode?: string, options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
+    if (!silent) setLoading(true);
     return projectsApi.list(request.signal)
       .then((rows) => {
         if (!requests.isLatest(request.id)) return;
@@ -55,11 +56,11 @@ export default function DeleteProjectTab() {
         }
       })
       .catch((requestError: any) => {
-        if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
+        if (silent || requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
         setProjects([]);
       })
       .finally(() => {
-        if (requests.isLatest(request.id)) setLoading(false);
+        if (!silent && requests.isLatest(request.id)) setLoading(false);
       });
   }, [requests, selCode]);
 
@@ -67,7 +68,7 @@ export default function DeleteProjectTab() {
     void refreshProjects();
   }, [refreshProjects]);
 
-  useDwesRefresh(() => refreshProjects());
+  useDwesRefresh(options => refreshProjects(undefined, options));
 
   useEffect(() => onFramesChanged(detail => {
     if (detail.action !== 'deleted' || detail.frameId) return;

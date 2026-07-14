@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { emitFramesChanged } from '../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../utils/dwesRefreshEvents';
 import { emitDocumentsChanged } from '../utils/projectDocumentsEvents';
+import { useLiveConnection } from '../store/useLiveConnection';
+import { DWES_CLIENT_ID } from '../utils/clientId';
 
 type ServerEventScope = 'project' | 'panel' | 'document' | 'assignment' | 'inspection' | 'general' | 'heartbeat';
 
@@ -11,6 +13,8 @@ interface ServerEvent {
   projectCode?: string;
   frameId?: string;
   actorId?: number;
+  /** The browser tab that made the change. */
+  originId?: string;
   at: string;
 }
 
@@ -57,14 +61,23 @@ function dispatch(event: ServerEvent): void {
 
 /**
  * Subscribes to the backend change stream (SSE over fetch, so the JWT travels in
- * the Authorization header rather than the URL). Reconnects with backoff; the
- * existing background poll remains the fallback while disconnected.
+ * the Authorization header rather than the URL).
+ *
+ * - Reports connection state, so polling runs only while the stream is down.
+ * - Drops the echo of a change THIS TAB made (it already refreshed locally), while
+ *   still applying changes from every other tab — including the same user on a
+ *   second device.
+ * - Reconnects with exponential backoff.
  */
 export function useServerEvents(enabled: boolean): void {
   const stoppedRef = useRef(false);
+  const setConnected = useLiveConnection(state => state.setConnected);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setConnected(false);
+      return;
+    }
     stoppedRef.current = false;
     const controller = new AbortController();
     let retryMs = RETRY_MIN_MS;
@@ -82,6 +95,7 @@ export function useServerEvents(enabled: boolean): void {
         if (!response.ok || !response.body) throw new Error(`stream ${response.status}`);
 
         retryMs = RETRY_MIN_MS; // connected — reset backoff
+        setConnected(true);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -103,8 +117,11 @@ export function useServerEvents(enabled: boolean): void {
               .join('');
             if (payload) {
               try {
-                dispatch(JSON.parse(payload) as ServerEvent);
-              } catch { /* ignore a malformed frame; the poll still covers us */ }
+                const event = JSON.parse(payload) as ServerEvent;
+                // Skip only what this very tab caused; another device's change still applies.
+                const isOwnEcho = event.originId != null && event.originId === DWES_CLIENT_ID;
+                if (!isOwnEcho) dispatch(event);
+              } catch { /* ignore a malformed frame; the fallback poll still covers us */ }
             }
             split = buffer.indexOf('\n\n');
           }
@@ -113,6 +130,7 @@ export function useServerEvents(enabled: boolean): void {
         /* network drop, backend restart, or abort — handled by the retry below */
       }
 
+      setConnected(false);
       if (stoppedRef.current || controller.signal.aborted) return;
       retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
@@ -124,6 +142,7 @@ export function useServerEvents(enabled: boolean): void {
       stoppedRef.current = true;
       if (retryTimer) clearTimeout(retryTimer);
       controller.abort();
+      setConnected(false);
     };
-  }, [enabled]);
+  }, [enabled, setConnected]);
 }

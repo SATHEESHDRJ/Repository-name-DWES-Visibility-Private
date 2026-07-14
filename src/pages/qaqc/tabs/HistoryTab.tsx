@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import Modal from '../../../components/Modal';
 import { Eye, ClipboardList, MapPin } from '../../../components/ui/icons';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { onFramesChanged } from '../../../utils/projectFramesEvents';
 
 export default function HistoryTab() {
@@ -16,10 +16,11 @@ export default function HistoryTab() {
   const listRequests = useLatestRequest();
   const detailRequests = useLatestRequest();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = listRequests.begin();
-    setLoading(true);
-    setInspections([]);
+    if (!silent) setLoading(true);
+    if (!silent) setInspections([]);
     try {
       const rows = await qaqcApi.allInspections(request.signal);
       if (listRequests.isLatest(request.id)) setInspections(rows);

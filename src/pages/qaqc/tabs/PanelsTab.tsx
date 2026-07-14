@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { qaqcApi } from '../../../services/api';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import ProjectInfoCard from '../../../components/ui/ProjectInfoCard';
 import { RefreshCw, ClipboardCheck } from '../../../components/ui/icons';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
@@ -16,10 +16,11 @@ export default function PanelsTab({ onSelectPanel }: PanelsTabProps) {
   const [filter, setFilter] = useState<'ready' | 'all'>('ready');
   const requests = useLatestRequest();
 
-  const load = useCallback(() => {
+  const load = useCallback((options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setPanels([]);
+    if (!silent) setLoading(true);
+    if (!silent) setPanels([]);
     const response = filter === 'ready'
       ? qaqcApi.readyPanels(request.signal)
       : qaqcApi.allCompleted(request.signal);

@@ -10,6 +10,7 @@ interface Props {
 export default function SupervisorAlertStrips({ onNavigate }: Props) {
   const [approvals, setApprovals] = useState(0);
 
+  // Already updates the count in place and keeps the last good value on failure.
   const loadCounts = useCallback(() => {
     supervisorApi.pendingApprovals().then(d => setApprovals((d || []).length)).catch(() => {});
   }, []);

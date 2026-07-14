@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { directorApi } from '../../../services/api';
 import { useCallback } from 'react';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 function RingChart({ pct, tone, label, sub }: { pct: number; tone: string; label: string; sub: string }) {
@@ -101,10 +101,11 @@ export default function AnalyticsTab() {
   const [loading, setLoading] = useState(true);
   const requests = useLatestRequest();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setStats(null);
+    if (!silent) setLoading(true);
+    if (!silent) setStats(null);
     try {
       const next = await directorApi.stats(request.signal);
       if (requests.isLatest(request.id)) setStats(next);

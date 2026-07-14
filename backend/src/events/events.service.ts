@@ -10,8 +10,14 @@ export interface DwesServerEvent {
   action: 'created' | 'updated' | 'deleted';
   projectCode?: string;
   frameId?: string;
-  /** Emitting user, so a client can ignore the echo of its own mutation. */
+  /** Emitting user — informational only. */
   actorId?: number;
+  /**
+   * The browser tab that made the change (X-DWES-Client-Id). That tab skips this echo
+   * because it already refreshed locally; every other tab — including the same user on
+   * another device — still applies it.
+   */
+  originId?: string;
   at: string;
 }
 

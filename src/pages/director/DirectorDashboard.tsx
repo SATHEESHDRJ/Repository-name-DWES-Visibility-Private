@@ -5,7 +5,7 @@ import {
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { directorApi } from '../../services/api';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import SummaryReportTab from './tabs/SummaryReportTab';
 import ExportTab from './tabs/ExportTab';
 import ActivityTab from './tabs/ActivityTab';
@@ -29,9 +29,10 @@ export default function DirectorDashboard() {
   const [stats, setStats] = useState<any>(null);
   const requests = useLatestRequest();
 
-  const loadStats = useCallback(async () => {
+  const loadStats = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setStats(null);
+    if (!silent) setStats(null);
     try {
       const next = await directorApi.stats(request.signal);
       if (requests.isLatest(request.id)) setStats(next);

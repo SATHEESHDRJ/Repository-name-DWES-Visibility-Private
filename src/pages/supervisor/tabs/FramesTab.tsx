@@ -72,6 +72,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
     }).catch(() => setLoading(false));
   }, [selectedProject]);
 
+  // Already swaps frames/assignments in place and keeps the last good data on failure.
   const loadFrames = useCallback(() => {
     if (!selectedProject) return;
     Promise.all([

@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import PanelCompletionReportPreview, { type PanelCompletionReportPreviewData } from './PanelCompletionReportPreview';
 import { projectsApi, supervisorApi } from '../../services/api';
 import { buildPanelReportFilename } from '../../utils/reportFilename';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { DWES_REPORT_PREVIEW_POLL_MS } from '../../constants/refreshIntervals';
 import { Download } from './icons';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
@@ -36,15 +36,19 @@ export default function ReportPreviewModal({
   const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
   const requests = useLatestRequest();
 
-  const fetchReport = useCallback(async () => {
+  // A silent refresh swaps the report content in place — the open preview never blanks.
+  const fetchReport = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setReport(null);
-    setFailed(false);
+    if (!silent) {
+      setReport(null);
+      setFailed(false);
+    }
     try {
       const data = await projectsApi.panelCompletionReport(projectCode, frameId, request.signal);
       if (requests.isLatest(request.id)) setReport(data);
     } catch (error: any) {
-      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) setFailed(true);
+      if (!silent && error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) setFailed(true);
     }
   }, [frameId, projectCode, requests]);
 

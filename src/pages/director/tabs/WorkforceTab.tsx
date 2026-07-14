@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Users } from '../../../components/ui/icons';
 import { directorApi } from '../../../services/api';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 function kpiTone(kpi: number): 'completed' | 'warning' | 'danger' {
@@ -15,10 +15,11 @@ export default function WorkforceTab() {
   const [loading, setLoading] = useState(true);
   const requests = useLatestRequest();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     const request = requests.begin();
-    setLoading(true);
-    setRows([]);
+    if (!silent) setLoading(true);
+    if (!silent) setRows([]);
     try {
       const next = await directorApi.workforce(request.signal);
       if (requests.isLatest(request.id)) setRows(next);
@@ -45,7 +46,7 @@ export default function WorkforceTab() {
           <Users size={16} />
           Technician performance · sorted by KPI
         </div>
-        <button type="button" className="btn-sm" onClick={load}>
+        <button type="button" className="btn-sm" onClick={() => void load()}>
           <RefreshCw size={14} />
           Refresh
         </button>
