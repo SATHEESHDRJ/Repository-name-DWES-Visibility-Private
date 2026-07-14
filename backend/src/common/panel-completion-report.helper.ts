@@ -8,6 +8,31 @@ import { assignedCableKpiPercent, compositeKpiPercent } from './kpi.constants';
 /** Executive reports deliberately expose only the two management states. */
 export type PanelReportStatus = 'active' | 'completed';
 
+/**
+ * Which report the production process actually warrants.
+ *
+ * A panel still being wired — or wired but not yet signed off — produces a
+ * PRODUCTION PROGRESS REPORT. Only a panel whose cables are all complete AND that
+ * a supervisor has approved produces a PROJECT COMPLETION REPORT. The document
+ * never claims completion the records do not support.
+ */
+export type PanelReportKind = 'progress' | 'completion';
+
+export const PANEL_REPORT_TITLES: Record<PanelReportKind, string> = {
+  progress: 'Production Progress Report',
+  completion: 'Project Completion Report',
+};
+
+/** The single rule for report type — used by the PDF, the Excel export, and the UI. */
+export function resolvePanelReportKind(input: {
+  cablesTotal: number;
+  cablesCompleted: number;
+  approved: boolean;
+}): PanelReportKind {
+  const fullyWired = input.cablesTotal > 0 && input.cablesCompleted >= input.cablesTotal;
+  return fullyWired && input.approved ? 'completion' : 'progress';
+}
+
 export interface PanelCompletionReportData {
   project: {
     code: string;
@@ -26,6 +51,9 @@ export interface PanelCompletionReportData {
   };
   reportStatus: PanelReportStatus;
   reportStatusLabel: string;
+  /** Progress vs Completion — driven by the real production state, not the caller. */
+  reportKind: PanelReportKind;
+  reportTitle: string;
   technicians: { fullName: string; username: string }[];
   technician: { fullName: string; username: string } | null;
   midChangeTechnician: { fullName: string; username: string } | null;
@@ -258,6 +286,14 @@ export async function collectPanelCompletionReportData(
   const isCompleted = total > 0 && completed >= total;
   const status: PanelReportStatus = isCompleted ? 'completed' : 'active';
   const label = status === 'completed' ? 'Completed' : 'Active';
+  // `supervisor_approved` defaults to true in the schema, so `approved_at` is the
+  // only reliable signal that a supervisor explicitly signed the panel off.
+  const isApproved = !!assignment?.approved_at;
+  const reportKind = resolvePanelReportKind({
+    cablesTotal: total,
+    cablesCompleted: completed,
+    approved: isApproved,
+  });
   const generatedAt = new Date();
   const anchorStart = assignment?.assigned_at || project.created_at;
   const meta = decodeProjectMeta(project.description);
@@ -280,6 +316,8 @@ export async function collectPanelCompletionReportData(
     },
     reportStatus: status,
     reportStatusLabel: label,
+    reportKind,
+    reportTitle: PANEL_REPORT_TITLES[reportKind],
     technicians: [...new Map(assignments.map(a => {
       const u = userMap.get(a.technician_id);
       return [a.technician_id, u

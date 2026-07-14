@@ -406,7 +406,9 @@ export class SupervisorService {
 
     mergeRow(2); ws.getRow(2).height = 22;
     const t2 = ws.getCell('A2');
-    t2.value = `PANEL COMPLETION REPORT — ${data.panel.name}`;
+    // Title follows the real production state: progress while wiring is in flight,
+    // completion only once the panel is fully wired and supervisor-approved.
+    t2.value = `${data.reportTitle.toUpperCase()} — ${data.panel.name}`;
     t2.font = { bold: true, size: 12, color: { argb: WHITE } };
     t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
     t2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -622,10 +624,11 @@ export class SupervisorService {
     r3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(3).height = 18;
 
-    // Row 4 — Frame / total cables
+    // Row 4 — Panel / total cables. The internal frame id is never printed: readers
+    // identify the panel by its name.
     merge(4);
     const r4 = ws.getCell('A4');
-    r4.value = `Frame ID: ${frameId}   |   Total Cables: ${frame.cable_count || frame.cables.length}`;
+    r4.value = `Panel: ${frame.panel_name || frameId}   |   Total Cables: ${frame.cable_count || frame.cables.length}`;
     r4.font = { size: 10, color: { argb: INFO_FG } };
     r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: INFO_BG } };
     r4.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };

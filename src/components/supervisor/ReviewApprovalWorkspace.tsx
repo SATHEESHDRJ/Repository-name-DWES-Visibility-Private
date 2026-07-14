@@ -447,7 +447,9 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
         </div>
       )}
 
-      {reportPanel?.assignmentId && (
+      {/* A panel with no assignment yet still has a report — it simply reads as
+          Production Progress with nothing recorded, so it is not gated here. */}
+      {reportPanel && (
         <ReportPreviewModal
           assignmentId={reportPanel.assignmentId}
           projectCode={reportPanel.projectCode}

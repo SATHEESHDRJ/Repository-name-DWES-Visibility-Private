@@ -11,8 +11,18 @@
   --t-surface-white-10:  rgba(255, 255, 255, 0.10);
   --t-surface-white-20:  rgba(255, 255, 255, 0.20);
   --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  /* Workspace canvas — soft light grey, calm behind white cards. */
   --t-bg:            #EEF2F6;
-  --t-bg-grad:       linear-gradient(180deg, #EAEFF4 0%, #F1F5F9 100%);
+  --t-bg-grad:       linear-gradient(180deg, #EDF1F6 0%, #F4F7FA 100%);
+
+  /* Sidebar rail — white surface on the grey canvas, separated by a hairline
+     border and a subtle shadow. Text tuned for AA contrast on white. */
+  --t-sidebar-bg:     #FFFFFF;
+  --t-sidebar-border: #E2E8F0;
+  --t-sidebar-text:   #475569;
+  --t-sidebar-muted:  #64748B;
+  --t-sidebar-strong: #0F172A;
+  --t-sidebar-hover:  #F1F5F9;
   --t-header:        linear-gradient(180deg, #101B2E 0%, #0B1220 45%, #070D16 100%);
   --t-header-border: rgba(56, 189, 248, 0.14);
   --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(2, 6, 23, 0.42);
