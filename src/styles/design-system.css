@@ -4726,21 +4726,45 @@
     @apply bg-red-50 text-red-700 border-red-300;
   }
   .pj-project-info-card-actions .pj-info-action {
-    /* Match the compact toolbar above: natural content width, never equal columns. */
+    /* One size for every action; long labels may grow past the shared floor. */
     flex: 0 1 auto;
     width: auto;
     max-width: 100%;
-    min-width: 0;
-    min-height: 40px;
-    height: 40px;
-    padding: 0 0.875rem;
-    border-radius: var(--btn-radius-md);
+    min-width: 8.75rem;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
     font-size: 13px;
+    font-weight: 600;
     gap: 0.5rem;
   }
   .pj-project-info-card-actions .pj-info-action svg {
     width: 1rem;
     height: 1rem;
+  }
+  .pj-project-info-card-actions .pj-info-action-menu {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 8.75rem;
+  }
+  .pj-project-info-card-actions .pj-info-action-menu .pj-info-action {
+    width: 100%;
+    min-width: 0;
+  }
+  .pj-project-info-card-actions .pj-info-action .pj-info-action-caret {
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+    margin-right: -2px;
+    opacity: 0.75;
+  }
+  @media (max-width: 640px) {
+    .pj-project-info-card-actions .pj-info-action,
+    .pj-project-info-card-actions .pj-info-action-menu {
+      flex: 1 1 calc(50% - 0.25rem);
+      min-width: 0;
+    }
   }
   .pj-project-info-card-divider {
     @apply h-px w-full bg-slate-200/90;

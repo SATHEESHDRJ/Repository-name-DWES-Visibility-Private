@@ -665,24 +665,35 @@
     filter: none;
   }
 
+  /* One muted slate for every action in the group — no accent-per-button. */
   .pj-info-action--secondary,
   .pj-info-action--drawing,
-  .pj-info-action--wiring {
-    background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+  .pj-info-action--wiring,
+  .pj-info-action--edit {
+    background: #1E293B;
     color: #FFFFFF;
-    border-color: rgba(79, 70, 229, 0.58);
+    border-color: #1E293B;
   }
 
   .pj-info-action--secondary:hover:not(:disabled),
   .pj-info-action--drawing:hover:not(:disabled),
-  .pj-info-action--wiring:hover:not(:disabled) {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
+  .pj-info-action--wiring:hover:not(:disabled),
+  .pj-info-action--edit:hover:not(:disabled) {
+    background: #334155;
+    border-color: #475569;
+  }
+
+  .pj-info-action--secondary:active:not(:disabled),
+  .pj-info-action--drawing:active:not(:disabled),
+  .pj-info-action--wiring:active:not(:disabled),
+  .pj-info-action--edit:active:not(:disabled) {
+    background: #0F172A;
   }
 
   /* Document actions when genuinely unavailable — flat muted, not gradient + opacity */
   .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
-  .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+  .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
+  .pj-info-action--edit:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
     background: var(--color-surface-variant, #E2E8F0);
     color: var(--color-text-secondary, #64748B);
     border-color: var(--color-outline, #CBD5E1);

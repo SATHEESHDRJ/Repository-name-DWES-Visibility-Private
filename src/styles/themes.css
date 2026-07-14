@@ -1009,52 +1009,134 @@
   box-shadow: var(--t-shadow-1);
 }
 
-/* Project information action group — card-scoped; beats global button:disabled */
+/* ── Project information action group ────────────────────────────────────
+   Add Panel / Digital Wiring View / Drawing View / Edit ▾ are one action
+   bar: identical height, radius, padding, type, icon and shadow, in a
+   single muted slate. Only state (enabled / unavailable / busy) differs.
+   Card-scoped and unlayered so it owns these buttons outright — no theme
+   or polish rule can drift their size or colour apart again. */
+[data-theme] .pj-project-info-card-actions {
+  --pj-action-h: 44px;
+  --pj-action-px: 14px;
+  --pj-action-radius: 10px;
+  --pj-action-fs: 13px;
+  --pj-action-gap: 8px;
+  --pj-action-icon: 16px;
+  --pj-action-min-w: 8.75rem;
+  --pj-action-bg: #1E293B;
+  --pj-action-bg-hover: #334155;
+  --pj-action-bg-active: #0F172A;
+  --pj-action-border: #1E293B;
+  --pj-action-border-hover: #475569;
+  --pj-action-shadow: 0 1px 2px rgba(15, 23, 42, 0.16);
+  --pj-action-shadow-hover: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action {
+  flex: 0 1 auto;
+  height: var(--pj-action-h);
+  min-height: var(--pj-action-h);
+  min-width: var(--pj-action-min-w);
+  max-width: 100%;
+  padding: 0 var(--pj-action-px);
+  gap: var(--pj-action-gap);
+  border: 1px solid transparent;
+  border-radius: var(--pj-action-radius);
+  font-size: var(--pj-action-fs);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  filter: none;
+  transition:
+    background-color 0.18s var(--btn-ease, ease),
+    border-color 0.18s var(--btn-ease, ease),
+    box-shadow 0.18s var(--btn-ease, ease),
+    transform 0.12s var(--btn-ease, ease);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action svg {
+  width: var(--pj-action-icon);
+  height: var(--pj-action-icon);
+  flex-shrink: 0;
+}
+
+/* Edit sits in a menu wrapper — keep it the same width as its siblings */
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: var(--pj-action-min-w);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu .pj-info-action {
+  width: 100%;
+  min-width: 0;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  margin-right: -2px;
+  opacity: 0.75;
+  transition: transform 0.18s ease;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* Enabled — one muted slate for all four */
 [data-theme] .pj-project-info-card-actions .pj-info-action:not(:disabled) {
+  background: var(--pj-action-bg);
+  background-image: none;
+  color: #FFFFFF;
+  border-color: var(--pj-action-border);
+  box-shadow: var(--pj-action-shadow);
   opacity: 1;
   cursor: pointer;
   pointer-events: auto;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:not(:disabled),
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:not(:disabled),
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:not(:disabled) {
-  background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
-  color: #FFFFFF;
-  border-color: rgba(79, 70, 229, 0.58);
-  box-shadow: var(--t-shadow-1);
+[data-theme] .pj-project-info-card-actions .pj-info-action:hover:not(:disabled) {
+  background: var(--pj-action-bg-hover);
+  border-color: var(--pj-action-border-hover);
+  box-shadow: var(--pj-action-shadow-hover);
   filter: none;
+  transform: none;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:hover:not(:disabled),
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:hover:not(:disabled),
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: var(--t-shadow-2);
+[data-theme] .pj-project-info-card-actions .pj-info-action:active:not(:disabled) {
+  background: var(--pj-action-bg-active);
+  box-shadow: var(--pj-action-shadow);
+  transform: scale(0.98);
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:not(:disabled) {
-  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
-  color: #FFFFFF;
-  border-color: rgba(153, 27, 27, 0.62);
-  box-shadow: var(--t-shadow-1);
+[data-theme] .pj-project-info-card-actions .pj-info-action:focus-visible {
+  outline: 2px solid var(--t-primary, #2563EB);
+  outline-offset: 2px;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: var(--t-shadow-2);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+
+/* Unavailable (no drawing / no wiring schedule / no panel selected) — flat muted */
+[data-theme] .pj-project-info-card-actions .pj-info-action:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
   background: var(--t-surface-2, #E2E8F0);
+  background-image: none;
   color: var(--t-muted, #64748B);
   border-color: var(--t-outline, #CBD5E1);
   opacity: 0.72;
   cursor: not-allowed;
   box-shadow: none;
   filter: none;
+  transform: none;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:disabled:not(.btn--loading),
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:disabled:not(.btn--loading) {
-  opacity: 0.55;
-  cursor: not-allowed;
-  pointer-events: auto;
+
+/* Busy — keep the slate fill, just dim it (spinner inherits currentColor) */
+[data-theme] .pj-project-info-card-actions .pj-info-action.btn--loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+  filter: none;
+}
+
+/* Tablet portrait / narrow — two per row, still identical to each other */
+@media (max-width: 640px) {
+  [data-theme] .pj-project-info-card-actions .pj-info-action,
+  [data-theme] .pj-project-info-card-actions .pj-info-action-menu {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -1488,12 +1570,13 @@
   box-shadow: var(--t-shadow-2);
 }
 
-/* Compact dashboard buttons — page body + modals (topbar / tab nav excluded) */
+/* Compact dashboard buttons — page body + modals (topbar / tab nav excluded).
+   .pj-info-action is deliberately absent: the Project information action bar
+   sizes itself (see PART 5) so all four actions stay identical. */
 [data-theme] [data-ui-polish="saas"] .page-body :is(
   .btn-primary, .btn-primary-lg, .btn-secondary, .btn-ghost, .btn-sm,
   .btn-success, .btn-warning, .btn-danger,
   .pj-btn-primary, .pj-btn-secondary, .pj-btn-danger-ghost,
-  .pj-info-action,
   .frame-pill-btn,
   .tc-cta-btn, .tc-cta-neutral,
   .dr-btn-refresh, .dr-export-btn
