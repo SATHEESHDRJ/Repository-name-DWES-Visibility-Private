@@ -8,9 +8,11 @@ const configuredAdminPass = process.env.DWES_ADMIN_PASS?.trim();
 if (Boolean(configuredAdminUser) !== Boolean(configuredAdminPass)) {
   throw new Error('DWES_ADMIN_USER and DWES_ADMIN_PASS must be provided together');
 }
+// Project create/delete routes are @Roles('prod_supervisor') — RolesGuard has
+// no super-role bypass, so a system_admin login gets 403 on both operations.
 const privateAdmin = configuredAdminUser
   ? { username: configuredAdminUser, password: configuredAdminPass }
-  : accountForRole('system_admin');
+  : accountForRole('prod_supervisor');
 const ADMIN_USER = privateAdmin.username;
 const ADMIN_PASS = privateAdmin.password;
 const TRACK_FILE = path.resolve(process.cwd(), '.demo-project.json');
