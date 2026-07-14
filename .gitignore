@@ -84,6 +84,7 @@ desktop.ini
 coverage/
 .nyc_output/
 .smoke-shots/
+/artifacts/
 test-results/
 **/test-results/
 

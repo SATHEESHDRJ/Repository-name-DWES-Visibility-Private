@@ -1,7 +1,7 @@
-' Stop DWES.vbs — hidden wrapper for the DWES stop launcher.
-Dim sh, fso, root, cmd
+' Compatibility wrapper for the canonical hidden Stop launcher in scripts.
+Dim sh, fso, root, launcher
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 root = fso.GetParentFolderName(WScript.ScriptFullName)
-cmd = "cmd.exe /d /c " & Chr(34) & root & "\Stop DWES.cmd" & Chr(34)
-sh.Run cmd, 0, False
+launcher = root & "\scripts\Stop-DWES-Hidden.vbs"
+sh.Run Chr(34) & sh.ExpandEnvironmentStrings("%SystemRoot%\System32\wscript.exe") & Chr(34) & " " & Chr(34) & launcher & Chr(34), 0, False

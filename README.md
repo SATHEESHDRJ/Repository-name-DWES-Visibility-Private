@@ -8,10 +8,11 @@ Tablet-optimised wiring execution platform for industrial panel shops. Replaces 
 
 ### One-click launcher (recommended — Development / HMR)
 
-1. Create the desktop icon once: `npm run shortcut:create`
-2. Double-click **DWES** on the Desktop (or `Start DWES (Hidden).vbs` / `Start DWES.cmd`).
+1. Create the desktop icons once: `npm run shortcut:create`
+2. Double-click **DWES — Start Application** on the Desktop.
+3. Use **DWES — Stop Application** to stop only the DWES frontend/backend while leaving PostgreSQL running.
 
-This starts Vite on **:5175** and Nest `start:dev` **with no console windows**, waits for `/api/health`, then opens the browser. Frontend edits hot-reload (HMR) — you do **not** need to close and reopen the shortcut. Details: `scripts/LAUNCH.md`.
+The shortcuts run hidden VBS entry points. Start checks PostgreSQL, ports and backend health before opening the browser; Stop uses checkout-scoped process ownership and never terminates unrelated Node.js or PostgreSQL processes. Frontend edits hot-reload (HMR). Details: `scripts/LAUNCH.md`.
 
 **Production (no HMR):** build first (`npm run build` + `npm --prefix backend run build`), then `Start DWES Prod (Hidden).vbs` or `npm run launch:prod`.
 

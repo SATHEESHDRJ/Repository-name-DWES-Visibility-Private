@@ -11,7 +11,7 @@
  *   node scripts/launch-dwes.mjs --mode=dev    # Vite HMR on :5175 + Nest start:dev
  *   node scripts/launch-dwes.mjs --mode=prod   # vite preview + node dist/main
  *
- * Logs: logs/launcher.log (text), logs/startup-report.json (structured)
+ * Logs: logs/launcher/launcher.log (text), startup-report.json (structured)
  */
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,14 +24,21 @@ import { waitForPostgres } from './wait-for-postgres.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const logsDir = path.join(root, 'logs');
+const launcherLogsDir = path.join(logsDir, 'launcher');
 const BE_PORT = 3001;
 const PG_PORT = 5432;
 const HEALTH_PATH = '/api/health';
-const WAIT_STACK_SECS = 240;
-const PG_WAIT_SECS = 120;
-const BE_WAIT_BEFORE_FE_SECS = 120;
-const BE_RETRY_EVERY_SECS = 20;
-const BE_MAX_SPAWNS = 8;
+const positiveInt = (name, fallback) => {
+  const parsed = Number(process.env[name]);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+const WAIT_STACK_SECS = positiveInt('DWES_STACK_WAIT_SECS', 240);
+const PG_WAIT_SECS = positiveInt('DWES_PG_WAIT_SECS', 120);
+const BE_WAIT_BEFORE_FE_SECS = positiveInt('DWES_BACKEND_WAIT_SECS', 120);
+const BE_RETRY_EVERY_SECS = positiveInt('DWES_BACKEND_RETRY_SECS', 20);
+const BE_MAX_SPAWNS = positiveInt('DWES_BACKEND_MAX_SPAWNS', 8);
+const MAX_LOG_BYTES = positiveInt('DWES_LAUNCHER_LOG_MAX_BYTES', 2 * 1024 * 1024);
+const LOG_RETENTION = positiveInt('DWES_LAUNCHER_LOG_RETENTION', 5);
 
 function parseMode() {
   const args = process.argv.slice(2);
@@ -44,7 +51,8 @@ function parseMode() {
 
 const mode = parseMode();
 const isProd = mode === 'prod';
-const suppressBrowser = process.argv.includes('--no-browser');
+const suppressBrowser = process.argv.includes('--no-browser') || process.env.DWES_NO_BROWSER === '1';
+const suppressNotifications = process.argv.includes('--no-notify') || process.env.DWES_NO_NOTIFY === '1';
 const bootId = new Date().toISOString().replace(/[:.]/g, '-');
 
 /** @type {{ bootId: string, mode: string, startedAt: string, status: string, phases: object[], stack: object, error?: string, finishedAt?: string }} */
@@ -58,34 +66,62 @@ const report = {
 };
 
 function ensureLogsDir() {
-  try { fs.mkdirSync(logsDir, { recursive: true }); } catch { /* ok */ }
+  try { fs.mkdirSync(launcherLogsDir, { recursive: true }); } catch { /* ok */ }
+}
+
+function rotateLog(logPath) {
+  try {
+    if (!fs.existsSync(logPath) || fs.statSync(logPath).size <= MAX_LOG_BYTES) return;
+    for (let index = LOG_RETENTION - 1; index >= 1; index -= 1) {
+      const source = `${logPath}.${index}`;
+      const target = `${logPath}.${index + 1}`;
+      if (fs.existsSync(source)) {
+        if (fs.existsSync(target)) fs.unlinkSync(target);
+        fs.renameSync(source, target);
+      }
+    }
+    fs.renameSync(logPath, `${logPath}.1`);
+  } catch { /* rotation is best effort */ }
+}
+
+function prepareLauncherLogs() {
+  ensureLogsDir();
+  for (const fileName of ['launcher.log', 'backend.log', 'frontend.log', 'stop.log']) {
+    rotateLog(path.join(launcherLogsDir, fileName));
+  }
 }
 
 function log(msg, level = 'INFO') {
   ensureLogsDir();
   const line = `[${new Date().toISOString()}] [${mode}] [${level}] ${msg}\n`;
-  try { fs.appendFileSync(path.join(logsDir, 'launcher.log'), line); } catch { /* ok */ }
+  try { fs.appendFileSync(path.join(launcherLogsDir, 'launcher.log'), line); } catch { /* ok */ }
 }
 
 function writeReport() {
   ensureLogsDir();
   try {
-    fs.writeFileSync(path.join(logsDir, 'startup-report.json'), JSON.stringify(report, null, 2));
+    fs.writeFileSync(path.join(launcherLogsDir, 'startup-report.json'), JSON.stringify(report, null, 2));
   } catch { /* ok */ }
 }
 
-function showFailureMessage(errorText) {
-  if (process.platform !== 'win32') return;
-  const lines = (errorText || 'DWES could not start.').split(/\r?\n/).map((line) => line.replace(/'/g, "''"));
-  const message = lines.join('\n');
+function showStatusMessage(title, message, icon = 'Information') {
+  if (process.platform !== 'win32' || suppressNotifications) return;
+  const safeTitle = String(title || 'DWES').replace(/'/g, "''");
+  const safeMessage = String(message || '').replace(/'/g, "''");
+  const safeIcon = ['Information', 'Warning', 'Error'].includes(icon) ? icon : 'Information';
+  const script = `Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('${safeMessage}', '${safeTitle}', 'OK', '${safeIcon}') | Out-Null`;
   try {
     execFileSync('powershell.exe', [
       '-NoProfile',
       '-NonInteractive',
-      '-Command',
-      `Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('${message}', 'DWES startup failed', 'OK', 'Error') | Out-Null`,
+      '-EncodedCommand',
+      Buffer.from(script, 'utf16le').toString('base64'),
     ], { stdio: 'ignore', windowsHide: true });
   } catch { /* ignore popup failures */ }
+}
+
+function showFailureMessage(errorText) {
+  showStatusMessage('DWES startup failed', errorText || 'DWES could not start.', 'Error');
 }
 
 async function runPhase(name, fn) {
@@ -263,7 +299,7 @@ let backendSpawnCount = 0;
 
 function runHiddenLogged(command, args, cwd, logName) {
   ensureLogsDir();
-  const logPath = path.join(logsDir, logName);
+  const logPath = path.join(launcherLogsDir, logName);
   let outFd;
   try {
     fs.appendFileSync(logPath, `\n===== ${new Date().toISOString()} boot=${bootId} =====\n`);
@@ -280,6 +316,7 @@ function runHiddenLogged(command, args, cwd, logName) {
         fs.appendFileSync(logPath, `[launcher] spawn error: ${error?.message || String(error)}\n`);
       } catch { /* ok */ }
     });
+    recordServiceProcess(logName.replace(/\.log$/i, ''), child, command, args);
     child.unref();
     return child;
   } catch (error) {
@@ -292,6 +329,26 @@ function runHiddenLogged(command, args, cwd, logName) {
       try { fs.closeSync(outFd); } catch { /* ok */ }
     }
   }
+}
+
+function recordServiceProcess(role, child, command, args) {
+  if (!child?.pid) return;
+  const processPath = path.join(launcherLogsDir, 'processes.json');
+  let records = [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(processPath, 'utf8'));
+    if (Array.isArray(parsed)) records = parsed;
+  } catch { /* first launch or stale file */ }
+  records = records.filter((record) => record?.role !== role);
+  records.push({
+    role,
+    pid: child.pid,
+    root,
+    command,
+    args,
+    startedAt: new Date().toISOString(),
+  });
+  try { fs.writeFileSync(processPath, JSON.stringify(records, null, 2)); } catch { /* best effort */ }
 }
 
 function runHiddenNpm(npmArgs, cwd, logName) {
@@ -321,11 +378,11 @@ function writeLock() {
     startedAt: report.startedAt,
     readyAt: new Date().toISOString(),
   };
-  try { fs.writeFileSync(path.join(logsDir, 'dwes.lock'), JSON.stringify(lock, null, 2)); } catch { /* ok */ }
+  try { fs.writeFileSync(path.join(launcherLogsDir, 'dwes.lock'), JSON.stringify(lock, null, 2)); } catch { /* ok */ }
 }
 
 function readLock() {
-  try { return JSON.parse(fs.readFileSync(path.join(logsDir, 'dwes.lock'), 'utf8')); } catch { return null; }
+  try { return JSON.parse(fs.readFileSync(path.join(launcherLogsDir, 'dwes.lock'), 'utf8')); } catch { return null; }
 }
 
 function prodArtifactsOk() {
@@ -547,7 +604,7 @@ async function recoverPartialStack() {
 }
 
 async function main() {
-  ensureLogsDir();
+  prepareLauncherLogs();
   log(`========== DWES BOOT ${bootId} ==========`);
   log(`launch start mode=${mode} FE:${FE_PORT} BE:${BE_PORT} PG:${PG_PORT}`);
   writeReport();
@@ -557,7 +614,7 @@ async function main() {
     report.error = 'production artifacts missing';
     writeReport();
     log('ERROR: production artifacts missing', 'ERROR');
-    process.exit(1);
+    throw new Error('production artifacts missing — run the frontend and backend production builds first');
   }
 
   await runPhase('preflight-ports', async () => {
@@ -580,9 +637,9 @@ async function main() {
       onLog: (msg) => log(`postgres: ${msg}`),
     });
     if (!pg.ok) {
-      throw new Error(`PostgreSQL is not reachable on port ${PG_PORT} (${pg.database || 'default'}). Start PostgreSQL and try again.`);
+      throw new Error(`PostgreSQL is not reachable at ${pg.host || 'localhost'}:${pg.port || PG_PORT} (${pg.database || 'default'}). Start PostgreSQL and try again.`);
     }
-    return { postgresOk: true, waitedSecs: pg.waitedSecs, database: pg.database };
+    return { postgresOk: true, waitedSecs: pg.waitedSecs, host: pg.host, port: pg.port, database: pg.database };
   });
 
   if (await stackReady()) {
@@ -596,6 +653,7 @@ async function main() {
     writeReport();
     writeLock();
     openBrowser(appUrl());
+    showStatusMessage('DWES is already running', 'DWES is healthy and ready. The application has been opened without starting duplicate services.');
     return;
   }
 
@@ -633,6 +691,7 @@ async function main() {
   log(`BOOT SUCCESS — total ${Date.now() - new Date(report.startedAt).getTime()}ms`);
   log(`ready — opening ${appUrl()}`);
   openBrowser(appUrl());
+  showStatusMessage('DWES started successfully', `Frontend: http://localhost:${FE_PORT}\nBackend health: http://localhost:${report.stack.backendPort || BE_PORT}${HEALTH_PATH}`);
 }
 
 main().catch((e) => {
@@ -641,16 +700,16 @@ main().catch((e) => {
   report.finishedAt = new Date().toISOString();
   writeReport();
   log(`BOOT FAILED: ${report.error}`, 'ERROR');
-  log('see logs/backend.log logs/frontend.log logs/startup-report.json', 'ERROR');
+  log('see logs/launcher/backend.log logs/launcher/frontend.log logs/launcher/startup-report.json', 'ERROR');
   const details = [
     'DWES could not start.',
     `Reason: ${report.error}`,
     '',
     'Logs:',
-    '- logs/launcher.log',
-    '- logs/startup-report.json',
-    '- logs/backend.log',
-    '- logs/frontend.log',
+    '- logs/launcher/launcher.log',
+    '- logs/launcher/startup-report.json',
+    '- logs/launcher/backend.log',
+    '- logs/launcher/frontend.log',
   ].join('\n');
   showFailureMessage(details);
   process.exit(1);

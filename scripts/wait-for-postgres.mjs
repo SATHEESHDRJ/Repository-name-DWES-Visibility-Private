@@ -76,7 +76,7 @@ async function queryReady(connectionString) {
  * @param {object} opts
  * @param {number} [opts.maxSecs=120]
  * @param {(msg: string) => void} [opts.onLog]
- * @returns {Promise<{ ok: boolean, waitedSecs: number, database: string }>}
+ * @returns {Promise<{ ok: boolean, waitedSecs: number, host: string, port: number, database: string }>}
  */
 export async function waitForPostgres(opts = {}) {
   const maxSecs = opts.maxSecs ?? 120;
@@ -96,7 +96,7 @@ export async function waitForPostgres(opts = {}) {
     const q = await queryReady(connectionString);
     if (q.ok) {
       onLog(`PostgreSQL ready — accepting queries on ${database} (after ${i}s)`);
-      return { ok: true, waitedSecs: i, database };
+      return { ok: true, waitedSecs: i, host, port, database };
     }
 
     if (i === 0 || i % 10 === 0) {
@@ -106,7 +106,7 @@ export async function waitForPostgres(opts = {}) {
   }
 
   onLog(`PostgreSQL NOT ready after ${maxSecs}s — Nest will likely fail`);
-  return { ok: false, waitedSecs: maxSecs, database };
+  return { ok: false, waitedSecs: maxSecs, host, port, database };
 }
 
 const isCli = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
