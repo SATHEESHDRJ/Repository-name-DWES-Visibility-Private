@@ -11,7 +11,7 @@ Related existing docs (OCI-specific, superseded for provider choice but still va
 | Component | Technology | Evidence |
 |---|---|---|
 | Frontend | React 19 + Vite 8 + Tailwind 4 + Three.js (SPA/PWA) | `package.json` |
-| Backend | NestJS 10 (Express), REST only | `backend/package.json` |
+| Backend | NestJS 10 (Express), REST + authenticated Server-Sent Events | `backend/package.json`, `backend/src/events/` |
 | ORM | Prisma 7 via `@prisma/adapter-pg` (pg driver) | `backend/package.json`, `backend/src/main.ts` |
 | Database | PostgreSQL **18.3**, database `WiringSchemeDB` | measured: `SELECT current_setting('server_version')` → 18.3 |
 | Secondary store | SQLite `backend/data/dwes_auth.sqlite` (better-sqlite3, WAL) — WebAuthn passkeys + hashed refresh tokens | `backend/src/auth/webauthn-store.service.ts`, `auth-token-store.service.ts` |
@@ -48,11 +48,12 @@ Related existing docs (OCI-specific, superseded for provider choice but still va
 - **None.** No `prisma/migrations/` folder exists. WiringSchemeDB is externally managed; the app adapts to the schema (`prisma db pull` only — enforced project rule). Cloud DB provisioning = restore a dump, never `prisma migrate`. The only migratable store is `dwes_auth.sqlite` (self-migrates via better-sqlite3 on boot).
 
 ### Redis, queues, WebSockets, cron, background workers
-- **None of these exist.** Verified: no socket.io/`@nestjs/websockets`/SSE, no `@nestjs/schedule`/node-cron, no bull/bullmq/redis/ioredis, no worker_threads, no `setInterval`. The single `setTimeout` (`admin.service.ts:270`) is a deliberate delayed process-exit for admin-triggered restart.
+- DWES provides authenticated live updates over **Server-Sent Events** at `/api/events/stream`. Event fan-out currently uses an in-process RxJS `Subject`, so the supported deployment topology is **exactly one API replica**.
+- **Before adding a second backend replica**, replace the in-process fan-out with Redis Pub/Sub or PostgreSQL `LISTEN/NOTIFY`. Sticky sessions are not sufficient: the mutation and the listening client can reach different replicas. Queues, WebSockets, application cron, and background workers are not otherwise used.
 - Scheduled work is **external to the app**: backup + cert-renew cron on the host (`infra/oci/cloud-init.yaml`; Windows Task Scheduler locally). Any host must provide an equivalent scheduler *or* backups must run from elsewhere.
 
 ### Always-running backend? Cold starts acceptable?
-- **Correctness:** restart-safe. All state is durable (Postgres / disk / SQLite) except in-flight WebAuthn challenges (5-min TTL Maps, `webauthn.service.ts:36-38`) — a restart merely forces a passkey-login retry.
+- **Correctness:** restart-safe. All persisted state is durable (Postgres / disk / SQLite) except in-flight WebAuthn challenges (5-min TTL Maps, `webauthn.service.ts:36-38`) and non-durable live event notifications. After a restart, the frontend's fallback poll catches up from durable state.
 - **Availability:** the login page polls `/api/health` every 5 s; technicians work shifts on tablets. A sleeping backend means the **first user each morning waits through a cold start (typically 10–60 s on scale-to-zero hosts)** and passkey ceremonies can time out mid-wake. **Verdict (ASSUMED, confirm): acceptable for pilot/testing; not acceptable for production shift work.**
 
 ### Local filesystem storage currently required?
@@ -81,7 +82,7 @@ Measured (`backend/uploads/`, 2026-07-13):
 - **5–15 concurrent (user-confirmed 2026-07-13)**; 36 active accounts today across 5 roles; daily active **ASSUMED 10–30**. Existing k6 target (120 VUs) provides ample headroom validation.
 
 ### Required geographic region
-- Primary: **UAE**; secondary: **India**. Best-latency regions: AWS me-central-1 (UAE), Azure UAE North, GCP me-central1/2 (Doha/Dammam), OCI me-dubai-1; Mumbai regions serve India well. EU (Frankfurt/Falkenstein) adds ~100–150 ms to UAE — acceptable for this app's request/response pattern (no realtime), noticeable on large drawing downloads.
+- Primary: **UAE**; secondary: **India**. Best-latency regions: AWS me-central-1 (UAE), Azure UAE North, GCP me-central1/2 (Doha/Dammam), OCI me-dubai-1; Mumbai regions serve India well. EU (Frankfurt/Falkenstein) adds ~100–150 ms to UAE — acceptable for normal requests, but directly visible in live SSE updates and large drawing downloads.
 
 ### Backup retention / recovery time / uptime (business requirements — **ASSUMED, confirm at gate**)
 - **RPO ≤ 24 h** (daily backups — matches existing local Task Scheduler design: daily 02:00, keep 21 snapshots/30 days, `scripts/backup.config.json`).
@@ -94,7 +95,7 @@ Measured (`backend/uploads/`, 2026-07-13):
 - **No.** Compose is a convenience wrapper; the services are cleanly separable (static frontend / Node API / Postgres / cron). Managed platforms can host each part natively. Compose remains the reference for VPS-style deployment (`infra/docker/docker-compose.yml`).
 
 ### Is nginx necessary?
-- **No — replaceable** by managed routing/TLS. But three nginx duties must be re-provided by whatever replaces it: (1) TLS + HTTP→HTTPS, (2) ≥50 MB body pass-through, (3) rate limiting (app-level `@nestjs/throttler` already exists as backstop) + security headers (helmet covers most; CSP currently disabled — see SECURITY_AUDIT.md).
+- **No — replaceable** by managed routing/TLS. But four nginx duties must be re-provided by whatever replaces it: (1) TLS + HTTP→HTTPS, (2) ≥50 MB body pass-through, (3) rate limiting + security headers, and (4) streaming `/api/events/stream` without response buffering or caching.
 
 ### Does the application require SSH?
 - **The app: no.** SSH is purely an operations channel for the VPS option. Managed platforms need none (use their deploy/logs/secrets tooling).

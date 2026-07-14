@@ -18,6 +18,7 @@
 2. **Volumes**: create and mount `dwes-uploads` → `/app/uploads` and `dwes-auth` → `/app/data` (sizes: 5 GB / 1 GB).
 3. **Environment variables** (names from `infra/docker/.env.production.example`; values typed in dashboard):
    `NODE_ENV=production`, `PORT=3001`, `DATABASE_URL` (Neon app-role string, `sslmode=require`), `JWT_SECRET` (long random value the administrator generates locally), `JWT_ACCESS_EXPIRES`, `JWT_REFRESH_EXPIRES_DAYS`, `CORS_ORIGINS=https://dwes.ingenious-network.com`, `TRUST_PROXY=1`, `UPLOAD_DIR=/app/uploads`, `RP_ID=dwes.ingenious-network.com`, `RP_ORIGIN=https://dwes.ingenious-network.com`, `RP_NAME=DWES`, `DEMO_MODE=false`.
+   Keep the Railway API replica count at **1** until live-event fan-out uses Redis Pub/Sub or PostgreSQL `LISTEN/NOTIFY`.
 4. Deploy; watch logs until `GET /api/health` on the Railway-generated URL returns `{"status":"ok"}` (deep check includes `SELECT 1` against Neon).
 5. Set Railway **usage limits + email alerts** per `BILLING_AND_COST_CONTROL.md` before anything else touches it.
 
@@ -27,7 +28,7 @@
 3. Verify the site loads on the custom domain (API calls will fail until step 4 — expected).
 
 ## 4. Same-origin API routing — Cloudflare Worker
-1. Create a Worker bound to route `dwes.ingenious-network.com/api/*` that forwards method/headers/body to the Railway service URL and streams the response back (≈20 lines; body pass-through must be streaming — 50 MB uploads).
+1. Create a Worker bound to route `dwes.ingenious-network.com/api/*` that forwards method/headers/body to the Railway service URL and streams the response back (≈20 lines; request pass-through must support 50 MB uploads, and `/api/events/stream` responses must not be buffered or cached).
 2. This keeps the SPA same-origin (`/api` relative base in `src/services/api.ts` untouched, CORS not in play, WebAuthn origin exact).
 3. Verify: login from the public URL; upload a small drawing; download it back; run a passkey enrollment + login.
 

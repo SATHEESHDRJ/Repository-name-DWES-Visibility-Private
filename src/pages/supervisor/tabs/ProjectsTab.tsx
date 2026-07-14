@@ -7,7 +7,7 @@ import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
@@ -29,7 +29,7 @@ import {
   PROJECT_DELETE_WARNING,
 } from '../../../constants/projectDeletion';
 import {
-  buildProjectReferenceTitle,
+  buildProjectFullName,
   encodeProjectMeta,
   decodeProjectMeta,
   mergeProjectDescription,
@@ -57,24 +57,17 @@ export interface ProjectsTabProps {
 const CLIENTS = ['DEWA', 'SEWA', 'ADDC', 'TRANSCO', 'ENOWA', 'HITACHI', 'ABB', 'SIEMENS', 'GE', 'SCHNEIDER', 'ALSTOM'];
 const VOLTAGES = ['400KV', '220KV', '132KV', '115KV', '69KV', '33KV', '13.8KV', '11KV', '6.6KV'];
 const REGIONS = ['UAE', 'KSA', 'QAT', 'KWT', 'OMN', 'BHR'];
-const YEARS = ['2024', '2025', '2026', '2027'];
-const LOCATION_REGION_PRESETS = [
-  'DUBAI / UAE', 'ABU_DHABI / UAE', 'SHARJAH / UAE', 'FUJAIRAH / UAE',
-  'RIYADH / KSA', 'JEDDAH / KSA', 'NEOM / KSA', 'DOHA / QAT', 'KUWAIT / KWT', 'MUSCAT / OMN', 'MANAMA / BHR',
-];
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const MONTH_YEAR_PRESETS = MONTH_NAMES.flatMap(m => YEARS.map(y => `${m} ${y}`));
 const STATES: ProjectState[] = ['not_started', 'active', 'stopped', 'pending', 'completed', 'in_review', 'submitted_to_director'];
 
 interface CreateForm {
   displayName: string;
   client: string;
-  locationRegion: string;
-  monthYear: string;
-  seq: string;
+  location: string;
+  region: string;
+  projectNumbering: string;
 }
 
-const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
+const emptyForm: CreateForm = { displayName: '', client: '', location: '', region: '', projectNumbering: '' };
 
 interface PanelDraft {
   key: string;
@@ -93,54 +86,6 @@ function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
     systemType: '',
     ...seed,
   };
-}
-
-function panelNameTypeLabel(panel: Pick<PanelDraft, 'name' | 'panelType'>): string {
-  const name = panel.name.trim();
-  const type = panel.panelType.trim();
-  if (name && type) return `${name} / ${type}`;
-  return name || type;
-}
-
-function parseLocationRegion(raw: string): { location: string; region: string } {
-  const s = raw.trim();
-  if (!s) return { location: '', region: '' };
-  const slashParts = s.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean);
-  if (slashParts.length >= 2) {
-    return { location: slashParts[0], region: slashParts[slashParts.length - 1] };
-  }
-  const commaParts = s.split(/\s*,\s*/).map(p => p.trim()).filter(Boolean);
-  if (commaParts.length >= 2) {
-    return { location: commaParts[0], region: commaParts[commaParts.length - 1] };
-  }
-  const upper = s.toUpperCase();
-  for (const r of REGIONS) {
-    if (upper === r || upper.endsWith(` ${r}`)) {
-      const loc = s.slice(0, s.toUpperCase().lastIndexOf(r)).replace(/[,\-/]\s*$/, '').trim();
-      return { location: loc || s, region: r };
-    }
-  }
-  for (const r of REGIONS) {
-    if (upper.includes(r)) {
-      return {
-        location: s.replace(new RegExp(r, 'i'), '').replace(/[,\-/]\s*$/, '').trim() || s,
-        region: r,
-      };
-    }
-  }
-  return { location: s, region: '' };
-}
-
-function parseMonthYear(raw: string): { month: string; year: string } {
-  const s = raw.trim();
-  if (!s) return { month: '', year: '' };
-  const yearMatch = s.match(/\b(20\d{2})\b/);
-  const year = yearMatch ? yearMatch[1] : '';
-  let month = s;
-  if (yearMatch) {
-    month = s.replace(yearMatch[0], '').replace(/^[\s,\-/]+|[\s,\-/]+$/g, '').trim();
-  }
-  return { month: month || s, year };
 }
 
 function displayPanelMeta(value: string | null | undefined, fallback?: string): string {
@@ -436,36 +381,29 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setSelectedPanelId('');
   }, [selectedPanelId, projectPanels]);
 
-  // Normalize a code segment: uppercase, strip everything but A-Z0-9 (no spaces / separators).
-  // "Al Quoz" -> "ALQUOZ", "132 kV" -> "132KV". Keeps the "_" segment structure intact.
+  // Panel voltage is normalized only for required-field validation.
   const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  const { location, region } = parseLocationRegion(form.locationRegion);
-  const { year: parsedYear } = parseMonthYear(form.monthYear);
-
-  const primaryPanel = panels[0];
-  const codeVoltage = norm(primaryPanel?.voltageLevel ?? '');
-
-  // Project code = VOLTAGE_REGION_LOCATION_YEAR_SEQ (seq zero-padded to 3)
-  const seqDigits = (form.seq || '').replace(/\D/g, '');
-  const seq3 = seqDigits ? seqDigits.padStart(3, '0').slice(-3) : '';
-  const codeSegs = [codeVoltage, norm(region), norm(location), norm(parsedYear), seq3];
-  const computedCode = codeSegs.join('_');
-  const codeComplete = codeSegs.every(Boolean);
+  // The supervisor-entered Project Numbering is the stable project identifier. DWES
+  // no longer synthesizes a second voltage/location/year code behind the user's input.
+  const projectNumbering = form.projectNumbering.trim().toUpperCase();
   const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim() && !!norm(p.voltageLevel));
   // Project details must be valid before any panel can be added (project-first workflow).
   const projectDetailsReady = !!form.displayName.trim() && !!form.client.trim();
-  const numberingTaken = numberingCheck?.code === computedCode && !numberingCheck.available;
-  const canCreate = codeComplete && projectDetailsReady && panelsValid && !numberingTaken;
+  const numberingTaken = numberingCheck?.code === projectNumbering && !numberingCheck.available;
+  const projectFieldsComplete = projectDetailsReady
+    && !!form.location.trim()
+    && !!form.region.trim()
+    && !!projectNumbering;
+  const canCreate = projectFieldsComplete && panelsValid && !numberingTaken;
 
-  const generatedName = primaryPanel
-    ? buildProjectReferenceTitle(
+  const generatedName = projectFieldsComplete
+    ? buildProjectFullName(
         form.displayName,
         form.client,
-        panelNameTypeLabel(primaryPanel),
-        primaryPanel.voltageLevel,
-        form.locationRegion,
-        form.monthYear,
+        form.location,
+        form.region,
+        projectNumbering,
       )
     : '';
 
@@ -473,17 +411,17 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const fe = submitted ? {
     displayName: !form.displayName.trim() ? 'Required' : '',
     client: !form.client.trim() ? 'Required' : '',
-    locationRegion: !norm(location) || !norm(region) ? 'Use format: Location / Region' : '',
-    monthYear: !norm(parsedYear) ? 'Include a year (e.g. July 2026)' : '',
-    seq: !seq3
-      ? 'Required (digits only)'
+    location: !form.location.trim() ? 'Required' : '',
+    region: !form.region.trim() ? 'Required' : '',
+    projectNumbering: !projectNumbering
+      ? 'Required'
       : numberingTaken
         ? numberingCheck?.reason ?? 'This project numbering is already used'
         : '',
     panels: panels.length === 0 ? 'Add at least one panel' : '',
   } : {
-    displayName: '', client: '', locationRegion: '', monthYear: '',
-    seq: numberingTaken ? numberingCheck?.reason ?? 'This project numbering is already used' : '',
+    displayName: '', client: '', location: '', region: '',
+    projectNumbering: numberingTaken ? numberingCheck?.reason ?? 'This project numbering is already used' : '',
     panels: '',
   };
 
@@ -493,9 +431,9 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         if (!form.displayName.trim()) missing.push('project / substation name');
         if (!form.client.trim()) missing.push('client');
         if (panels.length === 0) missing.push('at least one panel');
-        if (!norm(location) || !norm(region)) missing.push('location / region');
-        if (!norm(parsedYear)) missing.push('month / year');
-        if (!seq3) missing.push('project numbering');
+        if (!form.location.trim()) missing.push('location');
+        if (!form.region.trim()) missing.push('region');
+        if (!projectNumbering) missing.push('project numbering');
         if (numberingTaken) missing.push('a unique project numbering');
         return missing.length
           ? `Complete required fields: ${missing.join(', ')}.`
@@ -506,21 +444,21 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   // Project numbering must be unique across active, deleted, and tombstoned projects.
   // The backend stays authoritative on create; this only surfaces the clash early.
   useEffect(() => {
-    if (!showCreate || !codeComplete) {
+    if (!showCreate || !projectNumbering) {
       setNumberingCheck(null);
       return;
     }
     const timer = setTimeout(async () => {
       const request = numberingRequests.begin();
       try {
-        const result = await projectsApi.codeAvailable(computedCode, request.signal);
+        const result = await projectsApi.codeAvailable(projectNumbering, request.signal);
         if (numberingRequests.isLatest(request.id)) setNumberingCheck(result);
       } catch {
         if (numberingRequests.isLatest(request.id)) setNumberingCheck(null);
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [showCreate, codeComplete, computedCode, numberingRequests]);
+  }, [showCreate, projectNumbering, numberingRequests]);
 
   const openCreateModal = () => {
     resetCreateForm();

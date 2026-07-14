@@ -38,6 +38,7 @@
     "deploy:lan:https": "node scripts/generate-certs.mjs && node scripts/check-dev-ports.mjs && node scripts/run-pre-operation-backup.mjs && npm run build && node scripts/print-lan-url.mjs --https && concurrently -n GATEWAY,REDIRECT,FE,BE -c magenta,yellow,cyan,green --kill-others-on-fail \"node scripts/https-port-gateway.mjs\" \"node scripts/http-redirect.mjs\" \"npm run preview:lan:https\" \"npm run backend\"",
     "test:watch": "npm --prefix backend run test:watch",
     "test:state": "node --experimental-strip-types --test tests/state-consistency.test.ts",
+    "test:pwa": "node --test tests/pwa-install.test.mjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "lint": "oxlint",

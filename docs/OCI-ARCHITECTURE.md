@@ -36,6 +36,11 @@ flowchart TB
 
 ## Paid upgrade triggers
 
+> **Live-event scaling gate:** keep one API replica with the current in-process event
+> bus. Before enabling a load balancer, second app VM, or Kubernetes replicas, move
+> event fan-out to Redis Pub/Sub or PostgreSQL `LISTEN/NOTIFY`. Sticky sessions alone
+> do not deliver mutations between backend processes.
+
 | Signal | OCI upgrade |
 |--------|-------------|
 | >150 concurrent users | OCI Load Balancer + 2nd app VM |

@@ -23,8 +23,10 @@ export interface DwesServerEvent {
 
 /**
  * In-process fan-out of data-change events to every connected client (SSE).
- * Single-instance by design — DWES runs one backend process; clients fall back
- * to polling if the stream is unavailable.
+ * Single-instance by design — every API process owns a different Subject. Keep
+ * exactly one backend replica until this is replaced by Redis Pub/Sub or PostgreSQL
+ * LISTEN/NOTIFY; sticky sessions alone cannot propagate mutations between replicas.
+ * Clients fall back to polling whenever a healthy stream is not delivering frames.
  */
 @Injectable()
 export class EventsService {

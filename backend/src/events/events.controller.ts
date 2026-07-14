@@ -1,5 +1,5 @@
 import { Controller, Sse, UseGuards } from '@nestjs/common';
-import { Observable, from, interval, map, merge, mergeMap, filter } from 'rxjs';
+import { Observable, from, map, merge, mergeMap, filter, timer } from 'rxjs';
 import { EventsService, type DwesServerEvent } from './events.service';
 import { canReceiveEvent, type EventAudience } from './event-visibility';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -41,7 +41,9 @@ export class EventsController {
       )),
     );
 
-    const heartbeat = interval(HEARTBEAT_MS).pipe(
+    // Emit immediately so a client only declares the stream live after an actual
+    // SSE body frame has traversed every proxy, then keep idle connections open.
+    const heartbeat = timer(0, HEARTBEAT_MS).pipe(
       map(() => ({ data: { scope: 'heartbeat' as const, at: new Date().toISOString() } })),
     );
 

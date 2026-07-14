@@ -20,6 +20,8 @@ interface ServerEvent {
 
 const RETRY_MIN_MS = 2_000;
 const RETRY_MAX_MS = 30_000;
+/** More than two missed 25-second heartbeats means the stream is not healthy. */
+const STREAM_STALE_MS = 65_000;
 
 /**
  * Translate one server change event into the existing in-app event bus, so every
@@ -79,13 +81,17 @@ export function useServerEvents(enabled: boolean): void {
       return;
     }
     stoppedRef.current = false;
-    const controller = new AbortController();
     let retryMs = RETRY_MIN_MS;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let activeController: AbortController | null = null;
 
     const connect = async () => {
       const token = localStorage.getItem('dwes_token');
       if (!token || stoppedRef.current) return;
+
+      const controller = new AbortController();
+      activeController = controller;
+      let deliveredFrame = false;
 
       try {
         const response = await fetch('/api/events/stream', {
@@ -94,14 +100,26 @@ export function useServerEvents(enabled: boolean): void {
         });
         if (!response.ok || !response.body) throw new Error(`stream ${response.status}`);
 
-        retryMs = RETRY_MIN_MS; // connected — reset backoff
-        setConnected(true);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
 
         for (;;) {
-          const { done, value } = await reader.read();
+          let staleTimer: ReturnType<typeof setTimeout> | null = null;
+          const stale = new Promise<never>((_, reject) => {
+            staleTimer = setTimeout(() => {
+              controller.abort();
+              reject(new Error('event stream heartbeat timed out'));
+            }, STREAM_STALE_MS);
+          });
+          let result: ReadableStreamReadResult<Uint8Array>;
+          try {
+            result = await Promise.race([reader.read(), stale]);
+          } finally {
+            if (staleTimer) clearTimeout(staleTimer);
+          }
+
+          const { done, value } = result;
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
 
@@ -118,6 +136,13 @@ export function useServerEvents(enabled: boolean): void {
             if (payload) {
               try {
                 const event = JSON.parse(payload) as ServerEvent;
+                if (!deliveredFrame) {
+                  // Headers alone are not enough: a buffering/stalled proxy must not
+                  // suppress fallback polling until a real SSE frame reaches us.
+                  deliveredFrame = true;
+                  retryMs = RETRY_MIN_MS;
+                  setConnected(true);
+                }
                 // Skip only what this very tab caused; another device's change still applies.
                 const isOwnEcho = event.originId != null && event.originId === DWES_CLIENT_ID;
                 if (!isOwnEcho) dispatch(event);
@@ -131,7 +156,8 @@ export function useServerEvents(enabled: boolean): void {
       }
 
       setConnected(false);
-      if (stoppedRef.current || controller.signal.aborted) return;
+      activeController = null;
+      if (stoppedRef.current) return;
       retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
     };
@@ -141,7 +167,7 @@ export function useServerEvents(enabled: boolean): void {
     return () => {
       stoppedRef.current = true;
       if (retryTimer) clearTimeout(retryTimer);
-      controller.abort();
+      activeController?.abort();
       setConnected(false);
     };
   }, [enabled, setConnected]);
