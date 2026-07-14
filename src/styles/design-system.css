@@ -291,11 +291,12 @@
      magic-number calc. (The old min-height: calc(100dvh - var(--dash-topbar-height))
      under-measured the wrapped topbar by ~63px on tablet portrait.) */
   .dash-layout {
-    @apply flex flex-1 w-full min-w-0 items-stretch;
-    align-items: stretch;
+    @apply flex flex-1 w-full min-w-0 items-start;
+    align-items: flex-start;
   }
   .dash-main     {
     @apply flex flex-col flex-1 min-w-0 overflow-x-hidden;
+    align-self: stretch;
     /* Create a new stacking context to contain z-indexes and prevent layout breaks from children. */
     isolation: isolate;
   }
@@ -831,14 +832,14 @@
   }
   .dash-sidebar {
     @apply hidden tablet-land:flex flex-col shrink-0 border-r;
-    /* Stay in the shared layout flow so this column follows the natural
-       content-area height below the header at every breakpoint. */
+    /* Desktop navigation sizes to its own content instead of inheriting the
+       main page's height. The mobile drawer modifier below remains fixed. */
     position: static;
-    align-self: stretch;
+    align-self: flex-start;
     flex: 0 0 auto;
     min-height: 0;
-    height: auto;
-    max-height: none;
+    height: fit-content;
+    max-height: calc(100dvh - var(--dash-topbar-height));
     width: 16.5rem;
     overflow: visible;
     background: #17152E;
@@ -860,6 +861,7 @@
        hardcoded 64px — otherwise the wrapped tablet topbar (≈151px) overlapped
        the drawer's top ~87px. */
     top: var(--dash-topbar-height);
+    align-self: stretch;
     width: min(17rem, 86vw);
     height: auto;
     max-height: none;
@@ -894,10 +896,13 @@
     transform: scale(0.95);
   }
   .dash-sidebar-nav {
-    @apply flex flex-col gap-1.5 px-2.5 py-3 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain;
+    @apply flex flex-col gap-1.5 px-2.5 py-3 overflow-y-auto overflow-x-hidden overscroll-contain;
+    flex: 0 1 auto;
+    min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
   }
+  .dash-sidebar--mobile-open .dash-sidebar-nav { flex: 1 1 auto; }
   .dash-sidebar-nav::-webkit-scrollbar { width: 5px; }
   .dash-sidebar-nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(148, 163, 184, 0.30); }
   .dash-sidebar-link {
