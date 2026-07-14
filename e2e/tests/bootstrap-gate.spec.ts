@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { accountForRole } from './demo-accounts';
 
 async function login(page: Page, username: string, password: string) {
   await page.goto('/');
@@ -10,7 +11,8 @@ async function login(page: Page, username: string, password: string) {
 }
 
 test('bootstrap gate blocks admin dashboard when bootstrap required', async ({ page }) => {
-  await login(page, 'sysadmin', 'admin123');
+  const admin = accountForRole('system_admin');
+  await login(page, admin.username, admin.password);
   await page.evaluate(() => {
     localStorage.setItem('dwes_bootstrap', JSON.stringify({
       required: true,

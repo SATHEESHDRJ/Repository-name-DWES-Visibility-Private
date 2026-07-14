@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import XLSX from 'xlsx';
 import { selectProjectPanel } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -155,7 +156,10 @@ async function emitDocsChanged(page, detail) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-const sup = await login('supervisor1', 'super123');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const unassignedTechnicianAccount = accountForRole('wiring_technician', 1);
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
 const supToken = sup.access_token;
 const projectsRes = await api('/projects', {}, supToken);
 const projects = projectsRes.body || [];
@@ -298,8 +302,8 @@ try {
   await page.close();
 
   // ── Technician gating ────────────────────────────────────────────────────
-  const tech1 = await login('tech1', 'tech1');
-  const tech24 = await login('tech24', 'tech24');
+  const tech1 = await login(technicianAccount.username, technicianAccount.password);
+  const tech24 = await login(unassignedTechnicianAccount.username, unassignedTechnicianAccount.password);
   const tech1Panels = (await api('/tech/my-panels', {}, tech1.access_token)).body || [];
   const tech24Panels = (await api('/tech/my-panels', {}, tech24.access_token)).body || [];
   record('Tech code: myPanels assignment filter', tech1Panels.length > 0 && tech24Panels.length === 0,

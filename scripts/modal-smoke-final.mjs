@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import XLSX from 'xlsx';
 import { resolveApiBase, FE, CHROME, ROOT_DIR as ROOT, filterConsoleErrors } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -390,11 +391,16 @@ async function selectProjectPanel(page, projectCode, panelId) {
   return true;
 }
 
-const sup = await login('supervisor1', 'super123');
-const tech1 = await login('tech1', 'tech1');
-const director = await login('ops_director1', 'ops_director123');
-const admin = await login('sysadmin', 'admin123');
-const qa = await login('qa1', 'qa1');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const directorAccount = accountForRole('ops_director');
+const adminAccount = accountForRole('system_admin');
+const qaAccount = accountForRole('qaqc_engineer');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
+const tech1 = await login(technicianAccount.username, technicianAccount.password);
+const director = await login(directorAccount.username, directorAccount.password);
+const admin = await login(adminAccount.username, adminAccount.password);
+const qa = await login(qaAccount.username, qaAccount.password);
 
 const activated = await ensureProjectsActive(CANONICAL_PROJECTS);
 if (activated.length) console.log(`Activated projects: ${activated.join(', ')}`);
@@ -794,7 +800,7 @@ const counts = {
 const report = {
   timestamp: new Date().toISOString(),
   pass: PASS_LABEL,
-  roles: ['sysadmin', 'ops_director1', 'supervisor1', 'qa1', 'tech1'],
+  roles: [adminAccount.username, directorAccount.username, supervisorAccount.username, qaAccount.username, technicianAccount.username],
   viewports: VIEWPORTS.map((v) => v.tag),
   screenshotsDir: OUT,
   counts,

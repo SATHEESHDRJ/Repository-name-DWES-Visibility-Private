@@ -10,6 +10,7 @@
  */
 import puppeteer from 'puppeteer-core';
 import { FE, CHROME, resolveApiBase } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const API = resolveApiBase();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -134,7 +135,8 @@ async function measure(page) {
   });
 }
 
-const sup = await login('supervisor1', 'super123');
+const supervisorAccount = accountForRole('prod_supervisor');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'] });
 const report = {};
 try {

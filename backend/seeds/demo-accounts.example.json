@@ -1,0 +1,18 @@
+[
+  {
+    "username": "<local-admin-username>",
+    "password": "<local-admin-password>",
+    "role": "system_admin",
+    "full_name": "Local System Administrator",
+    "employee_id": "<local-employee-id>",
+    "whatsapp_number": ""
+  },
+  {
+    "username": "<local-supervisor-username>",
+    "password": "<local-supervisor-password>",
+    "role": "prod_supervisor",
+    "full_name": "Local Production Supervisor",
+    "employee_id": "<local-employee-id>",
+    "whatsapp_number": ""
+  }
+]

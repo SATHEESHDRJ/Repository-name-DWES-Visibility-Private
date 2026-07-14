@@ -11,17 +11,9 @@ import { Pool } from 'pg';
 import { FrameStore } from './frames/frame-store';
 import { CANONICAL_SEED_PROJECTS } from './common/seed-projects';
 import { allowStartupSeed } from './common/demo-mode.util';
+import { loadDemoAccounts } from './common/demo-accounts';
 import { PANEL_DELETION_FILE_TYPE } from './common/deleted-resource.util';
 import * as bcrypt from 'bcryptjs';
-
-const SEED_USERS = [
-  { username: 'sysadmin',      password: 'admin123',        full_name: 'System Administrator', employee_id: 'EMP-001',     role: 'system_admin',      whatsapp_number: '+966500000001' },
-  { username: 'director1',     password: 'dir123',          full_name: 'Operations Director',   employee_id: 'EMP-005',     role: 'ops_director',      whatsapp_number: '+966500000002' },
-  { username: 'ops_director1', password: 'ops_director123', full_name: 'Operations Director',   employee_id: 'EMP-DIR-001', role: 'ops_director',      whatsapp_number: '+966500000003' },
-  { username: 'supervisor1',   password: 'super123',        full_name: 'Production Supervisor', employee_id: 'EMP-020',     role: 'prod_supervisor',   whatsapp_number: '+966500000004' },
-  { username: 'qa1',           password: 'qa1',             full_name: 'QA Engineer One',       employee_id: 'EMP-010',     role: 'qaqc_engineer',     whatsapp_number: '+966500000005' },
-  { username: 'qa2',           password: 'qa2',             full_name: 'QA Engineer Two',       employee_id: 'EMP-011',     role: 'qaqc_engineer',     whatsapp_number: '+966500000006' },
-];
 
 const SEED_PROJECTS = CANONICAL_SEED_PROJECTS;
 
@@ -127,15 +119,16 @@ async function bootstrap() {
 
   const userCount = await prisma.users.count();
   if (userCount === 0 && allowStartupSeed()) {
-    console.log('[DWES] Users table empty — seeding canonical leadership users...');
-    for (const u of SEED_USERS) {
+    const seedUsers = loadDemoAccounts();
+    console.log('[DWES] Users table empty — seeding users from the private demo account file...');
+    for (const u of seedUsers) {
       const hashed = await bcrypt.hash(u.password, 10);
       await prisma.users.create({
         data: { username: u.username, hashed_password: hashed, full_name: u.full_name,
                 employee_id: u.employee_id, role: u.role, whatsapp_number: u.whatsapp_number, is_active: true },
       });
     }
-    console.log(`[DWES] Seeded ${SEED_USERS.length} users`);
+    console.log(`[DWES] Seeded ${seedUsers.length} users`);
   } else if (userCount === 0) {
     console.log('[DWES] Users table empty — skipping seed (production; restore DB or set DEMO_MODE=true)');
   } else {

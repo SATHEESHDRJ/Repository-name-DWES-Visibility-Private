@@ -11,6 +11,9 @@ logs
 .env
 backend/.env
 **/.env
+backend/seeds/demo-accounts.local.json
+backend/seeds/accounts.seed.json
+**/demo-accounts.runtime.json
 infra/docker/.env
 backend/data
 backend/uploads

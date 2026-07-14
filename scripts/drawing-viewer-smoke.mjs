@@ -8,6 +8,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FE, CHROME, resolveApiBase, selectProjectPanel } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -44,7 +45,8 @@ const record = (scenario, pass, detail) => {
 };
 
 // ── Locate a project + panel that actually has a previewable drawing ──────────
-const sup = await login('supervisor1', 'super123');
+const supervisorAccount = accountForRole('prod_supervisor');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
 const token = sup.access_token;
 const projects = (await api('/projects', {}, token)).body || [];
 

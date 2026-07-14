@@ -5,7 +5,7 @@
  * Usage (run from project root or backend/seeds):
  *   node backend/seeds/seed-accounts.js
  *
- * Reads accounts.seed.json in the same directory.
+ * Reads the ignored demo-accounts.local.json file, or DWES_DEMO_ACCOUNTS_FILE.
  * Uses bcryptjs cost=10 (same as the app's auth layer).
  * INSERT ... ON CONFLICT (username) DO NOTHING — safe to re-run.
  * NEVER alters schema, NEVER updates/deletes existing rows.
@@ -18,12 +18,41 @@ const fs     = require('fs');
 const bcrypt = require(path.join(__dirname, '../node_modules/bcryptjs'));
 const { Client } = require(path.join(__dirname, '../node_modules/pg'));
 
-const DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/WiringSchemeDB';
-const MANIFEST     = path.join(__dirname, 'accounts.seed.json');
+const DATABASE_URL = process.env.DATABASE_URL?.trim();
+const MANIFEST     = process.env.DWES_DEMO_ACCOUNTS_FILE?.trim()
+  ? path.resolve(process.env.DWES_DEMO_ACCOUNTS_FILE)
+  : path.join(__dirname, 'demo-accounts.local.json');
 const COST_FACTOR  = 10;
 
-async function main() {
+function loadAccounts() {
+  if (!DATABASE_URL) {
+    throw new Error('DATABASE_URL is required; no database password fallback is provided');
+  }
+  if (!fs.existsSync(MANIFEST)) {
+    throw new Error(
+      'Private demo account file not found. Copy demo-accounts.example.json to ' +
+      'demo-accounts.local.json or set DWES_DEMO_ACCOUNTS_FILE.',
+    );
+  }
   const accounts = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
+  if (!Array.isArray(accounts) || accounts.length === 0) {
+    throw new Error('Private demo account file must contain at least one account');
+  }
+  for (const [index, account] of accounts.entries()) {
+    for (const field of ['username', 'password', 'role', 'full_name']) {
+      if (typeof account?.[field] !== 'string' || !account[field].trim()) {
+        throw new Error(`Account ${index + 1} has an invalid ${field}`);
+      }
+      if (/^<.*>$/.test(account[field].trim())) {
+        throw new Error(`Account ${index + 1} still contains the ${field} example placeholder`);
+      }
+    }
+  }
+  return accounts;
+}
+
+async function main() {
+  const accounts = loadAccounts();
 
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();

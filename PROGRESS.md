@@ -2865,7 +2865,7 @@ Health check: `http://localhost:3001/api/health` → `{"status":"ok",...}`.
 - [x] `start_dwes.bat` one-click launcher (+ `npm run dev:all` runs FE+BE via concurrently — see "HOW TO START" at top)
 - [x] `README.md` with credentials, ports, folder structure
 - [x] Login-failure fix (2026-06-26): backend was simply down → proxy 502 → misleading
-  "check credentials". Resolved: started backend on :3001 (verified `sysadmin/admin123` → HTTP 200
+  "check credentials". Resolved: started backend on :3001 (verified the private local administrator account → HTTP 200
   + JWT, wrong password → HTTP 401). Frontend error messages now distinguish 401/403
   ("Incorrect username or password.") from 5xx/network/no-response
   ("Can't reach the server. Please try again or contact support."), with real status logged to
@@ -2947,7 +2947,7 @@ Health check: `http://localhost:3001/api/health` → `{"status":"ok",...}`.
     `DEMO_CREDENTIALS` (Admin/Director/Supervisor/QA/Technician).
   - Source restored: `src/data/demoCredentials.ts` (sourced from `backend/seeds/accounts.seed.json`,
     `resolveJsonModule` re-added to tsconfig.app.json). Supervisor is the one explicit entry
-    (`super123` ≠ username).
+    (the historical supervisor password differed from its username).
   - SECURITY GATE unchanged: `SHOW_DEMO_CREDENTIALS = import.meta.env.DEV ||
     VITE_SHOW_DEMO_CREDENTIALS==='true'`; in prod `DEMO_CREDENTIALS` is `[]`, the seed JSON is only
     referenced inside the DEV-gated branch → Rollup tree-shakes every password out of the prod
@@ -2957,7 +2957,7 @@ Health check: `http://localhost:3001/api/health` → `{"status":"ok",...}`.
   expected demo usernames present (admin1, director2, qa1, qa2, tech1–tech24), none missing.
   Role totals: system_admin 2, ops_director 3, prod_supervisor 1, qaqc_engineer 5,
   wiring_technician 32. End-to-end: `tech1/tech1` → HTTP 200, role `wiring_technician` → technician
-  dashboard. Note: `director1/dir123` returns 401 (its password is not dir123) — Director demo uses
+  dashboard. Note: the retired director credential returns 401 — Director demo uses
   `director2/director2`. No schema change, no writes beyond additive seed (all skipped).
 
 ---
@@ -3567,21 +3567,19 @@ No schema change, migrate, or push.
 ## MODULE 0-B — DEMO ACCOUNTS ✅
 
 Pre-backup: `backups/WiringSchemeDB_backup_20260626_112032.sql` (66 KB, plain SQL).
-Seed manifest: `backend/seeds/accounts.seed.json` | Script: `backend/seeds/seed-accounts.js`
+Historical seed manifest: `backend/seeds/accounts.seed.json` (removed) | Script: `backend/seeds/seed-accounts.js`
 Hashing: `bcryptjs` cost=10 (matches app auth layer). Idempotent: `ON CONFLICT (username) DO NOTHING`.
 
-| Username    | Password    | Role               | Status   |
-|-------------|-------------|--------------------|----------|
-| admin1      | admin1      | system_admin       | INSERTED |
-| director1   | (unchanged) | ops_director       | SKIPPED (pre-existed, not in manifest) |
-| director2   | director2   | ops_director       | INSERTED |
-| supervisor1 | (unchanged) | prod_supervisor    | SKIPPED (pre-existed, not in manifest) |
-| qa1         | qa1         | qaqc_engineer      | INSERTED |
-| qa2         | qa2         | qaqc_engineer      | INSERTED |
-| tech1–tech24| (username)  | wiring_technician  | INSERTED (full_name=[TBD], to be updated) |
+| Account group | Credential source | Role               | Status   |
+|---------------|-------------------|--------------------|----------|
+| Local admin   | Private local file| system_admin       | INSERTED |
+| Local director| Private local file| ops_director       | INSERTED/SKIPPED |
+| Local supervisor | Private local file | prod_supervisor | INSERTED/SKIPPED |
+| Local QA/QC   | Private local file| qaqc_engineer      | INSERTED |
+| Local technicians | Private local file | wiring_technician | INSERTED |
 
 No existing row modified. No schema change. No migrate/push.
-Full names for tech1–tech24 are `[TBD]` — update via Admin > User Management or re-run seed after filling names in `accounts.seed.json`.
+Update local display names through Admin > User Management or the ignored private account manifest described in `docs/DEMO_ACCOUNTS.md`.
 
 ---
 
@@ -3838,7 +3836,7 @@ Old: `POST /api/system/shutdown` let sysadmin stop the Python server from the di
 Not a CORS issue, not wrong API URL, not a credentials problem.
 
 **Diagnosis**:
-- `POST /api/auth/login` with supervisor1/super123 → `200` + valid JWT when backend is up
+- `POST /api/auth/login` with the private local supervisor account → `200` + valid JWT when backend is up
 - CORS: `main.ts` allows `http://localhost:5173` explicitly
 - Frontend: `baseURL: '/api'` + Vite proxy → `http://localhost:3001` (no direct cross-origin request)
 - The request never reached the server because nothing was listening on 3001

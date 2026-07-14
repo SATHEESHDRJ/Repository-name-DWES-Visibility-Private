@@ -4,10 +4,16 @@ import pg from 'pg';
 import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { accountForRole } from '../../scripts/demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/WiringSchemeDB';
 const API = process.env.DWES_API || 'http://localhost:3001/api';
+const adminAccount = accountForRole('system_admin');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const qaAccount = accountForRole('qaqc_engineer');
+const directorAccount = accountForRole('ops_director');
 
 const EXPECTED = {
   total: 35,
@@ -45,23 +51,23 @@ async function tryLogin(username, password) {
 }
 
 const logins = await Promise.all([
-  tryLogin('sysadmin', 'admin123'),
-  tryLogin('supervisor1', 'super123'),
-  tryLogin('tech1', 'tech1'),
-  tryLogin('qa1', 'qa1'),
+  tryLogin(adminAccount.username, adminAccount.password),
+  tryLogin(supervisorAccount.username, supervisorAccount.password),
+  tryLogin(technicianAccount.username, technicianAccount.password),
+  tryLogin(qaAccount.username, qaAccount.password),
 ]);
 
 // Audit recording spot-check
 const sup = await fetch(`${API}/auth/login`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'supervisor1', password: 'super123' }),
+  body: JSON.stringify({ username: supervisorAccount.username, password: supervisorAccount.password }),
 });
 const supTok = (await sup.json()).access_token;
 const sh = { Authorization: `Bearer ${supTok}`, 'Content-Type': 'application/json' };
 
 const tech = await fetch(`${API}/auth/login`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'tech1', password: 'tech1' }),
+  body: JSON.stringify({ username: technicianAccount.username, password: technicianAccount.password }),
 });
 const techBody = await tech.json();
 const th = { Authorization: `Bearer ${techBody.access_token}`, 'Content-Type': 'application/json' };
@@ -86,7 +92,7 @@ if (aid) {
 
 const dir = await fetch(`${API}/auth/login`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'ops_director1', password: 'ops_director123' }),
+  body: JSON.stringify({ username: directorAccount.username, password: directorAccount.password }),
 });
 const dirTok = (await dir.json()).access_token;
 const activityRes = await fetch(`${API}/director/activity?limit=5`, {

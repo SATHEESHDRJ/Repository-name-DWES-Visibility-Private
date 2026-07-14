@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import XLSX from 'xlsx';
 import { resolveApiBase, FE, CHROME, ROOT_DIR as ROOT, filterConsoleErrors, selectProjectPanel } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const API = resolveApiBase();
@@ -142,9 +143,15 @@ async function testModalClose(page, openFn, label) {
 }
 
 // ── API pre-checks ───────────────────────────────────────────────────────────
-const sup = await login('supervisor1', 'super123');
-const tech1 = await login('tech1', 'tech1');
-const tech24 = await login('tech24', 'tech24');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const unassignedTechnicianAccount = accountForRole('wiring_technician', 1);
+const adminAccount = accountForRole('system_admin');
+const directorAccount = accountForRole('ops_director');
+const qaAccount = accountForRole('qaqc_engineer');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
+const tech1 = await login(technicianAccount.username, technicianAccount.password);
+const tech24 = await login(unassignedTechnicianAccount.username, unassignedTechnicianAccount.password);
 const supToken = sup.access_token;
 
 const projects = (await api('/projects', {}, supToken)).body || [];
@@ -318,11 +325,11 @@ try {
 
   // ── All roles × viewports ────────────────────────────────────────────────
   const roles = [
-    { u: 'sysadmin', p: 'admin123', route: '/admin', label: 'Admin' },
-    { u: 'ops_director1', p: 'ops_director123', route: '/director', label: 'Director' },
-    { u: 'supervisor1', p: 'super123', route: '/supervisor', label: 'Supervisor' },
-    { u: 'qa1', p: 'qa1', route: '/qaqc', label: 'QA/QC' },
-    { u: 'tech1', p: 'tech1', route: '/technician', label: 'Technician' },
+    { u: adminAccount.username, p: adminAccount.password, route: '/admin', label: 'Admin' },
+    { u: directorAccount.username, p: directorAccount.password, route: '/director', label: 'Director' },
+    { u: supervisorAccount.username, p: supervisorAccount.password, route: '/supervisor', label: 'Supervisor' },
+    { u: qaAccount.username, p: qaAccount.password, route: '/qaqc', label: 'QA/QC' },
+    { u: technicianAccount.username, p: technicianAccount.password, route: '/technician', label: 'Technician' },
   ];
   const viewports = [
     { w: 1280, h: 800, tag: 'desktop' },
@@ -349,7 +356,7 @@ try {
   }
 
   // Admin modal
-  const adminSess = await login('sysadmin', 'admin123');
+  const adminSess = await login(adminAccount.username, adminAccount.password);
   const { page: adminPage } = await openPage(browser, adminSess.access_token, adminSess.user, '/admin', { width: 1280, height: 800 });
   const adminModal = await testModalClose(adminPage, async () => adminPage.evaluate(() => {
     const btn = [...document.querySelectorAll('button')].find((b) => /Add User/i.test(b.textContent || ''));

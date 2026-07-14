@@ -9,10 +9,13 @@ services:
     image: dwes-api:e2e
     environment:
       DEMO_MODE: "true"
+      DWES_DEMO_ACCOUNTS_FILE: /run/secrets/dwes_demo_accounts
       NODE_ENV: production
       CORS_ORIGINS: http://localhost:18080
       RP_ID: localhost
       RP_ORIGIN: http://localhost:18080
+    secrets:
+      - dwes_demo_accounts
 
   nginx:
     build:
@@ -22,3 +25,7 @@ services:
     ports:
       - "18080:80"
       - "18443:443"
+
+secrets:
+  dwes_demo_accounts:
+    file: ./.e2e-data/demo-accounts.runtime.json

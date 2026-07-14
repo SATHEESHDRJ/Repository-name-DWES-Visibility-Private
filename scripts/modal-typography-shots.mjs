@@ -8,6 +8,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FE, CHROME, resolveApiBase } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -44,7 +45,8 @@ async function clickByText(page, selector, text) {
   return false;
 }
 
-const sup = await login('supervisor1', 'super123');
+const supervisorAccount = accountForRole('prod_supervisor');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'] });
 
 try {

@@ -68,22 +68,12 @@ Source: `scripts/git-hooks/pre-commit` (blocks secrets, build artifacts, and fil
 
 ---
 
-## Login credentials
+## Local demo accounts
 
-| Role                | Username        | Password        |
-|---------------------|-----------------|-----------------|
-| System Administrator| sysadmin        | admin123        |
-| Operations Director | ops_director1   | ops_director123 |
-| Sales Director      | sales_director2 | sales_director2 |
-| Production Supervisor| supervisor1    | super123        |
-| QA/QC Engineer      | qa1             | qa1             |
-| Wiring Technician   | tech1           | tech1           |
-
-Additional accounts (from live DB — password = username unless noted above):
-- `qa2` / `qa2` (QA/QC Engineer)
-- `tech01`–`tech05`, `tech1`–`tech24` (Wiring Technicians)
-
-Retired demo login: `director1` (deactivated when `DEMO_MODE=true`).
+Usable usernames and passwords are intentionally not tracked in this repository.
+For local demo/test seeding, create the ignored private account file described in
+[`docs/DEMO_ACCOUNTS.md`](docs/DEMO_ACCOUNTS.md). Production accounts are issued
+and managed through System Administrator user management.
 
 ---
 
@@ -92,7 +82,7 @@ Retired demo login: `director1` (deactivated when `DEMO_MODE=true`).
 - **Host:** localhost:5432
 - **Database:** WiringSchemeDB
 - **User:** postgres
-- **Password:** postgres
+- **Password:** supplied through the ignored local `DATABASE_URL`/environment configuration
 - **ORM:** Prisma (schema at `backend/prisma/schema.prisma`)
 
 > Never run `prisma migrate` or `prisma db push` — the existing schema is live.  

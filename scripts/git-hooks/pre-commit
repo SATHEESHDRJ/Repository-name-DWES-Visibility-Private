@@ -37,9 +37,9 @@ for pattern in "${blocked_paths[@]}"; do
   fi
 done
 
-# Block secrets (*.key, .env, *.pem, *.pfx)
-if git diff --cached --name-only | grep -qE '\.(key|pem|pfx)$|^\.env|infra/docker/\.env$|backend/backups/.*\.(dump|sql)$'; then
-  echo "❌ ERROR: Attempting to commit secrets or DB dumps (.env, infra/docker/.env, *.dump)"
+# Block secrets (*.key, .env, *.pem, *.pfx, private demo manifests)
+if git diff --cached --name-only | grep -qE '\.(key|pem|pfx)$|^\.env|infra/docker/\.env$|backend/backups/.*\.(dump|sql)$|demo-accounts\.(local|runtime)\.json$|backend/seeds/accounts\.seed\.json$'; then
+  echo "❌ ERROR: Attempting to commit secrets or DB dumps (.env, private account manifests, *.dump)"
   exit 1
 fi
 

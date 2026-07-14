@@ -15,6 +15,8 @@ docs/go-live-artifacts/
 infra/docker/.env
 infra/docker/.env.e2e
 infra/docker/.e2e-data/
+/backend/seeds/demo-accounts.local.json
+/backend/seeds/accounts.seed.json
 infra/docker/ssl/*.pem
 infra/docker/.previous-tag*
 .terraform/

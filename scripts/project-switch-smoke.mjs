@@ -14,6 +14,7 @@ import {
   setupBrowserApiProxy,
   selectProjectPanel,
 } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const API = resolveApiBase();
@@ -135,8 +136,10 @@ async function closeModal(page) {
   await new Promise((r) => setTimeout(r, 400));
 }
 
-const sup = await login('supervisor1', 'super123');
-const tech1 = await login('tech1', 'tech1');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
+const tech1 = await login(technicianAccount.username, technicianAccount.password);
 const tech01 = await login('tech01', 'tech01');
 const supToken = sup.access_token;
 

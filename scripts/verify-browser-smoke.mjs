@@ -1,8 +1,14 @@
 import puppeteer from 'puppeteer';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const BASE = 'http://localhost:5175';
 const results = [];
 const consoleErrors = [];
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const adminAccount = accountForRole('system_admin');
+const directorAccount = accountForRole('ops_director');
+const qaAccount = accountForRole('qaqc_engineer');
 
 async function login(page, username, password) {
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -56,7 +62,7 @@ try {
   const sup = await browser.newPage();
   sup.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(`[supervisor] ${msg.text()}`); });
   sup.on('pageerror', (err) => consoleErrors.push(`[supervisor] ${err.message}`));
-  await login(sup, 'supervisor1', 'super123');
+  await login(sup, supervisorAccount.username, supervisorAccount.password);
   await collectPageState(sup, 'supervisor-after-login');
 
   for (const [w, h, tag] of [[1280, 800, 'supervisor-desktop'], [1024, 768, 'supervisor-laptop'], [834, 1112, 'supervisor-tablet']]) {
@@ -91,7 +97,7 @@ try {
   // --- Technician ---
   const tech = await browser.newPage();
   tech.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(`[technician] ${msg.text()}`); });
-  await login(tech, 'tech1', 'tech1');
+  await login(tech, technicianAccount.username, technicianAccount.password);
   await collectPageState(tech, 'technician-after-login');
   const techActions = await tech.evaluate(() =>
     [...document.querySelectorAll('.tech-dash-action-btn, button')]
@@ -103,9 +109,9 @@ try {
 
   // --- Other roles quick mount ---
   for (const [user, pass, label] of [
-    ['sysadmin', 'admin123', 'admin'],
-    ['ops_director1', 'ops_director123', 'director'],
-    ['qa1', 'qa1', 'qaqc'],
+    [adminAccount.username, adminAccount.password, 'admin'],
+    [directorAccount.username, directorAccount.password, 'director'],
+    [qaAccount.username, qaAccount.password, 'qaqc'],
   ]) {
     const p = await browser.newPage();
     p.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(`[${label}] ${msg.text()}`); });

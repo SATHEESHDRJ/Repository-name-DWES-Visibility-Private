@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { loadDemoAccounts } from '../common/demo-accounts';
 
 // ─── Primitive types ──────────────────────────────────────────────────────────
 
@@ -383,17 +384,6 @@ export interface PanelInspection {
   signed_off_at: string | null;
 }
 
-// ─── Seed data ────────────────────────────────────────────────────────────────
-
-const SEED_USERS_RAW = [
-  { username: 'sysadmin',      password: 'admin123',        full_name: 'System Administrator', employee_id: 'EMP-001',     role: 'system_admin'      as UserRole, whatsapp: '+966500000001' },
-  { username: 'director1',     password: 'dir123',          full_name: 'Operations Director',   employee_id: 'EMP-005',     role: 'ops_director'      as UserRole, whatsapp: '+966500000002' },
-  { username: 'ops_director1', password: 'ops_director123', full_name: 'Operations Director',   employee_id: 'EMP-DIR-001', role: 'ops_director'      as UserRole, whatsapp: '+966500000003' },
-  { username: 'supervisor1',   password: 'super123',        full_name: 'Production Supervisor', employee_id: 'EMP-020',     role: 'prod_supervisor'   as UserRole, whatsapp: '+966500000004' },
-  { username: 'qa1',           password: 'qa1',             full_name: 'QA Engineer One',       employee_id: 'EMP-010',     role: 'qaqc_engineer'     as UserRole, whatsapp: '+966500000005' },
-  { username: 'qa2',           password: 'qa2',             full_name: 'QA Engineer Two',       employee_id: 'EMP-011',     role: 'qaqc_engineer'     as UserRole, whatsapp: '+966500000006' },
-];
-
 function mkCable(sno: number, src: string, dst: string, ferrule: string, color = 'GREY', size = '1.5SQ.mm', len = '3m', panel = 'P1'): Cable {
   const [sd, st] = src.includes(':') ? src.split(':') : [src, ''];
   const [dd, dt] = dst.includes(':') ? dst.split(':') : [dst, ''];
@@ -479,7 +469,7 @@ export class MockStore {
     const now = new Date().toISOString();
 
     // ── Users
-    for (const raw of SEED_USERS_RAW) {
+    for (const raw of loadDemoAccounts()) {
       const hashed = await bcrypt.hash(raw.password, 10);
       this.users.push({
         id: this._userId++,
@@ -487,11 +477,11 @@ export class MockStore {
         hashed_password: hashed,
         full_name: raw.full_name,
         employee_id: raw.employee_id,
-        role: raw.role,
+        role: raw.role as UserRole,
         is_active: true,
         created_at: now,
         last_login: null,
-        whatsapp_number: raw.whatsapp,
+        whatsapp_number: raw.whatsapp_number ?? '',
         ready_for_assignment: false,
         ready_since: null,
       });
