@@ -16,6 +16,7 @@ export interface PanelCompletionReportPreviewData {
   };
   reportStatus: string;
   reportStatusLabel: string;
+  technicians: { fullName: string; username: string }[];
   technician: { fullName: string; username: string } | null;
   midChangeTechnician: { fullName: string; username: string } | null;
   supervisor: { fullName: string } | null;
@@ -63,10 +64,7 @@ function parseSubstation(name: string, client: string | null) {
 function statusTone(status: string): string {
   switch (status) {
     case 'completed': return 'pcr-status--completed';
-    case 'in_progress': return 'pcr-status--progress';
-    case 'on_hold': return 'pcr-status--hold';
-    case 'not_started': return 'pcr-status--not-started';
-    default: return 'pcr-status--hold';
+    default: return 'pcr-status--progress';
   }
 }
 
@@ -98,10 +96,7 @@ export default function PanelCompletionReportPreview({ data }: { data: PanelComp
   const supRemarks = data.supervisorRemarks || data.rework.reason || '—';
 
   const personnel = [
-    { label: 'Assigned technician', name: data.technician?.fullName || '—' },
-    ...(data.midChangeTechnician
-      ? [{ label: 'Mid-change technician', name: data.midChangeTechnician.fullName }]
-      : []),
+    { label: 'Assigned technician(s)', name: data.technicians.map(t => t.fullName).join(', ') || '—' },
     { label: 'Production supervisor', name: data.supervisor?.fullName || '—' },
   ];
 
@@ -157,7 +152,7 @@ export default function PanelCompletionReportPreview({ data }: { data: PanelComp
         <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.cables.total}</span><span className="pcr-kpi-label">Total cables</span></div>
         <div className="pcr-kpi-card pcr-kpi-card--green"><span className="pcr-kpi-value">{data.cables.completed}</span><span className="pcr-kpi-label">Completed</span></div>
         <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.cables.remaining}</span><span className="pcr-kpi-label">Remaining</span></div>
-        <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.kpi}%</span><span className="pcr-kpi-label">Wiring KPI</span></div>
+        <div className="pcr-kpi-card"><span className="pcr-kpi-value">{data.kpi}%</span><span className="pcr-kpi-label">Assigned cable KPI</span></div>
       </section>
       <section className="pcr-kpi-sub">
         <div className="pcr-kpi-card"><span className="pcr-kpi-value pcr-kpi-value--sm">{data.cables.openEndSource} / {data.cables.openEndDestination}</span><span className="pcr-kpi-label">Open-end (src / dst)</span></div>

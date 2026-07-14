@@ -35,6 +35,8 @@ interface TopbarProps {
   showMenuButton?: boolean;
   activeProject?: ActiveProjectContext | null;
   projectSelectionRequired?: boolean;
+  projectContextLoading?: boolean;
+  noProjectAvailable?: boolean;
 }
 
 export default function Topbar({
@@ -45,6 +47,8 @@ export default function Topbar({
   showMenuButton = false,
   activeProject = null,
   projectSelectionRequired = false,
+  projectContextLoading = false,
+  noProjectAvailable = false,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -152,9 +156,13 @@ export default function Topbar({
               <span className="topbar-project-value">
                 {isTechLive
                   ? (liveWiring.projectName || liveWiring.projectCode || 'In progress')
+                  : projectContextLoading
+                    ? 'Loading…'
                   : projectSelectionRequired
                     ? 'Selection Required'
-                    : (activeProject?.code ?? 'Unassigned')}
+                    : noProjectAvailable
+                      ? 'No Project Available'
+                      : (activeProject?.code ?? 'Unassigned')}
               </span>
             </div>
             {isTechLive && (
@@ -170,7 +178,7 @@ export default function Topbar({
 
           {user && (
             <div
-              className={`topbar-user-card topbar-float topbar-float--light${user.role === 'wiring_technician' ? ' cursor-pointer hover:bg-white/90' : ''}`}
+              className={`topbar-user-card topbar-float topbar-float--light${user.role === 'wiring_technician' ? ' cursor-pointer hover:bg-[var(--t-surface-white-90)]' : ''}`}
               title={`${user.full_name} · @${user.username} · ${ROLE_LABELS[user.role] ?? user.role}`}
               onClick={user.role === 'wiring_technician' ? () => setShowProfile(true) : undefined}
               onKeyDown={user.role === 'wiring_technician' ? (e) => { if (e.key === 'Enter' || e.key === ' ') setShowProfile(true); } : undefined}

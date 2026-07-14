@@ -21,7 +21,6 @@ export class DevService {
   async hardResetPrecheck() {
     const uploadBase = this._resolveUploadDir();
     const projects = await this.prisma.projects.findMany({ select: { code: true } });
-    const codes = projects.map(p => p.code);
 
     const [
       users,
@@ -189,6 +188,7 @@ export class DevService {
 
     MockStore.frames = [];
     MockStore.drawings = [];
+    MockStore.drawingPackages = [];
     MockStore.directorReports = [];
 
     const webauthnCleared = this.webauthnStore.clearAll();

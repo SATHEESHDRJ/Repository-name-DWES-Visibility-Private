@@ -2,10 +2,11 @@ import {
   Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MockStore, type FrameData } from '../data/mock-store';
+import { MockStore, type FrameData, type PanelDrawingAsset } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { buildCompletionReport } from '../common/completion-report.helper';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
+import { wiringKpiPercent } from '../common/kpi.constants';
 import * as crypto from 'crypto';
 
 export interface CableStatus { src: boolean; dst: boolean; note: string; issue?: boolean; }
@@ -34,6 +35,15 @@ function parseCS(raw: string | null | undefined): Record<string, CableStatus> {
     Object.values(obj).forEach((v: any) => { if (v && v.issue === undefined) v.issue = false; });
     return obj;
   } catch { return {}; }
+}
+
+function hasCableWork(assignment: {
+  cable_status?: string | null;
+  cables_src_done?: number | null;
+  cables_dst_done?: number | null;
+}): boolean {
+  if ((assignment.cables_src_done || 0) > 0 || (assignment.cables_dst_done || 0) > 0) return true;
+  return Object.values(parseCS(assignment.cable_status)).some(state => Boolean(state?.src || state?.dst));
 }
 
 @Injectable()
@@ -128,11 +138,17 @@ export class TechService {
     return assignments.map(a => {
       const frame = this.resolveAssignmentFrame(a.project_code, a.frame_id);
       const project = projectByCode.get(a.project_code);
-      const drawings = MockStore.findDrawingsByProject(a.project_code).map(d => ({
-        id: d.id, original_name: d.original_name, content_type: d.content_type, uploaded_at: d.uploaded_at,
-      }));
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const drawingPackage = FrameStore.getDrawingPackage(a.project_code, a.frame_id);
+      const drawings = [drawingPackage?.drawing_2d, drawingPackage?.model_3d]
+        .filter((d): d is PanelDrawingAsset => !!d)
+        .map(d => ({
+          id: d.id,
+          kind: d.kind,
+          original_name: d.original_name,
+          content_type: d.content_type,
+          uploaded_at: d.uploaded_at,
+        }));
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       const {
         otp_code: _otp,
         otp_expires_at: _otpExp,
@@ -148,6 +164,12 @@ export class TechService {
         project_client: project?.client || '',
         schedule_file: frame?.original_filename || null,
         drawings,
+        drawing_package: drawingPackage ? {
+          id: drawingPackage.id,
+          revision: drawingPackage.revision,
+          drawing_2d: drawingPackage.drawing_2d,
+          model_3d: drawingPackage.model_3d,
+        } : null,
       };
     });
   }
@@ -220,7 +242,7 @@ export class TechService {
       data: { status: 'completed', completed_at: new Date() },
     });
     const tech = await this.prisma.users.findUnique({ where: { id: techId } });
-    const kpi = (a.cables_total || 0) > 0 ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     await this.logAudit(techId, tech?.full_name || '', a.project_code, a.frame_id, a.panel_name || '', 'complete', `Completed: KPI=${kpi}%, time=${a.total_wiring_seconds}s`);
     return { ...updated, cable_status: parseCS(updated.cable_status) };
   }
@@ -298,10 +320,19 @@ export class TechService {
       cs[key].note = value as string;
     }
 
+    const autoStart = a.status === 'assigned'
+      && (field === 'src' || field === 'dst')
+      && value === true
+      ? { status: 'in_progress', started_at: a.started_at || new Date() }
+      : {};
     await this.prisma.tech_assignments.update({
       where: { id: assignmentId },
-      data: { cable_status: JSON.stringify(cs), cables_src_done: src_done, cables_dst_done: dst_done },
+      data: { cable_status: JSON.stringify(cs), cables_src_done: src_done, cables_dst_done: dst_done, ...autoStart },
     });
+    if ('status' in autoStart) {
+      const tech = await this.prisma.users.findUnique({ where: { id: techId } });
+      await this.logAudit(techId, tech?.full_name || '', a.project_code, a.frame_id, a.panel_name || '', 'start', 'Auto-started on first cable update');
+    }
     return { assignment_id: assignmentId, cables_src_done: src_done, cables_dst_done: dst_done };
   }
 
@@ -472,7 +503,7 @@ export class TechService {
     if (!a) throw new NotFoundException('Assignment not found');
     if (a.technician_id !== techId) throw new BadRequestException('Not your assignment');
     const frame = this.resolveAssignmentFrame(a.project_code, a.frame_id);
-    const kpi = (a.cables_total || 0) > 0 ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     return {
       assignment: { ...a, cable_status: parseCS(a.cable_status) },
       frame: frame ? {
@@ -499,7 +530,7 @@ export class TechService {
       orderBy: { created_at: 'asc' },
     });
     const cs = parseCS(a.cable_status);
-    const kpi = (a.cables_total || 0) > 0 ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     const cablesBothDone = Object.values(cs).filter(s => s.src && s.dst).length;
     return {
       panel_name: a.panel_name, project_code: a.project_code,
@@ -550,10 +581,17 @@ export class TechService {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException('Assignment not found');
     assertPanelNameUniqueForWrite(a.project_code, a.frame_id);
+    const hasRecordedCableWork = hasCableWork(a);
     // Removal is only allowed until the technician starts. Once started (started_at set —
-    // covers in_progress, started-then-paused, and completed), the panel can only be handed
-    // over via mid-changeover, which preserves the work already done.
-    if (a.status !== 'assigned' || a.started_at != null || a.handover_from_id != null || a.changeover_locked) {
+    // covers in_progress, started-then-paused, and completed) or the first cable update is
+    // recorded, the panel can only be handed over via mid-changeover.
+    if (
+      a.status !== 'assigned'
+      || a.started_at != null
+      || a.handover_from_id != null
+      || a.changeover_locked
+      || hasRecordedCableWork
+    ) {
       throw new BadRequestException('Cannot remove this assignment — work has already started. Use mid-changeover to hand over to another technician.');
     }
     await this.prisma.tech_assignments.delete({ where: { id: assignmentId } });
@@ -585,7 +623,8 @@ export class TechService {
     let old = await this.prisma.tech_assignments.findUnique({ where: { id: oldAssignmentId } });
     if (!old) throw new NotFoundException('Old assignment not found');
     const isStartedHandover = old.status === 'assigned' && old.handover_from_id != null;
-    if (!['paused', 'in_progress'].includes(old.status || '') && !isStartedHandover) {
+    const isAssignedWithWork = old.status === 'assigned' && hasCableWork(old);
+    if (!['paused', 'in_progress'].includes(old.status || '') && !isStartedHandover && !isAssignedWithWork) {
       throw new BadRequestException('Work must have started before a mid-changeover');
     }
     if (old.changeover_locked) throw new BadRequestException('Changeover already initiated');
@@ -609,17 +648,22 @@ export class TechService {
       let source = await tx.tech_assignments.findUnique({ where: { id: oldAssignmentId } });
       if (!source) throw new NotFoundException('Old assignment not found');
       const sourceIsStartedHandover = source.status === 'assigned' && source.handover_from_id != null;
-      if (!['paused', 'in_progress'].includes(source.status || '') && !sourceIsStartedHandover) {
+      const sourceIsAssignedWithWork = source.status === 'assigned' && hasCableWork(source);
+      if (!['paused', 'in_progress'].includes(source.status || '') && !sourceIsStartedHandover && !sourceIsAssignedWithWork) {
         throw new BadRequestException('Work must have started before a mid-changeover');
       }
       if (source.changeover_locked) throw new BadRequestException('Changeover already initiated');
 
       const newActive = await tx.tech_assignments.findFirst({
-        where: { technician_id: newTechId, status: 'in_progress' },
+        where: {
+          technician_id: newTechId,
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+        },
       });
-      if (newActive) throw new BadRequestException('New technician already has an active panel');
+      if (newActive) throw new BadRequestException('Replacement technician is not available');
 
-      if (source.status === 'in_progress') {
+      if (source.status === 'in_progress' || sourceIsAssignedWithWork) {
         source = await tx.tech_assignments.update({
           where: { id: oldAssignmentId },
           data: {
@@ -636,6 +680,8 @@ export class TechService {
           technician_id: newTechId, assigned_by: supervisorId, status: 'assigned',
           cables_total: source.cables_total, cables_src_done: source.cables_src_done, cables_dst_done: source.cables_dst_done,
           cable_status: source.cable_status, total_wiring_seconds: source.total_wiring_seconds,
+          // Keep the panel's original execution start timestamp across every handover.
+          started_at: source.started_at || new Date(changeoverAt),
           supervisor_approved: true, approved_at: new Date(), approved_by: supervisorId,
           handover_from_id: source.id, is_hidden: false, report_submitted: false,
           rework_requested: false, rework_reason: '', changeover_locked: false, qc_status: 'not_ready',
@@ -654,12 +700,16 @@ export class TechService {
     const newAssignment = transfer.created;
     const cableCounts = this.countCableProgress(old.cable_status, old.cables_total);
 
-    const oldTech = await this.prisma.users.findUnique({ where: { id: old.technician_id } });
+    const [oldTech, supervisor] = await Promise.all([
+      this.prisma.users.findUnique({ where: { id: old.technician_id } }),
+      this.prisma.users.findUnique({ where: { id: supervisorId } }),
+    ]);
     const notesSuffix = reasonNotes.trim() ? ` | notes=${reasonNotes.trim()}` : '';
     const auditDetails =
       `prev_tech=${old.technician_id}:${oldTech?.full_name || ''} | new_tech=${newTechId}:${newTech.full_name || ''}` +
       ` | reason=${reason}${notesSuffix} | completed=${cableCounts.completed_cables} | remaining=${cableCounts.remaining_cables}` +
-      ` | total=${cableCounts.cables_total} | at=${changeoverAt} | supervisor=${supervisorId}`;
+      ` | total=${cableCounts.cables_total} | at=${changeoverAt}` +
+      ` | supervisor=${supervisorId}:${supervisor?.full_name || ''} | supervisor_confirmed=true`;
 
     await this.logAudit(old.technician_id, oldTech?.full_name || '', old.project_code, old.frame_id, old.panel_name || '', 'changeover_locked', `Handed over to ${newTech.full_name}`);
     await this.logAudit(old.technician_id, oldTech?.full_name || '', old.project_code, old.frame_id, old.panel_name || '', 'mid_changeover', auditDetails);
@@ -681,6 +731,9 @@ export class TechService {
       frame_id: old.frame_id,
       changeover_reason: reason,
       changeover_at: changeoverAt,
+      supervisor_id: supervisorId,
+      supervisor_name: supervisor?.full_name || '',
+      supervisor_confirmed: true,
       technician_whatsapp: newTech.whatsapp_number,
       ...cableCounts,
     };

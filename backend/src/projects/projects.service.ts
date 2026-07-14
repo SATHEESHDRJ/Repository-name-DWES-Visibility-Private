@@ -7,6 +7,8 @@ import { FrameStore } from '../frames/frame-store';
 import { prependExcelReportHeader } from '../common/report-branding';
 import { buildProjectReportPdf, ReportCable, ReportPanel } from '../common/report-pdf';
 import { permanentlyDeleteProject } from '../common/project-delete.util';
+import { assignedCableKpiPercent } from '../common/kpi.constants';
+import { parseCableStatus as parseCS } from '../common/cable-status.util';
 
 export interface CreatePanelDto {
   name: string;
@@ -14,10 +16,6 @@ export interface CreatePanelDto {
   description?: string;
   voltage_level?: string;
   system_type?: string;
-}
-function parseCS(raw: string | null | undefined): Record<string, { src?: boolean; dst?: boolean }> {
-  if (!raw) return {};
-  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return {}; }
 }
 
 @Injectable()
@@ -29,7 +27,7 @@ export class ProjectsService {
   }
 
   async findOne(code: string) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
+    const p = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
     return p;
   }
@@ -100,7 +98,7 @@ export class ProjectsService {
   }
 
   async update(code: string, dto: Partial<{ client: string; name: string; description: string; sequence: number }>) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
+    const p = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
     const data: any = {};
     if (dto.client !== undefined)      data.client = dto.client;
@@ -111,27 +109,30 @@ export class ProjectsService {
   }
 
   async remove(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) throw new NotFoundException(`Project ${code} not found`);
 
-    const uploadBase = process.env.UPLOAD_ROOT || path.resolve(process.cwd(), 'uploads');
+    const configuredUploadDir = process.env.UPLOAD_DIR || process.env.UPLOAD_ROOT;
+    const uploadBase = configuredUploadDir
+      ? (path.isAbsolute(configuredUploadDir) ? configuredUploadDir : path.resolve(process.cwd(), configuredUploadDir))
+      : path.resolve(process.cwd(), 'uploads');
     return permanentlyDeleteProject(this.prisma, code, uploadBase);
   }
 
   async setState(code: string, state: string) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
+    const p = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
     return this.prisma.projects.update({ where: { code }, data: { project_state: state } });
   }
 
   async assign(code: string, techUsernames: string[]) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
+    const p = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
     return this.prisma.projects.update({ where: { code }, data: { assigned_technicians: techUsernames.join(',') } });
   }
 
   async submitToDirector(code: string) {
-    const p = await this.prisma.projects.findUnique({ where: { code } });
+    const p = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!p) throw new NotFoundException(`Project ${code} not found`);
 
     const completed = await this.prisma.tech_assignments.findMany({
@@ -166,7 +167,7 @@ export class ProjectsService {
 
   /** Shared read-only data collection for project reports (PDF + Excel). */
   private async collectReportData(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) throw new NotFoundException(`Project ${code} not found`);
 
     const rows = await this.prisma.tech_assignments.findMany({
@@ -180,14 +181,20 @@ export class ProjectsService {
         },
       },
     });
-    const userIds = [...new Set(rows.flatMap(r => [
+    // Consolidated reports show each panel once. Changeover history must not
+    // duplicate that panel's assigned cable total in the overall KPI.
+    const latestByFrame = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) latestByFrame.set(row.frame_id, row);
+    const panelRows = [...latestByFrame.values()];
+
+    const userIds = [...new Set(panelRows.flatMap(r => [
       r.technician_id, r.assigned_by, r.reviewed_by, r.approved_by,
       r.panel_inspections[0]?.qc_user_id,
     ]).filter((id): id is number => typeof id === 'number'))];
     const techs = userIds.length ? await this.prisma.users.findMany({ where: { id: { in: userIds } } }) : [];
     const techMap = new Map(techs.map(t => [t.id, t]));
 
-    const assignedFrameIds = new Set(rows.map(a => a.frame_id));
+    const assignedFrameIds = new Set(panelRows.map(a => a.frame_id));
     const frameById = new Map<string, FrameData>();
     for (const frame of MockStore.findFramesByProject(code)) frameById.set(frame.id, frame);
     for (const frameId of assignedFrameIds) {
@@ -197,12 +204,11 @@ export class ProjectsService {
       }
     }
 
-    const panels = rows.map(a => {
+    const panels = panelRows.map(a => {
       const tech = techMap.get(a.technician_id);
       const cables = a.cables_total || 0;
-      const kpi = cables > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / (cables * 2)) * 1000) / 10
-        : 0;
+      const completed = Object.values(parseCS(a.cable_status)).filter(status => status.src && status.dst).length;
+      const kpi = assignedCableKpiPercent(completed, cables);
       return { assignment: a, tech, kpi, frame: frameById.get(a.frame_id) ?? null };
     });
 

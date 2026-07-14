@@ -34,7 +34,7 @@ if (wantLan || url) {
   const desktop = execFileSync(
     'powershell.exe',
     ['-NoProfile', '-Command', "[Environment]::GetFolderPath('Desktop')"],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', windowsHide: true },
   ).trim();
 
   if (!url) {
@@ -68,4 +68,4 @@ if (wantLan || url) {
 const psArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', fixScript];
 if (wantProd) psArgs.push('-IncludeProd');
 
-execFileSync('powershell.exe', psArgs, { stdio: 'inherit' });
+execFileSync('powershell.exe', psArgs, { stdio: 'inherit', windowsHide: true });

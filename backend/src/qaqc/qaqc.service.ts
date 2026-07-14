@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
+import { wiringKpiPercent } from '../common/kpi.constants';
+import { parseCableStatus as parseCS } from '../common/cable-status.util';
 
 export interface InspectionIssue {
   id: string; severity: 'critical' | 'major' | 'minor';
@@ -21,10 +23,6 @@ export interface CreateInspectionDto {
   issues: InspectionIssue[];
   inspection_notes: string;
   overall_result: 'PASS' | 'FAIL' | 'CONDITIONAL_PASS';
-}
-
-function parseCS(raw: string | null | undefined): Record<string, any> {
-  try { return JSON.parse(raw || '{}'); } catch { return {}; }
 }
 
 @Injectable()
@@ -59,8 +57,7 @@ export class QAQCService {
       const tech = techMap.get(a.technician_id);
       const frame = MockStore.findFrameById(a.frame_id);
       const existing = inspMap.get(a.id);
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       return {
         ...a, cable_status: undefined, technician_name: tech?.full_name || '',
         panel_display_name: frame?.panel_name || a.panel_name, kpi,
@@ -77,8 +74,7 @@ export class QAQCService {
     const frame = MockStore.findFrameById(a.frame_id);
     const tech = await this.prisma.users.findUnique({ where: { id: a.technician_id } });
     const existing = await this.prisma.panel_inspections.findFirst({ where: { assignment_id: assignmentId } });
-    const kpi = (a.cables_total || 0) > 0
-      ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     const cs = parseCS(a.cable_status);
     const cables = (frame?.cables || []).map((c, i) => {
       const st = cs[String(i)];

@@ -38,17 +38,19 @@ export function useProjectPanelDocumentStatus(
   const drawingGenRef = useRef(0);
   const wiringGenRef = useRef(0);
 
-  const refreshDrawings = useCallback(async (code: string, options?: { showLoading?: boolean }) => {
+  const refreshDrawings = useCallback(async (code: string, frameId: string | undefined, options?: { showLoading?: boolean }) => {
+    if (!frameId) {
+      drawingGenRef.current += 1;
+      setDrawing({ availability: 'missing', message: 'Select a panel first' });
+      return;
+    }
     const gen = ++drawingGenRef.current;
     if (options?.showLoading !== false) setDrawing(LOADING_DRAWING);
     try {
-      const raw = await projectsApi.drawings(code);
+      const raw = await projectsApi.panelDrawing(code, frameId);
       if (gen !== drawingGenRef.current) return;
-      const list = Array.isArray(raw) ? raw : [];
-      const summaries = list.map((d: { id: string; original_name: string }) => ({
-        id: d.id,
-        original_name: d.original_name,
-      }));
+      const slot = raw?.drawing_2d;
+      const summaries = slot ? [{ id: slot.id, original_name: slot.original_name }] : [];
       const active = pickPreviewableDrawing(summaries);
       if (!active) {
         setDrawing(MISSING_DRAWING);
@@ -63,7 +65,7 @@ export function useProjectPanelDocumentStatus(
       if (gen !== drawingGenRef.current) return;
       setDrawing({
         availability: 'error',
-        message: apiErrorMessage(err, 'Failed to check drawings for this project.'),
+        message: apiErrorMessage(err, 'Failed to check drawings for this panel.'),
       });
     }
   }, []);
@@ -112,7 +114,7 @@ export function useProjectPanelDocumentStatus(
     const refreshDrawing = opts?.drawing !== false;
     const refreshWiringSchedule = opts?.wiring !== false;
     const showLoading = opts?.showLoading;
-    if (refreshDrawing) void refreshDrawings(projectCode, { showLoading });
+    if (refreshDrawing) void refreshDrawings(projectCode, panelId, { showLoading });
     if (refreshWiringSchedule) void refreshWiring(projectCode, panelId, { showLoading });
   }, [projectCode, panelId, refreshDrawings, refreshWiring]);
 
@@ -125,7 +127,7 @@ export function useProjectPanelDocumentStatus(
       setWiring(MISSING_WIRING);
       return;
     }
-    void refreshDrawings(projectCode, { showLoading: true });
+    void refreshDrawings(projectCode, panelId, { showLoading: true });
     void refreshWiring(projectCode, panelId, { showLoading: true });
   }, [projectCode, panelId, refreshDrawings, refreshWiring]);
 
@@ -184,7 +186,7 @@ export function useProjectPanelDocumentStatus(
   return {
     drawing,
     wiring,
-    refreshDrawings: () => (projectCode ? refreshDrawings(projectCode) : Promise.resolve()),
+    refreshDrawings: () => (projectCode ? refreshDrawings(projectCode, panelId) : Promise.resolve()),
     refreshWiring: () => (projectCode ? refreshWiring(projectCode, panelId) : Promise.resolve()),
     refresh,
   };

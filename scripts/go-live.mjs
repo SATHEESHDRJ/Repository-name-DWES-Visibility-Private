@@ -54,7 +54,7 @@ function log(msg) {
 
 function run(cmd, args, opts = {}) {
   log(`$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: true, ...opts });
+  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: true, windowsHide: true, ...opts });
   if (r.status !== 0) {
     throw new Error(`Command failed (${r.status}): ${cmd} ${args.join(' ')}`);
   }
@@ -62,7 +62,7 @@ function run(cmd, args, opts = {}) {
 
 function runCapture(cmd, args, opts = {}) {
   log(`$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { encoding: 'utf8', shell: true, ...opts });
+  const r = spawnSync(cmd, args, { encoding: 'utf8', shell: true, windowsHide: true, ...opts });
   if (r.status !== 0) {
     throw new Error((r.stderr || r.stdout || `exit ${r.status}`).trim());
   }
@@ -73,7 +73,7 @@ function runCapture(cmd, args, opts = {}) {
 // never appears in the logged command line. Used for `gh secret set <NAME>`.
 function runInput(cmd, args, input, opts = {}) {
   log(`$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { input, encoding: 'utf8', shell: true, ...opts });
+  const r = spawnSync(cmd, args, { input, encoding: 'utf8', shell: true, windowsHide: true, ...opts });
   if (r.status !== 0) {
     throw new Error((r.stderr || `exit ${r.status}`).trim());
   }

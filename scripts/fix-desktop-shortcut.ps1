@@ -15,9 +15,11 @@ $launcherDev = Join-Path $root 'Start DWES (Hidden).vbs'
 $launcherProd = Join-Path $root 'Start DWES Prod (Hidden).vbs'
 $wscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
 $icon = Join-Path $root 'public\app-icon.ico'
-$primaryName = 'DWES.lnk'
+$primaryName = 'Start DWES.lnk'
 $primary = Join-Path $desktop $primaryName
-$prodName = 'DWES (Production).lnk'
+$stopName = 'Stop DWES.lnk'
+$stopShortcut = Join-Path $desktop $stopName
+$prodName = 'Start DWES (Production).lnk'
 $prodShortcut = Join-Path $desktop $prodName
 
 if (-not (Test-Path $launcherDev)) { throw "Dev launcher not found: $launcherDev" }
@@ -78,6 +80,15 @@ $sc.WindowStyle = 1
 $sc.Description = 'DWES Development — Vite HMR on :5175 (no console windows)'
 $sc.Save()
 
+$stop = $sh.CreateShortcut($stopShortcut)
+$stop.TargetPath = $wscript
+$stop.Arguments = ('"{0}"' -f (Join-Path $root 'Stop DWES (Hidden).vbs'))
+$stop.WorkingDirectory = $root
+$stop.IconLocation = "$icon,0"
+$stop.WindowStyle = 1
+$stop.Description = 'Stop DWES background processes (no console windows)'
+$stop.Save()
+
 if ($IncludeProd) {
   if (-not (Test-Path $launcherProd)) { throw "Prod launcher not found: $launcherProd" }
   $scp = $sh.CreateShortcut($prodShortcut)
@@ -112,10 +123,11 @@ Write-Host "  Runs     : $launcherDev (windowless)"
 Write-Host "  StartMenu: $smShortcut"
 Write-Host '  Opens    : http://localhost:5175/ (Vite HMR — edit src/ and see live updates)'
 Write-Host '  Mode     : Dev (npm run dev + backend start:dev)'
+Write-Host "  Stop     : $stopShortcut"
 if ($IncludeProd) {
   Write-Host "  Prod     : $prodShortcut → $launcherProd"
 }
-Write-Host '  Stop     : double-click Stop DWES.vbs in the repo folder'
+Write-Host '  Stop     : double-click Stop DWES.cmd in the repo folder'
 Write-Host '  Recreate : npm run shortcut:create'
 Write-Host ''
 if ($removed.Count) {

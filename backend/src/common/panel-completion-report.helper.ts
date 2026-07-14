@@ -1,10 +1,12 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
+import { isPanelDeleted } from './deleted-resource.util';
 import { parseCableStatus, cableStatusCounts } from './cable-status.util';
-import { wiringKpiPercent, compositeKpiPercent } from './kpi.constants';
+import { assignedCableKpiPercent, compositeKpiPercent } from './kpi.constants';
 
-export type PanelReportStatus = 'not_assigned' | 'not_started' | 'in_progress' | 'on_hold' | 'completed';
+/** Executive reports deliberately expose only the two management states. */
+export type PanelReportStatus = 'active' | 'completed';
 
 export interface PanelCompletionReportData {
   project: {
@@ -24,6 +26,7 @@ export interface PanelCompletionReportData {
   };
   reportStatus: PanelReportStatus;
   reportStatusLabel: string;
+  technicians: { fullName: string; username: string }[];
   technician: { fullName: string; username: string } | null;
   midChangeTechnician: { fullName: string; username: string } | null;
   supervisor: { fullName: string } | null;
@@ -104,26 +107,11 @@ export function resolvePanelReportStatus(
     review_status?: string | null;
   } | null | undefined,
 ): { status: PanelReportStatus; label: string } {
-  if (!assignment) {
-    return { status: 'not_assigned', label: 'Not Assigned' };
-  }
-  const raw = (assignment.status || '').toLowerCase();
+  const raw = (assignment?.status || '').toLowerCase();
   if (raw === 'completed') {
     return { status: 'completed', label: 'Completed' };
   }
-  if (raw === 'paused') {
-    return { status: 'on_hold', label: 'On Hold' };
-  }
-  if (raw === 'in_progress') {
-    return { status: 'in_progress', label: 'In Progress' };
-  }
-  if (raw === 'assigned' && !assignment.started_at) {
-    return { status: 'not_started', label: 'Not Started' };
-  }
-  if (raw === 'assigned') {
-    return { status: 'not_started', label: 'Not Started' };
-  }
-  return { status: 'in_progress', label: 'In Progress' };
+  return { status: 'active', label: 'Active' };
 }
 
 export async function collectPanelCompletionReportData(
@@ -132,8 +120,13 @@ export async function collectPanelCompletionReportData(
   frameId: string,
   generatedBy: string,
 ): Promise<PanelCompletionReportData> {
-  const project = await prisma.projects.findUnique({ where: { code: projectCode } });
+  const project = await prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
   if (!project) throw new Error(`Project ${projectCode} not found`);
+
+  if (await isPanelDeleted(prisma, projectCode, frameId)) {
+    FrameStore.blockPanel(projectCode, frameId);
+    throw new Error(`Frame ${frameId} not found`);
+  }
 
   const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
     ?? FrameStore.getFrameFromDisk(projectCode, frameId);
@@ -209,7 +202,9 @@ export async function collectPanelCompletionReportData(
   const openEnd = openEndSource + openEndDestination;
 
   const wiringSeconds = assignment?.total_wiring_seconds || 0;
-  const kpi = wiringKpiPercent(srcDone, dstDone, total);
+  // Canonical DWES panel KPI: completed assigned cables / total assigned cables.
+  // A cable is complete only when both its source and destination are complete.
+  const kpi = assignedCableKpiPercent(completed, total);
   let qcPassRate = 0;
   if (assignment) {
     const inspections = await prisma.panel_inspections.findMany({
@@ -222,7 +217,7 @@ export async function collectPanelCompletionReportData(
     }
   }
   const compositeKpi = compositeKpiPercent(kpi, qcPassRate);
-  const completionPercent = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
+  const completionPercent = kpi;
 
   const sessionRows = tech
     ? await prisma.session_log.findMany({
@@ -260,7 +255,9 @@ export async function collectPanelCompletionReportData(
     .filter(([, st]) => (st.note || '').trim().length > 0)
     .map(([, st]) => st.note!.trim());
 
-  const { status, label } = resolvePanelReportStatus(assignment);
+  const isCompleted = total > 0 && completed >= total;
+  const status: PanelReportStatus = isCompleted ? 'completed' : 'active';
+  const label = status === 'completed' ? 'Completed' : 'Active';
   const generatedAt = new Date();
   const anchorStart = assignment?.assigned_at || project.created_at;
   const meta = decodeProjectMeta(project.description);
@@ -283,6 +280,12 @@ export async function collectPanelCompletionReportData(
     },
     reportStatus: status,
     reportStatusLabel: label,
+    technicians: [...new Map(assignments.map(a => {
+      const u = userMap.get(a.technician_id);
+      return [a.technician_id, u
+        ? { fullName: u.full_name || u.username || '', username: u.username || '' }
+        : { fullName: `Technician #${a.technician_id}`, username: '' }];
+    })).values()],
     technician: tech
       ? { fullName: tech.full_name || tech.username || '', username: tech.username || '' }
       : null,

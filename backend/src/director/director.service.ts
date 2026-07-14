@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
-import { wiringKpiPercent, compositeKpiPercent } from '../common/kpi.constants';
+import { assignedCableKpiPercent, wiringKpiPercent, compositeKpiPercent } from '../common/kpi.constants';
+import { cableStatusCounts, parseCableStatus } from '../common/cable-status.util';
 import { drawEnterpriseFooter, drawEnterpriseHeader, pageBox } from '../common/pdf-report-layout';
 import * as XLSX from 'xlsx';
 import * as PDFDocument from 'pdfkit';
@@ -142,10 +143,6 @@ export class DirectorService {
   }
 
   async projectsSummary() {
-    const STATUS_PRIORITY: Record<string, number> = {
-      in_progress: 0, assigned: 1, paused: 2, completed: 3,
-    };
-
     const [projects, assignments, techs] = await Promise.all([
       this.prisma.projects.findMany({ where: { is_active: true }, orderBy: { code: 'asc' } }),
       this.prisma.tech_assignments.findMany({ where: { is_hidden: false } }),
@@ -155,51 +152,53 @@ export class DirectorService {
     const techById = new Map(techs.map(t => [t.id, t.full_name ?? `Tech #${t.id}`]));
 
     return projects.map(project => {
-      const panelRows = assignments.filter(a => a.project_code === project.code);
-
-      panelRows.sort((a, b) => {
-        const pa = STATUS_PRIORITY[a.status ?? ''] ?? 99;
-        const pb = STATUS_PRIORITY[b.status ?? ''] ?? 99;
-        return pa !== pb ? pa - pb : (a.panel_name ?? '').localeCompare(b.panel_name ?? '');
-      });
-
-      const totalCables = panelRows.reduce((s, a) => s + (a.cables_total ?? 0), 0);
-      const srcDone = panelRows.reduce((s, a) => s + (a.cables_src_done ?? 0), 0);
-      const dstDone = panelRows.reduce((s, a) => s + (a.cables_dst_done ?? 0), 0);
-      const wiringPct = totalCables > 0 ? Math.round(((srcDone + dstDone) / (totalCables * 2)) * 100) : 0;
+      // One live row per panel. A reassignment/changeover must not double-count
+      // the same panel's assigned cable total in an executive KPI.
+      const latestByFrame = new Map<string, (typeof assignments)[number]>();
+      for (const a of assignments.filter(row => row.project_code === project.code)) {
+        const previous = latestByFrame.get(a.frame_id);
+        if (!previous || a.id > previous.id) latestByFrame.set(a.frame_id, a);
+      }
+      const panelRows = [...latestByFrame.values()]
+        .sort((a, b) => (a.panel_name ?? a.frame_id).localeCompare(b.panel_name ?? b.frame_id));
 
       const panels = panelRows.map(a => {
         const ct = a.cables_total ?? 0;
-        const sd = a.cables_src_done ?? 0;
-        const dd = a.cables_dst_done ?? 0;
+        const counts = cableStatusCounts(parseCableStatus(a.cable_status), ct);
+        const completed = Math.min(ct, counts.bothDone);
+        const kpi = assignedCableKpiPercent(completed, ct);
+        const completedState = ct > 0 && completed >= ct;
         return {
           panelName: a.panel_name || a.frame_id,
           frameId: a.frame_id,
           assignmentId: a.id,
-          status: a.status || 'assigned',
+          status: completedState ? 'Completed' : 'Active',
           cablesTotal: ct,
-          cablesSrcDone: sd,
-          cablesDstDone: dd,
-          wiringPct: ct > 0 ? Math.round(((sd + dd) / (ct * 2)) * 100) : 0,
+          cablesCompleted: completed,
+          cablesRemaining: Math.max(0, ct - completed),
+          kpi,
           technicianName: techById.get(a.technician_id) ?? 'Unassigned',
-          reviewStatus: a.review_status ?? null,
-          qcStatus: a.qc_status ?? null,
         };
       });
+
+      const totalCables = panels.reduce((s, p) => s + p.cablesTotal, 0);
+      const completedCables = panels.reduce((s, p) => s + p.cablesCompleted, 0);
+      const kpi = assignedCableKpiPercent(completedCables, totalCables);
+      const completedPanels = panels.filter(p => p.status === 'Completed').length;
+      const status = panels.length > 0 && completedPanels === panels.length ? 'Completed' : 'Active';
 
       return {
         project: {
           code: project.code,
           name: project.name,
           client: project.client,
-          state: project.project_state,
+          status,
           panelCount: panelRows.length,
-          panelsCompleted: panelRows.filter(a => a.status === 'completed').length,
-          panelsInProgress: panelRows.filter(a => a.status === 'in_progress').length,
+          panelsCompleted: completedPanels,
           totalCables,
-          cablesSrcDone: srcDone,
-          cablesDstDone: dstDone,
-          wiringPct,
+          completedCables,
+          remainingCables: Math.max(0, totalCables - completedCables),
+          kpi,
         },
         panels,
       };

@@ -6,12 +6,15 @@ const { MockStore } = require('../dist/data/mock-store');
 const { FrameStore } = require('../dist/frames/frame-store');
 
 function prismaForProjects(overrides = {}) {
+  const projectOverrides = overrides.projects || {};
   return {
     projects: {
       findUnique: async () => null,
+      findFirst: projectOverrides.findFirst || projectOverrides.findUnique || (async () => null),
+      findMany: async () => [],
       create: async ({ data }) => ({ id: 1, ...data }),
       update: async ({ data }) => ({ ...data }),
-      ...(overrides.projects || {}),
+      ...projectOverrides,
     },
     tech_assignments: {
       findMany: async () => [],
@@ -19,6 +22,18 @@ function prismaForProjects(overrides = {}) {
     },
   };
 }
+
+test('ProjectsService.findAll always requests active database projects only', async () => {
+  const service = new ProjectsService(prismaForProjects({
+    projects: {
+      findMany: async (args) => {
+        assert.deepEqual(args, { where: { is_active: true }, orderBy: { sequence: 'asc' } });
+        return [{ code: 'ACTIVE', is_active: true }];
+      },
+    },
+  }));
+  assert.deepEqual(await service.findAll(), [{ code: 'ACTIVE', is_active: true }]);
+});
 
 test('ProjectsService.create rejects empty panel list', async () => {
   const service = new ProjectsService(prismaForProjects());

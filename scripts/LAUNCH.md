@@ -22,7 +22,9 @@ Health gate: `http://127.0.0.1:3001/api/health` must return `{ status: "ok" }` b
 5. **Frontend** — start Vite / preview, wait for full stack (up to 240s)
 6. **Browser** — open only when both FE + BE are healthy
 
-The login page shows **“Server is still starting”** and disables Sign In until `/api/health` succeeds (polls every 5s).
+If the backend is unavailable, the login page explains that DWES must be
+started manually and disables Sign In until `/api/health` succeeds (polls every
+5 seconds). It does not claim that automatic startup is running.
 
 Troubleshoot: `npm run startup:logs` or `Get-Content logs\launcher.log -Tail 40`
 
@@ -60,25 +62,16 @@ If the tab was opened as an installed PWA / “Open as app”, HMR websockets ca
 - Wrong-mode FE on `:5175` (e.g. preview while launching Dev) → frees **only** the FE port via `check-dev-ports.mjs`, then starts the correct server.
 - Lock metadata: `logs/dwes.lock` (mode + ports). Process logs: `logs/launcher.log`, `logs/backend.log`, `logs/frontend.log`.
 
-## Autostart (recommended for laptops)
+## Automatic startup
 
-Registers Task Scheduler **DWES App** — runs **60 seconds after user logon** (PostgreSQL + OneDrive settle time), then the full cold boot sequence above. Fully automatic; no manual Start DWES needed after reboot.
+Automatic startup is disabled. DWES does not start the frontend, backend,
+database, browser, or a watchdog when Windows boots or a user signs in.
 
-```powershell
-# Dev at logon (default)
-npm run autostart:register
+Retired autostart registration and backend-runner entry points are retained as
+no-ops so legacy shortcuts or tasks cannot recreate background startup.
 
-# Prod at logon
-npm run autostart:register:prod
-
-# Check logs after reboot
-npm run startup:logs
-
-# Unregister
-Unregister-ScheduledTask -TaskName 'DWES App' -Confirm:$false
-```
-
-No admin required for a per-user logon task. Task name: **DWES App**.
+Start it manually with **Start DWES.cmd** or **Start DWES (Hidden).vbs** in the
+project root. Use **Stop DWES.vbs** to stop the manually started stack.
 
 ## Manual test checklist
 

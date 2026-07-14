@@ -64,7 +64,7 @@ function UploadSection({
   };
 
   return (
-    <section className={`rounded-[12px] border ${accentBorder} bg-white overflow-hidden`}>
+    <section className={`rounded-[12px] border ${accentBorder} bg-[var(--t-surface-white)] overflow-hidden`}>
       <div className={`flex items-start gap-3 px-4 py-3.5 ${accentBg} border-b ${accentBorder}`}>
         <div className={`flex items-center justify-center w-10 h-10 rounded-[10px] shrink-0 ${accentIconBg}`}>
           {icon}
@@ -126,7 +126,7 @@ function UploadSection({
             {files.map(f => (
               <li
                 key={f.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-slate-200 transition-colors"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-slate-100 bg-slate-50/60 hover:bg-[var(--t-surface-white)] hover:border-slate-200 transition-colors"
               >
                 <FileText size={18} className="text-red-500 shrink-0" strokeWidth={1.5} />
                 <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ function UploadSection({
                     title="View file"
                     disabled={viewingId === f.id}
                     onClick={() => onView(f)}
-                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-[var(--t-surface-white)] text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50"
                   >
                     {viewingId === f.id
                       ? <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin block" />
@@ -154,7 +154,7 @@ function UploadSection({
                     type="button"
                     title="Delete file"
                     onClick={() => onDelete(f)}
-                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-white text-slate-500 hover:text-red-600 hover:border-red-200 transition-colors"
+                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-[var(--t-surface-white)] text-slate-500 hover:text-red-600 hover:border-red-200 transition-colors"
                   >
                     <Trash2 size={16} strokeWidth={1.5} />
                   </button>

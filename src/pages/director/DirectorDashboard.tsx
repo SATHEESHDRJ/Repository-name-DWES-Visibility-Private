@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Activity, BarChart3, CheckCheck, Clock3, Download, FolderKanban, Users,
 } from '../../components/ui/icons';
@@ -12,29 +12,35 @@ import ActivityTab from './tabs/ActivityTab';
 import WorkforceTab from './tabs/WorkforceTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import UsersTab from '../supervisor/tabs/UsersTab';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
 
 const TABS = [
-  { key: 'summary',   label: 'Project Summary', icon: <FolderKanban size={20} />, description: 'Enterprise project status, completion metrics, and portfolio overview.' },
-  { key: 'analytics', label: 'KPI Analytics',   icon: <BarChart3 size={20} />, description: 'Trend analysis and performance indicators across active projects.' },
-  { key: 'workforce', label: 'Workforce KPI',   icon: <Users size={20} />, description: 'Technician productivity, utilization, and assignment throughput.' },
-  { key: 'users',     label: 'Users',           icon: <Users size={20} />, description: 'Read-only user directory — exact login usernames and role assignments.' },
-  { key: 'activity',  label: 'Activity Log',    icon: <Activity size={20} />, description: 'Recent system events, submissions, and operational activity.' },
-  { key: 'export',    label: 'Export',          icon: <Download size={20} />, description: 'Download reports and data exports for executive review.' },
+  { key: 'summary', label: 'Project Summary', icon: <FolderKanban size={20} />, description: 'Live assigned-cable progress across every project and panel.' },
+  { key: 'analytics', label: 'KPI Analytics', icon: <BarChart3 size={20} />, description: 'Trend analysis and performance indicators across active projects.' },
+  { key: 'workforce', label: 'Workforce KPI', icon: <Users size={20} />, description: 'Technician productivity, utilization, and assignment throughput.' },
+  { key: 'users', label: 'Users', icon: <Users size={20} />, description: 'Read-only user directory — exact login usernames and role assignments.' },
+  { key: 'activity', label: 'Activity Log', icon: <Activity size={20} />, description: 'Recent system events, submissions, and operational activity.' },
+  { key: 'export', label: 'Export', icon: <Download size={20} />, description: 'Download reports and data exports for executive review.' },
 ];
 
 export default function DirectorDashboard() {
   const { user } = useAuthStore();
   const [tab, setTab] = useState('summary');
   const [stats, setStats] = useState<any>(null);
+  const requests = useLatestRequest();
 
-  const loadStats = () => {
-    directorApi.stats().then(setStats).catch(() => {});
-  };
+  const loadStats = useCallback(async () => {
+    const request = requests.begin();
+    setStats(null);
+    try {
+      const next = await directorApi.stats(request.signal);
+      if (requests.isLatest(request.id)) setStats(next);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) setStats(null);
+    }
+  }, [requests]);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
+  useEffect(() => { void loadStats(); }, [loadStats]);
   useDwesRefresh(loadStats);
 
   return (
@@ -48,9 +54,9 @@ export default function DirectorDashboard() {
       badgeVariant="gray"
       widthVariant="wide"
       kpis={stats ? [
-        { label: 'Completed',  value: stats.panels_completed,    color: 'completed', icon: <CheckCheck size={24} /> },
-        { label: 'Pending QC', value: stats.panels_ready_for_qc, color: 'qaqc',      icon: <Clock3 size={24} /> },
-        { label: 'Approvals',  value: stats.pending_approvals,   color: stats.pending_approvals > 0 ? 'warning' : 'default', icon: <CheckCheck size={24} /> },
+        { label: 'Completed', value: stats.panels_completed, color: 'completed', icon: <CheckCheck size={24} /> },
+        { label: 'Pending QC', value: stats.panels_ready_for_qc, color: 'qaqc', icon: <Clock3 size={24} /> },
+        { label: 'Approvals', value: stats.pending_approvals, color: stats.pending_approvals > 0 ? 'warning' : 'default', icon: <CheckCheck size={24} /> },
       ] : []}
     >
       {tab === 'summary' && <div className="dash-module"><SummaryReportTab /></div>}

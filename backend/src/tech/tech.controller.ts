@@ -17,7 +17,7 @@ export class TechController {
 
   @Post('assign-frame')
   @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'qaqc_engineer')
+  @Roles('prod_supervisor')
   assignFrame(@Body() dto: { project_code: string; frame_id: string; technician_id: number }, @CurrentUser() user: User) {
     return this.svc.assignFrame({ ...dto, assigned_by_id: user.id });
   }

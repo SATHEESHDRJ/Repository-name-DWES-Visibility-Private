@@ -1,12 +1,5 @@
-' ============================================================
-'  DWES backend — windowless launcher.
-'  Runs run-backend.bat with a hidden window (0) and does not
-'  wait, so the "DWES Backend" scheduled task fires this at logon
-'  and the API runs in the background with no console window.
-' ============================================================
-Dim sh, q, bat, fso
-Set sh = CreateObject("WScript.Shell")
-Set fso = CreateObject("Scripting.FileSystemObject")
-q = Chr(34)
-bat = fso.BuildPath(fso.GetParentFolderName(WScript.ScriptFullName), "run-backend.bat")
-sh.Run "cmd /c " & q & bat & q, 0, False
+' DWES backend automatic startup is intentionally disabled.
+'
+' This retired entry point remains as a no-op so any stale scheduled task or
+' shortcut cannot launch the backend in the background.
+WScript.Quit 0

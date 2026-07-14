@@ -10,9 +10,8 @@ import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
-import PdfDrawingUploadModal from '../../../components/supervisor/PdfDrawingUploadModal';
-import PanelDrawingViewModal from '../../../components/supervisor/PanelDrawingViewModal';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
+import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
 import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelConfirmModal';
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
@@ -41,6 +40,7 @@ import { buildPanelReportFilename } from '../../../utils/reportFilename';
 import { useProjectSelectionStore } from '../../../store/useProjectSelectionStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 export interface ProjectsTabProps {
   onOpenTechnicianWorkflow?: (opts: {
@@ -72,6 +72,8 @@ interface CreateForm {
   monthYear: string;
   seq: string;
 }
+
+const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
 
 interface PanelDraft {
   key: string;
@@ -183,6 +185,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const { user } = useAuthStore();
   const sessionCode = useProjectSelectionStore(s => s.selectedProject?.code ?? null);
   const setSessionProject = useProjectSelectionStore(s => s.setProjectForUser);
+  const clearSessionProject = useProjectSelectionStore(s => s.clearProjectForUser);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -195,10 +198,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
   const [loadingPanels, setLoadingPanels] = useState(false);
   const [showWiringUpload, setShowWiringUpload] = useState(false);
-  const [showDrawingPicker, setShowDrawingPicker] = useState(false);
-  const [drawingUploadType, setDrawingUploadType] = useState<'pdf' | 'dwg' | null>(null);
-  const [showDrawingView, setShowDrawingView] = useState(false);
   const [showWiringView, setShowWiringView] = useState(false);
+  const [showGaDrawingView, setShowGaDrawingView] = useState(false);
   const [reportMenuOpen, setReportMenuOpen] = useState(false);
   const reportMenuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
@@ -213,66 +214,72 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [deleteProjectConfirmed, setDeleteProjectConfirmed] = useState(false);
   const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
   const createModalScrollRef = useRef<HTMLFormElement>(null);
-  const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
   const [form, setForm] = useState<CreateForm>(emptyForm);
   const [panels, setPanels] = useState<PanelDraft[]>([newPanelDraft()]);
+  const projectRequests = useLatestRequest();
+  const panelRequests = useLatestRequest();
 
-  const resetCreateForm = () => {
+  const resetCreateForm = useCallback(() => {
     setForm(emptyForm);
     setPanels([newPanelDraft()]);
     setSubmitted(false);
     setError('');
-  };
+  }, []);
 
   const closeCreateModal = useCallback(() => {
     if (saving) return;
     setShowCreate(false);
     resetCreateForm();
-  }, [saving]);
+  }, [saving, resetCreateForm]);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    const request = projectRequests.begin();
+    panelRequests.cancel();
     setLoading(true);
-    projectsApi.list().then(data => {
+    setSelectedProject(null);
+    setProjectPanels([]);
+    setSelectedPanelId('');
+    setLoadingPanels(false);
+    try {
+      const data = await projectsApi.list(request.signal) as Project[];
+      if (!projectRequests.isLatest(request.id)) return;
       setProjects(data);
-      setLoading(false);
-      setSelectedProject(prev => {
-        if (!prev) return prev;
-        return data.find((p: Project) => p.code === prev.code) ?? null;
-      });
-    }).catch(() => setLoading(false));
-  }, []);
-
-  const pollProjects = useCallback(() => {
-    projectsApi.list().then(data => {
-      setProjects(data);
-    }).catch(() => {});
-  }, []);
+    } catch (requestError: any) {
+      if (requestError?.code !== 'ERR_CANCELED' && projectRequests.isLatest(request.id)) {
+        setProjects([]);
+      }
+      return;
+    } finally {
+      if (projectRequests.isLatest(request.id)) setLoading(false);
+    }
+  }, [panelRequests, projectRequests]);
 
   const reloadProjectPanels = useCallback((projectCode: string, options?: { silent?: boolean }) => {
+    const request = panelRequests.begin();
     if (!options?.silent) setLoadingPanels(true);
-    return projectsApi.frames(projectCode)
+    return projectsApi.frames(projectCode, request.signal)
       .then(data => {
+        if (!panelRequests.isLatest(request.id)) return;
         const list = data as FramePanel[];
         setProjectPanels(list);
         setSelectedPanelId(prev => {
           if (prev && list.some(p => p.id === prev)) return prev;
-          if (list.length === 1) return list[0].id;
-          return '';
+          return list[0]?.id ?? '';
         });
       })
-      .catch(() => {
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
         setProjectPanels([]);
         setSelectedPanelId('');
       })
       .finally(() => {
-        if (!options?.silent) setLoadingPanels(false);
+        if (!options?.silent && panelRequests.isLatest(request.id)) setLoadingPanels(false);
       });
-  }, []);
+  }, [panelRequests]);
 
   useEffect(() => { load(); }, [load]);
   useDwesRefresh(() => {
-    pollProjects();
-    if (selectedProject?.code) reloadProjectPanels(selectedProject.code, { silent: true });
+    return load();
   });
 
   useEffect(() => {
@@ -290,21 +297,37 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setDuplicateBannerDismissed(false);
   }, [selectedProject?.code, selectedPanelId]);
 
-  useEffect(() => {
-    if (!selectedProject?.code) return;
-    return onFramesChanged((detail) => {
-      if (detail.projectCode === selectedProject.code) {
-        setDuplicateBannerDismissed(false);
+  useEffect(() => onFramesChanged((detail) => {
+    if (detail.action === 'deleted') {
+      projectRequests.cancel();
+      panelRequests.cancel();
+    }
+    if (detail.action === 'deleted' && (detail.entity ?? (detail.frameId ? 'panel' : 'project')) === 'project') {
+      setProjects(current => current.filter(project => project.code !== detail.projectCode));
+      if (selectedProject?.code === detail.projectCode) {
+        setSelectedProject(null);
+        setProjectPanels([]);
+        setSelectedPanelId('');
+        if (user?.id) clearSessionProject(user.id);
       }
-    });
-  }, [selectedProject?.code]);
+    }
+    if (detail.projectCode === selectedProject?.code) {
+      setDuplicateBannerDismissed(false);
+      if (detail.action === 'deleted' && detail.frameId) {
+        setProjectPanels(current => current.filter(panel => panel.id !== detail.frameId));
+        setSelectedPanelId(current => current === detail.frameId ? '' : current);
+        setShowWiringView(false);
+        setShowGaDrawingView(false);
+      }
+    }
+  }), [clearSessionProject, panelRequests, projectRequests, selectedProject?.code, user?.id]);
 
   useEffect(() => {
     if (!selectedProject?.code) return;
     return onDocumentsChanged((detail) => {
       if (detail.projectCode !== selectedProject.code) return;
       if (detail.kind === 'drawing' && detail.action === 'deleted') {
-        setShowDrawingView(false);
+        setShowGaDrawingView(false);
       }
       if (detail.kind === 'wiring' || detail.kind === 'both') {
         void reloadProjectPanels(selectedProject.code, { silent: true });
@@ -320,14 +343,34 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   }, [selectedProject?.code, reloadProjectPanels]);
 
   useEffect(() => {
-    if (!projects.length || !sessionCode || selectedProject) return;
-    const match = projects.find((p: Project) => p.code === sessionCode);
-    if (!match) return;
+    if (loading) return;
+    const current = selectedProject
+      ? projects.find((project: Project) => project.code === selectedProject.code)
+      : null;
+    const sessionMatch = sessionCode
+      ? projects.find((project: Project) => project.code === sessionCode)
+      : null;
+    const match = current ?? sessionMatch ?? projects[0] ?? null;
+    if (!match) {
+      if (selectedProject) setSelectedProject(null);
+      if (user?.id) clearSessionProject(user.id);
+      return;
+    }
+    if (selectedProject?.code === match.code && selectedProject === match) return;
     setLoadingPanels(true);
     setProjectPanels([]);
     setSelectedPanelId('');
     setSelectedProject(match);
-  }, [projects, sessionCode, selectedProject]);
+    if (user?.id) {
+      setSessionProject({
+        code: match.code,
+        name: match.name,
+        client: match.client,
+        project_state: match.project_state,
+        is_active: match.is_active,
+      }, user.id);
+    }
+  }, [clearSessionProject, loading, projects, selectedProject, sessionCode, setSessionProject, user?.id]);
 
   useEffect(() => {
     if (!selectedProject?.code) {
@@ -336,27 +379,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       setLoadingPanels(false);
       return;
     }
-    let cancelled = false;
-    setLoadingPanels(true);
-    projectsApi.frames(selectedProject.code)
-      .then(data => {
-        if (cancelled) return;
-        const list = data as FramePanel[];
-        setProjectPanels(list);
-        setSelectedPanelId(prev => {
-          if (prev && list.some(p => p.id === prev)) return prev;
-          if (list.length === 1) return list[0].id;
-          return '';
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setProjectPanels([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingPanels(false);
-      });
-    return () => { cancelled = true; };
-  }, [selectedProject?.code]);
+    void reloadProjectPanels(selectedProject.code);
+  }, [selectedProject?.code, reloadProjectPanels]);
 
   const activePanelOptions = useMemo(
     () => buildProjectPanelSelectList(projectPanels),
@@ -590,10 +614,29 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setDeleting(true);
     try {
       await projectsApi.remove(project.code);
-      setProjects(prev => prev.filter(p => p.code !== project.code));
-      emitFramesChanged({ projectCode: project.code, action: 'deleted' });
-      setSelectedProject(prev => (prev?.code === project.code ? null : prev));
-      if (selectedProject?.code === project.code) setSelectedPanelId('');
+      const remaining = projects.filter(item => item.code !== project.code);
+      const nextProject = remaining[0] ?? null;
+      setProjects(remaining);
+      emitFramesChanged({ projectCode: project.code, entity: 'project', action: 'deleted' });
+      if (selectedProject?.code === project.code) {
+        setSelectedProject(nextProject);
+        setSelectedPanelId('');
+        setProjectPanels([]);
+        if (user?.id) {
+          if (nextProject) {
+            setSessionProject({
+              code: nextProject.code,
+              name: nextProject.name,
+              client: nextProject.client,
+              project_state: nextProject.project_state,
+              is_active: nextProject.is_active,
+            }, user.id);
+          } else {
+            clearSessionProject(user.id);
+          }
+        }
+      }
+      await load();
       setDeleteProjectTarget(null);
       setDeleteProjectConfirmed(false);
       setToast({ message: 'Project permanently deleted.', tone: 'success' });
@@ -617,9 +660,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const handlePanelDeleted = async (panelId: string) => {
     if (!selectedProject) return;
     const panel = projectPanels.find(p => p.id === panelId);
-    setProjectPanels(prev => prev.filter(p => p.id !== panelId));
-    setSelectedPanelId(prev => (prev === panelId ? '' : prev));
-    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, action: 'deleted' });
+    const remainingPanels = projectPanels.filter(item => item.id !== panelId);
+    setProjectPanels(remainingPanels);
+    setSelectedPanelId(prev => (prev === panelId ? (remainingPanels[0]?.id ?? '') : prev));
+    setShowWiringView(false);
+    setShowGaDrawingView(false);
+    setReportMenuOpen(false);
+    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, entity: 'panel', action: 'deleted' });
     await reloadProjectPanels(selectedProject.code);
     closeDeletePanelModal();
     setToast({
@@ -656,7 +703,9 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     selectedPanel?.panel_name,
     duplicateBannerDismissed,
   );
-  const gateHint = !selectedProject
+  const gateHint = loading
+    ? 'Loading projects from the database…'
+    : !selectedProject
     ? 'Select a project and panel to enable wiring upload, drawing upload, and reports.'
     : loadingPanels
       ? 'Loading panels for this project…'
@@ -682,7 +731,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             onChange={e => handleProjectDropdownChange(e.target.value)}
             disabled={loading}
           >
-            <option value="">Select a project…</option>
+            <option value="">{loading ? 'Loading projects…' : projects.length === 0 ? 'No Project Available' : 'Select a project…'}</option>
             {projects.map(p => (
               <option key={p.code} value={p.code}>
                 {projectSelectLabel(p)}
@@ -767,7 +816,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               type="button"
               onClick={() => {
                 setDuplicateBannerDismissed(false);
-                setShowDrawingPicker(true);
+                setShowGaDrawingView(true);
               }}
               disabled={!actionGated}
               className="pj-btn-primary pj-action-btn"
@@ -875,7 +924,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                       setToast({ message: drawingDoc.message ?? 'Failed to open drawing.', tone: 'warn' });
                       return;
                     }
-                    if (drawingReady) setShowDrawingView(true);
+                    if (drawingReady) setShowGaDrawingView(true);
                   }}
                   disabled={!drawingReady || drawingLoading}
                   aria-busy={drawingLoading || undefined}
@@ -913,11 +962,21 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                           ? 'Select a panel first'
                           : !wiringReady
                             ? 'No Wiring Schedule Uploaded'
-                            : `Open Digital Wiring Monitor for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
+                            : `Open Digital Wiring View for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
                   }
                 >
                   {wiringLoading ? <span className="btn-spinner" aria-hidden /> : <LayoutGrid size={16} strokeWidth={1.75} aria-hidden />}
                   <span>Digital Wiring Monitor</span>
+                </button>
+                <button
+                  type="button"
+                  className="pj-info-action pj-info-action--secondary"
+                  onClick={() => setShowGaDrawingView(true)}
+                  disabled={!selectedProject || !selectedPanelId || !selectedPanel}
+                  title={selectedPanel ? `Open drawings for ${selectedPanel.panel_name}` : 'Select a specific panel first'}
+                >
+                  <FileText size={16} strokeWidth={1.75} aria-hidden />
+                  <span>3D GA / 2D Drawing View</span>
                 </button>
                 <button
                   type="button"
@@ -1055,42 +1114,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
 
       {showTeam && <TeamManagementModal onClose={() => setShowTeam(false)} />}
 
-      {showDrawingPicker && selectedProject && (
-        <Modal
-          title="Drawing Upload"
-          onClose={() => setShowDrawingPicker(false)}
-          size="sm"
-          footer={(
-            <button type="button" className="btn-secondary" onClick={() => setShowDrawingPicker(false)}>
-              Cancel
-            </button>
-          )}
-        >
-          <p className="text-[13px] text-slate-600 mb-4">
-            Choose the drawing file type for <strong>{selectedPanel?.panel_name ?? selectedProject.name}</strong>
-            {selectedPanel ? ` (${selectedProject.name})` : ''}.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
-              onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('pdf'); }}
-            >
-              <FileText size={24} className="text-red-500" />
-              <span className="text-[13px] font-semibold">PDF</span>
-            </button>
-            <button
-              type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
-              onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('dwg'); }}
-            >
-              <FileText size={24} className="text-blue-600" />
-              <span className="text-[13px] font-semibold">DWG</span>
-            </button>
-          </div>
-        </Modal>
-      )}
-
       {showWiringUpload && selectedProject && selectedPanelId && (
         <UploadFrameModal
           projectCode={selectedProject.code}
@@ -1123,54 +1146,22 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         />
       )}
 
-      {drawingUploadType && selectedProject && selectedPanelId && (
-        <PdfDrawingUploadModal
-          projectCode={selectedProject.code}
-          projectName={selectedProject.name}
-          panelName={selectedPanel?.panel_name}
-          panelId={selectedPanelId}
-          siblingPanels={projectPanels}
-          onEditPanel={panelId => {
-            const panel = projectPanels.find(p => p.id === panelId);
-            if (panel) {
-              setDrawingUploadType(null);
-              setShowEditPanel(panel);
-            }
-          }}
-          onSelectPanel={setSelectedPanelId}
-          fileType={drawingUploadType}
-          onClose={() => setDrawingUploadType(null)}
-          onUploaded={() => {
-            setToast({ message: `${drawingUploadType.toUpperCase()} drawing uploaded.`, tone: 'success' });
-            if (selectedProject) {
-              emitDocumentsChanged({
-                projectCode: selectedProject.code,
-                frameId: selectedPanelId,
-                kind: 'drawing',
-                action: 'uploaded',
-              });
-              refresh({ drawing: true, wiring: false, showLoading: false });
-            }
-          }}
-        />
-      )}
-
-      {showDrawingView && selectedProject && drawingDoc.drawing && (
-        <PanelDrawingViewModal
-          projectCode={selectedProject.code}
-          drawing={drawingDoc.drawing}
-          panelLabel={selectedPanel?.panel_name ?? selectedProject.name}
-          canDownload={perms.canManageProjects}
-          onClose={() => setShowDrawingView(false)}
-        />
-      )}
-
       {showWiringView && selectedProject && selectedPanelId && selectedPanel && (
         <PanelWiringViewModal
           projectCode={selectedProject.code}
           frameId={selectedPanelId}
           panelLabel={selectedPanel.panel_name}
           onClose={() => setShowWiringView(false)}
+        />
+      )}
+
+      {showGaDrawingView && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelGaDrawingModal
+          projectCode={selectedProject.code}
+          frameId={selectedPanelId}
+          panelName={selectedPanel.panel_name}
+          projectName={selectedProject.name}
+          onClose={() => setShowGaDrawingView(false)}
         />
       )}
 

@@ -3,16 +3,17 @@ import { TECH_STATUS_META, type TechResourceStatus } from '../../utils/assignmen
 type TechnicianStatusIndicatorProps = {
   status: TechResourceStatus;
   compact?: boolean;
+  prominent?: boolean;
 };
 
 /** Consistent technician status marker for every assignment surface. */
-export default function TechnicianStatusIndicator({ status, compact = false }: TechnicianStatusIndicatorProps) {
+export default function TechnicianStatusIndicator({ status, compact = false, prominent = false }: TechnicianStatusIndicatorProps) {
   const meta = TECH_STATUS_META[status];
   const accessibleLabel = status === 'available' ? 'Available' : meta.label;
 
   return (
     <span
-      className={`tech-status-indicator tech-status-indicator--${status}${compact ? ' is-compact' : ''}`}
+      className={`tech-status-indicator tech-status-indicator--${status}${compact ? ' is-compact' : ''}${prominent ? ' is-prominent' : ''}`}
       aria-label={accessibleLabel}
       title={accessibleLabel}
     >

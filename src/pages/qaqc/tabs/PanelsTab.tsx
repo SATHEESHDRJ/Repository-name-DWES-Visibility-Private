@@ -3,6 +3,8 @@ import { qaqcApi } from '../../../services/api';
 import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
 import ProjectInfoCard from '../../../components/ui/ProjectInfoCard';
 import { RefreshCw, ClipboardCheck } from '../../../components/ui/icons';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { onFramesChanged } from '../../../utils/projectFramesEvents';
 
 interface PanelsTabProps {
   onSelectPanel: (panel: any) => void;
@@ -12,23 +14,39 @@ export default function PanelsTab({ onSelectPanel }: PanelsTabProps) {
   const [panels, setPanels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ready' | 'all'>('ready');
+  const requests = useLatestRequest();
 
-  const load = useCallback((options?: { silent?: boolean }) => {
-    if (!options?.silent) setLoading(true);
-    const request = filter === 'ready' ? qaqcApi.readyPanels() : qaqcApi.allCompleted();
-    request.then(data => {
+  const load = useCallback(() => {
+    const request = requests.begin();
+    setLoading(true);
+    setPanels([]);
+    const response = filter === 'ready'
+      ? qaqcApi.readyPanels(request.signal)
+      : qaqcApi.allCompleted(request.signal);
+    return response.then(data => {
+      if (!requests.isLatest(request.id)) return;
       setPanels(data);
-      if (!options?.silent) setLoading(false);
-    }).catch(() => {
-      if (!options?.silent) setLoading(false);
+    }).catch((error: any) => {
+      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) setPanels([]);
+    }).finally(() => {
+      if (requests.isLatest(request.id)) setLoading(false);
     });
-  }, [filter]);
+  }, [filter, requests]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  useDwesRefresh(() => load({ silent: true }), { listenFrames: false });
+  useDwesRefresh(load, { listenFrames: true });
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    requests.cancel();
+    setPanels(current => current.filter(panel => (
+      panel.project_code !== detail.projectCode
+      || (!!detail.frameId && panel.frame_id !== detail.frameId)
+    )));
+  }), [requests]);
 
   if (loading) return <div className="empty-state"><p className="empty-text">Loading panels...</p></div>;
 

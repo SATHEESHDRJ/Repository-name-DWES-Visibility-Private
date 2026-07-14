@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../Modal';
-import { supervisorApi, techApi, usersApi } from '../../services/api';
+import { projectsApi, supervisorApi, techApi, usersApi } from '../../services/api';
 import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useAppDialog } from '../AppDialogProvider';
 import Toast, { type ToastTone } from '../ui/Toast';
-import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
   CHANGEOVER_REASONS,
   type ChangeoverReason,
 } from '../assignment/MidChangeoverModal';
+import type { FramePanel } from '../assignment/ProjectPanelSelect';
 import {
   buildTechResources,
   isActiveAssignment,
@@ -19,18 +20,23 @@ import {
 } from '../../utils/assignmentCenterUtils';
 import {
   ArrowLeftRight,
+  Cable,
+  Check,
   Info,
+  Lock,
+  Search,
   TriangleAlert,
+  UserMinus,
   UserPlus,
   Users,
 } from '../ui/icons';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
 
 /** Kept for drop-in compatibility with the previous Smart Assignment Center entry point. */
 export type TechnicianWorkflowSection = 'assign' | 'deassign' | 'changeover';
 
 export interface TechnicianWorkflowModalProps {
   onClose: () => void;
-  /** Accepted for backward compatibility; the compact modal has no tabs. */
   initialSection?: TechnicianWorkflowSection;
   projectCode: string;
   panelId: string;
@@ -39,48 +45,114 @@ export interface TechnicianWorkflowModalProps {
   cableCount?: number;
 }
 
-type PanelState = 'unassigned' | 'assigned' | 'started';
+type PanelWorkflowStatus = 'available' | 'assigned' | 'working' | 'completed' | 'changed-over';
 
+interface PanelContext {
+  panel: FramePanel;
+  current: AssignmentRow | null;
+  latest: AssignmentRow | null;
+  status: PanelWorkflowStatus;
+  total: number;
+  completed: number;
+  remaining: number;
+  percent: number;
+  hasWork: boolean;
+  started: boolean;
+  canAssign: boolean;
+  canRemove: boolean;
+  canChangeover: boolean;
+  technicianName: string;
+}
 
-function techEngagementLabel(assigned: number, active: number): string {
-  const total = assigned + active;
-  if (total === 0) return 'Free — no active panels';
-  const base = `${total} active panel${total > 1 ? 's' : ''}`;
-  return active > 0 ? `${base} · ${active} in progress` : base;
+const PANEL_STATUS_META: Record<PanelWorkflowStatus, { label: string; className: string }> = {
+  available: { label: 'Available', className: 'pa-status--available' },
+  assigned: { label: 'Assigned', className: 'pa-status--assigned' },
+  working: { label: 'Working', className: 'pa-status--working' },
+  completed: { label: 'Completed', className: 'pa-status--completed' },
+  'changed-over': { label: 'Changed Over', className: 'pa-status--changed' },
+};
+
+function rowTime(row: AssignmentRow): number {
+  const raw = row.completed_at || row.started_at || row.assigned_at;
+  const parsed = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : row.id;
+}
+
+function errorMessage(error: unknown): string {
+  return (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+    || 'Action failed. Please try again.';
+}
+
+function engagementLabel(assigned: number, working: number): string {
+  if (assigned + working === 0) return 'Free — no active panels';
+  const parts: string[] = [];
+  if (assigned > 0) parts.push(`${assigned} assigned`);
+  if (working > 0) parts.push(`${working} working`);
+  return parts.join(' · ');
+}
+
+function technicianStatusLabel(status: TechResource['status']): string {
+  if (status === 'available') return 'Available';
+  if (status === 'assigned') return 'Assigned';
+  return 'Working';
 }
 
 export default function PanelAssignmentModal({
   onClose,
+  initialSection,
   projectCode,
   panelId,
-  panelName,
-  cableCount,
+  projectName,
 }: TechnicianWorkflowModalProps) {
+  const dialog = useAppDialog();
+  const initialised = useRef(false);
   const [techUsers, setTechUsers] = useState<TechUser[]>([]);
   const [allAssignments, setAllAssignments] = useState<AssignmentRow[]>([]);
+  const [panels, setPanels] = useState<FramePanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [busyPanelId, setBusyPanelId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [selectedPanelIds, setSelectedPanelIds] = useState<Set<string>>(new Set());
   const [selectedTechId, setSelectedTechId] = useState<number | null>(null);
+  const [changeoverPanelId, setChangeoverPanelId] = useState<string | null>(null);
   const [changeoverReason, setChangeoverReason] = useState<ChangeoverReason | ''>('');
   const [changeoverNotes, setChangeoverNotes] = useState('');
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [panelQuery, setPanelQuery] = useState('');
+  const [techQuery, setTechQuery] = useState('');
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const requests = useLatestRequest();
 
   const loadContext = useCallback(async () => {
-    const [techs, panels] = await Promise.all([
-      usersApi.technicians().catch(() => []),
-      supervisorApi.allPanels().catch(() => []),
-    ]);
-    setTechUsers(Array.isArray(techs) ? (techs as TechUser[]) : []);
-    setAllAssignments(Array.isArray(panels) ? (panels as AssignmentRow[]) : []);
-  }, []);
+    const request = requests.begin();
+    setLoading(true);
+    setPanels([]);
+    setAllAssignments([]);
+    try {
+      const [techs, assignments, projectPanels] = await Promise.all([
+        usersApi.technicians().catch(() => []),
+        supervisorApi.allPanels(request.signal),
+        projectsApi.frames(projectCode, request.signal),
+      ]);
+      if (!requests.isLatest(request.id)) return;
+      const nextPanels = Array.isArray(projectPanels) ? (projectPanels as FramePanel[]) : [];
+      setTechUsers(Array.isArray(techs) ? (techs as TechUser[]) : []);
+      setAllAssignments(Array.isArray(assignments) ? (assignments as AssignmentRow[]) : []);
+      setPanels(nextPanels);
+      setSelectedPanelIds(current => new Set([...current].filter(id => nextPanels.some(panel => panel.id === id))));
+      if (!nextPanels.some(panel => panel.id === panelId)) onClose();
+    } catch (requestError: any) {
+      if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
+      setPanels([]);
+      setAllAssignments([]);
+      if (requestError?.response?.status === 404) onClose();
+    } finally {
+      if (requests.isLatest(request.id)) setLoading(false);
+    }
+  }, [onClose, panelId, projectCode, requests]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    loadContext().finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    void loadContext();
   }, [loadContext]);
 
   useDwesRefresh(loadContext, { pollMs: 12_000, listenFrames: true, listenWorkflow: true });
@@ -91,322 +163,597 @@ export default function PanelAssignmentModal({
   );
 
   const engagementByTech = useMemo(() => {
-    const map = new Map<number, { assigned: number; active: number }>();
-    for (const a of allAssignments) {
-      if (!isActiveAssignment(a)) continue;
-      const e = map.get(a.technician_id) ?? { assigned: 0, active: 0 };
-      if (String(a.status) === 'assigned') e.assigned += 1;
-      else e.active += 1;
-      map.set(a.technician_id, e);
+    const map = new Map<number, { assigned: number; working: number }>();
+    for (const assignment of allAssignments) {
+      if (!isActiveAssignment(assignment) || assignment.changeover_locked) continue;
+      const current = map.get(assignment.technician_id) ?? { assigned: 0, working: 0 };
+      if (String(assignment.status) === 'assigned' && assignment.handover_from_id == null) current.assigned += 1;
+      else current.working += 1;
+      map.set(assignment.technician_id, current);
     }
     return map;
   }, [allAssignments]);
 
-  const currentAssignment = useMemo(() => {
-    const rows = allAssignments.filter(
-      a => a.project_code === projectCode
-        && a.frame_id === panelId
-        && !a.changeover_locked
-        && isActiveAssignment(a),
+  const panelContexts = useMemo<PanelContext[]>(() => panels.map(panel => {
+    const history = allAssignments
+      .filter(row => row.project_code === projectCode && row.frame_id === panel.id)
+      .sort((a, b) => rowTime(b) - rowTime(a));
+    const active = history.filter(row => !row.changeover_locked && isActiveAssignment(row));
+    const current = active.find(row => String(row.status) === 'in_progress')
+      ?? active.find(row => String(row.status) === 'paused')
+      ?? active.find(row => String(row.status) === 'assigned')
+      ?? null;
+    const latest = current ?? history[0] ?? null;
+    const total = Math.max(0, Number(current?.cables_total ?? latest?.cables_total ?? panel.cable_count ?? 0));
+    const fallbackCompleted = String(latest?.status) === 'completed'
+      ? total
+      : Math.min(Number(latest?.cables_src_done ?? 0), Number(latest?.cables_dst_done ?? 0));
+    const completed = Math.max(0, Math.min(total, Number(latest?.cables_completed ?? fallbackCompleted)));
+    const remaining = Math.max(0, Number(latest?.cables_remaining ?? total - completed));
+    const hasWork = Boolean(
+      current?.has_recorded_work
+      || (current?.cables_src_done ?? 0) > 0
+      || (current?.cables_dst_done ?? 0) > 0,
     );
-    if (!rows.length) return null;
-    for (const s of ['in_progress', 'assigned', 'paused']) {
-      const match = rows.find(a => String(a.status) === s);
-      if (match) return match;
+    const started = Boolean(
+      current
+      && (
+        current.started_at != null
+        || current.handover_from_id != null
+        || String(current.status) !== 'assigned'
+        || hasWork
+      ),
+    );
+
+    let status: PanelWorkflowStatus = 'available';
+    if (current) {
+      if (String(current.status) === 'in_progress' || String(current.status) === 'paused' || (hasWork && current.handover_from_id == null)) {
+        status = 'working';
+      } else if (current.handover_from_id != null) {
+        status = 'changed-over';
+      } else {
+        status = 'assigned';
+      }
+    } else if (String(latest?.status) === 'completed') {
+      status = 'completed';
+    } else if (latest?.changeover_locked || latest?.handover_to_id != null) {
+      status = 'changed-over';
     }
-    return rows[0];
-  }, [allAssignments, projectCode, panelId]);
 
-  const started = currentAssignment
-    ? (currentAssignment.started_at != null
-      || currentAssignment.handover_from_id != null
-      || String(currentAssignment.status) !== 'assigned')
-    : false;
+    const technicianName = current?.technician_name
+      || latest?.technician_name
+      || techUsers.find(tech => tech.id === (current?.technician_id ?? latest?.technician_id))?.full_name
+      || '';
 
-  const panelState: PanelState = !currentAssignment
-    ? 'unassigned'
-    : started ? 'started' : 'assigned';
+    return {
+      panel,
+      current,
+      latest,
+      status,
+      total,
+      completed,
+      remaining,
+      percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      hasWork,
+      started,
+      canAssign: !current && status === 'available' && total > 0,
+      canRemove: Boolean(
+        current
+        && String(current.status) === 'assigned'
+        && !started
+        && current.handover_from_id == null
+        && !current.changeover_locked,
+      ),
+      canChangeover: Boolean(current && started && !current.changeover_locked),
+      technicianName,
+    };
+  }), [allAssignments, panels, projectCode, techUsers]);
 
-  const scheduleReady = (cableCount ?? 0) > 0;
-  const currentTechName = currentAssignment?.technician_name
-    || techUsers.find(t => t.id === currentAssignment?.technician_id)?.full_name
-    || 'Technician';
-  const currentKpi = Number(currentAssignment?.kpi ?? 0);
+  const contextByPanel = useMemo(
+    () => new Map(panelContexts.map(context => [context.panel.id, context])),
+    [panelContexts],
+  );
+  const availablePanels = useMemo(
+    () => panelContexts.filter(context => context.canAssign),
+    [panelContexts],
+  );
+  const changeoverTarget = changeoverPanelId ? contextByPanel.get(changeoverPanelId) ?? null : null;
 
-  // The technician the current panel is assigned to (hidden from the pick list when relevant).
-  const currentTechId = currentAssignment?.technician_id ?? null;
+  useEffect(() => {
+    if (loading || initialised.current || panelContexts.length === 0) return;
+    const initial = contextByPanel.get(panelId);
+    if (initialSection === 'changeover' && initial?.canChangeover) {
+      setChangeoverPanelId(panelId);
+    } else if (initial?.canAssign) {
+      setSelectedPanelIds(new Set([panelId]));
+    }
+    initialised.current = true;
+  }, [contextByPanel, initialSection, loading, panelContexts.length, panelId]);
 
+  useEffect(() => {
+    const assignableIds = new Set(availablePanels.map(context => context.panel.id));
+    setSelectedPanelIds(previous => {
+      const next = new Set([...previous].filter(id => assignableIds.has(id)));
+      if (next.size === previous.size && [...next].every(id => previous.has(id))) return previous;
+      return next;
+    });
+  }, [availablePanels]);
+
+  const selectedContexts = useMemo(
+    () => panelContexts.filter(context => selectedPanelIds.has(context.panel.id)),
+    [panelContexts, selectedPanelIds],
+  );
+  const selectedCableCount = selectedContexts.reduce((sum, context) => sum + context.total, 0);
+  const availableTechCount = techResources.filter(tech => tech.status === 'available').length;
+  const selectedTech = techResources.find(tech => tech.id === selectedTechId) ?? null;
   const reasonValid = changeoverReason !== ''
     && (changeoverReason !== 'Other' || changeoverNotes.trim().length > 0);
-  const canAssign = panelState === 'unassigned' && scheduleReady && selectedTechId != null;
-  const canChangeover = panelState === 'started' && selectedTechId != null && reasonValid;
+  const canAssign = selectedContexts.length > 0 && selectedTech?.status === 'available';
+  const canConfirmChangeover = Boolean(
+    changeoverTarget?.canChangeover
+    && selectedTech?.status === 'available'
+    && selectedTech.id !== changeoverTarget.current?.technician_id
+    && reasonValid,
+  );
 
-  const showToast = (message: string, tone: ToastTone = 'success') => setToast({ message, tone });
+  const filteredPanels = useMemo(() => {
+    const query = panelQuery.trim().toLowerCase();
+    if (!query) return panelContexts;
+    return panelContexts.filter(context => (
+      context.panel.panel_name.toLowerCase().includes(query)
+      || context.panel.id.toLowerCase().includes(query)
+    ));
+  }, [panelContexts, panelQuery]);
 
-  const runAction = async (fn: () => Promise<void>, successMsg: string) => {
+  const filteredTechnicians = useMemo(() => {
+    const query = techQuery.trim().toLowerCase();
+    if (!query) return techResources;
+    return techResources.filter(tech => (
+      tech.full_name.toLowerCase().includes(query)
+      || tech.employee_id.toLowerCase().includes(query)
+      || tech.username.toLowerCase().includes(query)
+    ));
+  }, [techQuery, techResources]);
+
+  const publishPanelChange = (frameId: string) => {
+    emitFramesChanged({ projectCode, frameId, action: 'updated' });
+    emitWorkflowChanged({ scope: 'assignment', projectCode, frameId });
+  };
+
+  const togglePanel = (context: PanelContext) => {
+    if (!context.canAssign || busy) return;
+    setError('');
+    setSelectedPanelIds(previous => {
+      const next = new Set(previous);
+      if (next.has(context.panel.id)) next.delete(context.panel.id);
+      else next.add(context.panel.id);
+      return next;
+    });
+  };
+
+  const toggleAllAvailable = () => {
+    if (busy || availablePanels.length === 0) return;
+    const allSelected = availablePanels.every(context => selectedPanelIds.has(context.panel.id));
+    setSelectedPanelIds(allSelected
+      ? new Set()
+      : new Set(availablePanels.map(context => context.panel.id)));
+  };
+
+  const handleAssign = async () => {
+    if (!canAssign || !selectedTech) return;
+    const confirmed = await dialog.confirm({
+      title: 'Confirm Panel Assignment',
+      tone: 'info',
+      confirmText: selectedContexts.length === 1 ? 'Assign Panel' : `Assign ${selectedContexts.length} Panels`,
+      message: `Assign ${selectedTech.full_name} to ${selectedContexts.length} selected panel${selectedContexts.length === 1 ? '' : 's'} (${selectedCableCount} assigned cables)? Each panel will remain an independent assignment.`,
+    });
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError('');
+    const results = await Promise.allSettled(selectedContexts.map(context => supervisorApi.assignFrame({
+      project_code: projectCode,
+      frame_id: context.panel.id,
+      technician_id: selectedTech.id,
+    })));
+    const successfulIds = results
+      .map((result, index) => result.status === 'fulfilled' ? selectedContexts[index].panel.id : null)
+      .filter((id): id is string => Boolean(id));
+    const failures = results.filter(result => result.status === 'rejected') as PromiseRejectedResult[];
+    successfulIds.forEach(publishPanelChange);
+    await loadContext();
+    setBusy(false);
+    setSelectedTechId(null);
+    setSelectedPanelIds(previous => new Set([...previous].filter(id => !successfulIds.includes(id))));
+
+    if (successfulIds.length > 0) {
+      setToast({
+        tone: 'success',
+        message: `${successfulIds.length} panel assignment${successfulIds.length === 1 ? '' : 's'} confirmed for ${selectedTech.full_name}.`,
+      });
+    }
+    if (failures.length > 0) {
+      setError(`${failures.length} panel assignment${failures.length === 1 ? '' : 's'} could not be completed. ${errorMessage(failures[0].reason)}`);
+    }
+  };
+
+  const handleRemove = async (context: PanelContext) => {
+    if (!context.current || !context.canRemove) {
+      setError('Remove Assignment is unavailable because work has already started. Use Mid Changeover.');
+      return;
+    }
+    const confirmed = await dialog.confirm({
+      title: 'Remove Panel Assignment',
+      tone: 'delete',
+      confirmText: 'Remove Assignment',
+      message: `Remove ${context.technicianName} from ${context.panel.panel_name}? This is allowed only because no Start action or cable work has been recorded.`,
+    });
+    if (!confirmed) return;
+
+    setBusyPanelId(context.panel.id);
+    setError('');
+    try {
+      await techApi.delete(context.current.id);
+      publishPanelChange(context.panel.id);
+      await loadContext();
+      setToast({ tone: 'success', message: `Assignment removed from ${context.panel.panel_name}.` });
+    } catch (actionError) {
+      setError(errorMessage(actionError));
+    } finally {
+      setBusyPanelId(null);
+    }
+  };
+
+  const beginChangeover = (context: PanelContext) => {
+    if (!context.canChangeover) {
+      setError('Mid Changeover becomes available only after the technician starts work.');
+      return;
+    }
+    setChangeoverPanelId(context.panel.id);
+    setSelectedTechId(null);
+    setChangeoverReason('');
+    setChangeoverNotes('');
+    setError('');
+  };
+
+  const cancelChangeover = () => {
+    setChangeoverPanelId(null);
+    setSelectedTechId(null);
+    setChangeoverReason('');
+    setChangeoverNotes('');
+    setError('');
+  };
+
+  const handleChangeover = async () => {
+    if (!canConfirmChangeover || !changeoverTarget?.current || !selectedTech || !changeoverReason) return;
+    const confirmed = await dialog.confirm({
+      title: 'Confirm Mid Changeover',
+      tone: 'warning',
+      confirmText: 'Confirm Changeover',
+      message: `Hand over ${changeoverTarget.panel.panel_name} from ${changeoverTarget.technicianName} to ${selectedTech.full_name}? ${changeoverTarget.completed} completed cables will be preserved and only ${changeoverTarget.remaining} remaining cables will transfer. This action creates a permanent audit record.`,
+    });
+    if (!confirmed) return;
+
     setBusy(true);
     setError('');
     try {
-      await fn();
-      emitFramesChanged({ projectCode, frameId: panelId, action: 'updated' });
-      emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
+      await supervisorApi.midChangeover({
+        old_assignment_id: changeoverTarget.current.id,
+        new_technician_id: selectedTech.id,
+        changeover_reason: changeoverReason,
+        reason_notes: changeoverNotes.trim() || undefined,
+      });
+      publishPanelChange(changeoverTarget.panel.id);
       await loadContext();
-      setSelectedTechId(null);
-      setConfirmRemove(false);
-      showToast(successMsg, 'success');
-    } catch (e) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-        || 'Action failed. Please try again.';
-      setError(msg);
+      setToast({
+        tone: 'success',
+        message: `${changeoverTarget.panel.panel_name} changed over to ${selectedTech.full_name}. Completed work was preserved.`,
+      });
+      cancelChangeover();
+    } catch (actionError) {
+      setError(errorMessage(actionError));
     } finally {
       setBusy(false);
     }
   };
 
-  const handleAssign = () => {
-    if (selectedTechId == null) return;
-    const tech = techResources.find(t => t.id === selectedTechId);
-    void runAction(
-      () => supervisorApi.assignFrame({ project_code: projectCode, frame_id: panelId, technician_id: selectedTechId }),
-      `Panel assigned to ${tech?.full_name ?? 'technician'}`,
-    );
-  };
-
-  const handleRemove = () => {
-    if (!currentAssignment) return;
-    void runAction(
-      () => techApi.delete(currentAssignment.id),
-      'Assignment removed',
-    );
-  };
-
-  const handleChangeover = () => {
-    if (!currentAssignment || selectedTechId == null || !reasonValid) return;
-    const tech = techResources.find(t => t.id === selectedTechId);
-    void runAction(
-      () => supervisorApi.midChangeover({
-        old_assignment_id: currentAssignment.id,
-        new_technician_id: selectedTechId,
-        changeover_reason: changeoverReason,
-        reason_notes: changeoverNotes.trim() || undefined,
-      }),
-      `Changed over to ${tech?.full_name ?? 'new technician'}`,
-    );
-  };
-
-  // Which techs are selectable in the list: everyone when unassigned; everyone except the
-  // current tech when doing a changeover; none when simply assigned-not-started.
-  const selectable = panelState === 'unassigned'
-    || (panelState === 'started');
-  const rowIsSelectable = (t: TechResource) =>
-    selectable && !(panelState === 'started' && t.id === currentTechId);
-
-  const banner = (() => {
-    if (panelState === 'unassigned') {
-      return (
-        <div className="flex items-start gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <UserPlus size={16} className="mt-0.5 shrink-0 text-slate-500" />
-          <div className="text-[13px] text-slate-700">
-            <span className="font-semibold">Unassigned.</span> Select a technician below to assign this panel.
-          </div>
-        </div>
-      );
-    }
-    if (panelState === 'assigned') {
-      return (
-        <div className="flex items-start gap-2 rounded-[10px] border border-blue-200 bg-blue-50 px-3 py-2.5">
-          <Users size={16} className="mt-0.5 shrink-0 text-blue-600" />
-          <div className="text-[13px] text-blue-900">
-            Assigned to <span className="font-semibold">{currentTechName}</span> — not started yet.
-            You can remove this assignment until work begins.
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-start gap-2 rounded-[10px] border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-        <ArrowLeftRight size={16} className="mt-0.5 shrink-0 text-emerald-600" />
-        <div className="text-[13px] text-emerald-900">
-          In progress with <span className="font-semibold">{currentTechName}</span> ({currentKpi}% wired).
-          Work has started — you can only hand over to another technician.
-        </div>
-      </div>
-    );
-  })();
+  const footer = changeoverTarget ? (
+    <>
+      <button onClick={cancelChangeover} className="btn-secondary" type="button" disabled={busy}>
+        Back to panels
+      </button>
+      <button
+        onClick={handleChangeover}
+        className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+        type="button"
+        disabled={busy || !canConfirmChangeover}
+        title={!canConfirmChangeover ? 'Select an available replacement and a changeover reason.' : undefined}
+      >
+        <ArrowLeftRight size={17} />
+        {busy ? 'Processing…' : 'Confirm Mid Changeover'}
+      </button>
+    </>
+  ) : (
+    <>
+      <button onClick={onClose} className="btn-secondary" type="button" disabled={busy}>Close</button>
+      <button
+        onClick={handleAssign}
+        className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+        type="button"
+        disabled={busy || !canAssign}
+        title={!canAssign ? 'Select one or more available panels and an available technician.' : undefined}
+      >
+        <UserPlus size={17} />
+        {busy ? 'Assigning…' : `Assign ${selectedContexts.length || ''} Panel${selectedContexts.length === 1 ? '' : 's'}`}
+      </button>
+    </>
+  );
 
   return (
     <Modal
-      title="Panel Assignment"
-      subtitle={`${projectCode} · ${panelName}${scheduleReady ? ` · ${cableCount} cables` : ''}`}
+      title="Workflow / Panel Assignment"
+      subtitle={`${projectName || projectCode} · Production Supervisor controls`}
       onClose={onClose}
-      size="lg"
-      footer={
-        panelState === 'unassigned' ? (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            <button
-              onClick={handleAssign}
-              disabled={busy || !canAssign}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              type="button"
-            >
-              {busy ? 'Assigning…' : 'Assign panel'}
-            </button>
-          </>
-        ) : panelState === 'assigned' ? (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            {confirmRemove ? (
-              <button
-                onClick={handleRemove}
-                disabled={busy}
-                className="btn-danger disabled:opacity-40 disabled:cursor-not-allowed"
-                type="button"
-              >
-                {busy ? 'Removing…' : 'Confirm remove'}
-              </button>
-            ) : (
-              <button onClick={() => setConfirmRemove(true)} className="btn-danger" type="button">
-                Remove assignment
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            <button
-              onClick={handleChangeover}
-              disabled={busy || !canChangeover}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              type="button"
-            >
-              {busy ? 'Processing…' : 'Confirm Mid-Changeover'}
-            </button>
-          </>
-        )
-      }
+      size="xl"
+      bodyClassName="panel-assignment-modal-body"
+      closeOnBackdrop={!busy && !busyPanelId}
+      closeOnEscape={!busy && !busyPanelId}
+      footer={footer}
     >
-      <div className="flex flex-col gap-4">
-        {banner}
-
-        {!scheduleReady && panelState === 'unassigned' && (
-          <div className="flex items-start gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
-            <div className="text-[13px] text-amber-800">
-              This panel has no imported cables yet — complete the wiring upload before assigning.
-            </div>
+      <div className="pa-shell">
+        <section className="pa-project-summary" aria-label="Active project assignment summary">
+          <div className="pa-project-copy">
+            <span className="pa-kicker">Active project</span>
+            <strong title={projectName || projectCode}>{projectName || projectCode}</strong>
+            <span title={projectCode}>{projectCode}</span>
           </div>
-        )}
+          <span className="pa-project-state"><span />Active</span>
+          <div className="pa-summary-stat"><strong>{panelContexts.length}</strong><span>Panels</span></div>
+          <div className="pa-summary-stat"><strong>{selectedCableCount}</strong><span>Selected cables</span></div>
+          <div className="pa-summary-stat"><strong>{availableTechCount}</strong><span>Available techs</span></div>
+        </section>
 
-        {panelState === 'started' && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="form-label mb-1">Changeover reason <span className="text-red-500">*</span></label>
-              <select
-                value={changeoverReason}
-                onChange={e => { setChangeoverReason(e.target.value as ChangeoverReason | ''); setError(''); }}
-                className="form-select"
-                aria-label="Changeover reason"
-              >
-                <option value="">Select reason…</option>
-                {CHANGEOVER_REASONS.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-            {(changeoverReason === 'Other' || changeoverNotes) && (
+        {changeoverTarget && (
+          <section className="pa-changeover-summary" aria-label="Mid changeover transfer summary">
+            <div className="pa-changeover-heading">
+              <span className="pa-icon-box"><ArrowLeftRight size={18} /></span>
               <div>
-                <label className="form-label mb-1">
-                  Details {changeoverReason === 'Other' && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={changeoverNotes}
-                  onChange={e => { setChangeoverNotes(e.target.value); setError(''); }}
-                  placeholder={changeoverReason === 'Other' ? 'Describe the reason…' : 'Optional notes…'}
-                  className="form-input w-full"
-                />
+                <span className="pa-kicker">Mid Changeover</span>
+                <strong>{changeoverTarget.panel.panel_name}</strong>
+                <span>Outgoing technician: {changeoverTarget.technicianName}</span>
               </div>
-            )}
+            </div>
+            <div className="pa-transfer-count"><strong>{changeoverTarget.completed}</strong><span>Completed preserved</span></div>
+            <div className="pa-transfer-arrow">→</div>
+            <div className="pa-transfer-count pa-transfer-count--remaining"><strong>{changeoverTarget.remaining}</strong><span>Remaining transferred</span></div>
+          </section>
+        )}
+
+        {error && (
+          <div className="pa-error" role="alert">
+            <TriangleAlert size={17} />
+            <span>{error}</span>
           </div>
         )}
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              {panelState === 'started' ? 'Hand over to' : 'Technicians'}
-            </span>
-            {selectable && (
-              <span className="text-[11px] text-slate-400">
-                {panelState === 'started' ? 'Pick a replacement' : 'Pick one to assign'}
-              </span>
-            )}
-          </div>
+        <div className="pa-layout">
+          <section className="pa-section" aria-labelledby="pa-panels-title">
+            <header className="pa-section-header">
+              <div>
+                <span className="pa-step">1</span>
+                <div>
+                  <h3 id="pa-panels-title">Select panels</h3>
+                  <p>{availablePanels.length} ready for assignment · each managed independently</p>
+                </div>
+              </div>
+              {!changeoverTarget && availablePanels.length > 0 && (
+                <button type="button" className="pa-text-button" onClick={toggleAllAvailable} disabled={busy}>
+                  {availablePanels.every(context => selectedPanelIds.has(context.panel.id)) ? 'Clear all' : 'Select all ready'}
+                </button>
+              )}
+            </header>
 
-          {loading ? (
-            <p className="py-6 text-center text-[13px] text-slate-400">Loading technicians…</p>
-          ) : techResources.length === 0 ? (
-            <p className="py-6 text-center text-[13px] text-slate-400">No active technicians found.</p>
-          ) : (
-            <ul className="flex max-h-[46vh] flex-col gap-1.5 overflow-y-auto pr-1">
-              {techResources.map(t => {
-                const eng = engagementByTech.get(t.id) ?? { assigned: 0, active: 0 };
-                const isCurrent = t.id === currentTechId;
-                const canPick = rowIsSelectable(t);
-                const isSelected = selectedTechId === t.id;
+            <label className="pa-search">
+              <Search size={17} />
+              <input
+                value={panelQuery}
+                onChange={event => setPanelQuery(event.target.value)}
+                placeholder="Search panels"
+                aria-label="Search panels"
+              />
+            </label>
+
+            <div className="pa-panel-list">
+              {loading ? (
+                <p className="pa-empty">Loading project panels…</p>
+              ) : filteredPanels.length === 0 ? (
+                <p className="pa-empty">No panels match this search.</p>
+              ) : filteredPanels.map(context => {
+                const selected = selectedPanelIds.has(context.panel.id);
+                const statusMeta = PANEL_STATUS_META[context.status];
+                const actionBusy = busyPanelId === context.panel.id;
                 return (
-                  <li key={t.id}>
+                  <article
+                    key={context.panel.id}
+                    className={`pa-panel-card${selected ? ' is-selected' : ''}${changeoverPanelId === context.panel.id ? ' is-changeover' : ''}`}
+                  >
                     <button
                       type="button"
-                      disabled={!canPick}
-                      onClick={() => canPick && setSelectedTechId(isSelected ? null : t.id)}
-                      className={[
-                        'flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition-colors',
-                        isSelected
-                          ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'
-                          : 'border-slate-200 bg-white',
-                        canPick ? 'hover:border-slate-300 hover:bg-slate-50 cursor-pointer' : 'cursor-default',
-                        !canPick && !isCurrent ? 'opacity-70' : '',
-                      ].join(' ')}
+                      className="pa-panel-main"
+                      onClick={() => togglePanel(context)}
+                      disabled={!context.canAssign || busy || Boolean(changeoverTarget)}
+                      aria-pressed={selected}
+                      title={!context.canAssign && context.total === 0
+                        ? 'Upload a wiring schedule before assigning this panel.'
+                        : !context.canAssign ? `Panel is ${statusMeta.label.toLowerCase()}.` : 'Select panel for assignment'}
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600">
-                        {t.initials}
+                      <span className={`pa-checkbox${selected ? ' is-checked' : ''}`} aria-hidden="true">
+                        {selected && <Check size={14} />}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-[13px] font-semibold text-slate-900">{t.full_name}</span>
-                          {isCurrent && (
-                            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                              Current
-                            </span>
-                          )}
+                      <span className="pa-panel-copy">
+                        <span className="pa-panel-title-row">
+                          <strong title={context.panel.panel_name}>{context.panel.panel_name}</strong>
+                          <span className={`pa-status ${statusMeta.className}`}><span />{statusMeta.label}</span>
                         </span>
-                        <span className="truncate text-[11px] text-slate-500">
-                          {techEngagementLabel(eng.assigned, eng.active)}
+                        <span className="pa-panel-id" title={context.panel.id}>{context.panel.id}</span>
+                        <span className="pa-panel-meta">
+                          <span><Cable size={14} />{context.total} assigned cables</span>
+                          {context.technicianName && <span><Users size={14} />{context.technicianName}</span>}
+                        </span>
+                        <span className="pa-progress-row">
+                          <span className="pa-progress-track"><span style={{ width: `${context.percent}%` }} /></span>
+                          <span>{context.completed}/{context.total} · {context.percent}%</span>
                         </span>
                       </span>
-                      <TechnicianStatusIndicator status={t.status} />
                     </button>
-                  </li>
+
+                    <div className="pa-panel-actions">
+                      {context.canRemove && (
+                        <button
+                          type="button"
+                          className="pa-action pa-action--danger"
+                          onClick={() => void handleRemove(context)}
+                          disabled={actionBusy || busy}
+                        >
+                          <UserMinus size={15} />
+                          {actionBusy ? 'Removing…' : 'Remove Assignment'}
+                        </button>
+                      )}
+                      {context.canChangeover && (
+                        <button
+                          type="button"
+                          className="pa-action pa-action--primary"
+                          onClick={() => beginChangeover(context)}
+                          disabled={busy || Boolean(busyPanelId)}
+                        >
+                          <ArrowLeftRight size={15} />Mid Changeover
+                        </button>
+                      )}
+                      {!context.canRemove && !context.canChangeover && (
+                        <span className="pa-action-note">
+                          {context.status === 'completed'
+                            ? <><Check size={14} />Work complete · history retained</>
+                            : context.total === 0
+                              ? <><TriangleAlert size={14} />Wiring schedule required</>
+                              : <><Info size={14} />Select to assign</>}
+                        </span>
+                      )}
+                      {context.canRemove && <span className="pa-lock-note">Available until work starts</span>}
+                      {context.canChangeover && <span className="pa-lock-note"><Lock size={13} />Removal locked after start</span>}
+                    </div>
+                  </article>
                 );
               })}
-            </ul>
-          )}
+            </div>
+          </section>
+
+          <section className="pa-section" aria-labelledby="pa-tech-title">
+            <header className="pa-section-header">
+              <div>
+                <span className="pa-step">2</span>
+                <div>
+                  <h3 id="pa-tech-title">{changeoverTarget ? 'Choose replacement' : 'Choose technician'}</h3>
+                  <p>Only available technicians can be selected</p>
+                </div>
+              </div>
+            </header>
+
+            {changeoverTarget && (
+              <div className="pa-changeover-fields">
+                <label>
+                  <span>Changeover reason <b>*</b></span>
+                  <select
+                    className="form-select"
+                    value={changeoverReason}
+                    onChange={event => { setChangeoverReason(event.target.value as ChangeoverReason | ''); setError(''); }}
+                  >
+                    <option value="">Select reason…</option>
+                    {CHANGEOVER_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Supervisor notes {changeoverReason === 'Other' && <b>*</b>}</span>
+                  <input
+                    className="form-input"
+                    value={changeoverNotes}
+                    onChange={event => { setChangeoverNotes(event.target.value); setError(''); }}
+                    placeholder={changeoverReason === 'Other' ? 'Reason details required' : 'Optional confirmation note'}
+                  />
+                </label>
+              </div>
+            )}
+
+            <label className="pa-search">
+              <Search size={17} />
+              <input
+                value={techQuery}
+                onChange={event => setTechQuery(event.target.value)}
+                placeholder="Search technicians"
+                aria-label="Search technicians"
+              />
+            </label>
+
+            <div className="pa-tech-list">
+              {loading ? (
+                <p className="pa-empty">Loading technician availability…</p>
+              ) : filteredTechnicians.length === 0 ? (
+                <p className="pa-empty">No technicians match this search.</p>
+              ) : filteredTechnicians.map(tech => {
+                const engagement = engagementByTech.get(tech.id) ?? { assigned: 0, working: 0 };
+                const isOutgoing = tech.id === changeoverTarget?.current?.technician_id;
+                const selectable = tech.status === 'available' && !isOutgoing && !busy;
+                const selected = selectedTechId === tech.id;
+                return (
+                  <button
+                    key={tech.id}
+                    type="button"
+                    className={`pa-tech-card${selected ? ' is-selected' : ''}`}
+                    onClick={() => selectable && setSelectedTechId(selected ? null : tech.id)}
+                    disabled={!selectable}
+                    title={isOutgoing
+                      ? 'The outgoing technician cannot replace themselves.'
+                      : tech.status !== 'available' ? 'This technician already has active panel work.' : undefined}
+                  >
+                    <span className="pa-avatar">{tech.initials}</span>
+                    <span className="pa-tech-copy">
+                      <span><strong>{tech.full_name}</strong>{tech.employee_id && <small>{tech.employee_id}</small>}</span>
+                      <small>{isOutgoing ? 'Outgoing technician' : engagementLabel(engagement.assigned, engagement.working)}</small>
+                    </span>
+                    <span className={`pa-tech-status pa-tech-status--${tech.status}`}>
+                      <span />{technicianStatusLabel(tech.status)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pa-selection-summary">
+              {changeoverTarget ? (
+                <>
+                  <ArrowLeftRight size={16} />
+                  <span>{selectedTech
+                    ? `${selectedTech.full_name} will receive ${changeoverTarget.remaining} remaining cables.`
+                    : 'Select an available replacement technician.'}</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus size={16} />
+                  <span>{selectedTech
+                    ? `${selectedTech.full_name} selected for ${selectedContexts.length} panel${selectedContexts.length === 1 ? '' : 's'}.`
+                    : 'Select one available technician for the chosen panels.'}</span>
+                </>
+              )}
+            </div>
+          </section>
         </div>
 
-        {panelState === 'started' && (
-          <div className="assignment-info-callout flex items-start gap-1.5">
-            <Info size={15} className="mt-0.5 shrink-0" />
-            <span>The previous technician&apos;s completed cables and history are preserved and transferred to the new technician.</span>
-          </div>
-        )}
-
-        {error && <div className="form-error">{error}</div>}
+        <div className="pa-history-note">
+          <Info size={16} />
+          <span>Assignments are supervisor-controlled. After Start or the first cable update, removal is locked; Mid Changeover preserves completed work and the full outgoing/incoming audit history.</span>
+        </div>
       </div>
 
-      {toast && (
-        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
-      )}
+      {toast && <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />}
     </Modal>
   );
 }

@@ -3,18 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TechService } from '../tech/tech.service';
 import { MockStore } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
-import * as XLSX from 'xlsx';
 import * as ExcelJS from 'exceljs';
 import { buildCompletionReport } from '../common/completion-report.helper';
 import { getReportLogoBuffer, REPORT_COMPANY, REPORT_SYSTEM } from '../common/report-branding';
 import { collectPanelCompletionReportData } from '../common/panel-completion-report.helper';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
+import { assignedCableKpiPercent, wiringKpiPercent } from '../common/kpi.constants';
+import { parseCableStatus as parseCS } from '../common/cable-status.util';
 
 interface AnyUser { id: number; role: string | null; full_name: string | null; }
-
-function parseCS(raw: string | null | undefined): Record<string, any> {
-  try { return JSON.parse(raw || '{}'); } catch { return {}; }
-}
 
 @Injectable()
 export class SupervisorService {
@@ -31,9 +28,25 @@ export class SupervisorService {
     return assignments.map(a => {
       const tech = techMap.get(a.technician_id);
       const frame = MockStore.findFrameById(a.frame_id);
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
-      return { ...a, cable_status: undefined, technician_name: tech?.full_name || '', technician_username: tech?.username || '', panel_display_name: frame?.panel_name || a.panel_name, kpi };
+      const cableState = parseCS(a.cable_status);
+      const states = Object.values(cableState);
+      const cablesCompleted = states.filter(state => Boolean(state?.src && state?.dst)).length;
+      const hasRecordedWork = (a.cables_src_done || 0) > 0
+        || (a.cables_dst_done || 0) > 0
+        || states.some(state => Boolean(state?.src || state?.dst));
+      const cablesTotal = a.cables_total || 0;
+      const kpi = assignedCableKpiPercent(cablesCompleted, cablesTotal);
+      return {
+        ...a,
+        cable_status: undefined,
+        technician_name: tech?.full_name || '',
+        technician_username: tech?.username || '',
+        panel_display_name: frame?.panel_name || a.panel_name,
+        cables_completed: cablesCompleted,
+        cables_remaining: Math.max(0, cablesTotal - cablesCompleted),
+        has_recorded_work: hasRecordedWork,
+        kpi,
+      };
     });
   }
 
@@ -47,8 +60,7 @@ export class SupervisorService {
     const techMap = new Map(techs.map(t => [t.id, t]));
     return assignments.map(a => {
       const tech = techMap.get(a.technician_id);
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       return { ...a, cable_status: undefined, technician_name: tech?.full_name || '', kpi };
     });
   }
@@ -63,8 +75,7 @@ export class SupervisorService {
       where: { technician_id: a.technician_id, frame_id: a.frame_id },
       orderBy: { created_at: 'asc' },
     });
-    const kpi = (a.cables_total || 0) > 0
-      ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     const { hashed_password: _hashed_password, ...safeTech } = tech || ({} as any);
     return {
       assignment: { ...a, cable_status: parseCS(a.cable_status) },
@@ -203,7 +214,17 @@ export class SupervisorService {
   async pendingChangeovers() {
     const assignments = await this.prisma.tech_assignments.findMany({
       where: {
-        status: { in: ['paused', 'in_progress'] },
+        OR: [
+          { status: { in: ['paused', 'in_progress'] } },
+          {
+            status: 'assigned',
+            OR: [
+              { handover_from_id: { not: null } },
+              { cables_src_done: { gt: 0 } },
+              { cables_dst_done: { gt: 0 } },
+            ],
+          },
+        ],
         changeover_locked: { not: true },
         is_hidden: { not: true },
       },
@@ -229,7 +250,17 @@ export class SupervisorService {
       where: {
         project_code: projectCode,
         frame_id: frameId,
-        status: { in: ['paused', 'in_progress'] },
+        OR: [
+          { status: { in: ['paused', 'in_progress'] } },
+          {
+            status: 'assigned',
+            OR: [
+              { handover_from_id: { not: null } },
+              { cables_src_done: { gt: 0 } },
+              { cables_dst_done: { gt: 0 } },
+            ],
+          },
+        ],
         changeover_locked: { not: true },
         is_hidden: { not: true },
       },
@@ -269,7 +300,7 @@ export class SupervisorService {
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
     });
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
     const auditAll = await this.prisma.tech_audit_log.findMany({
       where: { project_code: projectCode, frame_id: frameId }, orderBy: { created_at: 'asc' },
     });
@@ -279,7 +310,7 @@ export class SupervisorService {
 
     const techDetails = assignments.map(a => {
       const tech = techMap.get(a.technician_id);
-      const kpi = (a.cables_total || 0) > 0 ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       const { hashed_password: _hashed_password, ...safeTech } = tech || ({} as any);
       return { assignment: { ...a, cable_status: parseCS(a.cable_status) }, technician: tech ? safeTech : null, kpi };
     });
@@ -508,7 +539,7 @@ export class SupervisorService {
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
 
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'DWES — Digital Wiring Execution System';

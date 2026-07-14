@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * Fullscreen Digital Wiring Monitor for Production Supervisors — read-only
+ * Fullscreen Digital Wiring View for Production Supervisors — read-only
  * wiring schedule grid, cable inspector, and execution summary dashboard.
  */
 export default function PanelWiringViewModal({
@@ -20,7 +20,7 @@ export default function PanelWiringViewModal({
 }: Props) {
   return (
     <Modal
-      title="Digital Wiring Monitor"
+      title="Digital Wiring View"
       subtitle={`${panelLabel} · Read-only supervisor view`}
       onClose={onClose}
       size="fullscreen"

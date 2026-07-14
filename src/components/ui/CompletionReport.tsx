@@ -71,7 +71,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
   const isCompleted = a.status === 'completed' || a.status === 'approved';
 
   return (
-    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-[var(--t-surface-white)] overflow-hidden shadow-sm">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-700 flex items-center gap-3">
@@ -93,7 +93,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <button
               type="button"
               onClick={onDownloadXlsx}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-[var(--t-surface-white-10)] hover:bg-[var(--t-surface-white-20)] text-white text-[11px] font-semibold transition-colors"
             >
               <FileSpreadsheet size={12} />
               <span>XLSX</span>

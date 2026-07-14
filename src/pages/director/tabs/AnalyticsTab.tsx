@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { directorApi } from '../../../services/api';
+import { useCallback } from 'react';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 function RingChart({ pct, tone, label, sub }: { pct: number; tone: string; label: string; sub: string }) {
   const r = 36;
@@ -96,10 +99,21 @@ function DonutChart({ segments }: { segments: { label: string; value: number; to
 export default function AnalyticsTab() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const requests = useLatestRequest();
 
-  useEffect(() => {
-    directorApi.stats().then(d => { setStats(d); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+  const load = useCallback(async () => {
+    const request = requests.begin();
+    setLoading(true);
+    setStats(null);
+    try {
+      const next = await directorApi.stats(request.signal);
+      if (requests.isLatest(request.id)) setStats(next);
+    } catch { /* unavailable */ }
+    finally { if (requests.isLatest(request.id)) setLoading(false); }
+  }, [requests]);
+
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
 
   if (loading) return <div className="empty-state"><p className="empty-text">Loading analytics…</p></div>;
   if (!stats) return <div className="empty-state"><p className="empty-text">Analytics unavailable.</p></div>;

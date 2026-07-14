@@ -206,6 +206,9 @@ export default function AssignmentTab({
                     }
                   : null,
                 a.status === 'assigned'
+                  && a.started_at == null
+                  && a.handover_from_id == null
+                  && !a.changeover_locked
                   ? {
                       id: 'remove',
                       label: 'Remove Assignment',
@@ -423,7 +426,7 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
                 <label key={s} className={`flex items-center gap-3 p-3 rounded-[8px] border cursor-pointer transition-colors ${
                   status === s
                     ? s === 'approved' ? 'bg-green-50 border-green-400' : s === 'rework' ? 'bg-red-50 border-red-400' : 'bg-blue-50 border-blue-400'
-                    : 'bg-white border-[#E2E8F0] hover:bg-slate-50'
+                    : 'bg-[var(--t-surface-white)] border-[#E2E8F0] hover:bg-slate-50'
                 }`}>
                   <input type="radio" name="review_status" value={s} checked={status === s} onChange={() => setStatus(s)} className="accent-blue-600" />
                   <span className="text-[13px] font-medium text-slate-800 capitalize">
@@ -443,7 +446,7 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
               onChange={e => setNotes(e.target.value)}
               rows={3}
               placeholder={status === 'rework' ? 'Describe the rework required…' : 'Add review notes…'}
-              className="w-full text-[14px] border border-[#E2E8F0] rounded-[10px] bg-slate-50 focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-3 resize-none"
+              className="w-full text-[14px] border border-[#E2E8F0] rounded-[10px] bg-slate-50 focus:bg-[var(--t-surface-white)] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-3 resize-none"
             />
           </div>
 

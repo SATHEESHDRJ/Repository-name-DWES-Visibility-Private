@@ -9,7 +9,7 @@ function MetricCard({ label, val, sub, tone = 'muted', wide = false }: { label: 
   const bgClass = isDanger ? 'bg-red-50 text-red-700' : isWarning ? 'bg-amber-50 text-amber-700' : isSuccess ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700';
 
   return (
-    <div className={`h-[90px] border border-[#E2E8F0] rounded-[10px] bg-white p-4 flex flex-col justify-between shadow-sm hover:border-blue-200 transition-colors ${wide ? 'col-span-2 md:col-span-4 lg:col-span-2' : ''}`}>
+    <div className={`h-[90px] border border-[#E2E8F0] rounded-[10px] bg-[var(--t-surface-white)] p-4 flex flex-col justify-between shadow-sm hover:border-blue-200 transition-colors ${wide ? 'col-span-2 md:col-span-4 lg:col-span-2' : ''}`}>
       <div className="flex items-center justify-between">
         <span className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] truncate">{label}</span>
         {sub && <span className="text-[11px] font-medium text-slate-400 truncate ml-2">{sub}</span>}
@@ -85,14 +85,14 @@ export default function DiagnosticsTab() {
   return (
     <div className="p-2">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={load} className="flex items-center justify-center gap-2 h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm" type="button">
+        <button onClick={load} className="flex items-center justify-center gap-2 h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm" type="button">
           <RefreshCw size={16} strokeWidth={1.5} />
           <span>Refresh</span>
         </button>
-        <button onClick={doPing} disabled={pinging} className="flex items-center justify-center h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" type="button">
+        <button onClick={doPing} disabled={pinging} className="flex items-center justify-center h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" type="button">
           {pinging ? 'Pinging...' : 'DB Ping'}
         </button>
-        <button onClick={doClearCache} disabled={clearing} className="flex items-center justify-center h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ml-auto disabled:opacity-50" type="button">
+        <button onClick={doClearCache} disabled={clearing} className="flex items-center justify-center h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ml-auto disabled:opacity-50" type="button">
           {clearing ? 'Clearing...' : 'Clear Error Buffer'}
         </button>
       </div>

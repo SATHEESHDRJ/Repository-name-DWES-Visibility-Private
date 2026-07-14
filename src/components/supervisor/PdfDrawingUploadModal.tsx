@@ -18,7 +18,7 @@ import {
 
 const MAX_SIZE_MB = 50;
 
-type DrawingFileType = 'pdf' | 'dwg';
+type DrawingFileType = 'pdf' | 'dwg' | 'model3d';
 
 interface ProjectDrawing {
   id: string;
@@ -45,6 +45,12 @@ const DRAWING_FILE_CONFIG: Record<DrawingFileType, {
     accept: '.dwg,application/acad,application/x-acad',
     hint: '.dwg only',
     test: /\.dwg$/i,
+  },
+  model3d: {
+    label: '3D GA',
+    accept: '.glb,.gltf,.obj,.stl,model/gltf-binary,model/gltf+json',
+    hint: '.glb, .gltf, .obj, or .stl',
+    test: /\.(glb|gltf|obj|stl)$/i,
   },
 };
 
@@ -128,7 +134,13 @@ export default function PdfDrawingUploadModal({
     setMode('loading');
     setError('');
     try {
-      const drawings: ProjectDrawing[] = await projectsApi.drawings(projectCode);
+      if (!panelId) {
+        setExistingDrawing(null);
+        setMetadata(null);
+        setMode('empty');
+        return;
+      }
+      const drawings: ProjectDrawing[] = await projectsApi.panelDrawings(projectCode, panelId);
       const match = findDrawingByType(drawings, fileType);
       setExistingDrawing(match);
       if (match) {
@@ -143,7 +155,7 @@ export default function PdfDrawingUploadModal({
       setMetadata(null);
       setMode('empty');
     }
-  }, [projectCode, fileType]);
+  }, [projectCode, panelId, fileType]);
 
   useEffect(() => {
     void resolveExisting();
@@ -155,14 +167,15 @@ export default function PdfDrawingUploadModal({
     setViewError('');
     setViewBlob(null);
     try {
-      const raw = await projectsApi.drawingFile(projectCode, existingDrawing.id);
+      if (!panelId) throw new Error('Select a panel first');
+      const raw = await projectsApi.panelDrawingFile(projectCode, panelId, existingDrawing.id);
       setViewBlob(raw);
     } catch {
       setViewError('Failed to load drawing file.');
     } finally {
       setViewLoading(false);
     }
-  }, [projectCode, existingDrawing]);
+  }, [projectCode, panelId, existingDrawing]);
 
   useEffect(() => {
     if (mode !== 'populated' || !existingDrawing || duplicateBlocked) return;
@@ -244,7 +257,8 @@ export default function PdfDrawingUploadModal({
   const downloadExisting = async () => {
     if (!existingDrawing) return;
     try {
-      const blob = await projectsApi.drawingFile(projectCode, existingDrawing.id);
+      if (!panelId) throw new Error('Select a panel first');
+      const blob = await projectsApi.panelDrawingFile(projectCode, panelId, existingDrawing.id);
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = href;

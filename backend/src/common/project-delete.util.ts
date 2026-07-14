@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MockStore } from '../data/mock-store';
 import { PrismaService } from '../prisma/prisma.service';
+import { FrameStore } from '../frames/frame-store';
 
 export interface PermanentProjectDeleteResult {
   success: true;
@@ -41,11 +42,23 @@ export async function permanentlyDeleteProject(
     prisma.file_hashes.deleteMany({ where: { project_code: code } }),
     prisma.tech_audit_log.deleteMany({ where: { project_code: code } }),
     prisma.session_log.deleteMany({ where: { project_code: code } }),
-    prisma.projects.delete({ where: { code } }),
+    // Keep a database tombstone. Deleting the row allowed startup seed data to
+    // recreate the same project code after an application restart.
+    prisma.projects.update({
+      where: { code },
+      data: {
+        is_active: false,
+        project_state: 'deleted',
+        assigned_technicians: '',
+      },
+    }),
   ]);
 
+  FrameStore.blockProject(code);
   MockStore.frames = MockStore.frames.filter(frame => frame.project_code !== code);
   MockStore.drawings = MockStore.drawings.filter(drawing => drawing.project_code !== code);
+  MockStore.drawingPackages = MockStore.drawingPackages.filter(record => record.project_code !== code);
+  MockStore.directorReports = MockStore.directorReports.filter(report => report.project_code !== code);
 
   let folderRemoved = false;
   if (fs.existsSync(projectUploadsDir)) {

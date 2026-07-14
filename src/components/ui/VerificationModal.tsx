@@ -288,7 +288,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
 
                   {remapField === field && (
                     <div
-                      className="absolute top-full left-0 mt-1 z-20 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden min-w-[200px]"
+                      className="absolute top-full left-0 mt-1 z-20 bg-[var(--t-surface-white)] border border-slate-200 rounded-xl shadow-xl overflow-hidden min-w-[200px]"
                       onClick={e => e.stopPropagation()}
                     >
                       <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500 select-none">
@@ -391,7 +391,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
                       className={`transition-colors hover:bg-blue-50/20 ${
                         hasRowError ? 'bg-red-50/30' :
                         hasRowMismatch ? 'bg-amber-50/30' :
-                        idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                        idx % 2 === 0 ? 'bg-[var(--t-surface-white)]' : 'bg-slate-50/30'
                       }`}
                     >
                       <td className="px-3 py-1.5 text-[11px] tabular-nums text-slate-500 border-r border-slate-100 select-none bg-slate-50/50">
@@ -452,7 +452,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0 rounded-b-2xl">
+        <div className="px-6 py-4 border-t border-slate-200 bg-[var(--t-surface-white)] shrink-0 rounded-b-2xl">
           <div className="flex items-center gap-4">
 
             {/* Left: status summary + progress */}

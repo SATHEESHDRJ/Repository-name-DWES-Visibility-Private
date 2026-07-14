@@ -10,9 +10,9 @@ export const TECH_STATUS_META: Record<
   TechResourceStatus,
   { label: string; chip: string; dot: string; sort: number }
 > = {
-  available: { label: '', chip: 'sac-status--available', dot: 'bg-emerald-500', sort: 0 },
+  available: { label: 'Available', chip: 'sac-status--available', dot: 'bg-emerald-500', sort: 0 },
   assigned: { label: 'Assigned', chip: 'sac-status--assigned', dot: 'bg-amber-500', sort: 1 },
-  working: { label: 'Working', chip: 'sac-status--working', dot: 'bg-blue-500', sort: 2 },
+  working: { label: 'Busy', chip: 'sac-status--working', dot: 'bg-red-500', sort: 2 },
   busy: { label: 'Busy', chip: 'sac-status--busy', dot: 'bg-red-500', sort: 3 },
 };
 
@@ -28,6 +28,9 @@ export type AssignmentRow = {
   cables_total?: number | null;
   cables_src_done?: number | null;
   cables_dst_done?: number | null;
+  cables_completed?: number | null;
+  cables_remaining?: number | null;
+  has_recorded_work?: boolean | null;
   started_at?: string | Date | null;
   completed_at?: string | Date | null;
   assigned_at?: string | Date | null;
@@ -36,6 +39,7 @@ export type AssignmentRow = {
   review_status?: string | null;
   changeover_locked?: boolean | null;
   handover_from_id?: number | null;
+  handover_to_id?: number | null;
 };
 
 export type TechUser = {

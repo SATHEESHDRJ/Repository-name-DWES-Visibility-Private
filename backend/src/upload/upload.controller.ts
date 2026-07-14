@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Body, Param, UseGuards, UseInterceptors,
+  Controller, Post, Put, Body, Param, UseGuards, UseInterceptors,
   UploadedFile, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -7,6 +7,8 @@ import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { type User } from '../data/mock-store';
 
 @Controller('api')
 @UseGuards(JwtAuthGuard)
@@ -90,6 +92,31 @@ export class UploadController {
       file.mimetype,
       body.replace_drawing_id,
       body.frame_id?.trim() || undefined,
+    );
+  }
+
+  /** Stable panel drawing package slot upload/replacement. */
+  @Put('projects/:code/frames/:frameId/drawing/:slot')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadPanelDrawingAsset(
+    @Param('code') code: string,
+    @Param('frameId') frameId: string,
+    @Param('slot') slot: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    if (slot !== '2d' && slot !== '3d') throw new BadRequestException('Drawing slot must be 2d or 3d');
+    return this.svc.uploadPanelDrawingAsset(
+      code,
+      frameId,
+      slot,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      user.id,
     );
   }
 

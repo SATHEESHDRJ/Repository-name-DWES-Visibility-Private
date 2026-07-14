@@ -13,6 +13,7 @@ import type { Project } from '../../types';
 import { compactPanelDisplayName, resolveProjectCardDetails } from '../../utils/projectDisplay';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
 
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned' | 'pending_approval';
 type StatusBucket = 'completed' | 'in_progress' | 'pending_review' | 'not_started';
@@ -122,29 +123,45 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
   const [reworkPanel, setReworkPanel] = useState<PanelRow | null>(null);
   const [projectPdf, setProjectPdf] = useState<{ code: string; title: string } | null>(null);
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set());
+  const requests = useLatestRequest();
 
-  const loadWorkspaceData = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? false;
-    if (!silent) setLoading(true);
+  const loadWorkspaceData = useCallback(async (_opts?: { silent?: boolean }) => {
+    const request = requests.begin();
+    setLoading(true);
+    setProjects([]);
+    setFrames([]);
+    setAssignments([]);
     try {
-      const projs = await projectsApi.list().catch(() => [] as Project[]);
+      const projs = await projectsApi.list(request.signal) as Project[];
       const [frameLists, panelAssignments] = await Promise.all([
         Promise.all(
           projs.map((p: Project) =>
-            projectsApi.frames(p.code)
-              .then(fs => fs.map((f: any) => ({ ...f, project_code: p.code })))
-              .catch(() => []),
+            projectsApi.frames(p.code, request.signal)
+              .then(fs => fs.map((f: any) => ({ ...f, project_code: p.code }))),
           ),
         ),
-        supervisorApi.allPanels().catch(() => []),
+        supervisorApi.allPanels(request.signal),
       ]);
+      if (!requests.isLatest(request.id)) return;
       setProjects(projs);
       setFrames(frameLists.flat());
       setAssignments(panelAssignments);
+      const validFrameKeys = new Set(frameLists.flat().map((frame: any) => `${frame.project_code}:${frame.id}`));
+      const validProjectCodes = new Set(projs.map(project => project.code));
+      setReportPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setReviewPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setReworkPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setProjectPdf(current => current && validProjectCodes.has(current.code) ? current : null);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) {
+        setProjects([]);
+        setFrames([]);
+        setAssignments([]);
+      }
     } finally {
-      if (!silent) setLoading(false);
+      if (requests.isLatest(request.id)) setLoading(false);
     }
-  }, []);
+  }, [requests]);
 
   const wasActiveRef = useRef(isActive);
   useEffect(() => {
@@ -152,24 +169,36 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
       wasActiveRef.current = false;
       return;
     }
-    const silent = wasActiveRef.current;
     wasActiveRef.current = true;
-    void loadWorkspaceData({ silent });
+    void loadWorkspaceData();
   }, [isActive, loadWorkspaceData]);
 
   useDwesRefresh(() => {
     if (!isActive) return;
-    return loadWorkspaceData({ silent: true });
+    return loadWorkspaceData();
   }, { enabled: isActive });
 
   useEffect(() => {
     return onFramesChanged((detail) => {
-      if (detail.action === 'deleted' && detail.frameId) {
+      if (detail.action === 'deleted') requests.cancel();
+      if (detail.action === 'deleted' && !detail.frameId) {
+        setProjects(prev => prev.filter(project => project.code !== detail.projectCode));
+        setFrames(prev => prev.filter(frame => frame.project_code !== detail.projectCode));
+        setAssignments(prev => prev.filter(assignment => assignment.project_code !== detail.projectCode));
+        setProjectPdf(current => current?.code === detail.projectCode ? null : current);
+      } else if (detail.action === 'deleted' && detail.frameId) {
         setFrames(prev => prev.filter(f => !(f.project_code === detail.projectCode && f.id === detail.frameId)));
         setAssignments(prev => prev.filter(a => !(a.project_code === detail.projectCode && a.frame_id === detail.frameId)));
       }
+      if (detail.action === 'deleted') {
+        const deleted = (panel: PanelRow | null) => panel?.projectCode === detail.projectCode
+          && (!detail.frameId || panel.frameId === detail.frameId);
+        setReportPanel(current => deleted(current) ? null : current);
+        setReviewPanel(current => deleted(current) ? null : current);
+        setReworkPanel(current => deleted(current) ? null : current);
+      }
     });
-  }, []);
+  }, [requests]);
 
   const assignmentByFrame = useMemo(() => {
     const m = new Map<string, any>();

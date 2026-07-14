@@ -4,9 +4,8 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
-import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import {
-  Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog,
+  Eye, Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog,
   CheckCircle2, UserX, Phone, Calendar, Hash,
 } from '../../../components/ui/icons';
 import { Input } from '../../../components/ui/Input';
@@ -85,12 +84,16 @@ export default function UserMgmtTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [msg, setMsg] = useState('');
   const [msgTone, setMsgTone] = useState<'ok' | 'err'>('ok');
 
   const [detailUser, setDetailUser] = useState<any | null>(null);
+  const [detailMode, setDetailMode] = useState<'view' | 'edit'>('view');
   const [editData, setEditData] = useState<EditForm>({ full_name: '', role: '', employee_id: '', whatsapp_number: '' });
   const [resetUser, setResetUser] = useState<any | null>(null);
+  const [roleUser, setRoleUser] = useState<any | null>(null);
+  const [pendingRole, setPendingRole] = useState('');
   const [deleteUser, setDeleteUser] = useState<any | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [newUser, setNewUser] = useState({ ...EMPTY_NEW });
@@ -133,6 +136,7 @@ export default function UserMgmtTab() {
 
   const filtered = users
     .filter(u => roleFilter === 'all' || u.role === roleFilter)
+    .filter(u => statusFilter === 'all' || (statusFilter === 'active' ? u.is_active : !u.is_active))
     .filter(u => {
       if (!search) return true;
       const q = search.toLowerCase();
@@ -143,16 +147,22 @@ export default function UserMgmtTab() {
 
   const countByRole = (role: string) => users.filter(u => u.role === role).length;
 
-  const openUserDetails = (user: any) => {
+  const openUserDetails = (user: any, mode: 'view' | 'edit' = 'view') => {
     // Defer one frame so the opening click cannot immediately hit the overlay
     requestAnimationFrame(() => {
       setDetailUser(user);
+      setDetailMode(mode);
       setEditData(editFormFromUser(user));
     });
   };
 
   const openResetPassword = (user: any) => {
     requestAnimationFrame(() => setResetUser(user));
+  };
+
+  const openChangeRole = (user: any) => {
+    setPendingRole(user.role);
+    requestAnimationFrame(() => setRoleUser(user));
   };
 
   const openDeleteUser = (user: any) => {
@@ -195,19 +205,37 @@ export default function UserMgmtTab() {
     finally { setSaving(false); }
   };
 
+  const handleChangeRole = async () => {
+    if (!roleUser || !pendingRole || pendingRole === roleUser.role) return;
+    setSaving(true);
+    try {
+      await usersApi.update(roleUser.id, {
+        full_name: roleUser.full_name,
+        role: pendingRole,
+        employee_id: roleUser.employee_id || '',
+        whatsapp_number: roleUser.whatsapp_number || '',
+      });
+      flash(`Changed ${roleUser.username} to ${ROLE_LABELS[pendingRole] || pendingRole}`);
+      setRoleUser(null);
+      if (detailUser?.id === roleUser.id) closeUserDetails();
+      await load();
+    } catch { flash('Failed to change user role', 'err'); }
+    finally { setSaving(false); }
+  };
+
   const handleToggle = async (user: any) => {
     const ok = await dialog.confirm({
-      title: user.is_active ? 'Block User' : 'Activate User',
+      title: user.is_active ? 'Deactivate User' : 'Activate User',
       message: user.is_active
-        ? `Block ${user.full_name}? They will be unable to log in until reactivated.`
+        ? `Deactivate ${user.full_name}? They will be unable to log in until reactivated.`
         : `Activate ${user.full_name}? They will regain login access.`,
       tone: user.is_active ? 'warning' : 'info',
-      confirmText: user.is_active ? 'Block' : 'Activate',
+      confirmText: user.is_active ? 'Deactivate' : 'Activate',
     });
     if (!ok) return;
     try {
       await usersApi.toggleStatus(user.id);
-      flash(`${user.is_active ? 'Blocked' : 'Activated'} ${user.username}`);
+      flash(`${user.is_active ? 'Deactivated' : 'Activated'} ${user.username}`);
       if (detailUser?.id === user.id) closeUserDetails();
       load();
     } catch { flash('Failed to update status', 'err'); }
@@ -219,7 +247,7 @@ export default function UserMgmtTab() {
     try {
       const result = await usersApi.remove(deleteUser.id);
       if (result?.deactivated) {
-        flash(`Blocked ${deleteUser.username} — cannot delete (has sessions/assignments on record)`);
+        flash(`Deactivated ${deleteUser.username} — cannot delete (has sessions/assignments on record)`);
       } else {
         flash(`Deleted ${deleteUser.username}`);
       }
@@ -253,7 +281,9 @@ export default function UserMgmtTab() {
           editData={editData}
           setEditData={setEditData}
           saving={saving}
+          mode={detailMode}
           onClose={closeUserDetails}
+          onEdit={() => setDetailMode('edit')}
           onSave={handleEdit}
           onResetPassword={() => openResetPassword(detailUser)}
           onToggleStatus={() => handleToggle(detailUser)}
@@ -270,51 +300,23 @@ export default function UserMgmtTab() {
         />
       )}
 
+      {roleUser && (
+        <ChangeRoleModal
+          user={roleUser}
+          role={pendingRole}
+          saving={saving}
+          onRoleChange={setPendingRole}
+          onClose={() => setRoleUser(null)}
+          onSave={handleChangeRole}
+        />
+      )}
+
       {deleteUser && (
-        <DeleteConfirmModal
-          title="Delete User"
-          subtitle="Permanent removal when allowed; otherwise deactivated."
-          typography="user-management"
-          resourceKind="user"
-          itemLabel={deleteUser.full_name || deleteUser.username}
-          fields={[
-            { label: 'Username', value: `@${deleteUser.username}` },
-            { label: 'Role', value: ROLE_LABELS[deleteUser.role] || deleteUser.role },
-          ]}
-          sections={[
-            {
-              id: 'impact',
-              title: 'Impact',
-              icon: 'users',
-              items: [
-                `Delete ${deleteUser.full_name} (@${deleteUser.username})`,
-                'Users with session or assignment history may be deactivated instead of deleted',
-              ],
-            },
-            {
-              id: 'retained',
-              title: 'Preserved when deactivated',
-              icon: 'shield',
-              defaultExpanded: false,
-              badge: 'history',
-              items: ['Session/assignment history stays for audit', 'Project wiring data is not wiped'],
-            },
-          ]}
-          scopes={[
-            {
-              id: 'item_only',
-              label: 'Delete / deactivate selected user',
-              description: 'Does not delete project files or wiring records.',
-            },
-          ]}
-          defaultScope="item_only"
-          backup={{ status: 'skipped', note: 'User delete does not run a project file backup.' }}
-          warningText={`Permanently remove this account when allowed. Users with history may be blocked instead.`}
-          confirmCheckboxLabel={`I confirm deleting or deactivating “${deleteUser.full_name}”.`}
-          confirmButtonLabel="Delete User"
-          deleting={saving}
+        <UserDeleteConfirmModal
+          user={deleteUser}
+          saving={saving}
           onClose={() => { if (!saving) setDeleteUser(null); }}
-          onConfirm={async (_scope: DeleteScopeId) => { await handleDelete(); }}
+          onConfirm={handleDelete}
         />
       )}
 
@@ -340,10 +342,22 @@ export default function UserMgmtTab() {
   }
 
   return (
-    <div>
+    <div className="admin-user-management">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="h-scroll-strip flex-1 pb-1">
+      <div className="admin-user-toolbar">
+        <div className="admin-user-toolbar-title">
+          <div>
+            <h2>System Users</h2>
+            <p>{filtered.length} shown · {users.filter(user => user.is_active).length} active accounts</p>
+          </div>
+          <button className="btn-primary admin-add-user" onClick={openAddUser} type="button">
+            <Plus size={16} />
+            <span>Add User</span>
+          </button>
+        </div>
+
+        <div className="admin-user-controls">
+          <div className="h-scroll-strip admin-role-filters" aria-label="Filter users by role">
           <button className={`tab-btn ${roleFilter === 'all' ? 'active' : ''}`} onClick={() => setRoleFilter('all')} type="button">
             All ({users.length})
           </button>
@@ -352,37 +366,40 @@ export default function UserMgmtTab() {
               {ROLE_LABELS[role]} ({countByRole(role)})
             </button>
           ))}
-        </div>
-
-        <div className="flex items-center gap-2 w-full tablet-port:w-auto shrink-0">
-          <Input
-            icon={<Search />}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search name / ID"
-            className="flex-1 min-w-0 tablet-port:w-[240px] tablet-port:flex-none"
-          />
-          <button className="btn-primary" onClick={openAddUser} type="button">
-            <Plus size={16} />
-            <span>Add User</span>
-          </button>
+          </div>
+          <div className="admin-user-search">
+            <Input
+              icon={<Search />}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, username or employee ID"
+            />
+          </div>
+          <label className="admin-status-filter">
+            <span>Status</span>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)} aria-label="Filter users by status">
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
         </div>
       </div>
 
       {msg && <div className={msgTone === 'err' ? 'flash-err' : 'flash-ok'}>{msg}</div>}
 
       {/* User table */}
-      <div className="border border-[#E2E8F0] rounded-[12px] bg-white shadow-sm flex flex-col mt-4 min-w-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="sticky top-0 bg-white z-10 shadow-[0_2px_0_#E2E8F0]">
+      <div className="admin-user-table-card">
+        <div className="admin-user-table-scroll">
+          <table className="admin-user-table">
+            <thead>
               <tr>
                 <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[160px]">Username</th>
                 <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px]">Full Name</th>
                 <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[180px]">Role</th>
                 <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[120px]">Status</th>
                 <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[140px]">Last Login</th>
-                <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[140px] text-right">Actions</th>
+                <th className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] py-[12px] px-[16px] w-[250px] text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F1F5F9]">
@@ -403,8 +420,8 @@ export default function UserMgmtTab() {
                 filtered.map((user, idx) => (
                   <tr
                     key={user.id}
-                    onClick={() => openUserDetails(user)}
-                    className={`h-[52px] cursor-pointer hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'} ${!user.is_active ? 'opacity-75' : ''}`}
+                    onClick={() => openUserDetails(user, 'view')}
+                    className={`admin-user-row ${idx % 2 === 0 ? 'bg-[var(--t-surface-white)]' : 'bg-[#FAFAFA]'} ${!user.is_active ? 'opacity-75' : ''}`}
                   >
                     <td className="px-[16px] py-[8px] text-[14px] font-mono font-medium text-slate-900 truncate">
                       @{user.username}
@@ -430,19 +447,21 @@ export default function UserMgmtTab() {
                         ${user.is_active ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-300'}
                       `}>
                         {user.is_active ? <CheckCircle2 size={12} /> : <UserX size={12} />}
-                        {user.is_active ? 'Active' : 'Blocked'}
+                        {user.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-[16px] py-[8px] text-[13px] text-slate-500 whitespace-nowrap">
                       {fmtLogin(user.last_login)}
                     </td>
                     <td className="px-[16px] py-[8px]">
-                      <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                        <RowActionBtn icon={<Pencil size={16} strokeWidth={1.5} />} title="View / Edit" onClick={() => openUserDetails(user)} action="edit" />
+                      <div className="admin-user-row-actions" onClick={e => e.stopPropagation()}>
+                        <RowActionBtn icon={<Eye size={16} strokeWidth={1.5} />} title="View" onClick={() => openUserDetails(user, 'view')} action="view" />
+                        <RowActionBtn icon={<Pencil size={16} strokeWidth={1.5} />} title="Edit User" onClick={() => openUserDetails(user, 'edit')} action="edit" />
                         <RowActionBtn icon={<KeyRound size={16} strokeWidth={1.5} />} title="Reset Password" onClick={() => openResetPassword(user)} action="reset" />
+                        <RowActionBtn icon={<UserCog size={16} strokeWidth={1.5} />} title="Change Role" onClick={() => openChangeRole(user)} action="role" />
                         <RowActionBtn
                           icon={user.is_active ? <Lock size={16} strokeWidth={1.5} /> : <Unlock size={16} strokeWidth={1.5} />}
-                          title={user.is_active ? 'Block User' : 'Activate User'}
+                          title={user.is_active ? 'Deactivate User' : 'Activate User'}
                           onClick={() => handleToggle(user)}
                           action={user.is_active ? 'block' : 'activate'}
                         />
@@ -496,7 +515,7 @@ function RowActionBtn({ icon, title, onClick, action }: {
   icon: ReactNode;
   title: string;
   onClick: () => void;
-  action: 'edit' | 'reset' | 'delete' | 'block' | 'activate';
+  action: 'view' | 'edit' | 'reset' | 'delete' | 'block' | 'activate' | 'role';
 }) {
   return (
     <button
@@ -504,18 +523,103 @@ function RowActionBtn({ icon, title, onClick, action }: {
       type="button"
       onClick={onClick}
       className={`btn-action btn-action--icon btn-action--${action}`}
+      aria-label={title}
     >
       {icon}
     </button>
   );
 }
 
-function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave, onResetPassword, onToggleStatus, onDelete }: {
+function ChangeRoleModal({ user, role, saving, onRoleChange, onClose, onSave }: {
+  user: any;
+  role: string;
+  saving: boolean;
+  onRoleChange: (role: string) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      title="Change User Role"
+      subtitle={`${user.full_name} · @${user.username}`}
+      onClose={onClose}
+      size="sm"
+      typography="user-management"
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn-primary" disabled={saving || role === user.role} onClick={onSave}>
+            {saving ? 'Saving…' : 'Change Role'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="admin-role-change">
+        <div className="admin-modal-section-heading">
+          <UserCog size={18} />
+          <div><strong>Role assignment</strong><span>Select the user’s new DWES workspace role.</span></div>
+        </div>
+        <RoleSelectField label="New Role" value={role} onChange={onRoleChange} icon={<UserCog size={16} />} />
+        <div className="admin-role-warning">Changing a role updates this account’s permissions the next time authorization is evaluated.</div>
+      </div>
+    </Modal>
+  );
+}
+
+function UserDeleteConfirmModal({ user, saving, onClose, onConfirm }: {
+  user: any;
+  saving: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+  return (
+    <Modal
+      title="Delete User"
+      subtitle={`${user.full_name} · @${user.username}`}
+      onClose={onClose}
+      size="sm"
+      typography="user-management"
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button type="button" className="btn-danger" onClick={() => void onConfirm()} disabled={saving || !confirmed}>
+            <Trash2 size={16} />{saving ? 'Deleting…' : 'Delete User'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="admin-delete-user-confirm">
+        <div className="admin-delete-warning">
+          <Trash2 size={20} />
+          <div>
+            <strong>This is a destructive action.</strong>
+            <span>The account will be permanently removed when allowed. If it has assignment or session history, DWES will deactivate it to preserve audit records.</span>
+          </div>
+        </div>
+        <dl className="admin-delete-user-summary">
+          <div><dt>Username</dt><dd>@{user.username}</dd></div>
+          <div><dt>Role</dt><dd>{ROLE_LABELS[user.role] || user.role}</dd></div>
+        </dl>
+        <label className="admin-delete-user-check">
+          <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />
+          <span>I confirm that I want to delete or deactivate this user.</span>
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
+function UserDetailsModal({ user, editData, setEditData, saving, mode, onClose, onEdit, onSave, onResetPassword, onToggleStatus, onDelete }: {
   user: any;
   editData: EditForm;
   setEditData: Dispatch<SetStateAction<EditForm>>;
   saving: boolean;
+  mode: 'view' | 'edit';
   onClose: () => void;
+  onEdit: () => void;
   onSave: () => void;
   onResetPassword: () => void;
   onToggleStatus: () => void;
@@ -523,7 +627,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
 }) {
   return (
     <Modal
-      title="User Details"
+      title={mode === 'edit' ? 'Edit User' : 'User Details'}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -536,7 +640,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
             </button>
             <button type="button" onClick={onToggleStatus} className={`btn-action ${user.is_active ? 'btn-action--block' : 'btn-action--activate'}`}>
               {user.is_active ? <Lock size={16} /> : <Unlock size={16} />}
-              {user.is_active ? 'Block' : 'Activate'}
+              {user.is_active ? 'Deactivate' : 'Activate'}
             </button>
             <button type="button" onClick={onDelete} className="btn-action btn-action--delete">
               <Trash2 size={16} />
@@ -544,17 +648,23 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
             </button>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-            <button type="button" onClick={onSave} disabled={saving || !editData.full_name} className="btn-primary">
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
+            <button type="button" onClick={onClose} className="btn-secondary">{mode === 'edit' ? 'Cancel' : 'Close'}</button>
+            {mode === 'edit' ? (
+              <button type="button" onClick={onSave} disabled={saving || !editData.full_name} className="btn-action btn-action--edit admin-edit-primary">
+                <Pencil size={16} />{saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            ) : (
+              <button type="button" onClick={onEdit} className="btn-action btn-action--edit admin-edit-primary">
+                <Pencil size={16} />Edit User
+              </button>
+            )}
           </div>
         </div>
       )}
     >
       <div className="flex flex-col gap-5">
         {/* Profile header */}
-        <div className="flex items-start gap-4 p-4 rounded-[12px] border border-[#E2E8F0] bg-gradient-to-br from-slate-50 to-white">
+        <div className="flex items-start gap-4 p-4 rounded-[12px] border border-[#E2E8F0] bg-gradient-to-br from-slate-50 to-[var(--t-surface-white)]">
           <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-[18px] font-bold text-slate-600 shrink-0">
             {initials(user.full_name)}
           </div>
@@ -568,7 +678,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border
                 ${user.is_active ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
                 {user.is_active ? <CheckCircle2 size={12} /> : <UserX size={12} />}
-                {user.is_active ? 'Active' : 'Blocked'}
+                {user.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
           </div>
@@ -580,8 +690,8 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
           <MetaChip icon={<Hash size={16} />} label="User ID" value={`${String(user.id).slice(0, 8)}…`} mono />
         </div>
 
-        {/* Editable fields */}
-        <div className="grid grid-cols-1 tablet-port:grid-cols-2 gap-4">
+        {/* Editable fields / read-only profile details */}
+        {mode === 'edit' ? <div className="grid grid-cols-1 tablet-port:grid-cols-2 gap-4">
           <InputField
             label="Full Name *"
             icon={<User size={16} />}
@@ -617,7 +727,15 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
               placeholder="+971 50 000 0000"
             />
           </div>
-        </div>
+        </div> : (
+          <dl className="admin-user-detail-grid">
+            <div><dt>Full name</dt><dd>{user.full_name || '—'}</dd></div>
+            <div><dt>Username</dt><dd className="font-mono">@{user.username}</dd></div>
+            <div><dt>Employee ID</dt><dd>{user.employee_id || '—'}</dd></div>
+            <div><dt>Role</dt><dd>{ROLE_LABELS[user.role] || user.role}</dd></div>
+            <div className="admin-user-detail-wide"><dt>WhatsApp number</dt><dd>{user.whatsapp_number || '—'}</dd></div>
+          </dl>
+        )}
       </div>
     </Modal>
   );
@@ -625,7 +743,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, onClose, onSave
 
 function MetaChip({ icon, label, value, mono }: { icon: ReactNode; label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] bg-white">
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] bg-[var(--t-surface-white)]">
       <div className="text-slate-400 shrink-0">{icon}</div>
       <div className="min-w-0">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>

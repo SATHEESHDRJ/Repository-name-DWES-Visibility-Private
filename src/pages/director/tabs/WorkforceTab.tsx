@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Users } from '../../../components/ui/icons';
 import { directorApi } from '../../../services/api';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 function kpiTone(kpi: number): 'completed' | 'warning' | 'danger' {
   if (kpi >= 80) return 'completed';
@@ -11,16 +13,21 @@ function kpiTone(kpi: number): 'completed' | 'warning' | 'danger' {
 export default function WorkforceTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const requests = useLatestRequest();
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    const request = requests.begin();
     setLoading(true);
-    directorApi.workforce()
-      .then(setRows)
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }, []);
+    setRows([]);
+    try {
+      const next = await directorApi.workforce(request.signal);
+      if (requests.isLatest(request.id)) setRows(next);
+    } catch { /* unavailable */ }
+    finally { if (requests.isLatest(request.id)) setLoading(false); }
+  }, [requests]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
 
   const active = rows.filter(r => r.is_active).length;
   const avgKpi = rows.length

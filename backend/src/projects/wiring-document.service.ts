@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
-import * as path from 'path';
 import * as PDFDocument from 'pdfkit';
 import { PDFDocument as PDFLibDocument, StandardFonts, rgb } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
+import { isPanelDeleted } from '../common/deleted-resource.util';
 import { MockStore, Cable, Drawing } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { parseCableStatus, cableStatusCounts } from '../common/cable-status.util';
@@ -69,11 +69,6 @@ const COLOR_SWATCH: Record<string, string> = {
   purple: '#9333ea',
 };
 
-function uploadRoot(): string {
-  const raw = process.env.UPLOAD_DIR || 'uploads';
-  return path.isAbsolute(raw) ? raw : path.join(process.cwd(), raw);
-}
-
 function clip(text: string, max: number): string {
   const s = String(text ?? '').replace(/\s+/g, ' ').trim();
   if (s.length <= max) return s;
@@ -98,31 +93,23 @@ function parseProjectSegments(code: string): { region: string; location: string;
   return { voltage: parts[0] || '', region: parts[1] || '', location: parts[2] || '' };
 }
 
-function findGaDrawing(projectCode: string): Drawing | null {
-  const drawings = MockStore.findDrawingsByProject(projectCode);
-  if (drawings.length) {
-    const gaNamed = drawings.find(d => /ga|general.?arrangement/i.test(d.original_name));
-    if (gaNamed) return gaNamed;
-    const pdf = drawings.find(d => /\.pdf$/i.test(d.original_name) || d.content_type === 'application/pdf');
-    if (pdf) return pdf;
-    return drawings.find(d => /^image\//.test(d.content_type) || /\.(png|jpe?g|webp)$/i.test(d.original_name)) || null;
-  }
-  const dir = path.join(uploadRoot(), projectCode, 'drawings');
-  if (!fs.existsSync(dir)) return null;
-  for (const file of fs.readdirSync(dir)) {
-    if (/ga|general.?arrangement/i.test(file)) {
-      return {
-        id: file.split('_')[0] || file,
-        project_code: projectCode,
-        filename: file,
-        original_name: file.includes('_') ? file.slice(file.indexOf('_') + 1) : file,
-        content_type: file.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream',
-        uploaded_at: '',
-        size: 0,
-      };
-    }
-  }
-  return null;
+function findGaDrawing(projectCode: string, frameId: string): Drawing | null {
+  const asset = FrameStore.getDrawingPackage(projectCode, frameId)?.drawing_2d;
+  if (!asset) return null;
+  return {
+    id: asset.id,
+    project_code: projectCode,
+    frame_id: frameId,
+    package_id: FrameStore.drawingPackageId(projectCode, frameId),
+    kind: '2d',
+    sha256: asset.sha256,
+    uploaded_by: asset.uploaded_by,
+    filename: asset.filename,
+    original_name: asset.original_name,
+    content_type: asset.content_type,
+    uploaded_at: asset.uploaded_at,
+    size: asset.size,
+  };
 }
 
 function readDrawingBuffer(projectCode: string, drawing: Drawing): Buffer | null {
@@ -209,8 +196,13 @@ export class WiringDocumentService {
     frameId: string,
     generatedBy = '',
   ): Promise<{ buffer: Buffer; filename: string }> {
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
     if (!project) throw new NotFoundException(`Project ${projectCode} not found`);
+
+    if (await isPanelDeleted(this.prisma, projectCode, frameId)) {
+      FrameStore.blockPanel(projectCode, frameId);
+      throw new NotFoundException(`Frame ${frameId} not found`);
+    }
 
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
       ?? FrameStore.getFrameFromDisk(projectCode, frameId);
@@ -261,8 +253,8 @@ export class WiringDocumentService {
       dwgNo: frame.original_filename || '',
     });
 
-    const finalBuffer = await this.appendGaSection(mainBuffer, projectCode, findGaDrawing(projectCode));
-    const safePanel = (frame.panel_name || frameId).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+    const finalBuffer = await this.appendGaSection(mainBuffer, projectCode, findGaDrawing(projectCode, frameId));
+    const safePanel = (frame.panel_name || frameId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
     return { buffer: finalBuffer, filename: `${projectCode}_${safePanel}_wiring_document.pdf` };
   }
 

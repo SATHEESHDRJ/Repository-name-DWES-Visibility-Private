@@ -120,7 +120,7 @@ export default function HardResetDbTab() {
   };
 
   return (
-    <div className="rounded-2xl border border-red-300 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-300 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-red-300 bg-red-50 flex items-center gap-3">
         <Database size={20} className="text-red-800 shrink-0" />
         <div>
@@ -204,7 +204,7 @@ export default function HardResetDbTab() {
                 type="button"
                 onClick={closeModal}
                 disabled={resetting}
-                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-[var(--t-surface-white)] text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

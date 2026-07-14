@@ -3,6 +3,8 @@ import { Loader } from '../ui/icons';
 import { projectsApi } from '../../services/api';
 import type { Project } from '../../types';
 import { isVerifiedFrame } from './frameUtils';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
 
 export interface FramePanel {
   id: string;
@@ -67,40 +69,69 @@ export default function ProjectPanelSelect({
 }: ProjectPanelSelectProps) {
   const [panels, setPanels] = useState<FramePanel[]>([]);
   const [loadingPanels, setLoadingPanels] = useState(false);
+  const requests = useLatestRequest();
 
   useEffect(() => {
     if (!selectedProjectCode) {
+      requests.cancel();
       setPanels([]);
+      setLoadingPanels(false);
       onPanelsLoaded?.([]);
+      onLoadingChange?.(false);
       return;
     }
 
-    let cancelled = false;
+    const request = requests.begin();
+    setPanels([]);
     setLoadingPanels(true);
     onLoadingChange?.(true);
 
-    projectsApi.frames(selectedProjectCode)
+    projectsApi.frames(selectedProjectCode, request.signal)
       .then(data => {
-        if (cancelled) return;
+        if (!requests.isLatest(request.id)) return;
         const list = panelFilter ? (data as FramePanel[]).filter(panelFilter) : (data as FramePanel[]);
         setPanels(list);
         onPanelsLoaded?.(list);
+        if (selectedPanelId && !list.some(panel => panel.id === selectedPanelId)) {
+          onPanelChange(allowAllPanels ? '' : (list[0]?.id ?? ''));
+        }
       })
-      .catch(() => {
-        if (!cancelled) {
+      .catch((error: any) => {
+        if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) {
           setPanels([]);
           onPanelsLoaded?.([]);
+          onPanelChange('');
         }
       })
       .finally(() => {
-        if (!cancelled) {
+        if (requests.isLatest(request.id)) {
           setLoadingPanels(false);
           onLoadingChange?.(false);
         }
       });
+  }, [selectedProjectCode, selectedPanelId, panelFilter, onPanelsLoaded, onLoadingChange, onPanelChange, allowAllPanels, refreshKey, requests]);
 
-    return () => { cancelled = true; };
-  }, [selectedProjectCode, panelFilter, onPanelsLoaded, onLoadingChange, refreshKey]);
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted' || detail.projectCode !== selectedProjectCode) return;
+    requests.cancel();
+    setLoadingPanels(false);
+    onLoadingChange?.(false);
+    if (!detail.frameId) {
+      setPanels([]);
+      onPanelsLoaded?.([]);
+      onPanelChange('');
+      onProjectChange('');
+      return;
+    }
+    setPanels(current => {
+      const next = current.filter(panel => panel.id !== detail.frameId);
+      onPanelsLoaded?.(next);
+      if (selectedPanelId === detail.frameId) {
+        onPanelChange(allowAllPanels ? '' : (next[0]?.id ?? ''));
+      }
+      return next;
+    });
+  }), [allowAllPanels, onLoadingChange, onPanelChange, onPanelsLoaded, onProjectChange, requests, selectedPanelId, selectedProjectCode]);
 
   const handleProjectChange = (code: string) => {
     onProjectChange(code);

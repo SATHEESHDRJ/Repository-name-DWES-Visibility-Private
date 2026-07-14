@@ -343,8 +343,8 @@ export default function LoginPage() {
                     <div className="login-error login-error--offline" role="status" aria-live="polite">
                       <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
                       <span>
-                        <strong>Server is still starting.</strong>{' '}
-                        Automatic startup is in progress after system restart — this page will connect when the backend is ready.
+                        <strong>DWES backend is not available.</strong>{' '}
+                        Start DWES manually when required. This page will reconnect automatically when the backend is ready.
                       </span>
                     </div>
                   )}

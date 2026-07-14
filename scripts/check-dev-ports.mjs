@@ -65,7 +65,7 @@ function snapshotListeners(ports) {
       const out = execFileSync(
         'powershell.exe',
         ['-NoProfile', '-NonInteractive', '-Command', ps],
-        { encoding: 'utf8' },
+        { encoding: 'utf8', windowsHide: true },
       ).trim();
       for (const line of out ? out.split(/\r?\n/) : []) {
         const [portStr, pid, ...rest] = line.trim().split(/\s+/);
@@ -108,7 +108,7 @@ function killPid(pid) {
   try {
     if (isWin) {
       // /T also terminates the child tree (nest/vite spawn helpers).
-      execFileSync('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'ignore' });
+      execFileSync('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     } else {
       execFileSync('kill', ['-9', pid], { stdio: 'ignore' });
     }

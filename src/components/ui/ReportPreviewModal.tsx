@@ -6,6 +6,8 @@ import { buildPanelReportFilename } from '../../utils/reportFilename';
 import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import { DWES_REPORT_PREVIEW_POLL_MS } from '../../constants/refreshIntervals';
 import { Download } from './icons';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
 
 interface ReportPreviewModalProps {
   assignmentId: number;
@@ -32,17 +34,34 @@ export default function ReportPreviewModal({
   const [report, setReport] = useState<PanelCompletionReportPreviewData | null>(null);
   const [failed, setFailed] = useState(false);
   const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
+  const requests = useLatestRequest();
 
   const fetchReport = useCallback(async () => {
-    const data = await projectsApi.panelCompletionReport(projectCode, frameId);
-    setReport(data);
-  }, [projectCode, frameId]);
+    const request = requests.begin();
+    setReport(null);
+    setFailed(false);
+    try {
+      const data = await projectsApi.panelCompletionReport(projectCode, frameId, request.signal);
+      if (requests.isLatest(request.id)) setReport(data);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) setFailed(true);
+    }
+  }, [frameId, projectCode, requests]);
 
   useEffect(() => {
-    fetchReport().catch(() => setFailed(true));
+    void fetchReport();
   }, [fetchReport]);
 
   useDwesRefresh(fetchReport, { pollMs: DWES_REPORT_PREVIEW_POLL_MS });
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action === 'deleted'
+      && detail.projectCode === projectCode
+      && (!detail.frameId || detail.frameId === frameId)) {
+      requests.cancel();
+      onClose();
+    }
+  }), [frameId, onClose, projectCode, requests]);
 
   const exportPdf = async () => {
     setExporting('pdf');

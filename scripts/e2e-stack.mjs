@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dockerDir = path.join(root, 'infra', 'docker');
+// windowsHide keeps any cmd/console child windowless when this script itself
+// runs without a console (Codex/CI). In an interactive terminal it is a no-op
+// (children inherit the existing console), so Ctrl+C behaviour is unchanged.
+const HIDE = { windowsHide: true };
 const envE2e = path.join(dockerDir, '.env.e2e');
 const envExample = path.join(dockerDir, '.env.e2e.example');
 const composeBase = path.join(dockerDir, 'docker-compose.yml');
@@ -16,11 +20,13 @@ const composeE2e = path.join(dockerDir, 'docker-compose.e2e.yml');
 const baseUrl = process.env.DWES_E2E_BASE_URL || 'http://localhost:18080';
 
 function dockerCompose(args) {
-  const r = spawnSync(
-    'docker',
-    ['compose', '-f', composeBase, '-f', composeE2e, '--env-file', envE2e, ...args],
-    { cwd: dockerDir, stdio: 'inherit', shell: process.platform === 'win32' },
-  );
+  const composeArgs = ['compose', '-f', composeBase, '-f', composeE2e, '--env-file', envE2e, ...args];
+  // Prefer a direct docker.exe spawn (no cmd.exe hop); fall back to the shell
+  // only if PATH resolution genuinely needs it (e.g. a .cmd shim install).
+  let r = spawnSync('docker', composeArgs, { cwd: dockerDir, stdio: 'inherit', ...HIDE });
+  if (r.error && r.error.code === 'ENOENT' && process.platform === 'win32') {
+    r = spawnSync('docker', composeArgs, { cwd: dockerDir, stdio: 'inherit', shell: true, ...HIDE });
+  }
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
@@ -65,16 +71,23 @@ if (cmd === 'up') {
 } else if (cmd === 'test') {
   dockerCompose(['up', '-d', '--build']);
   await waitHealthy();
-  const e2e = spawnSync(
-    'npm',
-    ['exec', '--prefix', 'e2e', 'playwright', 'test'],
-    {
-      cwd: root,
-      stdio: 'inherit',
-      shell: true,
-      env: { ...process.env, DWES_E2E_BASE_URL: baseUrl },
-    },
-  );
+  // Run Playwright via its local CLI entry with node directly — no npm→cmd.exe
+  // shell chain, so a console-less caller can never surface a visible window.
+  const playwrightCli = path.join(root, 'e2e', 'node_modules', '@playwright', 'test', 'cli.js');
+  const e2e = fs.existsSync(playwrightCli)
+    ? spawnSync(process.execPath, [playwrightCli, 'test'], {
+        cwd: path.join(root, 'e2e'),
+        stdio: 'inherit',
+        ...HIDE,
+        env: { ...process.env, DWES_E2E_BASE_URL: baseUrl },
+      })
+    : spawnSync('npm', ['exec', '--prefix', 'e2e', 'playwright', 'test'], {
+        cwd: root,
+        stdio: 'inherit',
+        shell: true,
+        ...HIDE,
+        env: { ...process.env, DWES_E2E_BASE_URL: baseUrl },
+      });
   dockerCompose(['down']);
   process.exit(e2e.status ?? 1);
 } else {

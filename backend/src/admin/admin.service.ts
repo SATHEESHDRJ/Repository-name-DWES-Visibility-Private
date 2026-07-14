@@ -274,7 +274,7 @@ export class AdminService {
   // ── Hard Reset ────────────────────────────────────────────────────────────
 
   async projectResetPrecheck(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -315,7 +315,7 @@ export class AdminService {
   // ── Hard Delete (system_admin only; permanent — no backup, no restore) ────
 
   async hardDeleteProjectPrecheck(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -356,7 +356,7 @@ export class AdminService {
   async hardDeleteProject(code: string) {
     if (!code) return { error: 'Project code required' };
 
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     return permanentlyDeleteProject(this.prisma, code, this._resolveUploadDir());
@@ -366,7 +366,7 @@ export class AdminService {
     if (!code) return { error: 'Project code required' };
     if (code !== confirmedCode) return { error: 'Confirmation code does not match — type the exact project code' };
 
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -428,6 +428,7 @@ export class AdminService {
     // ── Step 4: Clear in-memory MockStore ───────────────────────────────────
     MockStore.frames   = MockStore.frames.filter(f => f.project_code !== code);
     MockStore.drawings = MockStore.drawings.filter(d => d.project_code !== code);
+    MockStore.drawingPackages = MockStore.drawingPackages.filter(record => record.project_code !== code);
 
     // ── Step 5: Remove files from disk ──────────────────────────────────────
     const framesDir   = path.join(uploadBase, code, 'frames');
@@ -564,6 +565,7 @@ export class AdminService {
     // ── Step 4: Clear in-memory MockStore ────────────────────────────────
     MockStore.frames   = [];
     MockStore.drawings = [];
+    MockStore.drawingPackages = [];
 
     // ── Step 5: Remove on-disk project folders (NOT uploads/backups/) ────
     let foldersRemoved = 0;

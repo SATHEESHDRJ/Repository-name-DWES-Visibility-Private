@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Zap } from '../../components/ui/icons';
 import DashboardShell from '../../components/ui/DashboardShell';
 import { techApi } from '../../services/api';
@@ -6,6 +6,8 @@ import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 import { useDwesRefresh } from '../../hooks/useDwesRefresh';
 import PanelsTab from './tabs/PanelsTab';
 import WiringTab from './tabs/WiringTab';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
 
 function pickDefaultPanel(panels: any[]) {
   const inProgress = panels.find(p => p.status === 'in_progress');
@@ -23,23 +25,61 @@ export default function TechnicianDashboard() {
   const [panelsLoading, setPanelsLoading] = useState(true);
   const [selectedPanel, setSelectedPanel] = useState<any>(null);
   const [wiringOpen, setWiringOpen] = useState(false);
+  const selectedPanelRef = useRef<any>(null);
+  const panelRequests = useLatestRequest();
+  const detailRequests = useLatestRequest();
 
-  const loadPanels = useCallback(() => {
-    techApi.myPanels().then(data => {
+  useEffect(() => { selectedPanelRef.current = selectedPanel; }, [selectedPanel]);
+
+  const loadPanels = useCallback(async () => {
+    const request = panelRequests.begin();
+    setPanelsLoading(true);
+    setPanels([]);
+    try {
+      const data = await techApi.myPanels(request.signal);
+      if (!panelRequests.isLatest(request.id)) return;
       setPanels(data);
-      setPanelsLoading(false);
       const inProgress = data.find((p: any) => p.status === 'in_progress');
       setLiveFromPanel(inProgress ?? null);
-      setSelectedPanel((prev: any) => {
-        if (prev) return data.find((p: any) => p.id === prev.id) ?? pickDefaultPanel(data);
-        return pickDefaultPanel(data);
-      });
-    }).catch(() => setPanelsLoading(false));
-  }, [setLiveFromPanel]);
+      const previous = selectedPanelRef.current;
+      const stillAssigned = previous ? data.find((panel: any) => panel.id === previous.id) : null;
+      if (previous && !stillAssigned) setWiringOpen(false);
+      const next = stillAssigned ?? pickDefaultPanel(data);
+      selectedPanelRef.current = next;
+      setSelectedPanel(next);
+    } catch (error: any) {
+      if (error?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
+      setPanels([]);
+      setSelectedPanel(null);
+      selectedPanelRef.current = null;
+      setWiringOpen(false);
+      setLiveFromPanel(null);
+    } finally {
+      if (panelRequests.isLatest(request.id)) setPanelsLoading(false);
+    }
+  }, [panelRequests, setLiveFromPanel]);
 
   useEffect(() => { loadPanels(); }, [loadPanels]);
 
   useDwesRefresh(loadPanels);
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    panelRequests.cancel();
+    detailRequests.cancel();
+    setPanels(current => current.filter(panel => (
+      panel.project_code !== detail.projectCode
+      || (!!detail.frameId && panel.frame_id !== detail.frameId)
+    )));
+    const selected = selectedPanelRef.current;
+    if (selected?.project_code === detail.projectCode
+      && (!detail.frameId || selected.frame_id === detail.frameId)) {
+      selectedPanelRef.current = null;
+      setSelectedPanel(null);
+      setWiringOpen(false);
+      setLiveFromPanel(null);
+    }
+  }), [detailRequests, panelRequests, setLiveFromPanel]);
 
   useEffect(() => {
     if (!wiringOpen) return;
@@ -49,19 +89,28 @@ export default function TechnicianDashboard() {
   }, [wiringOpen]);
 
   const handleSelectPanel = (panel: any) => {
+    selectedPanelRef.current = panel;
     setSelectedPanel(panel);
   };
 
   const handleOpenDigitalWiring = (panel: any) => {
+    selectedPanelRef.current = panel;
     setSelectedPanel(panel);
     setWiringOpen(true);
   };
 
   const handlePanelUpdate = () => {
-    loadPanels();
-    if (selectedPanel) {
-      techApi.myAssignmentDetail(selectedPanel.id).then(data => {
-        setSelectedPanel((prev: any) => prev ? { ...prev, ...data.assignment } : prev);
+    void loadPanels();
+    const selected = selectedPanelRef.current;
+    if (selected) {
+      const request = detailRequests.begin();
+      techApi.myAssignmentDetail(selected.id, request.signal).then(data => {
+        if (!detailRequests.isLatest(request.id)) return;
+        const current = selectedPanelRef.current;
+        if (!current || current.id !== selected.id) return;
+        const next = { ...current, ...data.assignment };
+        selectedPanelRef.current = next;
+        setSelectedPanel(next);
       }).catch(() => {});
     }
   };

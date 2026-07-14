@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-12 (supervisor: monitor converted-view-only + compact interlocked Panel Assignment modal; Jul-11 layout/typography/launcher/project-delete/PDF work committed — see CHANGELOG)  
+**Last updated:** 2026-07-14 (Quality pass over the pending refactor: fixed 3 floating-promise panel-drawing routes, consolidated KPI/parseCS/SVG-safety duplicates into shared utils, stabilized `useLatestRequest` identity, dead-code/lint cleanup — all builds green, backend 66/66 + state 4/4 tests pass. Prior: 2D Drawing → 3D Panel Model conversion; hosting assessment approval gate open — see CHANGELOG)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -11,7 +11,8 @@
 | Item | State |
 |------|--------|
 | Repository | Branch `main` (baseline commit `294cc2e`; **no `origin` remote configured yet**) |
-| OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
+| OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md). **Superseded for provider choice** by the 2026-07-13 provider-neutral assessment (OCI signup blocked) — kept as reference implementation |
+| Hosting assessment (2026-07-13) | **Complete — approval pending.** [docs/hosting/](docs/hosting/) (15 docs). Recommended: Option C — Cloudflare Pages + Railway (volumes) + Neon PG 18 + R2, ≈ $5–7/mo; Option B = $0 pilot rehearsal. Gate 0 in [FINAL_DEPLOYMENT_CHECKLIST.md](docs/hosting/FINAL_DEPLOYMENT_CHECKLIST.md) |
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) (production path) · [docs/CLOUD-ONBOARDING.md](docs/CLOUD-ONBOARDING.md) (dev/demo path — start here for a fresh cloud setup) |
 | Go-live command | `npm run go-live:plan` (preview) → `npm run go-live:preflight` → `npm run go-live` |
 | Orchestrator | **Hardened 2026-07-10** — secret redaction, origin/gh fail-fast, `--plan-only`, health-gated post-deploy ([CHANGELOG](CHANGELOG.md)) |

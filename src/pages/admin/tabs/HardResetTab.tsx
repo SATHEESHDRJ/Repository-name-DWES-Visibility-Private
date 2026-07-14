@@ -96,7 +96,7 @@ export default function HardResetTab() {
     : 0;
 
   return (
-    <div className="rounded-2xl border border-red-100 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-100 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b border-red-100 bg-red-50 flex items-center gap-3">
         <ShieldAlert size={20} className="text-red-600 shrink-0" />
@@ -236,7 +236,7 @@ export default function HardResetTab() {
                           type="button"
                           onClick={closeModal}
                           disabled={resetting}
-                          className="flex-1 h-12 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
+                          className="flex-1 h-12 rounded-xl border border-slate-200 bg-[var(--t-surface-white)] text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
                         >
                           Cancel
                         </button>

@@ -14,7 +14,7 @@ import { HTTPS_GATEWAY_PORT } from './dwes-ports.mjs';
 
 function commandExists(cmd) {
   const checker = process.platform === 'win32' ? 'where.exe' : 'which';
-  const r = spawnSync(checker, [cmd], { stdio: 'ignore' });
+  const r = spawnSync(checker, [cmd], { stdio: 'ignore', windowsHide: true });
   return r.status === 0;
 }
 

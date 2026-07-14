@@ -108,7 +108,7 @@ export default function DrawingsTab() {
                 title="View / Download"
                 onClick={() => handleView(d)}
                 disabled={viewing === d.id}
-                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
                 type="button"
               >
                 <ExternalLink size={16} strokeWidth={1.5} />
@@ -117,7 +117,7 @@ export default function DrawingsTab() {
                 <button
                   title="Delete Drawing"
                   onClick={() => handleDelete(d)}
-                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
                   type="button"
                 >
                   <Trash2 size={16} strokeWidth={1.5} />
@@ -264,7 +264,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
                 <button
                   type="button"
                   onClick={() => setDupChoice('keep')}
-                  className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 h-10 rounded-lg bg-[var(--t-surface-white)] border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
                 >
                   Keep existing
                 </button>

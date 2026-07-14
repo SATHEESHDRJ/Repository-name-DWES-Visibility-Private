@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -12,6 +12,8 @@ import {
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { adminApi } from '../../services/api';
+import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
 
 // User Management + System Settings only. Logs & Audit admin page removed;
 // backend audit recording (tech_audit_log) remains fully active.
@@ -25,10 +27,19 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [diag, setDiag] = useState<any>(null);
+  const requests = useLatestRequest();
 
-  useEffect(() => {
-    adminApi.diagnostics().then(setDiag).catch(() => {});
-  }, []);
+  const loadDiagnostics = useCallback(async () => {
+    const request = requests.begin();
+    setDiag(null);
+    try {
+      const next = await adminApi.diagnostics(request.signal);
+      if (requests.isLatest(request.id)) setDiag(next);
+    } catch { /* hide the unverified previous snapshot */ }
+  }, [requests]);
+
+  useEffect(() => { void loadDiagnostics(); }, [loadDiagnostics]);
+  useDwesRefresh(loadDiagnostics);
 
   const activeTab = location.pathname.includes('/settings') ? 'settings' : 'users';
   const heapPct = diag?.memory?.heap_pct ?? 0;
@@ -41,6 +52,7 @@ export default function AdminDashboard() {
       onTabChange={(key) => navigate(`/admin/${key}`)}
       subtitle={`${user?.full_name || ''} · ${user?.employee_id || ''}`}
       badge="Admin View"
+      heroClassName="admin-dashboard-hero"
       kpis={diag ? [
         { label: 'Uptime',       value: diag.system.uptime_human,      color: 'completed', icon: <Activity size={24} /> },
         { label: 'Heap',         value: `${heapPct}%`,                  color: heapPct > 80 ? 'danger' : heapPct > 60 ? 'warning' : 'completed', icon: <Database size={24} /> },
@@ -50,7 +62,7 @@ export default function AdminDashboard() {
         { label: 'Errors',       value: diag.recent_errors.length,      color: diag.recent_errors.length > 0 ? 'danger' : 'completed', icon: <TriangleAlert size={24} /> },
       ] : []}
     >
-      <Outlet />
+      <div className="admin-dashboard-content"><Outlet /></div>
     </DashboardShell>
   );
 }

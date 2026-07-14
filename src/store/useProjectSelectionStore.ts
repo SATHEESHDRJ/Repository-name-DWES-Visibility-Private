@@ -15,6 +15,7 @@ interface ProjectSelectionState {
   ownerUserId: number | null;
   setProjectForUser: (project: ActiveProjectContext, userId: number) => void;
   initializeForUser: (userId: number) => void;
+  clearProjectForUser: (userId: number) => void;
   clearSelection: () => void;
 }
 
@@ -35,6 +36,9 @@ export const useProjectSelectionStore = create<ProjectSelectionState>()(
           set({ selectedProject: null, ownerUserId: userId });
         }
       },
+
+      clearProjectForUser: (userId) =>
+        set({ selectedProject: null, ownerUserId: userId }),
 
       clearSelection: () => set({ selectedProject: null, ownerUserId: null }),
     }),

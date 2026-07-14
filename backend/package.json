@@ -11,8 +11,8 @@
     "start": "node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "test": "node --test \"test/**/*.test.cjs\"",
-    "test:watch": "node --test --watch \"test/**/*.test.cjs\""
+    "test": "node ../scripts/run-windowless.mjs node --test \"test/**/*.test.cjs\"",
+    "test:watch": "node ../scripts/run-windowless.mjs node --test --watch \"test/**/*.test.cjs\""
   },
   "dependencies": {
     "@nestjs/common": "^10.4.1",

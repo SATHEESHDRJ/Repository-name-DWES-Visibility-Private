@@ -11,6 +11,7 @@ import { Pool } from 'pg';
 import { FrameStore } from './frames/frame-store';
 import { CANONICAL_SEED_PROJECTS } from './common/seed-projects';
 import { allowStartupSeed } from './common/demo-mode.util';
+import { PANEL_DELETION_FILE_TYPE } from './common/deleted-resource.util';
 import * as bcrypt from 'bcryptjs';
 
 const SEED_USERS = [
@@ -151,12 +152,40 @@ async function bootstrap() {
     }
   }
 
+  // The database decides which file-backed records may be loaded. Deleted JSON
+  // and backup content must never become application state again.
+  const activeProjects = await prisma.projects.findMany({
+    where: { is_active: true },
+    select: { code: true },
+  });
+  const panelTombstones = await prisma.file_hashes.findMany({
+    where: { file_type: PANEL_DELETION_FILE_TYPE },
+    select: { project_code: true, file_name: true },
+  });
+  const deletedPanelIdsByProject = new Map<string, Set<string>>();
+  for (const row of panelTombstones) {
+    const ids = deletedPanelIdsByProject.get(row.project_code) ?? new Set<string>();
+    ids.add(row.file_name);
+    deletedPanelIdsByProject.set(row.project_code, ids);
+  }
+
   await prisma.$disconnect();
 
-  // Load frames from disk (file-based persistence)
-  FrameStore.loadAll();
+  FrameStore.loadAll({
+    activeProjectCodes: new Set(activeProjects.map(project => project.code)),
+    deletedPanelIdsByProject,
+  });
 
   const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'] });
+
+  app.use((req: any, res: any, next: () => void) => {
+    if (req.method === 'GET' && req.path?.startsWith('/api/')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
 
   if (process.env.TRUST_PROXY === 'true') {
     const http = app.getHttpAdapter().getInstance();

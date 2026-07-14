@@ -136,7 +136,7 @@ DWES/
 ├── Start DWES (Hidden).vbs Dev launcher (Vite HMR, no console)
 ├── Start DWES Prod (Hidden).vbs  Production launcher (no HMR)
 ├── Start DWES.cmd          Delegates to hidden Dev launcher
-├── scripts/LAUNCH.md       Dev/Prod launch, autostart, HMR notes
+├── scripts/LAUNCH.md       Manual Dev/Prod launch and HMR notes
 └── README.md               This file
 ```
 

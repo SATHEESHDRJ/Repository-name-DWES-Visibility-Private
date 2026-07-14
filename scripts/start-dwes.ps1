@@ -1,7 +1,6 @@
-# start-dwes.ps1 — Dev (HMR) or Prod silent launcher.
+# start-dwes.ps1 — hidden DWES launcher for manual desktop startup.
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dwes.ps1 -Mode Dev
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dwes.ps1 -Mode Prod
-# Prefer the VBS wrappers (no console flash). This script is for Task Scheduler / CLI.
 
 param(
   [ValidateSet('Dev', 'Prod')]
@@ -34,10 +33,9 @@ if (-not $node) {
   exit 1
 }
 
-# Hidden window — logs go to logs/ via launch-dwes.mjs
 Start-Process -FilePath $node `
   -ArgumentList @($launcher, $modeArg) `
   -WorkingDirectory $Root `
   -WindowStyle Hidden `
-  -Wait
-exit $LASTEXITCODE
+  -PassThru | Out-Null
+exit 0

@@ -17,6 +17,9 @@ const viteArgs = process.argv.slice(2);
 
 const child = spawn(process.execPath, [viteBin, ...viteArgs], {
   stdio: 'inherit',
+  // Hidden-console safety for console-less callers (hidden launcher / CI);
+  // in a real terminal children inherit that console, so Ctrl+C still works.
+  windowsHide: !process.stdout.isTTY,
   env: process.env,
 });
 

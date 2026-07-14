@@ -11,6 +11,7 @@
  * "Page X of Y", approval/sign-off page. See the synthesized design spec.
  */
 import * as PDFDocument from 'pdfkit';
+import { assignedCableKpiPercent } from './kpi.constants';
 import {
   resolveReportLogoPath,
   REPORT_COMPANY,
@@ -210,9 +211,7 @@ export function buildProjectReportPdf(data: ReportData): Promise<Buffer> {
       pendingCables += p.cablesTotal || 0; // unresolved schedule → counted pending
     }
   }
-  const overallKpi = totalCables > 0
-    ? Math.round(((sumSrc + sumDst) / (totalCables * 2)) * 1000) / 10
-    : 0;
+  const overallKpi = assignedCableKpiPercent(doneCables, totalCables);
 
   const docNo = `DWES-PCR-${project.code.replace(/[^A-Za-z0-9]/g, '').toUpperCase()}-${generatedAt.toISOString().slice(0, 10).replace(/-/g, '')}`;
   const issueDate = fmtDate(generatedAt);

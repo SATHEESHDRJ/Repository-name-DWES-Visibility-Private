@@ -256,7 +256,7 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
           <div className="ws-skel-row" />
           <div className="ws-skel-row" />
           <div className="ws-skel-row" />
-          <p className="ws-skel-note">Loading Digital Wiring Monitor…</p>
+          <p className="ws-skel-note">Loading Digital Wiring View…</p>
         </div>
       </div>
     );
@@ -273,12 +273,12 @@ export default function DigitalWiringMonitor({ projectCode, frameId, panelLabel 
   }
 
   return (
-    <div className="wsg-shell dwm-shell dwm-print-root" aria-label="Digital Wiring Monitor">
+    <div className="wsg-shell dwm-shell dwm-print-root" aria-label="Digital Wiring View">
       <header className="dwm-header">
         <div className="dwm-header-copy">
           <div className="dwm-header-kicker">
             <LayoutGrid size={14} aria-hidden />
-            Digital Wiring Monitor
+            Digital Wiring View
           </div>
           <h2 className="dwm-header-title">{panelLabel}</h2>
           <p className="dwm-header-sub">

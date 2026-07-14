@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
-import GaDrawingViewModal from '../../../components/technician/GaDrawingViewModal';
+import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
@@ -53,10 +53,7 @@ export default function PanelsTab({
   const hasAssignment = panels.length > 0;
   const headerPanel = selectedPanel;
 
-  const gaTarget = useMemo(() => {
-    if (!headerPanel || headerPanel.status === 'completed') return null;
-    return headerPanel;
-  }, [headerPanel]);
+  const gaTarget = useMemo(() => headerPanel || null, [headerPanel]);
 
   const confirmComplete = async (panel: any) => {
     setSaving(true);
@@ -124,25 +121,25 @@ export default function PanelsTab({
           className="btn-primary tech-dash-action-btn"
           disabled={!hasAssignment}
           title={hasAssignment ? 'Open digital wiring for the selected panel' : AWAITING_ASSIGNMENT}
-          aria-label={hasAssignment ? 'Digital Wiring View' : AWAITING_ASSIGNMENT}
+          aria-label={hasAssignment ? 'Digital Wiring Monitor' : AWAITING_ASSIGNMENT}
           onClick={() => {
             const panel = headerPanel ?? panels[0];
             if (panel) onOpenDigitalWiring(panel);
           }}
         >
           <Cable size={16} />
-          Digital Wiring View
+          Digital Wiring Monitor
         </button>
         <button
           type="button"
           className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment || !gaTarget}
-          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Not available for completed panels' : 'Open GA drawing viewer'}
-          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA 3D/2D Drawing View'}
+          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Select a panel first' : 'Open the selected panel drawing viewer'}
+          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : '3D GA / 2D Drawing View'}
           onClick={() => gaTarget && setGaOpen(true)}
         >
           <FileText size={16} />
-          GA 3D/2D Drawing View
+          3D GA / 2D Drawing View
         </button>
       </div>
 
@@ -267,9 +264,11 @@ export default function PanelsTab({
       )}
 
       {gaOpen && gaTarget && (
-        <GaDrawingViewModal
+        <PanelGaDrawingModal
+          projectCode={gaTarget.project_code}
+          frameId={gaTarget.frame_id}
           panelName={gaTarget.panel_name}
-          projectLabel={gaTarget.project_name || gaTarget.project_code}
+          projectName={gaTarget.project_name || gaTarget.project_code}
           onClose={() => setGaOpen(false)}
         />
       )}

@@ -1133,7 +1133,7 @@ export function UploadFrameModal({
                       Re-upload (create new version)
                     </button>
                     <button type="button" onClick={() => setDupChoice('keep')}
-                      className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors">
+                      className="flex-1 h-10 rounded-lg bg-[var(--t-surface-white)] border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors">
                       Cancel
                     </button>
                   </div>

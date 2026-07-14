@@ -6,7 +6,7 @@ import UserMgmtTab from './tabs/UserMgmtTab';
  */
 export default function UserManagementPage() {
   return (
-    <div className="dash-module dash-module--wide">
+    <div className="dash-module dash-module--wide admin-user-module">
       <UserMgmtTab />
     </div>
   );

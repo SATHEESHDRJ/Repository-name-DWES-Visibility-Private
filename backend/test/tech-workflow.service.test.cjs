@@ -64,6 +64,7 @@ test('TechService.deleteAssignment only removes an original assigned-before-star
       findUnique: async () => ({
         id: 9, project_code: 'PRJ', frame_id: 'frame', status: 'assigned',
         started_at: null, handover_from_id: null, changeover_locked: false,
+        cables_src_done: 0, cables_dst_done: 0, cable_status: '{}',
       }),
       delete: async args => { deleted.push(args); return {}; },
     },
@@ -91,6 +92,44 @@ for (const row of [
   });
 }
 
+test('TechService.deleteAssignment rejects an assigned row after the first cable update', async () => {
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async () => ({
+        id: 9, project_code: 'PRJ', frame_id: 'frame', status: 'assigned',
+        started_at: null, handover_from_id: null, changeover_locked: false,
+        cables_src_done: 1, cables_dst_done: 0,
+        cable_status: JSON.stringify({ 0: { src: true, dst: false } }),
+      }),
+    },
+  }));
+  await assert.rejects(
+    () => service.deleteAssignment(9),
+    (err) => err instanceof BadRequestException && err.message.includes('mid-changeover'),
+  );
+});
+
+test('TechService.updateCableStatus auto-starts an assigned panel on its first cable update', async () => {
+  const updates = [];
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async () => ({
+        id: 12, project_code: 'PRJ', frame_id: 'frame', panel_name: '=H001',
+        technician_id: 7, status: 'assigned', started_at: null,
+        cables_src_done: 0, cables_dst_done: 0,
+        cable_status: JSON.stringify({ 0: { src: false, dst: false, note: '' } }),
+      }),
+      update: async args => { updates.push(args); return { id: 12, ...args.data }; },
+    },
+    users: { findUnique: async () => ({ id: 7, full_name: 'Cable Tech' }) },
+  }));
+
+  await service.updateCableStatus(12, 7, 0, 'src', true);
+  assert.equal(updates[0].data.status, 'in_progress');
+  assert.ok(updates[0].data.started_at instanceof Date);
+  assert.equal(updates[0].data.cables_src_done, 1);
+});
+
 test('TechService.changeover validates the replacement before pausing current work', async () => {
   let writes = 0;
   const service = new TechService(workflowPrisma({
@@ -116,7 +155,7 @@ test('TechService.changeover carries wiring progress and links immutable history
     status: 'in_progress', changeover_locked: false, handover_from_id: null,
     cables_total: 4, cables_src_done: 3, cables_dst_done: 2,
     cable_status: JSON.stringify({ 0: { src: true, dst: true }, 1: { src: true, dst: false } }),
-    total_wiring_seconds: 320,
+    total_wiring_seconds: 320, started_at: new Date('2026-07-12T06:00:00.000Z'),
   };
   const updates = [];
   const creates = [];
@@ -146,6 +185,7 @@ test('TechService.changeover carries wiring progress and links immutable history
   assert.equal(transferred.cables_src_done, 3);
   assert.equal(transferred.cables_dst_done, 2);
   assert.equal(transferred.total_wiring_seconds, 320);
+  assert.equal(transferred.started_at, old.started_at);
   assert.equal(transferred.handover_from_id, 1);
   assert.equal(updates[1].data.handover_to_id, 2);
   assert.equal(updates[1].data.changeover_locked, true);

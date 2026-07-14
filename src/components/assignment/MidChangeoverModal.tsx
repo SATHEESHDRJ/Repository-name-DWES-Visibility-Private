@@ -230,11 +230,11 @@ export default function MidChangeoverModal({
               </div>
 
               <div className="mb-4 grid grid-cols-2 gap-3">
-                <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
+                <div className="p-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px]">
                   <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Completed Cables</div>
                   <div className="text-[20px] font-bold text-emerald-600 mt-1">{assignment.completed_cables ?? 0}</div>
                 </div>
-                <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
+                <div className="p-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px]">
                   <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Remaining Cables</div>
                   <div className="text-[20px] font-bold text-amber-600 mt-1">{assignment.remaining_cables ?? 0}</div>
                 </div>

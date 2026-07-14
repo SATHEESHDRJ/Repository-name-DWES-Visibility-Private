@@ -1,5 +1,5 @@
 @echo off
-REM Visible fallback — delegates to hidden Dev launcher (Vite HMR, no console windows).
+setlocal
 cd /d "%~dp0"
-wscript.exe "%~dp0Start DWES (Hidden).vbs"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0scripts\start-dwes.ps1" -Mode Dev
 exit /b %ERRORLEVEL%

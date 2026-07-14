@@ -16,7 +16,7 @@ export default function SupervisorAlertStrips({ onNavigate }: Props) {
 
   useEffect(() => { loadCounts(); }, [loadCounts]);
 
-  useDwesRefresh(loadCounts, { listenFrames: false });
+  useDwesRefresh(loadCounts, { listenFrames: true });
 
   if (approvals === 0) return null;
 

@@ -11,7 +11,7 @@ import HardResetDbTab from './tabs/HardResetDbTab';
  */
 export default function AdminSettingsPage() {
   return (
-    <div className="bento-grid bento-grid--settings">
+    <div className="bento-grid bento-grid--settings admin-settings-grid">
       <div className="dash-module bento-cell bento-cell--span-6"><DeploymentModeTab /></div>
       <div className="dash-module bento-cell bento-cell--span-6"><DbConfigTab /></div>
       <div className="dash-module dash-module--wide bento-cell bento-cell--span-12"><DiagnosticsTab /></div>

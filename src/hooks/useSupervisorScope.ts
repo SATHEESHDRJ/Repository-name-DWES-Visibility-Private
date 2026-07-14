@@ -3,6 +3,9 @@ import { projectsApi, usersApi } from '../services/api';
 import type { Project } from '../types';
 import type { FramePanel } from '../components/assignment/ProjectPanelSelect';
 import { isVerifiedFrame } from '../components/assignment/frameUtils';
+import { useLatestRequest } from './useLatestRequest';
+import { useDwesRefresh } from './useDwesRefresh';
+import { onFramesChanged } from '../utils/projectFramesEvents';
 
 export function useSupervisorScope() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -12,11 +15,38 @@ export function useSupervisorScope() {
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [panelsRefreshKey, setPanelsRefreshKey] = useState(0);
+  const projectRequests = useLatestRequest();
+
+  const loadProjects = useCallback(async () => {
+    const request = projectRequests.begin();
+    setProjects([]);
+    try {
+      const rows = await projectsApi.list(request.signal) as Project[];
+      if (!projectRequests.isLatest(request.id)) return;
+      setProjects(rows);
+      setSelectedProjectCode(current => rows.some(project => project.code === current)
+        ? current
+        : (rows[0]?.code ?? ''));
+    } catch { /* an unverified prior list must stay hidden */ }
+  }, [projectRequests]);
 
   useEffect(() => {
-    projectsApi.list().then(setProjects).catch(() => {});
+    void loadProjects();
     usersApi.technicians().then(setTechnicians).catch(() => {});
-  }, []);
+  }, [loadProjects]);
+
+  useDwesRefresh(loadProjects);
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    if (!detail.frameId) {
+      setProjects(current => current.filter(project => project.code !== detail.projectCode));
+      setSelectedProjectCode(current => current === detail.projectCode ? '' : current);
+    } else if (selectedProjectCode === detail.projectCode) {
+      setLoadedPanels(current => current.filter(panel => panel.id !== detail.frameId));
+      setSelectedPanelId(current => current === detail.frameId ? '' : current);
+    }
+  }), [selectedProjectCode]);
 
   const handleProjectChange = useCallback((code: string) => {
     setSelectedProjectCode(code);

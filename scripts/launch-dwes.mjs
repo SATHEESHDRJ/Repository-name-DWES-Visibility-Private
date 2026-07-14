@@ -19,6 +19,7 @@ import http from 'node:http';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectWindowsPortOwner, isDwesProcessCommand } from './dwes-process-ownership.mjs';
 import { waitForPostgres } from './wait-for-postgres.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -43,6 +44,7 @@ function parseMode() {
 
 const mode = parseMode();
 const isProd = mode === 'prod';
+const suppressBrowser = process.argv.includes('--no-browser');
 const bootId = new Date().toISOString().replace(/[:.]/g, '-');
 
 /** @type {{ bootId: string, mode: string, startedAt: string, status: string, phases: object[], stack: object, error?: string, finishedAt?: string }} */
@@ -70,6 +72,20 @@ function writeReport() {
   try {
     fs.writeFileSync(path.join(logsDir, 'startup-report.json'), JSON.stringify(report, null, 2));
   } catch { /* ok */ }
+}
+
+function showFailureMessage(errorText) {
+  if (process.platform !== 'win32') return;
+  const lines = (errorText || 'DWES could not start.').split(/\r?\n/).map((line) => line.replace(/'/g, "''"));
+  const message = lines.join('\n');
+  try {
+    execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('${message}', 'DWES startup failed', 'OK', 'Error') | Out-Null`,
+    ], { stdio: 'ignore', windowsHide: true });
+  } catch { /* ignore popup failures */ }
 }
 
 async function runPhase(name, fn) {
@@ -204,6 +220,10 @@ function appUrl() {
 }
 
 function openBrowser(url) {
+  if (suppressBrowser) {
+    log(`browser open suppressed for watchdog recovery → ${url}`);
+    return;
+  }
   const browser = findBrowser();
   // Open DWES as a standalone, chromeless "app" window (no tabs / address bar) so
   // only the application UI is visible — a seamless desktop-app experience.
@@ -313,17 +333,60 @@ function prodArtifactsOk() {
     && fs.existsSync(path.join(root, 'dist', 'index.html'));
 }
 
-async function freePorts(ports) {
-  log(`freeing ports: ${ports.join(', ')}`);
+function inspectPortOwner(port) {
+  return inspectWindowsPortOwner(port);
+}
+
+function isDwesPortOwner(owner) {
+  return Boolean(owner && isDwesProcessCommand(owner.commandLine, root));
+}
+
+function stopDwesPortOwner(expectedOwner) {
+  // Re-read the listener immediately before taskkill. This prevents a process
+  // that acquired the port after inspection from being terminated by PID race.
+  const currentOwner = inspectPortOwner(expectedOwner.port);
+  if (!currentOwner || currentOwner.pid !== expectedOwner.pid || !isDwesPortOwner(currentOwner)) return false;
   try {
-    execFileSync('node', [
-      path.join(root, 'scripts', 'check-dev-ports.mjs'),
-      ...ports.map(String),
-    ], { cwd: root, stdio: 'pipe', windowsHide: true });
-    log(`ports freed: ${ports.join(', ')}`);
+    execFileSync('taskkill', ['/PID', String(currentOwner.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function freePorts(ports) {
+  log(`checking ports: ${ports.join(', ')}`);
+  const blocked = [];
+  for (const port of ports) {
+    const owner = inspectPortOwner(port);
+    if (!owner) continue;
+    if (isDwesPortOwner(owner)) {
+      const stopped = stopDwesPortOwner(owner);
+      log(`cleared DWES-owned listener on ${port} (PID ${owner.pid}) -> ${stopped ? 'stopped' : 'not stopped'}`, stopped ? 'WARN' : 'ERROR');
+      if (stopped) continue;
+    }
+    blocked.push(`${port} (${owner.processName || 'unknown'} PID ${owner.pid})`);
+  }
+  if (blocked.length) {
+    throw new Error(`port(s) already occupied by non-DWES processes: ${blocked.join(', ')}`);
+  }
+}
+
+function stopStaleBackendProcesses() {
+  if (process.platform !== 'win32') return;
+  const cleanupScript = path.join(root, 'scripts', 'stop-stale-dwes-backend.ps1');
+  if (!fs.existsSync(cleanupScript)) return;
+
+  try {
+    const output = execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy', 'Bypass',
+      '-File', cleanupScript,
+      '-RootPath', root,
+    ], { cwd: root, stdio: 'pipe', windowsHide: true }).toString().trim();
+    if (output) log(`stopped stale backend process(es): ${output}`, 'WARN');
   } catch (err) {
-    const out = err?.stdout?.toString?.() || err?.stderr?.toString?.() || '';
-    log(`port preflight on ${ports.join(',')}: ${out.trim() || err?.message || 'conflict'}`, 'WARN');
+    log(`stale backend cleanup failed: ${err?.message || String(err)}`, 'WARN');
   }
 }
 
@@ -344,12 +407,18 @@ function spawnBackend() {
     runHiddenLogged(process.execPath, ['dist/main.js'], path.join(root, 'backend'), 'backend.log');
     return true;
   }
-  log('starting backend (Nest start:dev watch)');
-  const nestJs = resolveCliJs('backend', 'node_modules', '@nestjs', 'cli', 'bin', 'nest.js');
-  if (nestJs) {
-    runHiddenLogged(process.execPath, [nestJs, 'start', '--watch'], path.join(root, 'backend'), 'backend.log');
+  // Dev watch runs through the runner, NOT `nest start --watch`: the Nest CLI
+  // respawns the app with `shell: true` and no windowsHide, which allocates a
+  // visible cmd.exe console on EVERY backend file save when the watcher itself
+  // is console-less (this hidden launcher). The runner owns one app child and
+  // restarts it in place with windowsHide (its PID lock also makes repeated
+  // launcher retries reuse the same supervisor instead of stacking watchers).
+  log('starting backend (dev watch supervisor: scripts/backend-dev-runner.mjs)');
+  const runnerJs = path.join(root, 'scripts', 'backend-dev-runner.mjs');
+  if (fs.existsSync(runnerJs)) {
+    runHiddenLogged(process.execPath, [runnerJs], root, 'backend.log');
   } else {
-    log('nest CLI entry not found — falling back to npm run start:dev', 'WARN');
+    log('backend-dev-runner.mjs not found — falling back to npm run start:dev', 'WARN');
     runHiddenNpm(['run', 'start:dev'], path.join(root, 'backend'), 'backend.log');
   }
   return true;
@@ -362,6 +431,7 @@ async function ensureBackend() {
   }
 
   await freePorts([BE_PORT]);
+  stopStaleBackendProcesses();
   await sleep(500);
 
   if (await backendHealthy()) {
@@ -434,6 +504,7 @@ async function retryBackendIfNeeded(tick) {
 
   log('backend retry — clear :3001 and re-spawn', 'WARN');
   await freePorts([BE_PORT]);
+  stopStaleBackendProcesses();
   await sleep(500);
 
   if (await backendHealthy()) return;
@@ -489,15 +560,29 @@ async function main() {
     process.exit(1);
   }
 
+  await runPhase('preflight-ports', async () => {
+    const checks = await Promise.all([
+      portReady(PG_PORT),
+      portReady(BE_PORT),
+      portReady(FE_PORT),
+    ]);
+    return {
+      postgresPort: checks[0],
+      backendPort: checks[1],
+      frontendPort: checks[2],
+      expectedPorts: [PG_PORT, BE_PORT, FE_PORT],
+    };
+  });
+
   await runPhase('postgres', async () => {
     const pg = await waitForPostgres({
       maxSecs: PG_WAIT_SECS,
       onLog: (msg) => log(`postgres: ${msg}`),
     });
     if (!pg.ok) {
-      log('PostgreSQL not fully ready — backend start may fail; continuing with retries', 'WARN');
+      throw new Error(`PostgreSQL is not reachable on port ${PG_PORT} (${pg.database || 'default'}). Start PostgreSQL and try again.`);
     }
-    return { postgresOk: pg.ok, waitedSecs: pg.waitedSecs, database: pg.database };
+    return { postgresOk: true, waitedSecs: pg.waitedSecs, database: pg.database };
   });
 
   if (await stackReady()) {
@@ -557,5 +642,16 @@ main().catch((e) => {
   writeReport();
   log(`BOOT FAILED: ${report.error}`, 'ERROR');
   log('see logs/backend.log logs/frontend.log logs/startup-report.json', 'ERROR');
+  const details = [
+    'DWES could not start.',
+    `Reason: ${report.error}`,
+    '',
+    'Logs:',
+    '- logs/launcher.log',
+    '- logs/startup-report.json',
+    '- logs/backend.log',
+    '- logs/frontend.log',
+  ].join('\n');
+  showFailureMessage(details);
   process.exit(1);
 });

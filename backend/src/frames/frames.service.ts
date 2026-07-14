@@ -3,15 +3,19 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { MockStore, Cable, CompareResult, FrameData } from '../data/mock-store';
+import { MockStore, Cable, CompareResult, FrameData, type PanelDrawingAssetKind } from '../data/mock-store';
 import { PrismaService } from '../prisma/prisma.service';
 import { FrameStore } from './frame-store';
+import { PanelModelStore } from '../panel-model/panel-model-store';
 import {
   assertPanelNameUniqueForWrite,
   assertPatchPanelNameAllowed,
 } from '../common/panel-duplicate.helper';
-
-const normalize = (s: string) => String(s || '').toUpperCase().trim().replace(/\s+/g, '');
+import {
+  deletedPanelIds,
+  isPanelDeleted,
+  panelDeletionRecord,
+} from '../common/deleted-resource.util';
 
 const VFY_KW = ['ferrule', 'cable', 'wire', 'source', 'dest', 'terminal', 's.no', 'sno', 'color', 'size', 'length'];
 
@@ -49,6 +53,8 @@ function inferContentType(name: string): string {
     pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
     svg: 'image/svg+xml', bmp: 'image/bmp', tiff: 'image/tiff', tif: 'image/tiff',
     dwg: 'application/acad', dxf: 'image/vnd.dxf',
+    glb: 'model/gltf-binary', gltf: 'model/gltf+json', obj: 'model/obj', stl: 'model/stl',
+    step: 'application/step', stp: 'application/step', ifc: 'application/x-step', fbx: 'application/octet-stream',
   };
   return map[ext] || 'application/octet-stream';
 }
@@ -57,10 +63,18 @@ function inferContentType(name: string): string {
 export class FramesService {
   constructor(private prisma: PrismaService) {}
 
+  private async assertActiveProject(projectCode: string) {
+    const project = await this.prisma.projects.findFirst({
+      where: { code: projectCode, is_active: true },
+      select: { code: true },
+    });
+    if (!project) throw new NotFoundException(`Project ${projectCode} not found`);
+  }
+
   /** True if the technician has any assignment on a frame/panel of this project. */
   async technicianAssignedToProject(projectCode: string, technicianId: number): Promise<boolean> {
     const a = await this.prisma.tech_assignments.findFirst({
-      where: { project_code: projectCode, technician_id: technicianId },
+      where: { project_code: projectCode, technician_id: technicianId, is_hidden: { not: true } },
       select: { id: true },
     });
     return !!a;
@@ -69,7 +83,7 @@ export class FramesService {
   /** True if the technician is assigned to this specific frame/panel. */
   async technicianAssignedToFrame(projectCode: string, frameId: string, technicianId: number): Promise<boolean> {
     const a = await this.prisma.tech_assignments.findFirst({
-      where: { project_code: projectCode, frame_id: frameId, technician_id: technicianId },
+      where: { project_code: projectCode, frame_id: frameId, technician_id: technicianId, is_hidden: { not: true } },
       select: { id: true },
     });
     return !!a;
@@ -78,7 +92,7 @@ export class FramesService {
   /** Frame ids the technician may access within a project (read-only). */
   async technicianAssignedFrameIds(projectCode: string, technicianId: number): Promise<string[]> {
     const rows = await this.prisma.tech_assignments.findMany({
-      where: { project_code: projectCode, technician_id: technicianId },
+      where: { project_code: projectCode, technician_id: technicianId, is_hidden: { not: true } },
       select: { frame_id: true },
     });
     return [...new Set(rows.map(r => r.frame_id))];
@@ -97,8 +111,24 @@ export class FramesService {
     }
     return null;
   }
-  findAll(projectCode: string) {
-    return MockStore.findFramesByProject(projectCode).map(f => ({
+  async findAll(projectCode: string) {
+    await this.assertActiveProject(projectCode);
+    const deletedIds = await deletedPanelIds(this.prisma, projectCode);
+    if (deletedIds.size) {
+      for (const frameId of deletedIds) FrameStore.blockPanel(projectCode, frameId);
+      MockStore.frames = MockStore.frames.filter(
+        frame => frame.project_code !== projectCode || !deletedIds.has(frame.id),
+      );
+      MockStore.drawings = MockStore.drawings.filter(
+        drawing => drawing.project_code !== projectCode || !drawing.frame_id || !deletedIds.has(drawing.frame_id),
+      );
+      MockStore.drawingPackages = MockStore.drawingPackages.filter(
+        record => record.project_code !== projectCode || !deletedIds.has(record.frame_id),
+      );
+    }
+    return MockStore.findFramesByProject(projectCode)
+      .filter(frame => !FrameStore.isBlocked(projectCode, frame.id))
+      .map(f => ({
       id: f.id, project_code: f.project_code, panel_name: f.panel_name,
       uploaded_at: f.uploaded_at, compare_status: f.compare_status,
       original_filename: f.original_filename, cable_count: f.cable_count, sheet_name: f.sheet_name,
@@ -157,18 +187,38 @@ export class FramesService {
     };
   }
 
-  findOne(projectCode: string, frameId: string) {
+  async findOne(projectCode: string, frameId: string) {
+    await this.assertActiveProject(projectCode);
+    if (await isPanelDeleted(this.prisma, projectCode, frameId)) {
+      FrameStore.blockPanel(projectCode, frameId);
+      throw new NotFoundException(`Frame ${frameId} not found`);
+    }
     const f = MockStore.findFrameByProjectAndId(projectCode, frameId);
     if (!f) throw new NotFoundException(`Frame ${frameId} not found`);
     const { file_buffer: _file_buffer, ...safe } = f as any;
     return safe;
   }
 
-  remove(projectCode: string, frameId: string) {
+  async remove(projectCode: string, frameId: string) {
+    await this.assertActiveProject(projectCode);
     const idx = MockStore.frames.findIndex(f => f.project_code === projectCode && f.id === frameId);
     if (idx === -1) throw new NotFoundException(`Frame ${frameId} not found`);
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      select: { id: true },
+    });
+    const assignmentIds = assignments.map(assignment => assignment.id);
+    await this.prisma.$transaction([
+      this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } }),
+      this.prisma.tech_assignments.deleteMany({ where: { project_code: projectCode, frame_id: frameId } }),
+      this.prisma.tech_audit_log.deleteMany({ where: { project_code: projectCode, frame_id: frameId } }),
+      this.prisma.file_hashes.create({ data: panelDeletionRecord(projectCode, frameId) }),
+    ]);
+    FrameStore.removeDrawingPackage(projectCode, frameId);
     FrameStore.remove(projectCode, frameId);
+    PanelModelStore.removeFrame(projectCode, frameId);
     MockStore.frames.splice(idx, 1);
+    FrameStore.blockPanel(projectCode, frameId);
     return { message: 'Frame deleted' };
   }
 
@@ -448,17 +498,72 @@ export class FramesService {
       }
     }
     return MockStore.findDrawingsByProject(projectCode).map(d => ({
-      id: d.id, project_code: d.project_code, filename: d.filename,
+      id: d.id, project_code: d.project_code, frame_id: d.frame_id, package_id: d.package_id,
+      kind: d.kind, sha256: d.sha256, uploaded_by: d.uploaded_by, filename: d.filename,
       original_name: d.original_name, content_type: d.content_type, uploaded_at: d.uploaded_at, size: d.size,
     }));
   }
 
+  /** Panel-scoped drawing list. Legacy unscoped drawings are safe only for a one-panel project. */
+  getPanelDrawings(projectCode: string, frameId: string) {
+    const frames = MockStore.findFramesByProject(projectCode);
+    const allowLegacy = frames.length === 1 && frames[0]?.id === frameId;
+    return this.getDrawings(projectCode).filter(d => d.frame_id === frameId || (allowLegacy && !d.frame_id));
+  }
+
+  getPanelDrawingFile(projectCode: string, frameId: string, drawingId: string) {
+    const allowed = this.getPanelDrawings(projectCode, frameId).some(d => d.id === drawingId);
+    return allowed ? this.getDrawingFile(projectCode, drawingId) : null;
+  }
+
+  getPanelDrawingPackage(projectCode: string, frameId: string) {
+    const frame = MockStore.findFrameByProjectAndId(projectCode, frameId) ?? FrameStore.getFrameFromDisk(projectCode, frameId);
+    if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
+    const record = FrameStore.getDrawingPackage(projectCode, frameId);
+    if (!record) throw new NotFoundException(`Frame ${frameId} not found`);
+    return record;
+  }
+
+  getPanelDrawingAssetFile(projectCode: string, frameId: string, kind: PanelDrawingAssetKind) {
+    const record = this.getPanelDrawingPackage(projectCode, frameId);
+    const asset = kind === '2d' ? record.drawing_2d : record.model_3d;
+    if (!asset) return null;
+    if (asset.preview?.status === 'ready') {
+      const preview = FrameStore.getDrawingPreviewFile(projectCode, asset.id, asset.preview.format);
+      return preview ? { ...preview, asset, isPreview: true } : null;
+    }
+    const file = this.getDrawingFile(projectCode, asset.id);
+    return file ? { ...file, asset, isPreview: false } : null;
+  }
+
+  getPanelDrawingAssetSourceFile(projectCode: string, frameId: string, kind: PanelDrawingAssetKind) {
+    const record = this.getPanelDrawingPackage(projectCode, frameId);
+    const asset = kind === '2d' ? record.drawing_2d : record.model_3d;
+    if (!asset) return null;
+    const file = this.getDrawingFile(projectCode, asset.id);
+    return file ? { ...file, asset } : null;
+  }
+
   removeDrawing(projectCode: string, drawingId: string) {
+    this.getDrawings(projectCode);
     const idx = MockStore.drawings.findIndex(d => d.project_code === projectCode && d.id === drawingId);
     if (idx === -1) throw new NotFoundException(`Drawing ${drawingId} not found`);
     const drawing = MockStore.drawings[idx];
     FrameStore.removeDrawing(projectCode, drawingId, drawing.original_name || '');
     MockStore.drawings.splice(idx, 1);
+    if (drawing.frame_id) {
+      const record = FrameStore.getDrawingPackage(projectCode, drawing.frame_id);
+      if (record) {
+        const next = {
+          ...record,
+          revision: record.revision + 1,
+          updated_at: new Date().toISOString(),
+          drawing_2d: record.drawing_2d?.id === drawingId ? null : record.drawing_2d,
+          model_3d: record.model_3d?.id === drawingId ? null : record.model_3d,
+        };
+        FrameStore.persistDrawingPackage(next);
+      }
+    }
     return { message: 'Drawing deleted' };
   }
 
@@ -519,7 +624,7 @@ export class FramesService {
 
     const uploadBase = this._resolveUploadDir();
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const safeName = f.panel_name.trim().replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+    const safeName = f.panel_name.trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
     const backupDir = path.join(uploadBase, 'backups');
     fs.mkdirSync(backupDir, { recursive: true });
     const dumpFile = path.join(backupDir, `FRAME_${safeName}_${ts}.dump`);
@@ -551,25 +656,31 @@ export class FramesService {
       archivedFiles.push(path.basename(src));
     }
 
-    // Purge DB rows tied to this frame (panel_inspections → tech_assignments → audit)
+    // Purge DB rows and record the database tombstone atomically. The tombstone
+    // prevents archived or stale JSON from restoring this panel after restart.
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
       select: { id: true },
     });
     const assignmentIds = assignments.map(a => a.id);
-    const inspDel = assignmentIds.length
-      ? await this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
-      : { count: 0 };
-    const assnDel = await this.prisma.tech_assignments.deleteMany({
-      where: { project_code: projectCode, frame_id: frameId },
-    });
-    const auditDel = await this.prisma.tech_audit_log.deleteMany({
-      where: { project_code: projectCode, frame_id: frameId },
-    });
+    const [inspDel, assnDel, auditDel] = await this.prisma.$transaction([
+      this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } }),
+      this.prisma.tech_assignments.deleteMany({ where: { project_code: projectCode, frame_id: frameId } }),
+      this.prisma.tech_audit_log.deleteMany({ where: { project_code: projectCode, frame_id: frameId } }),
+      this.prisma.file_hashes.create({ data: panelDeletionRecord(projectCode, frameId) }),
+    ]);
 
     const idx = MockStore.frames.findIndex(fr => fr.project_code === projectCode && fr.id === frameId);
+    const drawingRecord = FrameStore.getDrawingPackage(projectCode, frameId);
+    if (drawingRecord) {
+      for (const asset of [drawingRecord.drawing_2d, drawingRecord.model_3d]) {
+        if (asset) FrameStore.archiveDrawingFile(projectCode, asset.id, asset.original_name);
+      }
+      FrameStore.removeDrawingPackage(projectCode, frameId);
+    }
     if (idx !== -1) MockStore.frames.splice(idx, 1);
     FrameStore.remove(projectCode, frameId);
+    FrameStore.blockPanel(projectCode, frameId);
 
     return {
       success: true,
@@ -589,6 +700,7 @@ export class FramesService {
   // ── Guarded drawing delete (backup-first + phrase confirm) ──────────────────
 
   async deleteDrawingPrecheck(projectCode: string, drawingId: string) {
+    this.getDrawings(projectCode);
     const d = MockStore.drawings.find(dr => dr.project_code === projectCode && dr.id === drawingId);
     if (!d) throw new NotFoundException(`Drawing ${drawingId} not found`);
     return {
@@ -600,6 +712,7 @@ export class FramesService {
   }
 
   async deleteDrawingGuarded(projectCode: string, drawingId: string, confirmedPhrase: string) {
+    this.getDrawings(projectCode);
     const d = MockStore.drawings.find(dr => dr.project_code === projectCode && dr.id === drawingId);
     if (!d) throw new NotFoundException(`Drawing ${drawingId} not found`);
 
@@ -610,7 +723,7 @@ export class FramesService {
 
     const uploadBase = this._resolveUploadDir();
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const safeName = d.original_name.trim().replace(/[^a-zA-Z0-9_\-\.]/g, '_').slice(0, 40);
+    const safeName = d.original_name.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 40);
     const backupDir = path.join(uploadBase, 'backups');
     fs.mkdirSync(backupDir, { recursive: true });
     const dumpFile = path.join(backupDir, `DRAWING_${safeName}_${ts}.dump`);
@@ -641,14 +754,32 @@ export class FramesService {
       fs.copyFileSync(drawingPath, dst);
       archivedFile = path.basename(drawingPath);
     }
+    const archivedPreviews: string[] = [];
+    for (const previewPath of FrameStore.getDrawingPreviewFilePaths(projectCode, drawingId)) {
+      const name = path.basename(previewPath);
+      fs.copyFileSync(previewPath, path.join(archiveDir, name));
+      archivedPreviews.push(name);
+    }
 
     const idx = MockStore.drawings.findIndex(dr => dr.project_code === projectCode && dr.id === drawingId);
     if (idx !== -1) MockStore.drawings.splice(idx, 1);
     FrameStore.removeDrawing(projectCode, drawingId, d.original_name || '');
+    if (d.frame_id) {
+      const record = FrameStore.getDrawingPackage(projectCode, d.frame_id);
+      if (record) {
+        FrameStore.persistDrawingPackage({
+          ...record,
+          revision: record.revision + 1,
+          updated_at: new Date().toISOString(),
+          drawing_2d: record.drawing_2d?.id === drawingId ? null : record.drawing_2d,
+          model_3d: record.model_3d?.id === drawingId ? null : record.model_3d,
+        });
+      }
+    }
 
     return {
       success: true,
-      backup: { dump: dumpFile, archive: archiveDir, file: archivedFile },
+      backup: { dump: dumpFile, archive: archiveDir, file: archivedFile, previews: archivedPreviews },
       deleted: { original_name: d.original_name, drawing_id: drawingId },
       message: `Drawing "${d.original_name}" deleted. Backup at backups/DRAWING_${safeName}_${ts}.dump`,
       ts: new Date().toISOString(),

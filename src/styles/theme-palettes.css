@@ -4,6 +4,13 @@
 */
 
 [data-theme="arctic"] {
+  /* Semantic white surface channel. Light mode warms it below; dark mode keeps
+     the historical white value so this change does not alter dark rendering. */
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
   --t-bg:            #EEF2F6;
   --t-bg-grad:       linear-gradient(180deg, #EAEFF4 0%, #F1F5F9 100%);
   --t-header:        linear-gradient(180deg, #101B2E 0%, #0B1220 45%, #070D16 100%);
@@ -109,4 +116,32 @@
   --t-bento-columns:   12;
   --t-bento-min-cell:  180px;
   --t-bento-row-min:   5.5rem;
+}
+
+/* Warm light surfaces only. ThemeProvider keeps the selected mode in
+   data-mode; scoping here guarantees dark mode remains byte-for-byte visual. */
+[data-theme="arctic"][data-mode="light"] {
+  --t-surface-white:     #F7F6F2;
+  --t-surface-white-rgb: 247, 246, 242;
+  --t-surface-white-10:  rgba(247, 246, 242, 0.10);
+  --t-surface-white-20:  rgba(247, 246, 242, 0.20);
+  --t-surface-white-90:  rgba(247, 246, 242, 0.90);
+
+  --t-card:              #F7F6F2;
+  --t-elev:              #F7F6F2;
+  --t-table:             #F7F6F2;
+  --t-btn-secondary-bg:  #F7F6F2;
+  --t-header-user-bg:    rgba(247, 246, 242, 0.92);
+  --t-header-action-bg:  rgba(247, 246, 242, 0.06);
+  --t-header-action-hover: rgba(247, 246, 242, 0.12);
+  --t-header-float-bg:   rgba(247, 246, 242, 0.07);
+
+  --t-glass-bg:          rgba(247, 246, 242, 0.72);
+  --t-glass-bg-solid:    rgba(247, 246, 242, 0.94);
+  --t-glass-bg-subtle:   rgba(247, 246, 242, 0.56);
+
+  /* Legacy surface roles still consumed by a few older modules. */
+  --color-surface-elevated: #F7F6F2;
+  --color-surface-overlay:  rgba(247, 246, 242, 0.95);
+  --color-md-surface:       #F7F6F2;
 }

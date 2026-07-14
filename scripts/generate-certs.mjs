@@ -25,7 +25,7 @@ function lanIpv4Addresses() {
 
 function commandExists(cmd) {
   const checker = process.platform === 'win32' ? 'where.exe' : 'which';
-  const r = spawnSync(checker, [cmd], { stdio: 'ignore' });
+  const r = spawnSync(checker, [cmd], { stdio: 'ignore', windowsHide: true });
   return r.status === 0;
 }
 
@@ -44,7 +44,7 @@ function tryMkcert(hosts) {
     '-cert-file', CERT_PATH,
     ...hosts,
   ];
-  const r = spawnSync('mkcert', args, { stdio: 'inherit' });
+  const r = spawnSync('mkcert', args, { stdio: 'inherit', windowsHide: true });
   return r.status === 0;
 }
 
@@ -88,7 +88,7 @@ ${sanParts.join('\n')}
       '-config', cnfPath,
       '-extensions', 'v3_req',
     ],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', windowsHide: true },
   );
 
   try { fs.unlinkSync(cnfPath); } catch { /* ignore */ }

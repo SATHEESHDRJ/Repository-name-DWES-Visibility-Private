@@ -77,9 +77,7 @@ function parseCodeMeta(code: string): { location: string; region: string; voltag
 function statusStyle(status: PanelReportStatus): { fill: string; text: string } {
   switch (status) {
     case 'completed': return { fill: C.successBg, text: C.success };
-    case 'in_progress': return { fill: C.amberBg, text: C.amber };
-    case 'on_hold': return { fill: C.neutralBg, text: C.slate600 };
-    case 'not_started': return { fill: C.blue50, text: C.accent };
+    case 'active': return { fill: C.blue50, text: C.accent };
     default: return { fill: C.neutralBg, text: C.slate600 };
   }
 }
@@ -243,14 +241,11 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
 
   // ── Zone 3: Personnel row ─────────────────────────────────────────────────
   const personGap = 8;
-  const personCount = data.midChangeTechnician ? 3 : 2;
+  const personCount = 2;
   const personW = (CW - (personCount - 1) * personGap) / personCount;
   const personH = 42;
   const personnel = [
-    { label: 'Assigned technician', name: data.technician?.fullName || '—' },
-    ...(data.midChangeTechnician
-      ? [{ label: 'Mid-change technician', name: data.midChangeTechnician.fullName }]
-      : []),
+    { label: 'Assigned technician(s)', name: data.technicians.map(t => t.fullName).join(', ') || '—' },
     { label: 'Production supervisor', name: data.supervisor?.fullName || '—' },
   ];
   personnel.forEach((p, i) => {
@@ -275,7 +270,7 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
   drawKpiCard(doc, kpiX1, y, smallW, kpiH, 'Total cables', String(data.cables.total));
   drawKpiCard(doc, kpiX1 + smallW + kpiGap, y, smallW, kpiH, 'Completed', String(data.cables.completed), { valueColor: C.success });
   drawKpiCard(doc, kpiX1 + 2 * (smallW + kpiGap), y, smallW, kpiH, 'Remaining', String(data.cables.remaining));
-  drawKpiCard(doc, kpiX1 + 3 * (smallW + kpiGap), y, smallW, kpiH, 'Wiring KPI', `${data.kpi}%`, { valueColor: kpiColor(data.kpi) });
+  drawKpiCard(doc, kpiX1 + 3 * (smallW + kpiGap), y, smallW, kpiH, 'Assigned cable KPI', `${data.kpi}%`, { valueColor: kpiColor(data.kpi) });
 
   y += kpiH + 8;
   const subCardW = (CW - 3 * kpiGap) / 4;

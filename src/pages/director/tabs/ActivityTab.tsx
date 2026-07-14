@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { directorApi } from '../../../services/api';
 import { RefreshCw, ClipboardList } from '../../../components/ui/icons';
+import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 const TYPE_LABEL: Record<string, string> = { session: 'SESSION', audit: 'WIRING' };
 
@@ -14,13 +16,21 @@ export default function ActivityTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'session' | 'audit'>('all');
   const [limit, setLimit] = useState(50);
+  const requests = useLatestRequest();
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    const request = requests.begin();
     setLoading(true);
-    directorApi.activity(limit).then(d => { setActivity(d); setLoading(false); }).catch(() => setLoading(false));
-  }, [limit]);
+    setActivity([]);
+    try {
+      const next = await directorApi.activity(limit, request.signal);
+      if (requests.isLatest(request.id)) setActivity(next);
+    } catch { /* unavailable */ }
+    finally { if (requests.isLatest(request.id)) setLoading(false); }
+  }, [limit, requests]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
 
   const filtered = filter === 'all' ? activity : activity.filter(a => a.type === filter);
 
@@ -60,7 +70,7 @@ export default function ActivityTab() {
         {filtered.map((item, idx) => {
           const isLatest = idx === 0;
           return (
-            <div key={item.id} className="relative flex flex-col gap-1.5 bg-white p-4 rounded-[12px] border border-[#E2E8F0] shadow-sm ml-4">
+            <div key={item.id} className="relative flex flex-col gap-1.5 bg-[var(--t-surface-white)] p-4 rounded-[12px] border border-[#E2E8F0] shadow-sm ml-4">
               <div className={`absolute left-[-26px] top-5 w-3 h-3 rounded-full ring-[4px] ring-[#F8FAFC] ${isLatest ? 'bg-blue-600 ring-blue-100' : 'bg-slate-300'}`} />
               
               <div className="flex items-center gap-3 mb-1">
