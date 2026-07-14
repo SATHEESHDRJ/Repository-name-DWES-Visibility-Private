@@ -7840,55 +7840,88 @@
     .wsg-insp-fields { @apply grid-cols-3; }
   }
 
-  /* ── Digital Wiring View (supervisor fullscreen) ── */
-  .dwm-shell { @apply flex flex-col min-h-0 h-full; }
-  .dwm-header {
-    @apply flex items-start justify-between gap-4 px-4 py-3 border-b shrink-0 flex-wrap;
-    background: linear-gradient(180deg, var(--t-surface-2, #f8fafc) 0%, var(--t-card, var(--t-surface-white)) 100%);
-    border-color: var(--t-border, #e2e8f0);
+  /* ══ Digital Wiring View — read-only full schedule (supervisor fullscreen) ══
+     One meta header + one scrolling table. No toolbar, filters, or inspector, so
+     the table gets the whole popup height. */
+  .dwv-shell {
+    @apply flex flex-col min-h-0 h-full overflow-hidden;
+    background: var(--t-surface, #f8fafc);
   }
-  .dwm-header-copy { @apply min-w-0 flex-1; }
-  .dwm-header-kicker {
-    @apply inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest mb-1;
-    color: var(--t-accent, #2563eb);
-  }
-  .dwm-header-title { @apply text-[17px] font-bold m-0 truncate; color: var(--t-text, #0f172a); }
-  .dwm-header-sub { @apply text-[12px] m-0 mt-0.5 truncate; color: var(--t-muted, #64748b); }
-  .dwm-readonly-pill {
-    @apply inline-flex ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide align-middle;
-    color: #6d28d9;
-    background: #ede9fe;
-    border: 1px dashed #a78bfa;
-  }
-  .dwm-progress-ring {
-    @apply flex flex-col items-center justify-center shrink-0 rounded-xl border px-4 py-2 min-w-[88px];
-    background: var(--t-accent-soft, #eff6ff);
-    border-color: color-mix(in srgb, var(--t-accent, #2563eb) 25%, transparent);
-  }
-  .dwm-progress-value { @apply text-[22px] font-bold leading-none; color: var(--t-accent, #2563eb); }
-  .dwm-progress-label { @apply text-[10px] font-bold uppercase tracking-wide mt-1; color: var(--t-muted, #64748b); }
-  .dwm-kpi-strip {
-    @apply shrink-0 px-3 py-2 border-b;
-    border-color: var(--t-border, #e2e8f0);
-    background: var(--t-card, var(--t-surface-white));
-  }
-  .dwm-kpi-strip .kpi-card { min-height: 68px; }
 
-  @media print {
-    body.dwm-print-active .modal-overlay { position: static; background: #fff; }
-    body.dwm-print-active .modal-box-fullscreen {
-      max-width: none; max-height: none; width: 100%; height: auto; box-shadow: none;
-    }
-    body.dwm-print-active .modal-header,
-    body.dwm-print-active .modal-footer,
-    body.dwm-print-active .dwm-no-print { display: none !important; }
-    body.dwm-print-active .dwm-print-root { height: auto; overflow: visible; }
-    body.dwm-print-active .wsg-grid-scroll { overflow: visible; max-height: none; }
-    body.dwm-print-active .wsg-hrow { position: static; }
-    body.dwm-print-active .wsg-hcell.frozen-l,
-    body.dwm-print-active .wsg-cell.frozen-l,
-    body.dwm-print-active .wsg-hcell.frozen-r,
-    body.dwm-print-active .wsg-cell.frozen-r { position: static; }
+  .dwv-message {
+    @apply flex-1 grid place-items-center p-8 text-[13px] font-medium text-slate-500 text-center;
+  }
+  .dwv-message--error { @apply text-red-600; }
+
+  /* Project / panel identification */
+  .dwv-meta {
+    @apply grid gap-x-5 gap-y-3 px-4 py-3 border-b shrink-0;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    border-color: var(--t-border, #e2e8f0);
+    background: var(--t-card, var(--t-surface-white, #fff));
+  }
+  .dwv-meta-item { @apply flex flex-col gap-0.5 min-w-0; }
+  .dwv-meta-item--wide { grid-column: span 2; }
+  .dwv-meta-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.07em] text-slate-400;
+  }
+  .dwv-meta-value {
+    @apply text-[13px] font-semibold text-slate-800 truncate;
+  }
+
+  /* The only scroll container: vertical + horizontal, fills remaining height */
+  .dwv-table-scroll {
+    @apply flex-1 min-h-0 overflow-auto;
+    scrollbar-gutter: stable;
+  }
+  .dwv-table-scroll:focus-visible {
+    outline: 2px solid var(--t-accent, #2563eb);
+    outline-offset: -2px;
+  }
+
+  .dwv-table {
+    @apply w-full border-collapse text-[12px];
+    background: var(--t-surface-white, #fff);
+  }
+
+  /* Header row stays visible while scrolling */
+  .dwv-table thead th {
+    @apply sticky top-0 z-10 px-3 py-2 text-left whitespace-nowrap
+           text-[10px] font-bold uppercase tracking-[0.05em] text-slate-500;
+    background: var(--t-surface-2, #f1f5f9);
+    border-bottom: 1px solid var(--t-border-strong, #cbd5e1);
+    box-shadow: 0 1px 0 var(--t-border, #e2e8f0);
+  }
+
+  .dwv-table tbody td {
+    @apply px-3 py-1.5 whitespace-nowrap text-slate-700 align-middle;
+    border-bottom: 1px solid var(--t-border, #eef2f7);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dwv-table tbody tr:nth-child(even) td { background: var(--t-surface, #f8fafc); }
+  .dwv-table tbody tr:hover td { background: rgba(37, 99, 235, 0.06); }
+
+  /* Row number column pinned left so wide schedules stay readable */
+  .dwv-table .dwv-col-index {
+    @apply sticky left-0 z-[1] text-right font-semibold text-slate-400 tabular-nums;
+    min-width: 52px;
+    background: var(--t-surface-2, #f1f5f9);
+    border-right: 1px solid var(--t-border, #e2e8f0);
+  }
+  .dwv-table thead th.dwv-col-index { z-index: 11; }
+
+  /* Tablet: tighter cells so more of the schedule fits on screen */
+  @media (max-width: 1024px) {
+    .dwv-meta { @apply gap-x-4 gap-y-2 px-3 py-2.5; }
+    .dwv-table { @apply text-[11px]; }
+    .dwv-table tbody td { @apply px-2 py-1; max-width: 190px; }
+    .dwv-table thead th { @apply px-2; }
+  }
+  @media (max-width: 640px) {
+    .dwv-meta-item--wide { grid-column: span 1; }
   }
 
   /* Workstation loading skeleton */

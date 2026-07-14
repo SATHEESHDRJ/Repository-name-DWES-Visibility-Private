@@ -1255,8 +1255,11 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       {showWiringView && selectedProject && selectedPanelId && selectedPanel && (
         <PanelWiringViewModal
           projectCode={selectedProject.code}
+          projectName={projectDetails?.substationName ?? selectedProject.name}
           frameId={selectedPanelId}
           panelLabel={selectedPanel.panel_name}
+          panelType={selectedPanel.panel_type as string | undefined}
+          voltageLevel={panelVoltageDisplay(selectedPanel, selectedProject.code)}
           onClose={() => setShowWiringView(false)}
         />
       )}
