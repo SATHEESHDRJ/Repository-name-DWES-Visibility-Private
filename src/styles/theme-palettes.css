@@ -25,7 +25,9 @@
   --t-sidebar-hover:  #F1F5F9;
   --t-header:        linear-gradient(180deg, #101B2E 0%, #0B1220 45%, #070D16 100%);
   --t-header-border: rgba(56, 189, 248, 0.14);
-  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(2, 6, 23, 0.42);
+  /* Flat band: a subtle drop shadow to separate the header from the light
+     workspace, not the deep elevation of a floating card. */
+  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 10px rgba(2, 6, 23, 0.24);
   --t-on-header:     #F8FAFC;
   --t-on-header-muted: rgba(226, 232, 240, 0.62);
   --t-header-icon:           rgba(226, 232, 240, 0.72);
@@ -36,12 +38,13 @@
   --t-header-action-hover:  rgba(255, 255, 255, 0.12);
   --t-header-float-bg:      rgba(255, 255, 255, 0.07);
   --t-header-float-border:  rgba(255, 255, 255, 0.14);
-  --t-header-float-shadow:  0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  --t-header-float-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.14), 0 12px 32px rgba(2, 6, 23, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  /* Controls sit in the header band. Only a hairline highlight — no lift. */
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --t-header-user-bg:            rgba(255, 255, 255, 0.92);
   --t-header-user-border:        rgba(15, 23, 42, 0.10);
-  --t-header-user-shadow:        0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --t-header-user-hover-shadow:  0 4px 12px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --t-header-user-shadow:        0 1px 3px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --t-header-user-text:          #0F172A;
   --t-header-user-muted:         #64748B;
   --t-header-pill-text:          var(--t-header-user-text);
