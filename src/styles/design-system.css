@@ -4315,8 +4315,34 @@
   .pcr-section--titled {
     @apply pt-3;
   }
+  /* Industrial section rule: charcoal text on a hairline, with a teal tick. */
   .pcr-section-title {
-    @apply text-[10px] font-bold uppercase tracking-widest text-white bg-slate-800 rounded px-3 py-1.5 mb-3 select-none;
+    @apply flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-widest
+           text-slate-800 border-b border-slate-200 pb-1.5 mb-3 pl-2.5 select-none relative;
+  }
+  .pcr-section-title::before {
+    content: '';
+    @apply absolute left-0 top-0 w-[3px] h-[11px] rounded-sm;
+    background: #0D9488;
+  }
+
+  /* Approval state chip beside the sign-off heading */
+  .pcr-approval-chip {
+    @apply shrink-0 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide;
+    background: #FEF3C7;
+    color: #B45309;
+  }
+  .pcr-approval-chip.is-approved {
+    background: #CCFBF1;
+    color: #0F766E;
+  }
+
+  /* Closing note — states what the document does and does not certify */
+  .pcr-note {
+    @apply m-0 mt-4 rounded-md px-3 py-2.5 text-[11px] leading-relaxed;
+    background: #F0FDFA;
+    border: 1px solid #CCFBF1;
+    color: #0F766E;
   }
   .pcr-meta-grid {
     @apply grid grid-cols-1 tablet-port:grid-cols-2 gap-x-6 gap-y-3 m-0;

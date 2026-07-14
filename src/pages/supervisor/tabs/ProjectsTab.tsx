@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { projectsApi, supervisorApi } from '../../../services/api';
+import { projectsApi } from '../../../services/api';
 import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
 import type { Project, ProjectState } from '../../../types';
 import Modal from '../../../components/Modal';
@@ -7,7 +7,7 @@ import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
@@ -38,7 +38,6 @@ import {
   resolveProjectCardDetails,
   compactPanelDisplayName,
 } from '../../../utils/projectDisplay';
-import { buildPanelReportFilename } from '../../../utils/reportFilename';
 import { useProjectSelectionStore } from '../../../store/useProjectSelectionStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
@@ -150,12 +149,9 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [showWiringView, setShowWiringView] = useState(false);
   const [showGaDrawingView, setShowGaDrawingView] = useState(false);
   const [confirmReupload, setConfirmReupload] = useState(false);
-  const [reportMenuOpen, setReportMenuOpen] = useState(false);
-  const reportMenuRef = useRef<HTMLDivElement>(null);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const editMenuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
-  const [generatingReport, setGeneratingReport] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState<FramePanel | null>(null);
@@ -247,16 +243,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   useEffect(() => { void load(); }, [load]);
   useDwesRefresh(load);
 
-  useEffect(() => {
-    if (!reportMenuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (reportMenuRef.current && !reportMenuRef.current.contains(e.target as Node)) {
-        setReportMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [reportMenuOpen]);
 
   useEffect(() => {
     if (!editMenuOpen) return;
@@ -514,39 +500,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }
   };
 
-  const downloadReport = async (format: 'pdf' | 'excel') => {
-    if (!selectedProject || !selectedPanelId || generatingReport) return;
-    setGeneratingReport(true);
-    setReportMenuOpen(false);
-    const panelName = projectPanels.find(p => p.id === selectedPanelId)?.panel_name ?? 'Panel';
-    try {
-      const isPdf = format === 'pdf';
-      const blob: Blob = isPdf
-        ? await projectsApi.reportPdf(selectedProject.code, selectedPanelId)
-        : await supervisorApi.panelReportXlsx(selectedProject.code, selectedPanelId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = buildPanelReportFilename({
-        projectCode: selectedProject.code,
-        panelName,
-        ext: isPdf ? 'pdf' : 'xlsx',
-      });
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setToast({ message: `${isPdf ? 'PDF' : 'Excel'} report downloaded.`, tone: 'success' });
-    } catch (e: any) {
-      await dialog.alert({
-        title: 'Report Error',
-        message: e?.response?.data?.message || 'Could not generate the report. Please try again.',
-        tone: 'error',
-      });
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
 
   const handleCreate = async (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -670,7 +623,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setSelectedPanelId(prev => (prev === panelId ? (remainingPanels[0]?.id ?? '') : prev));
     setShowWiringView(false);
     setShowGaDrawingView(false);
-    setReportMenuOpen(false);
     emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, entity: 'panel', action: 'deleted' });
     await reloadProjectPanels(selectedProject.code);
     closeDeletePanelModal();
@@ -701,7 +653,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     duplicateKeys,
     blocked: duplicateBlocked,
     actionGated,
-    reportGated,
   } = usePanelDuplicateGuard(
     projectPanels,
     selectedPanelId,
@@ -833,45 +784,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             </button>
           )}
 
-          {perms.canManageProjects && (
-            <div className="pj-action-block pj-action-block--menu" ref={reportMenuRef}>
-              <button
-                type="button"
-                onClick={() => reportGated && setReportMenuOpen(o => !o)}
-                disabled={!reportGated || generatingReport}
-                className="pj-btn-primary pj-action-btn w-full"
-                aria-expanded={reportMenuOpen}
-                aria-haspopup="menu"
-                title={reportGated ? 'Export panel reports' : gateHint || 'Select a project and panel first'}
-              >
-                <FileDown size={16} strokeWidth={1.5} />
-                <span>{generatingReport ? 'Generating…' : 'Reports'}</span>
-                <ChevronDown size={14} strokeWidth={1.5} className={`ml-auto shrink-0 transition-transform ${reportMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {reportMenuOpen && reportGated && (
-                <div className="pj-toolbar-dropdown" role="menu" aria-label="Report format">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="pj-toolbar-dropdown-item"
-                    onClick={() => downloadReport('pdf')}
-                  >
-                    <FileText size={16} strokeWidth={1.5} className="text-red-500 shrink-0" />
-                    <span>Non-editable PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="pj-toolbar-dropdown-item"
-                    onClick={() => downloadReport('excel')}
-                  >
-                    <FileSpreadsheet size={16} strokeWidth={1.5} className="text-green-600 shrink-0" />
-                    <span>Excel</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Reports deliberately live in the Status section: which report a panel
+              warrants depends on its production state, which Status is the view for. */}
 
           {perms.canManageTeamTechnicians && (
             <button type="button" onClick={() => setShowTeam(true)} className="pj-btn-primary pj-action-btn">

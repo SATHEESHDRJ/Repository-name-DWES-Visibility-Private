@@ -10,7 +10,8 @@ import { useLatestRequest } from '../../hooks/useLatestRequest';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 
 interface ReportPreviewModalProps {
-  assignmentId: number;
+  /** Absent when the panel has no assignment yet — the report still renders. */
+  assignmentId?: number | null;
   projectCode: string;
   frameId: string;
   panelName: string;
@@ -103,7 +104,10 @@ export default function ReportPreviewModal({
 
   return (
     <Modal
-      title="Project Completion Report"
+      // The production process decides the document: progress while wiring is in
+      // flight, completion only once the panel is fully wired and approved.
+      title={report?.reportTitle ?? 'Panel Report'}
+      subtitle={`${panelName} · Read-only`}
       onClose={onClose}
       size="xl"
       footer={(
@@ -149,7 +153,8 @@ export default function ReportPreviewModal({
         <>
           <PanelCompletionReportPreview data={report} />
           <div className="pcr-live-hint">
-            Live preview · refreshes on changes · assignment #{assignmentId}
+            Read-only live preview · refreshes as work is recorded
+            {assignmentId ? ` · assignment #${assignmentId}` : ''}
           </div>
         </>
       )}
