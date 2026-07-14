@@ -833,9 +833,12 @@
     @apply hidden tablet-land:flex flex-col shrink-0 border-r;
     /* Stay in the shared layout flow so this column follows the natural
        content-area height below the header at every breakpoint. */
+    position: static;
     align-self: stretch;
     flex: 0 0 auto;
+    min-height: 0;
     height: auto;
+    max-height: none;
     width: 16.5rem;
     overflow: visible;
     background: #17152E;
