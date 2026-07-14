@@ -113,6 +113,8 @@ async function setup() {
     name: 'Demo Project (Isolated Test)',
     description: 'DEMO-ONLY: isolated end-to-end testing project. Safe to remove after QA.',
     sequence: 999,
+    // Project creation requires at least one panel since the numbering refactor.
+    panels: [{ name: '=DEMO01', voltage_level: '415V', panel_type: 'DEMO' }],
   };
 
   const created = await api('/projects', {

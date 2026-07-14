@@ -22,7 +22,8 @@ import { EventsModule } from './events/events.module';
     ThrottlerModule.forRoot([{
       name: 'default',
       ttl: 60_000,
-      limit: 120,
+      // Env override exists for load/benchmark harnesses only; production keeps 120.
+      limit: Number(process.env.DWES_THROTTLE_LIMIT) || 120,
     }]),
     PrismaModule,
     HealthModule,
