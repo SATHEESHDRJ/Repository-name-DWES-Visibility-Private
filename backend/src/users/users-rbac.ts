@@ -9,6 +9,7 @@ export type UserLike = { id: number; role: string | null | undefined };
 const PRIVILEGED_ROLES: UserRole[] = [
   'system_admin',
   'ops_director',
+  'sales_director',
   'prod_supervisor',
   'qaqc_engineer',
 ];
@@ -25,11 +26,17 @@ export function assertCanViewUserList(caller: UserLike): void {
   ) {
     return;
   }
+  // sales_director is deliberately excluded: the sales view is aggregate-only and
+  // must never expose technician usernames or the personnel roster.
   throw new ForbiddenException('You do not have permission to view the user list');
 }
 
 export function assertCanViewUser(caller: UserLike, target: UserLike): void {
   if (caller.role === 'system_admin' || caller.role === 'ops_director') return;
+  if (caller.role === 'sales_director') {
+    if (caller.id === target.id) return;
+    throw new ForbiddenException('Sales directors may only view their own account');
+  }
   if (caller.role === 'prod_supervisor') {
     if (!isTechnicianRole(target.role)) {
       throw new ForbiddenException('Supervisors may only view technician accounts');
@@ -53,7 +60,7 @@ export function assertCanCreateUser(caller: UserLike, dtoRole: string): void {
 
 export function assertCanMutateUser(caller: UserLike, target: UserLike): void {
   if (caller.role === 'system_admin') return;
-  if (caller.role === 'ops_director') {
+  if (caller.role === 'ops_director' || caller.role === 'sales_director') {
     if (caller.id !== target.id) {
       throw new ForbiddenException('Directors may only update their own account');
     }
@@ -96,7 +103,7 @@ export function sanitizeUpdateDto(
     return allowed;
   }
 
-  if (caller.role === 'ops_director' && caller.id === target.id) {
+  if ((caller.role === 'ops_director' || caller.role === 'sales_director') && caller.id === target.id) {
     const allowed: Record<string, unknown> = {};
     if (dto.password) allowed.password = dto.password;
     return allowed;

@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Body, Request, UseGuards, HttpCode,
+  Controller, Post, Get, Body, Request, UseGuards, HttpCode, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../data/mock-store';
 import { isDemoMode } from '../common/demo-mode.util';
+import { loadDemoAccounts } from '../common/demo-accounts';
 import { HealthService } from '../common/health.service';
 
 @Controller('api')
@@ -30,6 +31,37 @@ export class AuthController {
       ip,
       body.project_code || '',
     );
+  }
+
+  // ── Device Preview (DEMO_MODE only — 404 in production) ────────────────────
+  // The dev Device Preview tool lists the private demo accounts (no passwords)
+  // and logs in through the NORMAL password flow with server-held credentials,
+  // so every preview session carries a genuine RBAC token.
+
+  @Get('auth/dev/demo-roles')
+  async demoRoles() {
+    if (!isDemoMode()) throw new NotFoundException();
+    const accounts = loadDemoAccounts();
+    const active = await this.authService.filterActiveUsernames(accounts.map(a => a.username));
+    return accounts
+      .filter(account => active.has(account.username))
+      .map(account => ({
+        username: account.username,
+        full_name: account.full_name,
+        role: account.role,
+      }));
+  }
+
+  @Post('auth/dev/demo-login')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async demoLogin(@Body() body: { username: string }, @Request() req) {
+    if (!isDemoMode()) throw new NotFoundException();
+    const account = loadDemoAccounts().find(item => item.username === body?.username);
+    if (!account) throw new BadRequestException('Unknown demo account');
+    const ip = req.ip || req.raw?.socket?.remoteAddress || '127.0.0.1';
+    // Full normal login (bcrypt check, session log, token issue) — never bypassed.
+    return this.authService.login(account.username, account.password, ip, '');
   }
 
   @Post('auth/refresh')

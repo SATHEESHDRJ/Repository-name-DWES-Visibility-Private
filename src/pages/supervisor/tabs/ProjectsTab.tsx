@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { projectsApi, supervisorApi } from '../../../services/api';
 import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
-import type { Project, ProjectState } from '../../../types';
+import type { Project, ProjectState, PanelActivityData } from '../../../types';
 import Modal from '../../../components/Modal';
 import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
+import PanelTechnicianActivity from '../../../components/supervisor/PanelTechnicianActivity';
+import { UploadFrameModal } from './FramesTab';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronRight, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
-import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
 import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
@@ -78,43 +79,7 @@ interface PanelDraft {
   systemType: string;
 }
 
-interface PanelActivityTechnician {
-  id: number;
-  name: string;
-  username: string;
-}
 
-interface PanelMidChangeActivity {
-  occurred: boolean;
-  changed_at: string | null;
-  original_technician: PanelActivityTechnician & { cables_completed: number };
-  incoming_technician: PanelActivityTechnician & { cables_completed: number };
-  incoming_started: boolean;
-}
-
-interface PanelActivityData {
-  project_code: string;
-  frame_id: string;
-  panel_name: string;
-  assigned: boolean;
-  status: string;
-  status_label: string;
-  work_state_label: string;
-  pause_reason?: string | null;
-  technician: PanelActivityTechnician | null;
-  assigned_at: string | null;
-  wiring_started_at: string | null;
-  last_activity_at: string | null;
-  completed_at: string | null;
-  completed_by: PanelActivityTechnician | null;
-  has_started: boolean;
-  is_completed: boolean;
-  cables_total: number;
-  cables_completed: number;
-  cables_remaining: number;
-  completion_percentage: number;
-  mid_change: PanelMidChangeActivity | null;
-}
 
 function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
   return {
@@ -163,18 +128,7 @@ function panelDraftToApiPayload(p: PanelDraft) {
   };
 }
 
-function formatActivityDateTime(value?: string | null): string {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
+
 
 export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabProps = {}) {
   const dialog = useAppDialog();
@@ -1625,144 +1579,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   );
 }
 
-function PanelTechnicianActivity({
-  activity,
-  loading,
-  error,
-}: {
-  activity: PanelActivityData | null;
-  loading: boolean;
-  error: string;
-}) {
-  if (loading && !activity) {
-    return (
-      <section className="pj-tech-activity pj-tech-activity--loading" aria-label="Technician activity" aria-busy="true">
-        <div className="pj-tech-activity-skeleton is-wide" />
-        <div className="pj-tech-activity-skeleton" />
-        <div className="pj-tech-activity-skeleton" />
-      </section>
-    );
-  }
 
-  if (error && !activity) {
-    return (
-      <section className="pj-tech-activity pj-tech-activity--error" aria-label="Technician activity">
-        <TriangleAlert size={16} aria-hidden />
-        <span>{error}</span>
-      </section>
-    );
-  }
-
-  if (!activity) return null;
-
-  const technicianName = activity.technician?.name || 'Not Assigned';
-  const technicianUsername = activity.technician?.username ? `@${activity.technician.username}` : '';
-  const progress = Math.min(100, Math.max(0, activity.completion_percentage || 0));
-
-  return (
-    <section className="pj-tech-activity" aria-labelledby="pj-tech-activity-title">
-      <div className="pj-tech-activity-header">
-        <div className="pj-tech-activity-heading">
-          <span className="pj-tech-activity-icon" aria-hidden><UserCog size={18} strokeWidth={1.75} /></span>
-          <div>
-            <h4 id="pj-tech-activity-title">Technician activity</h4>
-            <p>Live assignment and wiring progress from the selected panel.</p>
-          </div>
-        </div>
-        <div className="pj-tech-activity-badges">
-          <span className="pj-tech-status-badge" data-status={activity.status}>{activity.status_label}</span>
-          <span className="pj-tech-start-badge" data-complete={activity.is_completed || undefined}>
-            {activity.is_completed ? 'Panel Completed' : activity.has_started ? 'Panel Started' : 'Not Started'}
-          </span>
-        </div>
-      </div>
-
-      <div className="pj-tech-activity-grid">
-        <div className="pj-tech-activity-person">
-          <span className="pj-tech-activity-label">Assigned technician</span>
-          <strong title={technicianName}>{technicianName}</strong>
-          {technicianUsername && <small title={technicianUsername}>{technicianUsername}</small>}
-        </div>
-        <div className="pj-tech-activity-stat">
-          <span className="pj-tech-activity-label">Assigned</span>
-          <strong>{formatActivityDateTime(activity.assigned_at)}</strong>
-        </div>
-        <div className="pj-tech-activity-stat">
-          <span className="pj-tech-activity-label">Wiring started</span>
-          <strong>{activity.has_started ? formatActivityDateTime(activity.wiring_started_at) : 'Not Started'}</strong>
-        </div>
-        <div className="pj-tech-activity-stat">
-          <span className="pj-tech-activity-label">Last activity</span>
-          <strong>{formatActivityDateTime(activity.last_activity_at)}</strong>
-        </div>
-      </div>
-
-      {activity.pause_reason && ['paused', 'lunch_break', 'tea_break'].includes(activity.status) && (
-        <p className="pj-tech-pause-reason"><strong>Pause reason:</strong> {activity.pause_reason}</p>
-      )}
-
-      <div className="pj-tech-progress">
-        <div className="pj-tech-progress-header">
-          <span>Wiring completion</span>
-          <strong>{progress}%</strong>
-        </div>
-        <div
-          className="pj-tech-progress-track"
-          role="progressbar"
-          aria-label="Panel wiring completion"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress}
-        >
-          <span style={{ width: `${progress}%` }} />
-        </div>
-        <div className="pj-tech-progress-counts">
-          <span><strong>{activity.cables_completed}</strong> completed</span>
-          <span><strong>{activity.cables_remaining}</strong> remaining</span>
-          <span><strong>{activity.cables_total}</strong> total</span>
-        </div>
-      </div>
-
-      {activity.is_completed && (
-        <div className="pj-tech-completed-by">
-          <span className="pj-tech-activity-label">Completed by</span>
-          <strong>{activity.completed_by?.name || technicianName}</strong>
-          {activity.completed_by?.username && <small>@{activity.completed_by.username}</small>}
-          <time>{formatActivityDateTime(activity.completed_at)}</time>
-        </div>
-      )}
-
-      {activity.mid_change?.occurred && (
-        <div className="pj-mid-change">
-          <div className="pj-mid-change-header">
-            <div>
-              <h5>Mid Change</h5>
-              <p>{formatActivityDateTime(activity.mid_change.changed_at)}</p>
-            </div>
-            <span className="pj-mid-change-state" data-started={activity.mid_change.incoming_started || undefined}>
-              {activity.mid_change.incoming_started ? 'Incoming Started' : 'Incoming Not Started'}
-            </span>
-          </div>
-          <div className="pj-mid-change-flow">
-            <div className="pj-mid-change-tech">
-              <span>Original technician</span>
-              <strong>{activity.mid_change.original_technician.name}</strong>
-              {activity.mid_change.original_technician.username && <small>@{activity.mid_change.original_technician.username}</small>}
-              <b>{activity.mid_change.original_technician.cables_completed} cables completed</b>
-            </div>
-            <ChevronRight className="pj-mid-change-arrow" size={19} strokeWidth={2} aria-hidden />
-            <div className="pj-mid-change-tech is-incoming">
-              <span>Incoming technician</span>
-              <strong>{activity.mid_change.incoming_technician.name}</strong>
-              {activity.mid_change.incoming_technician.username && <small>@{activity.mid_change.incoming_technician.username}</small>}
-              <b>{activity.mid_change.incoming_technician.cables_completed} cables completed</b>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
 
 /**
  * Small Add / Edit Panel overlay for the New Project flow. Deliberately limited to

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, RefreshCw, FileText, CheckSquare, Check, X,
-  SendHorizonal, Building2, ArrowRight, ChevronRight, Pencil, MessageCircle,
+  SendHorizonal, Building2, ArrowRight, ChevronRight, ChevronDown, Pencil, MessageCircle,
 } from '../ui/icons';
 import Modal from '../Modal';
 import ReportPreviewModal from '../ui/ReportPreviewModal';
@@ -14,6 +14,7 @@ import { compactPanelDisplayName, resolveProjectCardDetails } from '../../utils/
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
+import PanelActivityRowDetails from './PanelActivityRowDetails';
 
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned' | 'pending_approval';
 type StatusBucket = 'completed' | 'in_progress' | 'pending_review' | 'not_started';
@@ -622,61 +623,71 @@ function PanelWorkflowRow({
   onRework: () => void;
   onApproveLegacy: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const meta = STATE_META[panel.state];
   const canReview = panel.state === 'completed' || panel.state === 'ready_for_qc';
   const showReport = panel.assignmentId != null && (panel.state === 'completed' || panel.state === 'ready_for_qc' || panel.reportSubmitted);
   const panelLabel = compactPanelDisplayName(panel.panelName);
 
   return (
-    <div className="rwa-panel-row">
-      <div className="rwa-panel-cell rwa-panel-cell--name">
-        <span className="rwa-panel-name" title={panel.panelName}>{panelLabel}</span>
-      </div>
-      <div className="rwa-panel-cell">
-        <span className={`rwa-panel-pill ${meta.pill}`}>{meta.label}</span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--tech">
-        <span className="rwa-panel-tech" title={panel.technician}>{panel.technician}</span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--progress">
-        <progress className="ops-assignment-progress rwa-panel-bar" value={panel.progress} max={100} />
-        <span className="rwa-panel-pct">{panel.progress}%</span>
-        <span className="rwa-cable-stat">
-          {panel.cablesSrc}/{panel.cablesTotal}·{panel.cablesDst}/{panel.cablesTotal}
-        </span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--qc">
-        {panel.reviewStatus ? (
-          <span className="rwa-review-chip">{panel.reviewStatus.replace(/_/g, ' ')}</span>
-        ) : (
-          <span className="rwa-review-chip rwa-review-chip--muted">—</span>
-        )}
-        {panel.reportSubmitted && (
-          <span className="rwa-review-chip rwa-review-chip--submitted">Submitted</span>
-        )}
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--actions">
-        {panel.needsLegacyApproval && (
-          <>
-            <button type="button" className="rwa-action-btn rwa-action-btn--danger" disabled={saving} onClick={onRework} title="Request changes">
-              <X size={13} />
+    <div className="rwa-panel-row-container flex flex-col border-b border-slate-100 last:border-b-0">
+      <div 
+        className="rwa-panel-row hover:bg-slate-50 cursor-pointer transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="rwa-panel-cell rwa-panel-cell--name flex items-center gap-2">
+          {expanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+          <span className="rwa-panel-name" title={panel.panelName}>{panelLabel}</span>
+        </div>
+        <div className="rwa-panel-cell">
+          <span className={`rwa-panel-pill ${meta.pill}`}>{meta.label}</span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--tech">
+          <span className="rwa-panel-tech" title={panel.technician}>{panel.technician}</span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--progress">
+          <progress className="ops-assignment-progress rwa-panel-bar" value={panel.progress} max={100} />
+          <span className="rwa-panel-pct">{panel.progress}%</span>
+          <span className="rwa-cable-stat">
+            {panel.cablesSrc}/{panel.cablesTotal}·{panel.cablesDst}/{panel.cablesTotal}
+          </span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--qc">
+          {panel.reviewStatus ? (
+            <span className="rwa-review-chip">{panel.reviewStatus.replace(/_/g, ' ')}</span>
+          ) : (
+            <span className="rwa-review-chip rwa-review-chip--muted">—</span>
+          )}
+          {panel.reportSubmitted && (
+            <span className="rwa-review-chip rwa-review-chip--submitted">Submitted</span>
+          )}
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--actions" onClick={(e) => e.stopPropagation()}>
+          {panel.needsLegacyApproval && (
+            <>
+              <button type="button" className="rwa-action-btn rwa-action-btn--danger" disabled={saving} onClick={onRework} title="Request changes">
+                <X size={13} />
+              </button>
+              <button type="button" className="rwa-action-btn rwa-action-btn--ok" disabled={saving} onClick={onApproveLegacy} title="Approve">
+                <Check size={13} />
+              </button>
+            </>
+          )}
+          {showReport && (
+            <button type="button" className="rwa-action-btn" onClick={onReport} title="Panel report">
+              <FileText size={13} />
             </button>
-            <button type="button" className="rwa-action-btn rwa-action-btn--ok" disabled={saving} onClick={onApproveLegacy} title="Approve">
-              <Check size={13} />
+          )}
+          {canReview && panel.assignmentId && (
+            <button type="button" className="rwa-action-btn rwa-action-btn--primary" onClick={onReview} title="Review">
+              <CheckSquare size={13} />
             </button>
-          </>
-        )}
-        {showReport && (
-          <button type="button" className="rwa-action-btn" onClick={onReport} title="Panel report">
-            <FileText size={13} />
-          </button>
-        )}
-        {canReview && panel.assignmentId && (
-          <button type="button" className="rwa-action-btn rwa-action-btn--primary" onClick={onReview} title="Review">
-            <CheckSquare size={13} />
-          </button>
-        )}
+          )}
+        </div>
       </div>
+      {expanded && (
+        <PanelActivityRowDetails projectCode={panel.projectCode} frameId={panel.frameId} />
+      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ import { FrameStore } from '../frames/frame-store';
 
 @Controller('api/supervisor')
 @UseGuards(JwtAuthGuard, RolesGuard)
+// sales_director excluded: supervisor payloads carry technician names and pause
+// details, which the sales view must never receive (aggregate KPIs only).
 @Roles('system_admin', 'prod_supervisor', 'ops_director', 'qaqc_engineer')
 export class SupervisorController {
   constructor(private svc: SupervisorService) {}

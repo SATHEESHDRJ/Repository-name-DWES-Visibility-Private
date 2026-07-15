@@ -2516,7 +2516,7 @@
   .modal-box-full,
   .modal-box-fullscreen {
     @apply w-full flex flex-col min-w-0 overflow-hidden;
-    max-height: min(88vh, 820px);
+    max-height: calc(100dvh - 32px);
     --modal-pad-x: 20px;
     --modal-header-y: 14px;
     --modal-body-y: 16px;
@@ -2530,16 +2530,15 @@
     margin: auto;
     animation: modalPopIn 260ms var(--ease-out-back) both;
   }
-  .modal-box-sm   { max-width: min(400px, 100%); }
-  .modal-box      { max-width: min(520px, 100%); }
-  .modal-box-lg   { max-width: min(680px, 100%); }
-  .modal-box-form { max-width: min(520px, 100%); }
-  .modal-box-wide { max-width: min(680px, 100%); }
-  .modal-box-xl   { max-width: min(860px, 100%); }
+  .modal-box-sm   { max-width: min(400px, calc(100vw - 32px)); }
+  .modal-box      { max-width: min(520px, calc(100vw - 32px)); }
+  .modal-box-lg   { max-width: min(680px, calc(100vw - 32px)); }
+  .modal-box-form { max-width: min(520px, calc(100vw - 32px)); }
+  .modal-box-wide { max-width: min(680px, calc(100vw - 32px)); }
+  .modal-box-xl   { max-width: min(860px, calc(100vw - 32px)); }
   /* User / team management — wide list, single vertical scroll */
   .modal-box-team {
-    max-width: min(880px, 96vw);
-    max-height: min(88vh, 840px);
+    max-width: min(880px, calc(100vw - 32px));
   }
   .modal-box-team .modal-body {
     @apply py-3 px-3 tablet-land:px-4 overflow-hidden flex flex-col min-h-0;
@@ -4762,7 +4761,7 @@
     outline-offset: 2px;
   }
   .modal-body {
-    @apply flex flex-col overflow-y-auto flex-1 min-w-0;
+    @apply flex flex-col overflow-y-auto overflow-x-hidden flex-1 min-w-0;
     padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px);
     gap: var(--modal-content-gap, 12px);
     color: var(--color-on-surface);
@@ -5310,6 +5309,230 @@
     }
   }
 
+  /* ─── Already-Assigned Card ─── */
+  .assign-already-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .assign-already-card {
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 4px rgb(15 23 42 / 0.05), 0 4px 16px rgb(15 23 42 / 0.03);
+    overflow: hidden;
+  }
+  .assign-already-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #F1F5F9;
+    background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+  }
+  .assign-already-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .assign-already-pulse-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+  }
+  .assign-already-pulse {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: #94A3B8;
+  }
+  .assign-already-pulse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: inherit;
+    opacity: 0.35;
+    animation: assignPulseRing 2s ease-out infinite;
+  }
+  .assign-already-pulse[data-tone="assigned"] {
+    background: #3B82F6;
+  }
+  .assign-already-pulse[data-tone="progress"] {
+    background: #10B981;
+  }
+  .assign-already-pulse[data-tone="paused"] {
+    background: #F59E0B;
+  }
+  .assign-already-pulse[data-tone="done"] {
+    background: #6366F1;
+  }
+  @keyframes assignPulseRing {
+    0% { transform: scale(1); opacity: 0.35; }
+    70% { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .assign-already-pulse::before { animation: none; opacity: 0; }
+  }
+  .assign-already-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #475569;
+    background: #F1F5F9;
+  }
+  .assign-already-status-badge[data-tone="assigned"] {
+    color: #1E40AF;
+    background: #DBEAFE;
+  }
+  .assign-already-status-badge[data-tone="progress"] {
+    color: #065F46;
+    background: #D1FAE5;
+  }
+  .assign-already-status-badge[data-tone="paused"] {
+    color: #92400E;
+    background: #FEF3C7;
+  }
+  .assign-already-status-badge[data-tone="done"] {
+    color: #3730A3;
+    background: #E0E7FF;
+  }
+  .assign-already-panel-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F8FAFC;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  .assign-already-tech-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #F1F5F9;
+  }
+  .assign-already-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    color: #4F46E5;
+    flex-shrink: 0;
+  }
+  .assign-already-tech-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 1px;
+  }
+  .assign-already-tech-name {
+    color: #0F172A;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .assign-already-tech-username {
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .assign-already-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+  .assign-already-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 16px;
+  }
+  .assign-already-meta + .assign-already-meta {
+    border-left: 1px solid #F1F5F9;
+  }
+  .assign-already-meta-label {
+    color: #94A3B8;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .assign-already-meta strong {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .assign-already-midchange-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid #BFDBFE;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #EFF6FF 0%, #F0F7FF 100%);
+    color: #1E40AF;
+  }
+  .assign-already-midchange-notice strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.4;
+  }
+  .assign-already-midchange-notice p {
+    margin: 0;
+    color: #1E3A5F;
+    font-size: 12px;
+    font-weight: 450;
+    line-height: 1.55;
+  }
+  .assign-already-midchange-notice em {
+    font-style: normal;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #DBEAFE;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  @media (max-width: 520px) {
+    .assign-already-meta-grid {
+      grid-template-columns: 1fr;
+    }
+    .assign-already-meta + .assign-already-meta {
+      border-left: 0;
+      border-top: 1px solid #F1F5F9;
+    }
+  }
+
   /* Modal body content — long entity names wrap; tooltips on title attr when clipped.
      Tailwind v4: never @apply .modal-long-text from other @layer components rules;
      inline min-w-0 break-words + overflow-wrap instead (see file header). */
@@ -5717,6 +5940,27 @@
     border-color: #CBD5E1;
     background: #F8FAFC;
     color: #64748B;
+  }
+  .pj-tech-status-badge[data-status="assigned"] {
+    border-color: #93C5FD;
+    background: #DBEAFE;
+    color: #1E40AF;
+    gap: 5px;
+  }
+  .pj-tech-status-badge[data-status="assigned"]::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: #3B82F6;
+    animation: assignPulseRing 2s ease-out infinite;
+    box-shadow: 0 0 0 0 rgba(59 130 246 / 0.4);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pj-tech-status-badge[data-status="assigned"]::before {
+      animation: none;
+    }
   }
   .pj-tech-activity-grid {
     display: grid;
@@ -10210,6 +10454,17 @@
   }
   .page-header-actions {
     @apply flex items-center gap-2;
+  }
+  /* Pending Mid Change strip — the technician's entry point to review/confirm a
+     request. Initiation itself lives in the wiring workstation's Pause popup. */
+  .tech-midchange-notice {
+    @apply flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-[13px] leading-5;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+  }
+  .tech-midchange-notice > .ui-icon {
+    color: #2563eb;
   }
   .tech-dash-actions {
     @apply flex flex-col sm:flex-row gap-2;

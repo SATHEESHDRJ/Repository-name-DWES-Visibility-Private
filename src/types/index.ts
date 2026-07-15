@@ -1,6 +1,7 @@
 export type UserRole =
   | 'system_admin'
   | 'ops_director'
+  | 'sales_director'
   | 'prod_supervisor'
   | 'qaqc_engineer'
   | 'wiring_technician';
@@ -173,6 +174,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   prod_supervisor: 'Production Supervisor',
   qaqc_engineer: 'QA/QC Engineer',
   wiring_technician: 'Wiring Technician',
+  sales_director: 'Sales Director',
 };
 
 export const ROLE_ROUTES: Record<UserRole, string> = {
@@ -181,6 +183,7 @@ export const ROLE_ROUTES: Record<UserRole, string> = {
   prod_supervisor: '/supervisor',
   qaqc_engineer: '/qaqc',
   wiring_technician: '/technician',
+  sales_director: '/director',
 };
 
 export const STATE_LABELS: Record<ProjectState, string> = {
@@ -196,3 +199,41 @@ export const STATE_LABELS: Record<ProjectState, string> = {
   report_generated: 'Report Ready',
   in_review: 'In Review',
 };
+
+export interface PanelActivityTechnician {
+  id: number;
+  name: string;
+  username: string;
+}
+
+export interface PanelMidChangeActivity {
+  occurred: boolean;
+  changed_at: string | null;
+  original_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_started: boolean;
+}
+
+export interface PanelActivityData {
+  project_code: string;
+  frame_id: string;
+  panel_name: string;
+  assigned: boolean;
+  status: string;
+  status_label: string;
+  work_state_label: string;
+  pause_reason?: string | null;
+  technician: PanelActivityTechnician | null;
+  assigned_at: string | null;
+  wiring_started_at: string | null;
+  last_activity_at: string | null;
+  completed_at: string | null;
+  completed_by: PanelActivityTechnician | null;
+  has_started: boolean;
+  is_completed: boolean;
+  cables_total: number;
+  cables_completed: number;
+  cables_remaining: number;
+  completion_percentage: number;
+  mid_change: PanelMidChangeActivity | null;
+}

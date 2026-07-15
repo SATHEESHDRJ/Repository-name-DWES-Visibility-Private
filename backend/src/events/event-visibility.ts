@@ -1,7 +1,7 @@
 import type { DwesServerEvent } from './events.service';
 
 /** Roles that may observe every change in the system (read-only dashboards or admin). */
-const GLOBAL_OBSERVER_ROLES = new Set(['system_admin', 'prod_supervisor', 'ops_director']);
+const GLOBAL_OBSERVER_ROLES = new Set(['system_admin', 'prod_supervisor', 'ops_director', 'sales_director']);
 
 /** QA/QC follows panel and inspection lifecycle, not drawing/model uploads. */
 const QAQC_SCOPES = new Set(['panel', 'project', 'assignment', 'inspection']);

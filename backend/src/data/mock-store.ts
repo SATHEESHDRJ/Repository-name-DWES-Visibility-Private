@@ -4,7 +4,7 @@ import { loadDemoAccounts } from '../common/demo-accounts';
 // ─── Primitive types ──────────────────────────────────────────────────────────
 
 export type UserRole =
-  | 'system_admin' | 'ops_director' | 'prod_supervisor'
+  | 'system_admin' | 'ops_director' | 'sales_director' | 'prod_supervisor'
   | 'qaqc_engineer' | 'wiring_technician';
 
 export type ProjectState =

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ArrowLeftRight, Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
 import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
-import TechnicianMidChangeModal from '../../../components/technician/TechnicianMidChangeModal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
@@ -50,12 +49,11 @@ export default function PanelsTab({
   const [submitPanel, setSubmitPanel] = useState<any | null>(null);
   const [hideTarget, setHideTarget] = useState<any | null>(null);
   const [gaOpen, setGaOpen] = useState(false);
-  const [midChangeOpen, setMidChangeOpen] = useState(false);
-  const [pendingMidChanges, setPendingMidChanges] = useState(0);
+  const [midChangeRequests, setMidChangeRequests] = useState<any[]>([]);
 
   const refreshMidChangeCount = () => {
     techApi.midChangeRequests()
-      .then(rows => setPendingMidChanges(Array.isArray(rows) ? rows.length : 0))
+      .then(rows => setMidChangeRequests(Array.isArray(rows) ? rows : []))
       .catch(() => {});
   };
 
@@ -64,6 +62,8 @@ export default function PanelsTab({
     const timer = window.setInterval(refreshMidChangeCount, 12_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const incomingMidChange = midChangeRequests.find(request => request.direction === 'incoming');
 
   const hasAssignment = panels.length > 0;
   const headerPanel = selectedPanel;
@@ -82,6 +82,20 @@ export default function PanelsTab({
       setSubmitPanel({ ...panel, status: 'completed' });
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not complete panel');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResumeMidChange = async (assignmentId: number) => {
+    setSaving(true);
+    setError('');
+    try {
+      await techApi.start(assignmentId);
+      refreshMidChangeCount();
+      onRefresh();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not resume mid change assignment');
     } finally {
       setSaving(false);
     }
@@ -130,19 +144,27 @@ export default function PanelsTab({
     <div>
       {error && <div className="form-error mb-2">{error}</div>}
 
+      {/* Mid Change is initiated from the Pause popup inside the wiring workstation.
+          This strip surfaces incoming Mid Change transfers so the receiving technician can resume. */}
+      {incomingMidChange && (
+        <div className="tech-midchange-notice mb-4" role="status">
+          <ArrowLeftRight size={16} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <strong>Mid Change panel assigned</strong> — {incomingMidChange.initiator_name} transferred{' '}
+            <strong>{incomingMidChange.target?.panel_name || 'a panel'}</strong> to you.
+          </span>
+          <button
+            type="button"
+            className="btn-primary shrink-0"
+            disabled={saving}
+            onClick={() => handleResumeMidChange(incomingMidChange.target.id)}
+          >
+            {saving ? 'Resuming…' : 'Resume Wiring'}
+          </button>
+        </div>
+      )}
+
       <div className="tech-dash-actions mb-4" role="group" aria-label="Panel actions">
-        <button
-          type="button"
-          className="btn-primary tech-dash-action-btn"
-          disabled={!panels.some(panel => panel.status === 'in_progress')}
-          title={panels.some(panel => panel.status === 'in_progress')
-            ? 'Request or confirm an interchange with another active technician'
-            : 'Start a panel before using Mid Change'}
-          onClick={() => setMidChangeOpen(true)}
-        >
-          <ArrowLeftRight size={16} />
-          Mid Change{pendingMidChanges > 0 ? ` (${pendingMidChanges})` : ''}
-        </button>
         <button
           type="button"
           className="btn-secondary tech-dash-action-btn"
@@ -297,16 +319,6 @@ export default function PanelsTab({
           panelName={gaTarget.panel_name}
           projectName={gaTarget.project_name || gaTarget.project_code}
           onClose={() => setGaOpen(false)}
-        />
-      )}
-
-      {midChangeOpen && (
-        <TechnicianMidChangeModal
-          onClose={() => setMidChangeOpen(false)}
-          onChanged={() => {
-            onRefresh();
-            refreshMidChangeCount();
-          }}
         />
       )}
 

@@ -4,9 +4,12 @@ import { DirectorService } from './director.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../data/mock-store';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User, UserRole } from '../data/mock-store';
 
-const DIR_ROLES: UserRole[] = ['ops_director', 'system_admin'];
+const DIR_ROLES: UserRole[] = ['ops_director', 'sales_director', 'system_admin'];
+// Endpoints that expose personnel identities or audit details — never sales_director.
+const OPS_ONLY: UserRole[] = ['ops_director', 'system_admin'];
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/director')
@@ -25,24 +28,27 @@ export class DirectorController {
 
   @Get('workforce')
   @UseGuards(RolesGuard)
-  @Roles(...DIR_ROLES)
+  @Roles(...OPS_ONLY)
   workforce() { return this.svc.workforce(); }
 
   @Get('projects-summary')
   @UseGuards(RolesGuard)
   @Roles(...DIR_ROLES)
-  projectsSummary() { return this.svc.projectsSummary(); }
+  projectsSummary(@CurrentUser() user: User) {
+    // Sales view is aggregate-only — technician identities are redacted server-side.
+    return this.svc.projectsSummary(user.role === 'sales_director');
+  }
 
   @Get('activity')
   @UseGuards(RolesGuard)
-  @Roles(...DIR_ROLES)
+  @Roles(...OPS_ONLY)
   activity(@Query('limit') limit?: string) {
     return this.svc.activity(limit ? parseInt(limit) : 100);
   }
 
   @Get('export')
   @UseGuards(RolesGuard)
-  @Roles(...DIR_ROLES)
+  @Roles(...OPS_ONLY)
   async export(@Query('format') format: string, @Res() res: FastifyReply) {
     if (format === 'csv') {
       const csv = await this.svc.exportCsv();

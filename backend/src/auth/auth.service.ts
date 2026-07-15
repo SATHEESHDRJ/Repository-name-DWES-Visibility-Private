@@ -103,6 +103,16 @@ export class AuthService {
     };
   }
 
+  /** Usernames from the given list that exist and are active (dev Device Preview role list). */
+  async filterActiveUsernames(usernames: string[]): Promise<Set<string>> {
+    if (usernames.length === 0) return new Set();
+    const rows = await this.prisma.users.findMany({
+      where: { username: { in: usernames }, is_active: true },
+      select: { username: true },
+    });
+    return new Set(rows.map(row => row.username));
+  }
+
   // ── Password login (unchanged validation logic) ────────────────────────────
 
   async login(username: string, password: string, ip: string, projectCode = '') {

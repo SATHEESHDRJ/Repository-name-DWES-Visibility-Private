@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { BadRequestException, ConflictException } = require('@nestjs/common');
+const { BadRequestException, ConflictException, ForbiddenException } = require('@nestjs/common');
 const { TechService } = require('../dist/tech/tech.service');
 const { MockStore } = require('../dist/data/mock-store');
 
@@ -217,64 +217,116 @@ test('TechService.changeover carries wiring progress and links immutable history
   assert.equal(result.new_assignment_id, 2);
 });
 
-test('TechService.requestMidChange creates a pending confirmation without changing assignments', async () => {
+test('TechService.executeMidChange direct transfer closes the source and creates a waiting-for-resume continuation', async () => {
   const source = {
-    id: 21, project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A',
-    technician_id: 7, status: 'in_progress', changeover_locked: false,
+    id: 21, project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A', technician_id: 7,
+    assigned_by: 2, status: 'paused', started_at: new Date(Date.now() - 60_000),
+    changeover_locked: false, cables_total: 4, cables_src_done: 3, cables_dst_done: 2,
+    cable_status: JSON.stringify({ 0: { src: true, dst: true, note: 'done first' } }),
+    total_wiring_seconds: 320, approved_at: null, approved_by: 2,
   };
-  const target = {
-    id: 22, project_code: 'PRJ_B', frame_id: 'panel-b', panel_name: 'Panel B',
-    technician_id: 8, status: 'in_progress', changeover_locked: false,
-  };
+  const updates = [];
+  const creates = [];
   const audits = [];
-  let assignmentWrites = 0;
   const service = new TechService(workflowPrisma({
     tech_assignments: {
-      findUnique: async ({ where }) => where.id === source.id ? source : target,
-      update: async () => { assignmentWrites += 1; return {}; },
-      create: async () => { assignmentWrites += 1; return {}; },
+      findUnique: async () => source,
+      findFirst: async () => null, // receiving technician has no active panel → direct transfer
+      update: async ({ where, data }) => { updates.push({ where, data }); return { ...source, ...data }; },
+      create: async ({ data }) => { const created = { id: 90, ...data }; creates.push(created); return created; },
     },
-    users: { findUnique: async () => ({ id: 7, full_name: 'Initiator' }) },
+    users: {
+      findUnique: async ({ where }) => ({ id: where.id, role: 'wiring_technician', is_active: true, full_name: where.id === 7 ? 'Old Tech' : 'New Tech' }),
+    },
     tech_audit_log: {
-      findMany: async () => [],
       create: async ({ data }) => { audits.push(data); return { id: 1, ...data }; },
     },
   }));
 
-  const result = await service.requestMidChange(7, source.id, target.id, 'Workload balancing');
-  assert.equal(result.request.targetTechnicianId, 8);
-  assert.equal(audits[0].action, 'mid_change_requested');
-  assert.equal(JSON.parse(audits[0].details).reason, 'Workload balancing');
-  assert.equal(assignmentWrites, 0);
+  const result = await service.executeMidChange(7, source.id, 8, 'Shift handoff');
+  assert.equal(result.type, 'transfer');
+  assert.equal(result.new_assignment_id, 90);
+  // continuation: carried progress, waiting for resume, linked to the closed segment
+  assert.equal(creates.length, 1);
+  assert.equal(creates[0].technician_id, 8);
+  assert.equal(creates[0].status, 'assigned');
+  assert.equal(creates[0].cables_src_done, 3);
+  assert.equal(creates[0].cables_dst_done, 2);
+  assert.equal(creates[0].cable_status, source.cable_status);
+  assert.equal(creates[0].handover_from_id, source.id);
+  assert.equal(creates[0].total_wiring_seconds, 0);
+  // closed segment: paused + locked, banked time NOT double-counted for a paused source
+  const close = updates.find(update => update.data.changeover_locked === true);
+  assert.equal(close.data.total_wiring_seconds, 320);
+  assert.ok(updates.some(update => update.data.handover_to_id === 90));
+  assert.equal(audits[0].action, 'mid_change_transfer');
+  assert.equal(JSON.parse(audits[0].details).reason, 'Shift handoff');
 });
 
-test('TechService.requestMidChange blocks duplicate pending requests involving either panel', async () => {
-  const existing = {
-    requestId: 'pending-1', sourceAssignmentId: 31, targetAssignmentId: 32,
-    initiatorId: 7, targetTechnicianId: 8, createdAt: new Date().toISOString(), reason: 'Shift',
-  };
-  const assignments = {
-    31: { id: 31, technician_id: 7, status: 'in_progress', changeover_locked: false },
-    32: { id: 32, technician_id: 8, status: 'in_progress', changeover_locked: false },
-  };
+test('TechService.executeMidChange rejects a missing reason before any assignment writes', async () => {
+  let writes = 0;
   const service = new TechService(workflowPrisma({
-    tech_assignments: { findUnique: async ({ where }) => assignments[where.id] },
-    users: { findUnique: async () => ({ id: 7, full_name: 'Initiator' }) },
-    tech_audit_log: {
-      findMany: async () => [{ action: 'mid_change_requested', details: JSON.stringify(existing) }],
+    tech_assignments: {
+      update: async () => { writes += 1; return {}; },
+      create: async () => { writes += 1; return {}; },
     },
   }));
   await assert.rejects(
-    () => service.requestMidChange(7, 31, 32, 'Another request'),
-    err => err instanceof ConflictException && err.message.includes('pending Mid Change'),
+    () => service.executeMidChange(7, 21, 8, '   '),
+    err => err instanceof BadRequestException && err.message.includes('reason is required'),
   );
+  assert.equal(writes, 0);
 });
 
-test('TechService.confirmMidChange atomically closes both segments and creates interchanged continuations', async () => {
-  const request = {
-    requestId: 'swap-1', sourceAssignmentId: 41, targetAssignmentId: 42,
-    initiatorId: 7, targetTechnicianId: 8, createdAt: new Date().toISOString(), reason: 'Workload balancing',
+test('TechService.executeMidChange rejects an invalid receiving technician before any writes', async () => {
+  const source = {
+    id: 21, technician_id: 7, status: 'in_progress', changeover_locked: false,
+    project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A',
   };
+  let writes = 0;
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async () => source,
+      findFirst: async () => null,
+      update: async () => { writes += 1; return {}; },
+      create: async () => { writes += 1; return {}; },
+    },
+    users: {
+      findUnique: async ({ where }) => (where.id === 7
+        ? { id: 7, role: 'wiring_technician', is_active: true, full_name: 'Initiator' }
+        : null),
+    },
+  }));
+  await assert.rejects(
+    () => service.executeMidChange(7, source.id, 999, 'Transfer to nobody'),
+    err => err instanceof BadRequestException && err.message.includes('active wiring technician'),
+  );
+  assert.equal(writes, 0);
+});
+
+test('TechService.executeMidChange rejects interchange with a technician who has not started their panel', async () => {
+  const source = {
+    id: 21, technician_id: 7, status: 'in_progress', changeover_locked: false,
+    project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A',
+  };
+  let writes = 0;
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async () => source,
+      findFirst: async () => ({ id: 33, technician_id: 8, status: 'assigned', changeover_locked: false }),
+      update: async () => { writes += 1; return {}; },
+      create: async () => { writes += 1; return {}; },
+    },
+    users: { findUnique: async ({ where }) => ({ id: where.id, role: 'wiring_technician', is_active: true, full_name: 'Tech' }) },
+  }));
+  await assert.rejects(
+    () => service.executeMidChange(7, source.id, 8, 'Swap'),
+    err => err instanceof ConflictException && err.message.includes('must start their assigned panel'),
+  );
+  assert.equal(writes, 0);
+});
+
+test('TechService.executeMidChange interchange atomically closes both segments and creates two continuations', async () => {
   const source = {
     id: 41, project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A', technician_id: 7,
     assigned_by: 2, status: 'in_progress', started_at: new Date(Date.now() - 60_000),
@@ -292,8 +344,8 @@ test('TechService.confirmMidChange atomically closes both segments and creates i
   const auditBatches = [];
   const service = new TechService(workflowPrisma({
     tech_assignments: {
-      findUnique: async ({ where }) => where.id === source.id ? source : target,
-      findMany: async () => [],
+      findUnique: async () => source,
+      findFirst: async () => target,
       update: async ({ where, data }) => {
         updates.push({ where, data });
         return { ...(where.id === source.id ? source : target), ...data };
@@ -305,24 +357,54 @@ test('TechService.confirmMidChange atomically closes both segments and creates i
       },
     },
     users: {
-      findUnique: async ({ where }) => ({ id: where.id, full_name: where.id === 7 ? 'Tech A' : 'Tech B' }),
+      findUnique: async ({ where }) => ({ id: where.id, role: 'wiring_technician', is_active: true, full_name: where.id === 7 ? 'Tech A' : 'Tech B' }),
     },
     tech_audit_log: {
-      findMany: async () => [{ action: 'mid_change_requested', details: JSON.stringify(request) }],
       createMany: async ({ data }) => { auditBatches.push(data); return { count: data.length }; },
     },
   }));
 
-  const result = await service.confirmMidChange(8, request.requestId);
+  const result = await service.executeMidChange(7, source.id, 8, 'Workload balancing');
+  assert.equal(result.type, 'interchange');
   assert.equal(creates.length, 2);
+  // initiator continues the target's panel; the receiving technician continues the source panel
   assert.equal(creates[0].technician_id, 7);
   assert.equal(creates[0].frame_id, 'panel-b');
   assert.equal(creates[0].cables_src_done, 4);
+  assert.equal(creates[0].status, 'assigned');
   assert.equal(creates[1].technician_id, 8);
   assert.equal(creates[1].frame_id, 'panel-a');
   assert.equal(creates[1].cables_src_done, 2);
+  assert.equal(creates[1].status, 'assigned');
   assert.ok(updates.some(update => update.where.id === 41 && update.data.changeover_locked === true));
   assert.ok(updates.some(update => update.where.id === 42 && update.data.changeover_locked === true));
-  assert.equal(auditBatches[0].length, 3);
-  assert.equal(result.message, 'Mid Change confirmed and both active assignments were interchanged');
+  assert.equal(auditBatches[0].length, 2);
+});
+
+test('TechService.updateCableStatus blocks un-checking a cable completed by the previous technician', async () => {
+  const priorSegment = {
+    id: 77,
+    cable_status: JSON.stringify({ 0: { src: true, dst: true, note: 'done by tech A' } }),
+  };
+  const continuation = {
+    id: 90, technician_id: 8, handover_from_id: 77,
+    project_code: 'PRJ', frame_id: 'frame', panel_name: '=H000', status: 'in_progress',
+    cables_total: 4, cables_src_done: 1, cables_dst_done: 1,
+    cable_status: JSON.stringify({ 0: { src: true, dst: true, note: 'done by tech A' } }),
+  };
+  let writes = 0;
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async ({ where }) => (where.id === 77 ? priorSegment : continuation),
+      update: async () => { writes += 1; return {}; },
+    },
+  }));
+  await assert.rejects(
+    () => service.updateCableStatus(90, 8, 0, 'src', false),
+    err => err instanceof ForbiddenException && err.message.includes('previous technician'),
+  );
+  assert.equal(writes, 0);
+  // The same cable index CAN still be re-affirmed or annotated (no guard on value=true)
+  const ok = await service.updateCableStatus(90, 8, 0, 'src', true);
+  assert.equal(ok.assignment_id, 90);
 });

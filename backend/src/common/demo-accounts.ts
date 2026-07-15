@@ -4,6 +4,7 @@ import * as path from 'path';
 export const DEMO_ACCOUNT_ROLES = [
   'system_admin',
   'ops_director',
+  'sales_director',
   'prod_supervisor',
   'qaqc_engineer',
   'wiring_technician',

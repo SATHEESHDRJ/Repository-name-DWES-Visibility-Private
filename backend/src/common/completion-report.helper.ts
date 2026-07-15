@@ -1,7 +1,23 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { FrameStore } from '../frames/frame-store';
 
 function parseCS(raw: string | null | undefined): Record<string, { src: boolean; dst: boolean; note: string }> {
   try { return JSON.parse(raw || '{}'); } catch { return {}; }
+}
+
+/** Compact 1-based display ranges, e.g. [0,1,2,5] → "1–3, 6". */
+function indexRanges(indexes: number[]): string {
+  const ranges: string[] = [];
+  let start: number | null = null;
+  let prev: number | null = null;
+  for (const index of indexes) {
+    if (start == null) { start = index; prev = index; continue; }
+    if (index === (prev as number) + 1) { prev = index; continue; }
+    ranges.push(start === prev ? `${start + 1}` : `${start + 1}–${(prev as number) + 1}`);
+    start = index; prev = index;
+  }
+  if (start != null) ranges.push(start === prev ? `${start + 1}` : `${start + 1}–${(prev as number) + 1}`);
+  return ranges.join(', ');
 }
 
 function formatDuration(sec: number): string {
@@ -27,7 +43,7 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
       },
     }),
     prisma.tech_audit_log.findMany({
-      where: { technician_id: a.technician_id, project_code: a.project_code, frame_id: a.frame_id, action: 'pause' },
+      where: { project_code: a.project_code, frame_id: a.frame_id, action: 'pause' },
       orderBy: { created_at: 'asc' },
       select: { details: true, created_at: true },
     }),
@@ -112,13 +128,24 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
   const contributorUserMap = new Map<number, any>(contributorUsers.map((user: any) => [user.id, user] as [number, any]));
   const assignmentMap = new Map(panelAssignments.map(assignment => [assignment.id, assignment]));
   const now = Date.now();
+  // Frame cable labels (ferrule / serial no) so each contributor's exact cables are identifiable.
+  const reportFrame = FrameStore.getFrameFromDisk(a.project_code, a.frame_id);
+  const cableLabel = (index: number) => {
+    const cable: any = Array.isArray(reportFrame?.cables) ? reportFrame!.cables[index] : null;
+    return cable?.ferrule || (cable?.sno != null && String(cable.sno)) || `Cable ${index + 1}`;
+  };
+
   const contributors = panelAssignments.map(segment => {
     const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
     const before = parseCS(baseline?.cable_status);
     const after = parseCS(segment.cable_status);
-    const completedCables = Object.keys(after).filter(index => (
-      after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
-    )).length;
+    const completedIndexes = Object.keys(after)
+      .filter(index => (
+        after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
+      ))
+      .map(Number)
+      .sort((first, second) => first - second);
+    const completedCables = completedIndexes.length;
     const startedAt = segment.started_at || segment.assigned_at;
     const endedAt = segment.paused_at || segment.completed_at || null;
     const startTime = startedAt ? startedAt.getTime() : 0;
@@ -145,6 +172,9 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
       cables_src_completed: Math.max(0, (segment.cables_src_done || 0) - (baseline?.cables_src_done || 0)),
       cables_dst_completed: Math.max(0, (segment.cables_dst_done || 0) - (baseline?.cables_dst_done || 0)),
       cables_completed: completedCables,
+      completed_cable_indexes: completedIndexes,
+      completed_cable_labels: completedIndexes.map(cableLabel),
+      completed_cable_ranges: indexRanges(completedIndexes),
       progress_before: {
         cables_src_done: baseline?.cables_src_done || 0,
         cables_dst_done: baseline?.cables_dst_done || 0,
@@ -159,7 +189,7 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
     };
   });
   const midChangeHistory = panelAudit
-    .filter(entry => entry.action === 'mid_change_swap' || entry.action === 'mid_change_requested' || entry.action === 'mid_change_confirmed')
+    .filter(entry => entry.action === 'mid_change_swap' || entry.action === 'mid_change_transfer' || entry.action === 'mid_change_requested' || entry.action === 'mid_change_confirmed')
     .map(entry => ({
       action: entry.action,
       technician_id: entry.technician_id,

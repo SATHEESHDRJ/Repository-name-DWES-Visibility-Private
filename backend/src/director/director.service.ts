@@ -195,7 +195,7 @@ export class DirectorService {
     return [...sessionItems, ...auditItems].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit);
   }
 
-  async projectsSummary() {
+  async projectsSummary(redactPersonnel = false) {
     const [projects, assignments, techs] = await Promise.all([
       this.prisma.projects.findMany({ where: { is_active: true }, orderBy: { code: 'asc' } }),
       this.prisma.tech_assignments.findMany({ where: { is_hidden: false } }),
@@ -230,7 +230,9 @@ export class DirectorService {
           cablesCompleted: completed,
           cablesRemaining: Math.max(0, ct - completed),
           kpi,
-          technicianName: techById.get(a.technician_id) ?? 'Unassigned',
+          // Sales view is aggregate-only — the identity never leaves the server.
+          technicianName: redactPersonnel ? 'Restricted' : (techById.get(a.technician_id) ?? 'Unassigned'),
+          workingHours: Math.round((a.total_wiring_seconds || 0) / 3600 * 10) / 10,
         };
       });
 
@@ -251,6 +253,7 @@ export class DirectorService {
           totalCables,
           completedCables,
           remainingCables: Math.max(0, totalCables - completedCables),
+          workingHours: panels.reduce((s, p) => s + p.workingHours, 0),
           kpi,
         },
         panels,

@@ -166,7 +166,7 @@ export class AdminService {
   }
 
   async changeRole(userId: number, newRole: string) {
-    const VALID_ROLES = ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
+    const VALID_ROLES = ['system_admin', 'ops_director', 'sales_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
     if (!VALID_ROLES.includes(newRole)) return { error: `Invalid role: ${newRole}` };
     const u = await this.prisma.users.findUnique({ where: { id: userId } });
     if (!u) return { error: 'User not found' };
@@ -177,7 +177,7 @@ export class AdminService {
   }
 
   async bulkSetRole(usernamePattern: string, targetRole: string) {
-    const VALID_ROLES = ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
+    const VALID_ROLES = ['system_admin', 'ops_director', 'sales_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
     if (!VALID_ROLES.includes(targetRole)) {
       return { error: `Invalid role '${targetRole}'. Must be one of: ${VALID_ROLES.join(', ')}` };
     }

@@ -101,6 +101,7 @@ export class TechService {
 
     const tech = await this.prisma.users.findUnique({ where: { id: dto.technician_id } });
     if (!tech || tech.role !== 'wiring_technician') throw new BadRequestException('Invalid technician');
+    if (tech.is_active === false) throw new BadRequestException('This technician account is deactivated and cannot receive assignments');
 
     const existing = await this.prisma.tech_assignments.findFirst({
       where: {
@@ -381,6 +382,17 @@ export class TechService {
     const key = String(cableIndex);
     if (!cs[key]) cs[key] = { src: false, dst: false, note: '' };
 
+    // Continuation segments (Mid Change) must not undo work recorded by the
+    // previous technician — checks completed before the handover are immutable.
+    if ((field === 'src' || field === 'dst') && value === false && a.handover_from_id != null) {
+      const baseline = await this._handoverBaseline(a.handover_from_id);
+      if (baseline[key]?.[field]) {
+        throw new ForbiddenException(
+          'This cable check was completed by the previous technician before the Mid Change and cannot be modified',
+        );
+      }
+    }
+
     let src_done = a.cables_src_done || 0;
     let dst_done = a.cables_dst_done || 0;
 
@@ -416,19 +428,27 @@ export class TechService {
     if (!a) throw new NotFoundException('Assignment not found');
     if (a.technician_id !== techId) throw new BadRequestException('Not your assignment');
 
-    // reset_all: rebuild the entire cable_status to pristine pending state (DEV/demo helper)
+    // reset_all: rebuild the entire cable_status to pristine pending state (DEV/demo helper).
+    // Continuations reset only to the Mid Change handover baseline — the previous
+    // technician's completed checks are immutable even in demo mode.
     if (action === 'reset_all') {
       if (process.env.DEMO_MODE !== 'true') throw new NotFoundException();
       const resetTotal = this._cableCountForAssignment(a);
+      const resetBaseline = await this._handoverBaseline(a.handover_from_id);
       const resetCs: Record<string, any> = {};
       for (let i = 0; i < resetTotal; i++) {
-        resetCs[String(i)] = { src: false, dst: false, note: '' };
+        const resetKey = String(i);
+        resetCs[resetKey] = resetBaseline[resetKey]
+          ? { ...resetBaseline[resetKey] }
+          : { src: false, dst: false, note: '' };
       }
+      const resetSrc = Object.values(resetCs).filter((c: any) => c.src).length;
+      const resetDst = Object.values(resetCs).filter((c: any) => c.dst).length;
       await this.prisma.tech_assignments.update({
         where: { id: assignmentId },
-        data: { cable_status: JSON.stringify(resetCs), cables_src_done: 0, cables_dst_done: 0 },
+        data: { cable_status: JSON.stringify(resetCs), cables_src_done: resetSrc, cables_dst_done: resetDst },
       });
-      return { assignment_id: assignmentId, cable_index: 0, action, cables_src_done: 0, cables_dst_done: 0 };
+      return { assignment_id: assignmentId, cable_index: 0, action, cables_src_done: resetSrc, cables_dst_done: resetDst };
     }
 
     const total = a.cables_total ?? 0;
@@ -480,20 +500,27 @@ export class TechService {
     if (total <= 0) throw new BadRequestException('No cables on this assignment');
 
     if (action === 'reset_all') {
+      // Continuations reset only to the Mid Change handover baseline (see cableAction).
+      const bulkBaseline = await this._handoverBaseline(a.handover_from_id);
       const resetCs: Record<string, CableStatus & { issue?: boolean }> = {};
       for (let i = 0; i < total; i++) {
-        resetCs[String(i)] = { src: false, dst: false, note: '' };
+        const bulkKey = String(i);
+        resetCs[bulkKey] = bulkBaseline[bulkKey]
+          ? { ...bulkBaseline[bulkKey] }
+          : { src: false, dst: false, note: '' };
       }
+      const bulkSrc = Object.values(resetCs).filter(c => c.src).length;
+      const bulkDst = Object.values(resetCs).filter(c => c.dst).length;
       await this.prisma.tech_assignments.update({
         where: { id: assignmentId },
-        data: { cable_status: JSON.stringify(resetCs), cables_src_done: 0, cables_dst_done: 0 },
+        data: { cable_status: JSON.stringify(resetCs), cables_src_done: bulkSrc, cables_dst_done: bulkDst },
       });
       return {
         action,
         assignment_id: assignmentId,
         cables_total: a.cables_total,
-        cables_src_done: 0,
-        cables_dst_done: 0,
+        cables_src_done: bulkSrc,
+        cables_dst_done: bulkDst,
         cable_status: resetCs,
       };
     }
@@ -563,6 +590,13 @@ export class TechService {
       return merged;
     }
     return disk ?? mem ?? null;
+  }
+
+  /** Cable state recorded at the Mid Change handover — immutable for the continuation. */
+  private async _handoverBaseline(handoverFromId: number | null): Promise<Record<string, CableStatus & { issue?: boolean }>> {
+    if (handoverFromId == null) return {};
+    const priorSegment = await this.prisma.tech_assignments.findUnique({ where: { id: handoverFromId } });
+    return parseCS(priorSegment?.cable_status);
   }
 
   /** Cable count for status writes — frame JSON length when available, else cables_total (never mutates cables_total). */
@@ -814,241 +848,163 @@ export class TechService {
     };
   }
 
-  async midChangeCandidates(technicianId: number) {
-    const active = await this.prisma.tech_assignments.findMany({
-      where: {
-        status: 'in_progress',
-        changeover_locked: { not: true },
-        is_hidden: { not: true },
-      },
-      orderBy: { started_at: 'asc' },
-    });
-    const mine = active.filter(assignment => assignment.technician_id === technicianId);
-    const candidates = active.filter(assignment => assignment.technician_id !== technicianId);
-    const technicianIds = [...new Set(active.map(assignment => assignment.technician_id))];
-    const projectCodes = [...new Set(active.map(assignment => assignment.project_code))];
-    const [technicians, projects] = await Promise.all([
-      technicianIds.length
-        ? this.prisma.users.findMany({ where: { id: { in: technicianIds }, is_active: true } })
-        : [],
-      projectCodes.length
-        ? this.prisma.projects.findMany({ where: { code: { in: projectCodes } } })
-        : [],
+  async midChangeTargets(technicianId: number) {
+    const [technicians, activeAssignments, projects] = await Promise.all([
+      this.prisma.users.findMany({ where: { role: 'wiring_technician', is_active: true } }),
+      this.prisma.tech_assignments.findMany({
+        where: {
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+          is_hidden: { not: true },
+        },
+      }),
+      this.prisma.projects.findMany(),
     ]);
-    const technicianMap = new Map<number, any>(technicians.map((technician: any) => [technician.id, technician] as [number, any]));
-    const projectMap = new Map<string, any>(projects.map((project: any) => [project.code, project] as [string, any]));
-    const present = (assignment: typeof active[number]) => ({
-      id: assignment.id,
-      project_code: assignment.project_code,
-      project_name: projectMap.get(assignment.project_code)?.name || assignment.project_code,
-      frame_id: assignment.frame_id,
-      panel_name: assignment.panel_name || assignment.frame_id,
-      technician_id: assignment.technician_id,
-      technician_name: technicianMap.get(assignment.technician_id)?.full_name || `Tech #${assignment.technician_id}`,
-      technician_username: technicianMap.get(assignment.technician_id)?.username || '',
-      cables_total: assignment.cables_total || 0,
-      cables_src_done: assignment.cables_src_done || 0,
-      cables_dst_done: assignment.cables_dst_done || 0,
-      started_at: assignment.started_at,
+
+    const projectMap = new Map<string, any>(projects.map(p => [p.code, p]));
+    const assignmentMap = new Map<number, typeof activeAssignments[0]>();
+    for (const a of activeAssignments) {
+      assignmentMap.set(a.technician_id, a);
+    }
+
+    const targets = technicians.map(t => {
+      const a = assignmentMap.get(t.id);
+      return {
+        technician_id: t.id,
+        technician_name: t.full_name || `Tech #${t.id}`,
+        technician_username: t.username,
+        is_me: t.id === technicianId,
+        has_assignment: !!a,
+        assignment: a ? {
+          id: a.id,
+          project_code: a.project_code,
+          project_name: projectMap.get(a.project_code)?.name || a.project_code,
+          frame_id: a.frame_id,
+          panel_name: a.panel_name || a.frame_id,
+          cables_total: a.cables_total || 0,
+          cables_src_done: a.cables_src_done || 0,
+          cables_dst_done: a.cables_dst_done || 0,
+          started_at: a.started_at,
+          status: a.status,
+        } : null,
+      };
     });
-    return {
-      my_assignments: mine.map(present),
-      candidates: candidates.map(present),
-    };
+
+    return targets;
   }
 
   async midChangeRequests(technicianId?: number) {
-    const events = await this.prisma.tech_audit_log.findMany({
-      where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
-      orderBy: { created_at: 'desc' },
-      take: 500,
+    // Incoming transfers/interchanges that are 'assigned' waiting for resume.
+    // Without a technicianId (supervisor view) every waiting transfer is returned.
+    const incoming = await this.prisma.tech_assignments.findMany({
+      where: {
+        ...(technicianId != null ? { technician_id: technicianId } : {}),
+        status: 'assigned',
+        handover_from_id: { not: null },
+        changeover_locked: { not: true },
+        is_hidden: { not: true },
+      },
     });
-    const pending = pendingMidChangePayloads(events)
-      .filter(request => technicianId == null
-        || request.initiatorId === technicianId
-        || request.targetTechnicianId === technicianId);
-    if (pending.length === 0) return [];
 
-    const assignmentIds = [...new Set(pending.flatMap(request => [request.sourceAssignmentId, request.targetAssignmentId]))];
-    const technicianIds = [...new Set(pending.flatMap(request => [request.initiatorId, request.targetTechnicianId]))];
-    const assignments = await this.prisma.tech_assignments.findMany({ where: { id: { in: assignmentIds } } });
-    const technicians = await this.prisma.users.findMany({ where: { id: { in: technicianIds } } });
-    const assignmentMap = new Map(assignments.map(assignment => [assignment.id, assignment]));
-    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+    if (incoming.length === 0) return [];
 
-    return pending.map(request => {
-      const source = assignmentMap.get(request.sourceAssignmentId);
-      const target = assignmentMap.get(request.targetAssignmentId);
+    const fromIds = incoming.map(a => a.handover_from_id as number);
+    const previousAssignments = await this.prisma.tech_assignments.findMany({
+      where: { id: { in: fromIds } },
+    });
+    const prevMap = new Map(previousAssignments.map(a => [a.id, a]));
+
+    const techIds = [...new Set(previousAssignments.map(a => a.technician_id))];
+    const prevTechs = await this.prisma.users.findMany({
+      where: { id: { in: techIds } },
+    });
+    const prevTechMap = new Map(prevTechs.map(t => [t.id, t]));
+
+    const describeSegment = (assignment?: (typeof incoming)[number]) => {
+      if (!assignment) return null;
+      const cableStates = parseCS(assignment.cable_status);
+      const total = this._cableCountForAssignment(assignment);
+      const frame = this.resolveAssignmentFrame(assignment.project_code, assignment.frame_id);
+      const cableLabel = (index: number) => {
+        const cable = Array.isArray(frame?.cables) ? (frame!.cables[index] as any) : null;
+        return cable?.ferrule || (cable?.sno != null && String(cable.sno)) || `Cable ${index + 1}`;
+      };
+      let lastCompleted: number | null = null;
+      let nextIncomplete: number | null = null;
+      let completedPairs = 0;
+      for (let i = 0; i < total; i++) {
+        const entry = cableStates[String(i)];
+        if (entry?.src && entry?.dst) { completedPairs += 1; lastCompleted = i; }
+        else if (nextIncomplete == null) nextIncomplete = i;
+      }
       return {
-        ...request,
-        direction: technicianId == null
-          ? 'supervisor'
-          : request.targetTechnicianId === technicianId ? 'incoming' : 'outgoing',
-        initiator_name: technicianMap.get(request.initiatorId)?.full_name || `Tech #${request.initiatorId}`,
-        target_technician_name: technicianMap.get(request.targetTechnicianId)?.full_name || `Tech #${request.targetTechnicianId}`,
-        source: source ? {
-          project_code: source.project_code,
-          frame_id: source.frame_id,
-          panel_name: source.panel_name || source.frame_id,
-          status: source.status,
-        } : null,
-        target: target ? {
-          project_code: target.project_code,
-          frame_id: target.frame_id,
-          panel_name: target.panel_name || target.frame_id,
-          status: target.status,
-        } : null,
+        id: assignment.id,
+        project_code: assignment.project_code,
+        frame_id: assignment.frame_id,
+        panel_name: assignment.panel_name || assignment.frame_id,
+        status: assignment.status,
+        cables_total: total,
+        cables_src_done: assignment.cables_src_done || 0,
+        cables_dst_done: assignment.cables_dst_done || 0,
+        cables_completed: completedPairs,
+        cables_remaining: Math.max(0, total - completedPairs),
+        last_completed_index: lastCompleted,
+        last_completed_label: lastCompleted != null ? cableLabel(lastCompleted) : null,
+        next_incomplete_index: nextIncomplete,
+        next_incomplete_label: nextIncomplete != null ? cableLabel(nextIncomplete) : null,
+      };
+    };
+
+    return incoming.map(a => {
+      const prevA = prevMap.get(a.handover_from_id as number);
+      const prevT = prevA ? prevTechMap.get(prevA.technician_id) : null;
+      return {
+        requestId: `transfer-${a.id}`, // Mock requestId to fit UI
+        direction: 'incoming',
+        initiator_name: prevT?.full_name || `Tech #${prevA?.technician_id}`,
+        initiator_username: prevT?.username || '',
+        target_technician_name: 'You',
+        reason: a.pause_reason || 'Mid Change', // Used pause_reason of new assignment to store the reason
+        assigned_at: a.assigned_at,
+        source: describeSegment(prevA),
+        target: describeSegment(a),
       };
     });
   }
 
-  async requestMidChange(technicianId: number, sourceAssignmentId: number, targetAssignmentId: number, reason = '') {
-    if (sourceAssignmentId === targetAssignmentId) throw new BadRequestException('Select a different technician and panel');
+  async executeMidChange(initiatorId: number, sourceAssignmentId: number, targetTechnicianId: number, reason = '') {
+    if (initiatorId === targetTechnicianId) throw new BadRequestException('Select a different technician');
     const cleanReason = reason.trim().slice(0, 120);
     if (!cleanReason) throw new BadRequestException('Mid Change reason is required');
-    const requestId = crypto.randomUUID();
-    const createdAt = new Date().toISOString();
-
-    const payload = await this.prisma.$transaction(async tx => {
-      const [source, target, initiator, events] = await Promise.all([
-        tx.tech_assignments.findUnique({ where: { id: sourceAssignmentId } }),
-        tx.tech_assignments.findUnique({ where: { id: targetAssignmentId } }),
-        tx.users.findUnique({ where: { id: technicianId } }),
-        tx.tech_audit_log.findMany({
-          where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
-          orderBy: { created_at: 'desc' },
-          take: 500,
-        }),
-      ]);
-      if (!source || !target) throw new NotFoundException('One of the active assignments no longer exists');
-      if (source.technician_id !== technicianId) throw new ForbiddenException('You can only exchange your own active assignment');
-      if (target.technician_id === technicianId) throw new BadRequestException('You cannot select yourself for Mid Change');
-      if (source.status !== 'in_progress' || target.status !== 'in_progress'
-        || source.changeover_locked || target.changeover_locked) {
-        throw new ConflictException('Both technicians must still be actively working before Mid Change can be requested');
-      }
-      const duplicate = pendingMidChangePayloads(events).find(request => (
-        [request.sourceAssignmentId, request.targetAssignmentId].includes(source.id)
-        || [request.sourceAssignmentId, request.targetAssignmentId].includes(target.id)
-      ));
-      if (duplicate) throw new ConflictException('A pending Mid Change already involves one of these assignments');
-
-      const request: MidChangeRequestPayload = {
-        requestId,
-        sourceAssignmentId: source.id,
-        targetAssignmentId: target.id,
-        initiatorId: technicianId,
-        targetTechnicianId: target.technician_id,
-        createdAt,
-        reason: cleanReason,
-      };
-      await tx.tech_audit_log.create({
-        data: {
-          technician_id: technicianId,
-          technician_name: initiator?.full_name || '',
-          project_code: source.project_code,
-          frame_id: source.frame_id,
-          panel_name: source.panel_name || '',
-          action: 'mid_change_requested',
-          details: JSON.stringify(request),
-        },
-      });
-      return request;
-    }, { isolationLevel: 'Serializable' });
-
-    return { message: 'Mid Change request sent for technician confirmation', request: payload };
-  }
-
-  async rejectMidChange(technicianId: number, requestId: string) {
-    await this.prisma.$transaction(async tx => {
-      const events = await tx.tech_audit_log.findMany({
-        where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
-        orderBy: { created_at: 'desc' },
-        take: 500,
-      });
-      const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
-      if (!request) throw new NotFoundException('Pending Mid Change request not found');
-      if (request.targetTechnicianId !== technicianId) throw new ForbiddenException('Only the selected technician can reject this request');
-      const technician = await tx.users.findUnique({ where: { id: technicianId } });
-      await tx.tech_audit_log.create({
-        data: {
-          technician_id: technicianId,
-          technician_name: technician?.full_name || '',
-          action: 'mid_change_rejected',
-          details: JSON.stringify(request),
-        },
-      });
-    }, { isolationLevel: 'Serializable' });
-    return { message: 'Mid Change request rejected', request_id: requestId };
-  }
-
-  async confirmMidChange(technicianId: number, requestId: string) {
     const changedAt = new Date();
+
     const result = await this.prisma.$transaction(async tx => {
-      const events = await tx.tech_audit_log.findMany({
-        where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
-        orderBy: { created_at: 'desc' },
-        take: 500,
-      });
-      const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
-      if (!request) throw new NotFoundException('Pending Mid Change request not found');
-      if (request.targetTechnicianId !== technicianId) {
-        throw new ForbiddenException('Only the selected technician can confirm this request');
+      let source = await tx.tech_assignments.findUnique({ where: { id: sourceAssignmentId } });
+      if (!source) throw new NotFoundException('Your assignment no longer exists');
+      if (source.technician_id !== initiatorId) throw new ForbiddenException('You can only mid-change your own assignment');
+      if (!['in_progress', 'paused'].includes(String(source.status || '')) || source.changeover_locked) {
+        throw new ConflictException('Your panel segment is no longer eligible for Mid Change');
       }
 
-      let source = await tx.tech_assignments.findUnique({ where: { id: request.sourceAssignmentId } });
-      let target = await tx.tech_assignments.findUnique({ where: { id: request.targetAssignmentId } });
-      if (!source || !target) throw new NotFoundException('One of the assignments no longer exists');
-      if (source.technician_id !== request.initiatorId || target.technician_id !== request.targetTechnicianId) {
-        throw new ConflictException('Technician assignments changed before confirmation');
-      }
-      if (source.status !== 'in_progress' || target.status !== 'in_progress'
-        || source.changeover_locked || target.changeover_locked) {
-        throw new ConflictException('Both technicians must remain actively working until the exchange is confirmed');
-      }
-
-      const priorCrossAssignments = await tx.tech_assignments.findMany({
+      const targetActive = await tx.tech_assignments.findFirst({
         where: {
-          OR: [
-            { project_code: target.project_code, frame_id: target.frame_id, technician_id: source.technician_id },
-            { project_code: source.project_code, frame_id: source.frame_id, technician_id: target.technician_id },
-          ],
+          technician_id: targetTechnicianId,
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+          is_hidden: { not: true },
         },
-        select: { id: true },
       });
-      if (priorCrossAssignments.length > 0) {
-        throw new ConflictException('This technician/panel interchange already exists in the permanent assignment history');
-      }
 
       const [initiator, targetTechnician] = await Promise.all([
-        tx.users.findUnique({ where: { id: request.initiatorId } }),
-        tx.users.findUnique({ where: { id: request.targetTechnicianId } }),
+        tx.users.findUnique({ where: { id: initiatorId } }),
+        tx.users.findUnique({ where: { id: targetTechnicianId } }),
       ]);
-      const elapsed = (assignment: typeof source) => {
-        if (!assignment?.started_at) return assignment?.total_wiring_seconds || 0;
-        return (assignment.total_wiring_seconds || 0)
-          + Math.max(0, Math.floor((changedAt.getTime() - assignment.started_at.getTime()) / 1000));
-      };
-      source = await tx.tech_assignments.update({
-        where: { id: source.id },
-        data: {
-          status: 'paused',
-          paused_at: changedAt,
-          pause_reason: `Mid Change to ${target.panel_name || target.frame_id}`,
-          total_wiring_seconds: elapsed(source),
-          changeover_locked: true,
-        },
-      });
-      target = await tx.tech_assignments.update({
-        where: { id: target.id },
-        data: {
-          status: 'paused',
-          paused_at: changedAt,
-          pause_reason: `Mid Change to ${source.panel_name || source.frame_id}`,
-          total_wiring_seconds: elapsed(target),
-          changeover_locked: true,
-        },
-      });
+      // The receiving side must be a real, active wiring technician — otherwise the
+      // transfer would strand the panel on an account that can never resume it.
+      if (!targetTechnician || targetTechnician.is_active === false
+        || targetTechnician.role !== 'wiring_technician') {
+        throw new BadRequestException('Select an active wiring technician to receive the panel');
+      }
 
       const createContinuation = (
         panel: typeof source,
@@ -1059,10 +1015,9 @@ export class TechService {
         frame_id: panel.frame_id,
         panel_name: panel.panel_name,
         technician_id: incomingTechnicianId,
-        assigned_by: panel.assigned_by,
+        assigned_by: initiatorId, // Tech assigns to tech
         assigned_at: changedAt,
-        status: 'in_progress',
-        started_at: changedAt,
+        status: 'assigned', // Wait for resume
         cables_total: panel.cables_total,
         cables_src_done: panel.cables_src_done,
         cables_dst_done: panel.cables_dst_done,
@@ -1084,63 +1039,117 @@ export class TechService {
         qr_panel_verified: false,
         otp_expires_at: new Date(changedAt.getTime() + 24 * 60 * 60 * 1000),
         otp_attempts: 0,
+        pause_reason: cleanReason,
       });
 
-      const initiatorContinuation = await tx.tech_assignments.create({
-        data: createContinuation(target, request.initiatorId, target.id),
-      });
-      const targetContinuation = await tx.tech_assignments.create({
-        data: createContinuation(source, request.targetTechnicianId, source.id),
-      });
-      await Promise.all([
-        tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } }),
-        tx.tech_assignments.update({ where: { id: target.id }, data: { handover_to_id: initiatorContinuation.id } }),
-      ]);
+      const elapsed = (assignment: typeof source) => {
+        if (!assignment?.started_at || assignment.status === 'paused') {
+          return assignment?.total_wiring_seconds || 0;
+        }
+        return (assignment.total_wiring_seconds || 0)
+          + Math.max(0, Math.floor((changedAt.getTime() - assignment.started_at.getTime()) / 1000));
+      };
 
-      const confirmedPayload = JSON.stringify(request);
-      await tx.tech_audit_log.createMany({
-        data: [
-          {
-            technician_id: technicianId,
-            technician_name: targetTechnician?.full_name || '',
-            project_code: target.project_code,
-            frame_id: target.frame_id,
-            panel_name: target.panel_name || '',
-            action: 'mid_change_confirmed',
-            details: confirmedPayload,
+      if (!targetActive) {
+        // Direct Transfer
+        source = await tx.tech_assignments.update({
+          where: { id: source.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change transferred to ${targetTechnician?.full_name}`,
+            total_wiring_seconds: elapsed(source),
+            changeover_locked: true,
           },
-          {
-            technician_id: request.initiatorId,
+        });
+
+        const targetContinuation = await tx.tech_assignments.create({
+          data: createContinuation(source, targetTechnicianId, source.id),
+        });
+
+        await tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } });
+
+        await tx.tech_audit_log.create({
+          data: {
+            technician_id: initiatorId,
             technician_name: initiator?.full_name || '',
-            project_code: target.project_code,
-            frame_id: target.frame_id,
-            panel_name: target.panel_name || '',
-            action: 'mid_change_swap',
-            details: JSON.stringify({ requestId, from: source.id, to: initiatorContinuation.id, at: changedAt.toISOString() }),
-          },
-          {
-            technician_id: request.targetTechnicianId,
-            technician_name: targetTechnician?.full_name || '',
             project_code: source.project_code,
             frame_id: source.frame_id,
             panel_name: source.panel_name || '',
-            action: 'mid_change_swap',
-            details: JSON.stringify({ requestId, from: target.id, to: targetContinuation.id, at: changedAt.toISOString() }),
+            action: 'mid_change_transfer',
+            details: JSON.stringify({ to: targetTechnicianId, to_name: targetTechnician?.full_name, new_assignment_id: targetContinuation.id, reason: cleanReason, at: changedAt.toISOString() }),
           },
-        ],
-      });
+        });
 
-      return {
-        request,
-        changed_at: changedAt.toISOString(),
-        initiator_assignment_id: initiatorContinuation.id,
-        target_assignment_id: targetContinuation.id,
-        initiator_panel_name: target.panel_name || target.frame_id,
-        target_panel_name: source.panel_name || source.frame_id,
-      };
+        return { type: 'transfer', new_assignment_id: targetContinuation.id };
+      } else {
+        // Interchange
+        if (targetActive.status === 'assigned') {
+           throw new ConflictException('The selected technician must start their assigned panel before it can be interchanged');
+        }
+
+        let target = await tx.tech_assignments.update({
+          where: { id: targetActive.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change interchange with ${initiator?.full_name}`,
+            total_wiring_seconds: elapsed(targetActive),
+            changeover_locked: true,
+          },
+        });
+
+        source = await tx.tech_assignments.update({
+          where: { id: source.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change interchange with ${targetTechnician?.full_name}`,
+            total_wiring_seconds: elapsed(source),
+            changeover_locked: true,
+          },
+        });
+
+        const initiatorContinuation = await tx.tech_assignments.create({
+          data: createContinuation(target, initiatorId, target.id),
+        });
+        const targetContinuation = await tx.tech_assignments.create({
+          data: createContinuation(source, targetTechnicianId, source.id),
+        });
+
+        await Promise.all([
+          tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } }),
+          tx.tech_assignments.update({ where: { id: target.id }, data: { handover_to_id: initiatorContinuation.id } }),
+        ]);
+
+        await tx.tech_audit_log.createMany({
+          data: [
+            {
+              technician_id: initiatorId,
+              technician_name: initiator?.full_name || '',
+              project_code: source.project_code,
+              frame_id: source.frame_id,
+              panel_name: source.panel_name || '',
+              action: 'mid_change_swap',
+              details: JSON.stringify({ with: targetTechnicianId, with_name: targetTechnician?.full_name, reason: cleanReason, at: changedAt.toISOString() }),
+            },
+            {
+              technician_id: targetTechnicianId,
+              technician_name: targetTechnician?.full_name || '',
+              project_code: target.project_code,
+              frame_id: target.frame_id,
+              panel_name: target.panel_name || '',
+              action: 'mid_change_swap',
+              details: JSON.stringify({ with: initiatorId, with_name: initiator?.full_name, reason: cleanReason, at: changedAt.toISOString() }),
+            },
+          ],
+        });
+
+        return { type: 'interchange', initiator_new_assignment_id: initiatorContinuation.id, target_new_assignment_id: targetContinuation.id };
+      }
     }, { isolationLevel: 'Serializable' });
 
-    return { message: 'Mid Change confirmed and both active assignments were interchanged', ...result };
+    return { message: 'Mid Change executed successfully', ...result };
   }
 
   async verifyOtp(assignmentId: number, techId: number, code: string) {

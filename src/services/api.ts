@@ -366,22 +366,16 @@ export const techApi = {
 
   myAssignmentDetail: (id: number, signal?: AbortSignal) => api.get(`/tech/my-assignment/${id}`, { signal }).then(r => r.data),
 
-  midChangeCandidates: () => api.get('/tech/mid-change/candidates').then(r => r.data),
+  midChangeTargets: () => api.get('/tech/mid-change/targets').then(r => r.data),
 
   midChangeRequests: () => api.get('/tech/mid-change/requests').then(r => r.data),
 
-  requestMidChange: (sourceAssignmentId: number, targetAssignmentId: number, reason: string) =>
-    api.post('/tech/mid-change/request', {
+  executeMidChange: (sourceAssignmentId: number, targetTechnicianId: number, reason: string) =>
+    api.post('/tech/mid-change/execute', {
       source_assignment_id: sourceAssignmentId,
-      target_assignment_id: targetAssignmentId,
+      target_technician_id: targetTechnicianId,
       reason,
     }).then(r => r.data),
-
-  confirmMidChange: (requestId: string) =>
-    api.post(`/tech/mid-change/${encodeURIComponent(requestId)}/confirm`).then(r => r.data),
-
-  rejectMidChange: (requestId: string) =>
-    api.post(`/tech/mid-change/${encodeURIComponent(requestId)}/reject`).then(r => r.data),
 
   completionReport: (id: number) => api.get(`/tech/completion-report/${id}`).then(r => r.data),
 

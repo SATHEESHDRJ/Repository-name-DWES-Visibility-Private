@@ -10,6 +10,16 @@ export const SCORE_KEYWORDS = [
   'size', 'color', 'length', 'sno', 's.no',
 ];
 
+const LABEL_KEYWORDS = [
+  ...HEADER_KEYWORDS,
+  'device', 'dev', 'term', 'pin', 'conn', 'destination', 'src', 'dst',
+  'type', 'name', 'desc', 'qty', 'no', 'number', 'routing', 'path', 'spec',
+  'cross', 'section', 'remark', 'ref', 'rack', 'sign', 'panel', 'pnl',
+  'client', 'project', 'drawing', 'dwg', 'sheet', 'page', 'rev', 'revision',
+  'date', 'status', 'operator', 'by', 'check', 'appr', 'approve',
+  'model', 'make', 'mfg', 'manuf', 'supplier', 'vendor', 'class', 'code'
+];
+
 /** Normalize cell text: collapse whitespace, strip control chars. */
 export function cleanExcelHeader(raw: unknown): string {
   return String(raw ?? '')
@@ -27,9 +37,24 @@ function looksLikeWireSpec(text: string): boolean {
 function looksLikeHeaderLabel(text: string): boolean {
   const l = text.toLowerCase();
   if (!l || l.length > 60) return false;
-  if (HEADER_KEYWORDS.some(kw => l.includes(kw))) return true;
+  if (/\d/.test(text)) return false;
+  if (LABEL_KEYWORDS.some(kw => l.includes(kw))) return true;
   if (/^(s\.?\s*no|ref|remark|rack|sign|panel|pnl)/i.test(text)) return true;
-  return text.length <= 24 && !looksLikeWireSpec(text) && !/^\d+([.:]\d+)?$/.test(text);
+  return text.length <= 24 && !looksLikeWireSpec(text);
+}
+
+/**
+ * Strong header evidence only — keyword/regex-matched labels or wire specs.
+ * Used by isSubHeaderRow, where the generic "any short digit-free text" fallback
+ * of looksLikeHeaderLabel is too eager: a first DATA row of device names or
+ * colours ("CT", "RELAY", "GREEN") must never be mistaken for a sub-header.
+ */
+function looksLikeStrongHeaderLabel(text: string): boolean {
+  const l = text.toLowerCase();
+  if (!l || l.length > 60) return false;
+  if (/\d/.test(text)) return false;
+  if (LABEL_KEYWORDS.some(kw => l.includes(kw))) return true;
+  return /^(s\.?\s*no|ref|remark|rack|sign|panel|pnl)/i.test(text);
 }
 
 /**
@@ -77,13 +102,18 @@ export interface HeaderPair {
  */
 export function isSubHeaderRow(rows: unknown[][], headerRowIdx: number): boolean {
   const sub = (rows[headerRowIdx + 1] || []) as unknown[];
+  // Data signatures win outright: a bare number (serial no / terminal) or a
+  // "left/right" pair never appears in a label-only sub-header row. This keeps
+  // the FIRST data row even when its text cells are short and digit-free.
+  if (sub.some(c => /^\d+(?:\.\d+)?$/.test(cleanExcelHeader(c)))) return false;
+  if (sub.some(c => String(c || '').includes('/'))) return false;
+  // Only strong header evidence counts — wire specs ("2.5sq mm White") or
+  // keyword-matched labels — never the generic short-text fallback.
   const headerLikeCount = sub.filter(c => {
     const t = cleanExcelHeader(c);
-    return t && (looksLikeWireSpec(t) || looksLikeHeaderLabel(t));
+    return t && (looksLikeWireSpec(t) || looksLikeStrongHeaderLabel(t));
   }).length;
-  if (headerLikeCount < 2) return false;
-  if (sub.some(c => String(c || '').includes('/'))) return false;
-  return true;
+  return headerLikeCount >= 2;
 }
 
 /** Build display headers from the detected header row (+ optional sub-header row). */

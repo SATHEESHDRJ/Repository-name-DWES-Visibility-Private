@@ -24,6 +24,8 @@ export class TechController {
 
   @Get('audit/:code')
   @UseGuards(RolesGuard)
+  // sales_director excluded — the audit trail exposes technician names, pause
+  // reasons and per-cable remarks, which the aggregate sales view must not receive.
   @Roles('system_admin', 'prod_supervisor', 'ops_director', 'qaqc_engineer')
   audit(@Param('code') code: string) { return this.svc.audit(code); }
 
@@ -46,11 +48,11 @@ export class TechController {
     return this.svc.myAssignmentDetail(id, user.id);
   }
 
-  @Get('mid-change/candidates')
+  @Get('mid-change/targets')
   @UseGuards(RolesGuard)
   @Roles('wiring_technician')
-  midChangeCandidates(@CurrentUser() user: User) {
-    return this.svc.midChangeCandidates(user.id);
+  midChangeTargets(@CurrentUser() user: User) {
+    return this.svc.midChangeTargets(user.id);
   }
 
   @Get('mid-change/requests')
@@ -60,33 +62,19 @@ export class TechController {
     return this.svc.midChangeRequests(user.id);
   }
 
-  @Post('mid-change/request')
+  @Post('mid-change/execute')
   @UseGuards(RolesGuard)
   @Roles('wiring_technician')
-  requestMidChange(
-    @Body() body: { source_assignment_id: number; target_assignment_id: number; reason: string },
+  executeMidChange(
+    @Body() body: { source_assignment_id: number; target_technician_id: number; reason: string },
     @CurrentUser() user: User,
   ) {
-    return this.svc.requestMidChange(
+    return this.svc.executeMidChange(
       user.id,
       Number(body.source_assignment_id),
-      Number(body.target_assignment_id),
+      Number(body.target_technician_id),
       body.reason || '',
     );
-  }
-
-  @Post('mid-change/:requestId/confirm')
-  @UseGuards(RolesGuard)
-  @Roles('wiring_technician')
-  confirmMidChange(@Param('requestId') requestId: string, @CurrentUser() user: User) {
-    return this.svc.confirmMidChange(user.id, requestId);
-  }
-
-  @Post('mid-change/:requestId/reject')
-  @UseGuards(RolesGuard)
-  @Roles('wiring_technician')
-  rejectMidChange(@Param('requestId') requestId: string, @CurrentUser() user: User) {
-    return this.svc.rejectMidChange(user.id, requestId);
   }
 
   @Post('start/:id')

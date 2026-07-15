@@ -51,6 +51,8 @@ export class FramesController {
    *  Technicians only when assigned to the project. */
   @Get('frames/:id/report-pdf')
   @UseGuards(RolesGuard)
+  // sales_director excluded — panel reports carry technician contributions,
+  // break/pause logs, and per-cable remarks.
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
   async frameReportPdf(
     @Param('code') code: string,
@@ -74,6 +76,7 @@ export class FramesController {
   /** Live panel completion report data for on-screen executive preview. */
   @Get('frames/:id/completion-report')
   @UseGuards(RolesGuard)
+  // sales_director excluded — see frameReportPdf.
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
   async frameCompletionReport(
     @Param('code') code: string,
@@ -159,14 +162,14 @@ export class FramesController {
 
   @Post('frames/:id/verify-confirm')
   @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'qaqc_engineer')
+  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'sales_director', 'qaqc_engineer')
   verifyConfirm(@Param('code') code: string, @Param('id') id: string) {
     return this.svc.verifyConfirm(code, id);
   }
 
   @Post('frames/:id/compare-source-file')
   @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'qaqc_engineer')
+  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'sales_director', 'qaqc_engineer')
   @UseInterceptors(DwesFileInterceptor('file'))
   compareSourceFile(
     @Param('code') code: string, @Param('id') id: string,

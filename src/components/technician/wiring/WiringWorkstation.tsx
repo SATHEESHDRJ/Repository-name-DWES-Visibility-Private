@@ -424,8 +424,23 @@ export default function WiringWorkstation({ panel, onPanelUpdate, onExit }: Prop
 
       {showPause && createPortal(
         <PauseReasonModal
+          assignmentId={panel.id}
           onClose={() => !saving && setShowPause(false)}
           onConfirm={confirmPause}
+          onMidChange={async (targetTechnicianId, reason) => {
+            setSaving(true);
+            try {
+              await techApi.executeMidChange(panel.id, targetTechnicianId, reason);
+              emitWorkflowChanged({ scope: 'wiring', projectCode: panel.project_code, frameId: panel.id });
+              onPanelUpdate();
+              setShowPause(false);
+              onExit?.();
+            } catch (e: any) {
+              setToast(e?.response?.data?.message || 'Mid change failed');
+            } finally {
+              setSaving(false);
+            }
+          }}
           busy={saving}
         />,
         document.body,

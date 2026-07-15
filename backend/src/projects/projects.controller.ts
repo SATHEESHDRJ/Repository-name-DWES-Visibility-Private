@@ -51,8 +51,10 @@ export class ProjectsController {
   @Roles('prod_supervisor')
   submit(@Param('code') code: string) { return this.svc.submitToDirector(code); }
 
-  // Reports are readable by every role; technicians only for projects they are assigned to
-  // (same policy as drawing file streaming in frames.controller.ts).
+  // Reports are readable by production roles; technicians only for projects they are
+  // assigned to (same policy as drawing file streaming in frames.controller.ts).
+  // sales_director is excluded — the report tables embed technician names and
+  // per-panel work detail that the sales view must not receive.
   @Get(':code/report-pdf')
   @Roles('prod_supervisor', 'ops_director', 'system_admin', 'qaqc_engineer', 'wiring_technician')
   async reportPdf(@Param('code') code: string, @CurrentUser() user: User, @Res() res: FastifyReply) {

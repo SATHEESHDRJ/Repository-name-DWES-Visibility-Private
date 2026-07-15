@@ -5,7 +5,7 @@ import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import type { FramePanel } from '../assignment/ProjectPanelSelect';
 import TechnicianSelect from '../assignment/TechnicianSelect';
 import type { AssignmentRow, TechUser } from '../../utils/assignmentCenterUtils';
-import { CheckCircle, TriangleAlert, UserPlus } from '../ui/icons';
+import { ArrowLeftRight, CheckCircle, TriangleAlert, UserPlus, User } from '../ui/icons';
 
 /** Kept for compatibility with callers; supervisor workflow now performs initial assignment only. */
 export type TechnicianWorkflowSection = 'assign' | 'deassign' | 'changeover';
@@ -27,6 +27,26 @@ type TechnicianOption = TechUser & {
 function messageFrom(error: unknown): string {
   return (error as { response?: { data?: { message?: string } } })?.response?.data?.message
     || 'The technician could not be assigned. Please refresh and try again.';
+}
+
+function formatAssignmentTime(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(d);
+}
+
+function statusDisplayLabel(status: string | null | undefined): { label: string; tone: string } {
+  switch (status) {
+    case 'in_progress': return { label: 'In Progress', tone: 'progress' };
+    case 'paused': return { label: 'Paused', tone: 'paused' };
+    case 'assigned': return { label: 'Assigned', tone: 'assigned' };
+    case 'completed': return { label: 'Completed', tone: 'done' };
+    default: return { label: String(status || 'Unknown').replace(/_/g, ' '), tone: 'idle' };
+  }
 }
 
 export default function PanelAssignmentModal({
@@ -94,6 +114,14 @@ export default function PanelAssignmentModal({
     && !saving,
   );
 
+  /* Look up the assigned technician's name + username from the technician list */
+  const assignedTech = panelAssignment
+    ? technicians.find(t => t.id === panelAssignment.technician_id) ?? null
+    : null;
+  const assignedTechName = assignedTech?.full_name || panelAssignment?.technician_name || `Tech #${panelAssignment?.technician_id}`;
+  const assignedTechUsername = assignedTech?.username || '';
+  const assignmentStatus = statusDisplayLabel(panelAssignment?.status);
+
   const assignTechnician = async () => {
     if (!canAssign || !selectedTechnician) return;
     setSaving(true);
@@ -112,6 +140,97 @@ export default function PanelAssignmentModal({
       setSaving(false);
     }
   };
+
+  /* ── Already Assigned view ── */
+  if (!loading && panelAssignment) {
+    return (
+      <Modal
+        title="Panel Already Assigned"
+        subtitle={`${projectName || projectCode} · ${resolvedPanelName}`}
+        icon={<User />}
+        onClose={onClose}
+        size="form"
+        footer={(
+          <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+        )}
+      >
+        <div className="assign-already-shell">
+          {/* Context bar */}
+          <section className="assign-technician-context" aria-label="Selected project and panel">
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Project Name</span>
+              <strong className="assign-technician-context-value" title={projectName || projectCode}>
+                {projectName || projectCode}
+              </strong>
+              <span className="assign-technician-context-meta" title={projectCode}>{projectCode}</span>
+            </div>
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Panel Name</span>
+              <strong className="assign-technician-context-value" title={resolvedPanelName}>
+                {resolvedPanelName}
+              </strong>
+              <span className="assign-technician-context-meta">{resolvedCableCount} assigned cables</span>
+            </div>
+          </section>
+
+          {/* Current assignment detail card */}
+          <div className="assign-already-card">
+            <div className="assign-already-card-header">
+              <div className="assign-already-card-heading">
+                <span className="assign-already-pulse-wrap">
+                  <span className="assign-already-pulse" data-tone={assignmentStatus.tone} />
+                </span>
+                <span className="assign-already-status-badge" data-tone={assignmentStatus.tone}>
+                  {assignmentStatus.label}
+                </span>
+              </div>
+              <span className="assign-already-panel-badge">{resolvedPanelName}</span>
+            </div>
+
+            <div className="assign-already-tech-row">
+              <div className="assign-already-avatar" aria-hidden="true">
+                <User size={22} />
+              </div>
+              <div className="assign-already-tech-info">
+                <strong className="assign-already-tech-name">{assignedTechName}</strong>
+                {assignedTechUsername && (
+                  <span className="assign-already-tech-username">@{assignedTechUsername}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="assign-already-meta-grid">
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Assigned</span>
+                <strong>{formatAssignmentTime(panelAssignment.assigned_at)}</strong>
+              </div>
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Wiring started</span>
+                <strong>{panelAssignment.started_at ? formatAssignmentTime(panelAssignment.started_at) : 'Not Started'}</strong>
+              </div>
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Work status</span>
+                <strong>{assignmentStatus.label}{panelAssignment.pause_reason ? ` — ${panelAssignment.pause_reason}` : ''}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Mid Change directive */}
+          <div className="assign-already-midchange-notice" role="note">
+            <ArrowLeftRight size={18} className="shrink-0" />
+            <div>
+              <strong>Need to reassign this panel?</strong>
+              <p>
+                Technician changes are handled through the <strong>Mid Change</strong> workflow inside the active
+                wiring session. The assigned technician selects <em>Pause → Mid-changeover</em> to transfer
+                the panel — all completed work, timestamps, and audit history are preserved automatically.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -160,13 +279,6 @@ export default function PanelAssignmentModal({
 
         {loading && <p className="assign-technician-loading">Loading technician availability…</p>}
 
-        {!loading && panelAssignment && (
-          <div className="assign-technician-notice" role="status">
-            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            <span>This panel already has an active technician assignment. Mid Change is available only from the Technician Dashboard.</span>
-          </div>
-        )}
-
         {!loading && !scheduleReady && (
           <div className="assign-technician-notice" role="status">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
@@ -196,7 +308,7 @@ export default function PanelAssignmentModal({
               }))}
               value={selectedTechnicianId}
               onChange={id => { setSelectedTechnicianId(id); setError(''); }}
-              disabled={loading || Boolean(panelAssignment) || !scheduleReady}
+              disabled={loading || !scheduleReady}
               inlineList
             />
           </section>

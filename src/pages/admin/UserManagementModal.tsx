@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { usersApi } from '../../../services/api';
-import { useAuthStore } from '../../../store/useAuthStore';
-import Modal from '../../../components/Modal';
-import { InputField } from '../../../components/ui/TabletFields';
-import { useAppDialog } from '../../../components/AppDialogProvider';
+import { usersApi } from '../../services/api';
+import { useAuthStore } from '../../store/useAuthStore';
+import Modal from '../../components/Modal';
+import { InputField } from '../../components/ui/TabletFields';
+import { useAppDialog } from '../../components/AppDialogProvider';
+import { type AuthUser as User } from '../../types';
 import {
-  Eye, Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog, UserPlus,
-  CheckCircle2, UserX, Phone, Calendar, Hash,
-} from '../../../components/ui/icons';
-import { Input } from '../../../components/ui/Input';
+  Eye, Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User as UserIcon, UserCog, UserPlus,
+  CheckCircle2, UserX, Phone, Calendar, Hash, 
+} from '../../components/ui/icons';
+import { Input } from '../../components/ui/Input';
 
 const ROLES = ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
 
@@ -77,12 +78,15 @@ function normalizeUsers(data: unknown): any[] {
   return Array.isArray(data) ? data : [];
 }
 
-export default function UserMgmtTab() {
+export function UserManagementModal({ onClose }: { onClose: () => void }) {
+  
   const dialog = useAppDialog();
   const token = useAuthStore(s => s.token);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  
+
+    const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [msg, setMsg] = useState('');
@@ -334,14 +338,15 @@ export default function UserMgmtTab() {
 
   if (loading) {
     return (
-      <>
+      <Modal onClose={onClose} title="User Management" size="lg">
         <div className="empty-state"><p className="empty-text">Loading users...</p></div>
         {modals}
-      </>
+      </Modal>
     );
   }
 
   return (
+    <Modal onClose={onClose} title="User Management" size="lg">
     <div className="admin-user-management">
       {/* Toolbar */}
       <div className="admin-user-toolbar">
@@ -478,6 +483,7 @@ export default function UserMgmtTab() {
 
       {modals}
     </div>
+    </Modal>
   );
 }
 
@@ -632,7 +638,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, mode, onClose, 
   return (
     <Modal
       title={mode === 'edit' ? 'Edit User' : 'User Details'}
-      icon={mode === 'edit' ? <Pencil /> : <User />}
+      icon={mode === 'edit' ? <Pencil /> : <UserIcon />}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -699,7 +705,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, mode, onClose, 
         {mode === 'edit' ? <div className="grid grid-cols-1 tablet-port:grid-cols-2 gap-4">
           <InputField
             label="Full Name *"
-            icon={<User size={16} />}
+            icon={<UserIcon size={16} />}
             value={editData.full_name}
             onChange={v => setEditData(d => ({ ...d, full_name: v }))}
             placeholder="Full name"
@@ -846,8 +852,8 @@ function AddUserModal({ newUser, setNewUser, saving, onClose, onCreate }: {
     >
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 tablet-port:grid-cols-2 gap-4">
-          <InputField label="Full Name *" icon={<User size={16} />} value={newUser.full_name} onChange={v => setNewUser(u => ({ ...u, full_name: v }))} placeholder="Full name" />
-          <InputField label="Username *" icon={<User size={16} />} value={newUser.username} onChange={v => setNewUser(u => ({ ...u, username: v.toLowerCase().trim() }))} placeholder="username" />
+          <InputField label="Full Name *" icon={<UserIcon size={16} />} value={newUser.full_name} onChange={v => setNewUser(u => ({ ...u, full_name: v }))} placeholder="Full name" />
+          <InputField label="Username *" icon={<UserIcon size={16} />} value={newUser.username} onChange={v => setNewUser(u => ({ ...u, username: v.toLowerCase().trim() }))} placeholder="username" />
           <InputField label="Password *" icon={<Lock size={16} />} type="password" value={newUser.password} onChange={v => setNewUser(u => ({ ...u, password: v }))} placeholder="Min 6 characters" />
           <InputField label="Confirm Password *" icon={<Lock size={16} />} type="password" value={newUser.confirm} onChange={v => setNewUser(u => ({ ...u, confirm: v }))} placeholder="Repeat password" />
           <RoleSelectField label="Role *" icon={<UserCog size={16} />} value={newUser.role} onChange={v => setNewUser(u => ({ ...u, role: v }))} />
