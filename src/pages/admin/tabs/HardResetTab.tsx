@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldAlert } from '../../../components/ui/icons';
+import { AlertTriangle, CheckCircle2, ShieldAlert, FolderKanban } from '../../../components/ui/icons';
 import { adminApi, projectsApi } from '../../../services/api';
 
 interface Precheck {
@@ -113,16 +113,19 @@ export default function HardResetTab() {
         {/* Project selector */}
         <div className="mb-5">
           <label className="form-label mb-1">Select project to reset</label>
-          <select
-            value={selCode}
-            onChange={e => setSelCode(e.target.value)}
-            className="form-select"
-            aria-label="Select project"
-          >
-            {projects.map(p => (
-              <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-            ))}
-          </select>
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><FolderKanban size={18} /></span>
+            <select
+              value={selCode}
+              onChange={e => setSelCode(e.target.value)}
+              className="form-select"
+              aria-label="Select project"
+            >
+              {projects.map(p => (
+                <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Precheck counts */}
@@ -195,17 +198,20 @@ export default function HardResetTab() {
                     <>
                       <div className="mb-4">
                         <label className="form-label mb-1">Select project to reset</label>
-                        <select
-                          value={modalCode}
-                          onChange={e => { setModalCode(e.target.value); setResetErr(''); }}
-                          className="form-select"
-                          aria-label="Select project to reset"
-                          disabled={resetting}
-                        >
-                          {projects.map(p => (
-                            <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                          <select
+                            value={modalCode}
+                            onChange={e => { setModalCode(e.target.value); setResetErr(''); }}
+                            className="form-select"
+                            aria-label="Select project to reset"
+                            disabled={resetting}
+                          >
+                            {projects.map(p => (
+                              <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       {/* What will be deleted */}

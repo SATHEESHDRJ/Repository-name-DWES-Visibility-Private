@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal from '../Modal';
+import { PauseCircle, MessageCircle } from '../ui/icons';
 
 /** Structured pause reasons (reference MOD-PAUSE §10) — "Other" requires free text. */
 export const PAUSE_REASONS = [
@@ -28,6 +29,8 @@ export default function PauseReasonModal({
     <Modal
       title="Pause wiring"
       subtitle="Select reason — pause time is excluded from total working time."
+      icon={<PauseCircle />}
+      iconTone="warning"
       size="sm"
       onClose={onClose}
       closeOnBackdrop={!busy}
@@ -43,6 +46,7 @@ export default function PauseReasonModal({
             onClick={() => resolved && onConfirm(resolved)}
             disabled={busy || !resolved}
           >
+            <PauseCircle size={16} />
             {busy ? 'Pausing…' : 'Pause'}
           </button>
         </>
@@ -66,13 +70,16 @@ export default function PauseReasonModal({
           ))}
         </div>
         {reason === 'Other' && (
-          <input
-            className="pause-modal-other-input form-input"
-            placeholder="Enter reason (audited)"
-            value={customReason}
-            onChange={e => setCustomReason(e.target.value)}
-            autoFocus
-          />
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><MessageCircle size={18} /></span>
+            <input
+              className="pause-modal-other-input form-input"
+              placeholder="Enter reason (audited)"
+              value={customReason}
+              onChange={e => setCustomReason(e.target.value)}
+              autoFocus
+            />
+          </div>
         )}
       </div>
     </Modal>

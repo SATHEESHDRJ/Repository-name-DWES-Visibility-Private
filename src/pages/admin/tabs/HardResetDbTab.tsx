@@ -196,6 +196,8 @@ export default function HardResetDbTab() {
       {showModal && (
         <Modal
           title="Confirm Hard Reset DB"
+          icon={<Database />}
+          iconTone="danger"
           onClose={closeModal}
           size="lg"
           footer={result ? undefined : (
@@ -240,16 +242,19 @@ export default function HardResetDbTab() {
 
               <div className="mb-4">
                 <label className="form-label mb-1">Type confirmation phrase</label>
-                <input
-                  type="text"
-                  value={confirmPhrase}
-                  onChange={e => { setConfirmPhrase(e.target.value); setError(''); }}
-                  className="form-input font-mono"
-                  placeholder={CONFIRM_PHRASE}
-                  autoComplete="off"
-                  disabled={resetting}
-                  aria-label="Hard reset confirmation phrase"
-                />
+                <div className="field-with-icon">
+                  <span className="field-lead-icon"><ShieldAlert size={18} /></span>
+                  <input
+                    type="text"
+                    value={confirmPhrase}
+                    onChange={e => { setConfirmPhrase(e.target.value); setError(''); }}
+                    className="form-input font-mono"
+                    placeholder={CONFIRM_PHRASE}
+                    autoComplete="off"
+                    disabled={resetting}
+                    aria-label="Hard reset confirmation phrase"
+                  />
+                </div>
                 <div className="text-[11px] text-slate-500 mt-1">
                   Type exactly: <strong>{CONFIRM_PHRASE}</strong>
                 </div>

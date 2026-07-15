@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../../../components/Modal';
-import { Trash2 } from '../../../components/ui/icons';
+import { Trash2, FolderKanban } from '../../../components/ui/icons';
 import { adminApi, projectsApi } from '../../../services/api';
 import {
   PROJECT_DELETE_CONFIRM_BUTTON,
@@ -146,16 +146,19 @@ export default function DeleteProjectTab() {
           <>
             <div className="mb-5">
               <label className="form-label mb-1">Select project</label>
-              <select
-                value={selCode}
-                onChange={e => setSelCode(e.target.value)}
-                className="form-select"
-                aria-label="Select project to delete"
-              >
-                {projects.map(p => (
-                  <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                ))}
-              </select>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                <select
+                  value={selCode}
+                  onChange={e => setSelCode(e.target.value)}
+                  className="form-select"
+                  aria-label="Select project to delete"
+                >
+                  {projects.map(p => (
+                    <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <button
@@ -174,6 +177,8 @@ export default function DeleteProjectTab() {
       {showModal && selectedProject && (
         <Modal
           title={PROJECT_DELETE_MODAL_TITLE}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={closeModal}
           size="default"
           closeOnBackdrop={!deleting}

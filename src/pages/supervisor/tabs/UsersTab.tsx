@@ -9,7 +9,7 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/D
 import { usePermissions } from '../../../hooks/usePermissions';
 import {
   User, Lock, UserCog, Search, Plus, Pencil, KeyRound, ShieldCheck, ShieldOff,
-  CheckCircle2, UserX, Users, Trash2,
+  CheckCircle2, UserX, Users, Trash2, UserPlus, FolderKanban, PanelTop,
 } from '../../../components/ui/icons';
 
 const TECHNICIAN_ROLE = 'wiring_technician';
@@ -190,6 +190,7 @@ export function TeamManagementModal({ onClose }: { onClose: () => void }) {
     <>
       <Modal
         title={modalTitle}
+        icon={<Users />}
         onClose={onClose}
         size="team"
         typography="user-management"
@@ -463,6 +464,7 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
   return (
     <Modal
       title={`Edit User — ${user.full_name}`}
+      icon={<Pencil />}
       onClose={onClose}
       size="wide"
       typography="user-management"
@@ -837,15 +839,20 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
       <div className="um-field-grid">
         <div className="um-native-field">
           <label className="um-field-label">Project</label>
-          <select className="form-select w-full" value={projectCode} onChange={e => setProjectCode(e.target.value)}>
-            <option value="">Select project…</option>
-            {projects.map(p => (
-              <option key={p.code} value={p.code}>{p.name}</option>
-            ))}
-          </select>
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><FolderKanban size={18} /></span>
+            <select className="form-select w-full" value={projectCode} onChange={e => setProjectCode(e.target.value)}>
+              <option value="">Select project…</option>
+              {projects.map(p => (
+                <option key={p.code} value={p.code}>{p.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="um-native-field">
           <label className="um-field-label">Panel</label>
+          <div className="field-with-icon">
+          <span className="field-lead-icon"><PanelTop size={18} /></span>
           <select
             className="form-select w-full"
             value={panelId}
@@ -859,6 +866,7 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
               <option key={p.id} value={p.id}>{p.panel_name}</option>
             ))}
           </select>
+          </div>
         </div>
       </div>
       {selectedProject && panelId && (
@@ -1016,6 +1024,7 @@ function UserFormModal({ mode, user, onClose, onSaved, techniciansOnly = false }
   return (
     <Modal
       title={mode === 'create' ? (techniciansOnly ? 'New Technician' : 'New User') : `Edit — ${user?.full_name}`}
+      icon={mode === 'create' ? <UserPlus /> : <Pencil />}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -1023,6 +1032,7 @@ function UserFormModal({ mode, user, onClose, onSaved, techniciansOnly = false }
         <div className="um-footer">
           <button type="button" onClick={onClose} className="pj-btn-secondary">Cancel</button>
           <button type="button" onClick={handleSave} disabled={saving} className="pj-btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            {mode === 'create' ? <UserPlus size={16} /> : <Pencil size={16} />}
             {saving ? 'Saving…' : mode === 'create' ? (techniciansOnly ? 'Create Technician' : 'Create User') : 'Save Changes'}
           </button>
         </div>

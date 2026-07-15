@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldAlert, Trash2 } from '../../../components/ui/icons';
+import { AlertTriangle, CheckCircle2, ShieldAlert, Trash2, FolderKanban } from '../../../components/ui/icons';
 import Modal from '../../../components/Modal';
 import { adminApi, projectsApi } from '../../../services/api';
 
@@ -232,16 +232,19 @@ export default function ResetAllProjectsTab() {
                 No projects available.
               </div>
             ) : (
-              <select
-                value={selCode}
-                onChange={e => setSelCode(e.target.value)}
-                className="form-select"
-                aria-label="Select project"
-              >
-                {projects.map(p => (
-                  <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                ))}
-              </select>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                <select
+                  value={selCode}
+                  onChange={e => setSelCode(e.target.value)}
+                  className="form-select"
+                  aria-label="Select project"
+                >
+                  {projects.map(p => (
+                    <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         )}
@@ -316,6 +319,8 @@ export default function ResetAllProjectsTab() {
       {showModal && (
         <Modal
           title={modalScope === 'all' ? 'Confirm: Delete All Projects' : 'Confirm: Reset Project'}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={closeModal}
           size="lg"
           footer={result ? undefined : (
@@ -366,16 +371,19 @@ export default function ResetAllProjectsTab() {
                 <>
                   <div className="mb-4">
                     <label className="form-label mb-1">Confirm action</label>
-                    <select
-                      value={modalConfirmPhrase}
-                      onChange={e => { setModalConfirmPhrase(e.target.value); setError(''); }}
-                      className="form-select"
-                      aria-label="Confirm delete all projects"
-                      disabled={resetting}
-                    >
-                      <option value="">Select confirmation…</option>
-                      <option value={CONFIRM_PHRASE}>Permanently delete ALL projects ({modalAllCounts.projects})</option>
-                    </select>
+                    <div className="field-with-icon">
+                      <span className="field-lead-icon"><ShieldAlert size={18} /></span>
+                      <select
+                        value={modalConfirmPhrase}
+                        onChange={e => { setModalConfirmPhrase(e.target.value); setError(''); }}
+                        className="form-select"
+                        aria-label="Confirm delete all projects"
+                        disabled={resetting}
+                      >
+                        <option value="">Select confirmation…</option>
+                        <option value={CONFIRM_PHRASE}>Permanently delete ALL projects ({modalAllCounts.projects})</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-slate-700">
@@ -400,17 +408,20 @@ export default function ResetAllProjectsTab() {
                 <>
                   <div className="mb-4">
                     <label className="form-label mb-1">Select project to reset</label>
-                    <select
-                      value={modalCode}
-                      onChange={e => { setModalCode(e.target.value); setError(''); }}
-                      className="form-select"
-                      aria-label="Select project to reset"
-                      disabled={resetting}
-                    >
-                      {projects.map(p => (
-                        <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                      ))}
-                    </select>
+                    <div className="field-with-icon">
+                      <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                      <select
+                        value={modalCode}
+                        onChange={e => { setModalCode(e.target.value); setError(''); }}
+                        className="form-select"
+                        aria-label="Select project to reset"
+                        disabled={resetting}
+                      >
+                        {projects.map(p => (
+                          <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-slate-700">
