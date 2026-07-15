@@ -2432,7 +2432,7 @@
      lg/wide 720px · xl/team 900px (viewers/wizards). */
   .modal-overlay {
     @apply fixed inset-0 flex items-center justify-center overflow-y-auto;
-    padding: 24px;
+    padding: 16px;
     z-index: 210;
     background: rgb(15 23 42 / 0.42);
     backdrop-filter: blur(var(--glass-blur-overlay, 6px));
@@ -4661,6 +4661,7 @@
   }
   .modal-footer :is(.btn-primary, .btn-primary-lg, .btn-secondary, .btn-danger, .btn-warning) {
     min-height: 40px;
+    height: 40px;
     min-width: 44px;
   }
 
@@ -4676,7 +4677,7 @@
   .modal-typography .modal-body label:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) {
     margin-bottom: 0;
   }
-  .modal-typography :is(.form-input, .form-select) {
+  .modal-typography :is(.form-input, .form-input-lg, .form-select) {
     min-height: 40px;
     height: 40px;
     padding-top: 8px;
@@ -4689,6 +4690,23 @@
     padding: 9px 12px;
     font-size: 14px;
     border-radius: 10px;
+  }
+  :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
+    .modal-body :is(
+      input[type="text"], input[type="email"], input[type="password"], input[type="number"],
+      input[type="tel"], input[type="url"], input[type="search"], input[type="date"],
+      input[type="time"], input[type="datetime-local"], select
+    ) {
+    min-height: 40px;
+    height: 40px;
+  }
+  :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
+    .modal-body :is(input[type="checkbox"], input[type="radio"]) {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    margin: 0;
   }
   :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
     .modal-body :is(.gap-4, .gap-5, .gap-6) {
@@ -4721,6 +4739,31 @@
   .modal-kicker {
     @apply text-[11px] font-bold uppercase tracking-wide;
     color: var(--color-on-surface-variant, #64748B);
+  }
+
+  /* Legacy hard-reset confirmation uses the shared modal shell directly. */
+  .hard-reset-modal {
+    max-width: min(520px, calc(100vw - 32px));
+  }
+  .hard-reset-modal__header {
+    @apply px-5 py-3.5;
+  }
+  .hard-reset-modal__body {
+    @apply px-5 py-4;
+  }
+  .hard-reset-modal__body :is(.mb-4, .mb-5, .mb-6) {
+    margin-bottom: 12px;
+  }
+  .hard-reset-modal__body .form-label {
+    margin-bottom: 4px;
+  }
+  .hard-reset-modal__body .form-select {
+    min-height: 40px;
+    height: 40px;
+  }
+  .hard-reset-modal__actions > button {
+    height: 40px;
+    min-height: 40px;
   }
   .modal-overlay .form-input::placeholder,
   .modal-overlay .form-select::placeholder,
@@ -7425,7 +7468,7 @@
   }
   .qr-scan-overlay.show { @apply flex; }
   .qr-scan-box {
-    @apply bg-[var(--t-surface-white)] rounded-2xl p-5 max-w-[420px] w-[90%] text-center max-h-[92vh] overflow-y-auto;
+    @apply bg-[var(--t-surface-white)] rounded-xl p-4 max-w-[400px] w-[calc(100%_-_2rem)] text-center max-h-[88vh] overflow-y-auto;
   }
   .qr-status { @apply text-[12px] font-semibold mt-2 text-slate-500; }
   .qr-upload-area {
@@ -8290,7 +8333,7 @@
        margins via the 90vw floor), and a height that leaves margin top+bottom.
        Only .modal-box-full (data viewers) is allowed to go near-fullscreen. */
     .modal-overlay {
-      padding: 24px;
+      padding: 20px;
       align-items: center;
     }
     .modal-box,

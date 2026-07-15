@@ -116,8 +116,8 @@ export default function QrScannerOverlay({
   };
 
   return (
-    <div className="qr-scan-overlay show">
-      <div className="qr-scan-box">
+    <div className="qr-scan-overlay show" role="presentation">
+      <div className="qr-scan-box" role="dialog" aria-modal="true" aria-label={title}>
         <div className="text-[15px] font-bold text-slate-900 mb-0.5">{title}</div>
         <div className="text-[12px] text-slate-500 mb-2">{subtitle}</div>
         <video ref={videoRef} autoPlay playsInline muted className="mx-auto block max-w-[320px] w-full rounded-[10px] border-[3px] border-teal-500 bg-black" />
@@ -151,7 +151,7 @@ export default function QrScannerOverlay({
           </div>
         </div>
 
-        <button type="button" className="btn-secondary mt-4 w-full" onClick={() => { stopCamera(); onClose(); }}>
+        <button type="button" className="btn-secondary mt-3 w-full" onClick={() => { stopCamera(); onClose(); }}>
           <X size={14} />
           Cancel
         </button>
