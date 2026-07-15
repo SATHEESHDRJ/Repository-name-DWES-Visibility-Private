@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import {
-  ChevronDown, ChevronUp, Download, Eye, FileText, RefreshCw,
+  ChevronDown, ChevronUp, Download, Eye, FileText, RefreshCw, Activity,
 } from '../../../components/ui/icons';
 import Modal from '../../../components/Modal';
 import ReportPreviewModal from '../../../components/ui/ReportPreviewModal';
@@ -272,6 +272,7 @@ export default function SummaryReportTab() {
           <Modal
             title={liveTarget.panel.panelName}
             subtitle={`${liveTarget.project.name} · Live assigned-cable progress`}
+            icon={<Activity />}
             onClose={() => setLiveTarget(null)}
             size="sm"
             footer={<button type="button" className="btn-primary" onClick={() => setLiveTarget(null)}>Close</button>}

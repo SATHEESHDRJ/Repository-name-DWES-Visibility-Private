@@ -14,18 +14,30 @@ function formatDuration(sec: number): string {
 }
 
 export async function buildCompletionReport(a: any, prisma: PrismaService) {
-  // Parallel lookups for tech user + project + project-wide rollup + pause audit trail
-  const [tech, project, allProjectAssignments, pauseAudit] = await Promise.all([
+  // Parallel lookups for project rollup, panel work segments, and permanent audit history.
+  const [tech, project, allProjectAssignments, pauseAudit, panelAssignments, panelAudit] = await Promise.all([
     prisma.users.findUnique({ where: { id: a.technician_id } }),
     prisma.projects.findUnique({ where: { code: a.project_code } }),
     prisma.tech_assignments.findMany({
       where: { project_code: a.project_code },
-      select: { id: true, status: true, frame_id: true, cables_total: true, cables_src_done: true, cables_dst_done: true },
+      select: {
+        id: true, status: true, frame_id: true, cables_total: true,
+        cables_src_done: true, cables_dst_done: true, assigned_at: true,
+        changeover_locked: true,
+      },
     }),
     prisma.tech_audit_log.findMany({
       where: { technician_id: a.technician_id, project_code: a.project_code, frame_id: a.frame_id, action: 'pause' },
       orderBy: { created_at: 'asc' },
       select: { details: true, created_at: true },
+    }),
+    prisma.tech_assignments.findMany({
+      where: { project_code: a.project_code, frame_id: a.frame_id },
+      orderBy: { assigned_at: 'asc' },
+    }),
+    prisma.tech_audit_log.findMany({
+      where: { project_code: a.project_code, frame_id: a.frame_id },
+      orderBy: { created_at: 'asc' },
     }),
   ]);
 
@@ -68,11 +80,93 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
   const totalFrames     = frameMap.size;
   const completedFrames = [...frameMap.values()].filter(s => s === 'completed').length;
 
-  // Project overall KPI across all assignments
-  const allSrc = allProjectAssignments.reduce((s, pa) => s + (pa.cables_src_done || 0), 0);
-  const allDst = allProjectAssignments.reduce((s, pa) => s + (pa.cables_dst_done || 0), 0);
-  const allTot = allProjectAssignments.reduce((s, pa) => s + (pa.cables_total || 0), 0);
+  // Project KPI uses the latest continuation for each panel. Historical handover rows
+  // contain cumulative snapshots and must not be added again.
+  const latestByFrame = new Map<string, typeof allProjectAssignments[number]>();
+  for (const assignment of allProjectAssignments) {
+    const current = latestByFrame.get(assignment.frame_id);
+    const currentTime = current?.assigned_at ? current.assigned_at.getTime() : 0;
+    const nextTime = assignment.assigned_at ? assignment.assigned_at.getTime() : 0;
+    if (!current || (!assignment.changeover_locked && current.changeover_locked) || nextTime >= currentTime) {
+      latestByFrame.set(assignment.frame_id, assignment);
+    }
+  }
+  const currentProjectAssignments = [...latestByFrame.values()];
+  const allSrc = currentProjectAssignments.reduce((s, pa) => s + (pa.cables_src_done || 0), 0);
+  const allDst = currentProjectAssignments.reduce((s, pa) => s + (pa.cables_dst_done || 0), 0);
+  const allTot = currentProjectAssignments.reduce((s, pa) => s + (pa.cables_total || 0), 0);
   const projectKpi = allTot > 0 ? Math.round(((allSrc + allDst) / (allTot * 2)) * 100) : 0;
+
+  const contributorIds = [...new Set(panelAssignments.map(assignment => assignment.technician_id))];
+  const [contributorUsers, sessionEvents] = await Promise.all([
+    contributorIds.length
+      ? prisma.users.findMany({ where: { id: { in: contributorIds } } })
+      : [],
+    contributorIds.length
+      ? prisma.session_log.findMany({
+        where: { user_id: { in: contributorIds } },
+        orderBy: { created_at: 'asc' },
+      })
+      : [],
+  ]);
+  const contributorUserMap = new Map(contributorUsers.map(user => [user.id, user]));
+  const assignmentMap = new Map(panelAssignments.map(assignment => [assignment.id, assignment]));
+  const now = Date.now();
+  const contributors = panelAssignments.map(segment => {
+    const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
+    const before = parseCS(baseline?.cable_status);
+    const after = parseCS(segment.cable_status);
+    const completedCables = Object.keys(after).filter(index => (
+      after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
+    )).length;
+    const startedAt = segment.started_at || segment.assigned_at;
+    const endedAt = segment.paused_at || segment.completed_at || null;
+    const startTime = startedAt ? startedAt.getTime() : 0;
+    const endTime = endedAt ? endedAt.getTime() : now;
+    const durationSeconds = segment.total_wiring_seconds && segment.total_wiring_seconds > 0
+      ? segment.total_wiring_seconds
+      : startTime > 0 ? Math.max(0, Math.floor((endTime - startTime) / 1000)) : 0;
+    const user = contributorUserMap.get(segment.technician_id);
+    const logins = sessionEvents.filter(event => {
+      const eventTime = event.created_at?.getTime() || 0;
+      return event.user_id === segment.technician_id
+        && eventTime >= startTime
+        && eventTime <= endTime;
+    }).map(event => ({ action: event.action, at: event.created_at }));
+    return {
+      assignment_id: segment.id,
+      technician_id: segment.technician_id,
+      technician_name: user?.full_name || `Tech #${segment.technician_id}`,
+      technician_username: user?.username || '',
+      started_at: startedAt,
+      ended_at: endedAt,
+      duration_seconds: durationSeconds,
+      duration_human: formatDuration(durationSeconds),
+      cables_src_completed: Math.max(0, (segment.cables_src_done || 0) - (baseline?.cables_src_done || 0)),
+      cables_dst_completed: Math.max(0, (segment.cables_dst_done || 0) - (baseline?.cables_dst_done || 0)),
+      cables_completed: completedCables,
+      progress_before: {
+        cables_src_done: baseline?.cables_src_done || 0,
+        cables_dst_done: baseline?.cables_dst_done || 0,
+      },
+      progress_after: {
+        cables_src_done: segment.cables_src_done || 0,
+        cables_dst_done: segment.cables_dst_done || 0,
+      },
+      login_logout_events: logins,
+      handover_from_assignment_id: segment.handover_from_id,
+      handover_to_assignment_id: segment.handover_to_id,
+    };
+  });
+  const midChangeHistory = panelAudit
+    .filter(entry => entry.action === 'mid_change_swap' || entry.action === 'mid_change_requested' || entry.action === 'mid_change_confirmed')
+    .map(entry => ({
+      action: entry.action,
+      technician_id: entry.technician_id,
+      technician_name: entry.technician_name || '',
+      at: entry.created_at,
+      details: entry.details || '',
+    }));
 
   const { hashed_password: _hp, ...safeTech } = (tech || {}) as any;
 
@@ -114,6 +208,8 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
     },
     break_log:        breakLog,
     technician_notes: technicianNotes,
+    contributors,
+    mid_change_history: midChangeHistory,
     generated_at: new Date().toISOString(),
   };
 }

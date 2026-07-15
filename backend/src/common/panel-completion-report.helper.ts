@@ -57,6 +57,26 @@ export interface PanelCompletionReportData {
   technicians: { fullName: string; username: string }[];
   technician: { fullName: string; username: string } | null;
   midChangeTechnician: { fullName: string; username: string } | null;
+  contributions: {
+    assignmentId: number;
+    technician: { fullName: string; username: string };
+    startedAt: Date | null;
+    endedAt: Date | null;
+    durationSeconds: number;
+    durationHuman: string;
+    cablesCompleted: number;
+    sourceEndsCompleted: number;
+    destinationEndsCompleted: number;
+    progressBefore: number;
+    progressAfter: number;
+    sessionLog: { loginAt: Date; logoutAt: Date | null }[];
+  }[];
+  midChangeHistory: {
+    action: string;
+    technicianName: string;
+    at: Date | null;
+    details: string;
+  }[];
   supervisor: { fullName: string } | null;
   assignedBy: { fullName: string } | null;
   cables: {
@@ -175,7 +195,6 @@ export async function collectPanelCompletionReportData(
   const userIds = new Set<number>();
   if (assignment?.technician_id) userIds.add(assignment.technician_id);
   if (assignment?.assigned_by) userIds.add(assignment.assigned_by);
-  if (assignment?.handover_from_id) userIds.add(assignment.handover_from_id);
   if (assignment?.approved_by) userIds.add(assignment.approved_by);
   if (assignment?.reviewed_by) userIds.add(assignment.reviewed_by);
   for (const a of assignments) {
@@ -185,7 +204,8 @@ export async function collectPanelCompletionReportData(
 
   // The user, inspection and rework-audit lookups only depend on the
   // assignment rows fetched above — batch them into one round trip.
-  const [users, assignmentInspections, reworkAudits] = await Promise.all([
+  const technicianIds = [...new Set(assignments.map(item => item.technician_id))];
+  const [users, assignmentInspections, reworkAudits, sessionRows] = await Promise.all([
     userIds.size
       ? prisma.users.findMany({ where: { id: { in: [...userIds] } } })
       : Promise.resolve([]),
@@ -197,8 +217,14 @@ export async function collectPanelCompletionReportData(
           where: {
             project_code: projectCode,
             frame_id: frameId,
-            action: { in: ['rework', 'mid_changeover', 'changeover_locked'] },
+            action: { in: ['rework', 'mid_changeover', 'changeover_locked', 'mid_change_requested', 'mid_change_confirmed', 'mid_change_swap'] },
           },
+          orderBy: { created_at: 'asc' },
+        })
+      : Promise.resolve([]),
+    technicianIds.length
+      ? prisma.session_log.findMany({
+          where: { user_id: { in: technicianIds }, project_code: projectCode },
           orderBy: { created_at: 'asc' },
         })
       : Promise.resolve([]),
@@ -250,7 +276,57 @@ export async function collectPanelCompletionReportData(
   }
   const openEnd = openEndSource + openEndDestination;
 
-  const wiringSeconds = assignment?.total_wiring_seconds || 0;
+  const assignmentMap = new Map(assignments.map(item => [item.id, item]));
+  const generatedAt = new Date();
+  const contributions = assignments.map(segment => {
+    const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
+    const beforeStatus = parseCableStatus(baseline?.cable_status);
+    const afterStatus = parseCableStatus(segment.cable_status);
+    const startedAt = segment.started_at || segment.assigned_at || null;
+    const endedAt = segment.paused_at || segment.completed_at || null;
+    const measuredSeconds = startedAt
+      ? Math.max(0, Math.floor(((endedAt || generatedAt).getTime() - startedAt.getTime()) / 1000))
+      : 0;
+    const durationSeconds = segment.total_wiring_seconds && segment.total_wiring_seconds > 0
+      ? segment.total_wiring_seconds
+      : measuredSeconds;
+    const segmentSessions: { loginAt: Date; logoutAt: Date | null }[] = [];
+    let loginAt: Date | null = null;
+    for (const event of sessionRows.filter(row => {
+      const at = row.created_at?.getTime() || 0;
+      return row.user_id === segment.technician_id
+        && (!startedAt || at >= startedAt.getTime())
+        && (!endedAt || at <= endedAt.getTime());
+    })) {
+      if (event.action === 'login' && event.created_at) loginAt = event.created_at;
+      if (event.action === 'logout' && loginAt) {
+        segmentSessions.push({ loginAt, logoutAt: event.created_at });
+        loginAt = null;
+      }
+    }
+    if (loginAt) segmentSessions.push({ loginAt, logoutAt: null });
+    const beforeCompleted = cableStatusCounts(beforeStatus, segment.cables_total || 0).bothDone;
+    const afterCompleted = cableStatusCounts(afterStatus, segment.cables_total || 0).bothDone;
+    const segmentUser = userMap.get(segment.technician_id);
+    return {
+      assignmentId: segment.id,
+      technician: {
+        fullName: segmentUser?.full_name || segmentUser?.username || `Technician #${segment.technician_id}`,
+        username: segmentUser?.username || '',
+      },
+      startedAt,
+      endedAt,
+      durationSeconds,
+      durationHuman: formatDuration(durationSeconds),
+      cablesCompleted: Math.max(0, afterCompleted - beforeCompleted),
+      sourceEndsCompleted: Math.max(0, (segment.cables_src_done || 0) - (baseline?.cables_src_done || 0)),
+      destinationEndsCompleted: Math.max(0, (segment.cables_dst_done || 0) - (baseline?.cables_dst_done || 0)),
+      progressBefore: beforeCompleted,
+      progressAfter: afterCompleted,
+      sessionLog: segmentSessions,
+    };
+  });
+  const wiringSeconds = contributions.reduce((sum, contribution) => sum + contribution.durationSeconds, 0);
   // Canonical DWES panel KPI: completed assigned cables / total assigned cables.
   // A cable is complete only when both its source and destination are complete.
   const kpi = assignedCableKpiPercent(completed, total);
@@ -263,26 +339,8 @@ export async function collectPanelCompletionReportData(
   const compositeKpi = compositeKpiPercent(kpi, qcPassRate);
   const completionPercent = kpi;
 
-  const sessionRows = tech
-    ? await prisma.session_log.findMany({
-        where: { user_id: tech.id, project_code: projectCode },
-        orderBy: { created_at: 'asc' },
-      })
-    : [];
-
   const sessionLog: { loginAt: Date; logoutAt: Date | null }[] = [];
-  let pendingLogin: Date | null = null;
-  for (const row of sessionRows) {
-    if (row.action === 'login' && row.created_at) {
-      pendingLogin = row.created_at;
-    } else if (row.action === 'logout' && pendingLogin) {
-      sessionLog.push({ loginAt: pendingLogin, logoutAt: row.created_at });
-      pendingLogin = null;
-    }
-  }
-  if (pendingLogin) {
-    sessionLog.push({ loginAt: pendingLogin, logoutAt: null });
-  }
+  contributions.forEach(contribution => sessionLog.push(...contribution.sessionLog));
 
   const technicianNotes = Object.entries(cableStatus)
     .filter(([, st]) => (st.note || '').trim().length > 0)
@@ -299,8 +357,7 @@ export async function collectPanelCompletionReportData(
     cablesCompleted: completed,
     approved: isApproved,
   });
-  const generatedAt = new Date();
-  const anchorStart = assignment?.assigned_at || project.created_at;
+  const anchorStart = assignments[0]?.assigned_at || project.created_at;
   const meta = decodeProjectMeta(project.description);
 
   return {
@@ -333,6 +390,15 @@ export async function collectPanelCompletionReportData(
       ? { fullName: tech.full_name || tech.username || '', username: tech.username || '' }
       : null,
     midChangeTechnician,
+    contributions,
+    midChangeHistory: reworkAudits
+      .filter(audit => ['mid_change_requested', 'mid_change_confirmed', 'mid_change_swap', 'mid_changeover'].includes(audit.action))
+      .map(audit => ({
+        action: audit.action,
+        technicianName: audit.technician_name || '',
+        at: audit.created_at,
+        details: audit.details || '',
+      })),
     supervisor: supervisorUser
       ? { fullName: supervisorUser.full_name || supervisorUser.username || '' }
       : null,
@@ -350,7 +416,7 @@ export async function collectPanelCompletionReportData(
       dstDone,
     },
     wiring: {
-      startedAt: assignment?.started_at || null,
+      startedAt: assignments[0]?.started_at || assignment?.started_at || null,
       completedAt: assignment?.completed_at || null,
       durationSeconds: wiringSeconds,
       durationHuman: formatDuration(wiringSeconds),
@@ -404,6 +470,19 @@ export function serializePanelCompletionReportForApi(data: PanelCompletionReport
     sessionLog: data.sessionLog.map(s => ({
       loginAt: s.loginAt.toISOString(),
       logoutAt: s.logoutAt?.toISOString() ?? null,
+    })),
+    contributions: data.contributions.map(contribution => ({
+      ...contribution,
+      startedAt: contribution.startedAt?.toISOString() ?? null,
+      endedAt: contribution.endedAt?.toISOString() ?? null,
+      sessionLog: contribution.sessionLog.map(session => ({
+        loginAt: session.loginAt.toISOString(),
+        logoutAt: session.logoutAt?.toISOString() ?? null,
+      })),
+    })),
+    midChangeHistory: data.midChangeHistory.map(entry => ({
+      ...entry,
+      at: entry.at?.toISOString() ?? null,
     })),
     approval: {
       ...data.approval,

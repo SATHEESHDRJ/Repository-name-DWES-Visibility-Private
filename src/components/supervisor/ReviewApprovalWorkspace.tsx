@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, RefreshCw, FileText, CheckSquare, Check, X,
-  SendHorizonal, Building2, ArrowRight, ChevronRight,
+  SendHorizonal, Building2, ArrowRight, ChevronRight, Pencil, MessageCircle,
 } from '../ui/icons';
 import Modal from '../Modal';
 import ReportPreviewModal from '../ui/ReportPreviewModal';
@@ -721,11 +721,13 @@ function ReviewDecisionModal({
   return (
     <Modal
       title={`Review — ${panel.panelName}`}
+      icon={<CheckSquare />}
       onClose={onClose}
       footer={(
         <>
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn-primary" disabled={saving} onClick={() => void handleSave()}>
+            <Check size={16} />
             {saving ? 'Saving…' : 'Submit review'}
           </button>
         </>
@@ -749,7 +751,10 @@ function ReviewDecisionModal({
         ))}
       </div>
       <label className="form-label">Notes (optional)</label>
-      <textarea className="form-textarea" rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Review notes…" />
+      <div className="field-with-icon field-with-icon--top">
+        <span className="field-lead-icon"><FileText size={18} /></span>
+        <textarea className="form-textarea" rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Review notes…" />
+      </div>
       {error && <div className="form-error mt-2">{error}</div>}
     </Modal>
   );
@@ -789,11 +794,14 @@ function ReworkRequestModal({
   return (
     <Modal
       title="Request Changes"
+      icon={<Pencil />}
+      iconTone="warning"
       onClose={onClose}
       footer={(
         <>
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn-danger" disabled={saving} onClick={() => void handleSave()}>
+            <SendHorizonal size={16} />
             {saving ? 'Sending…' : 'Send request'}
           </button>
         </>
@@ -803,7 +811,10 @@ function ReworkRequestModal({
         {panel.panelName} <ArrowRight size={12} className="inline text-slate-400" /> {panel.technician}
       </p>
       <label className="form-label">Reason (min 5 characters)</label>
-      <textarea className="form-textarea" rows={3} value={reason} onChange={e => setReason(e.target.value)} />
+      <div className="field-with-icon field-with-icon--top">
+        <span className="field-lead-icon"><MessageCircle size={18} /></span>
+        <textarea className="form-textarea" rows={3} value={reason} onChange={e => setReason(e.target.value)} />
+      </div>
       {error && <div className="form-error mt-2">{error}</div>}
     </Modal>
   );
