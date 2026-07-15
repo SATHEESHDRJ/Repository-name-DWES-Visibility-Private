@@ -300,6 +300,7 @@ export class SupervisorService {
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
     });
     const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
     const auditAll = await this.prisma.tech_audit_log.findMany({
@@ -360,7 +361,10 @@ export class SupervisorService {
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
-    const assignments = await this.prisma.tech_assignments.findMany({ where: { project_code: projectCode, frame_id: frameId } });
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    });
     const techIds = [...new Set(assignments.map(a => a.technician_id))];
     const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
     const techMap = new Map(techs.map(t => [t.id, t]));
@@ -495,7 +499,7 @@ export class SupervisorService {
     let r = headerRow + 1;
     frame.cables.forEach((cable, idx) => {
       let cs: any = null; let techId: number | undefined;
-      for (const a of assignments) {
+      for (const a of [...assignments].reverse()) {
         const parsed = parseCS(a.cable_status);
         if (parsed[String(idx)]) { cs = parsed[String(idx)]; techId = a.technician_id; break; }
       }

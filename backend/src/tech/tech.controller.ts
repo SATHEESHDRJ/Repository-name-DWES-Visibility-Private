@@ -22,27 +22,6 @@ export class TechController {
     return this.svc.assignFrame({ ...dto, assigned_by_id: user.id });
   }
 
-  @Post('changeover')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor')
-  changeover(
-    @Body() body: {
-      old_assignment_id: number;
-      new_technician_id: number;
-      changeover_reason?: string;
-      reason_notes?: string;
-    },
-    @CurrentUser() user: User,
-  ) {
-    return this.svc.changeover(
-      body.old_assignment_id,
-      body.new_technician_id,
-      user.id,
-      body.changeover_reason || '',
-      body.reason_notes || '',
-    );
-  }
-
   @Get('audit/:code')
   @UseGuards(RolesGuard)
   @Roles('system_admin', 'prod_supervisor', 'ops_director', 'qaqc_engineer')
