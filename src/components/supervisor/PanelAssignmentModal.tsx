@@ -114,7 +114,7 @@ export default function PanelAssignmentModal({
       subtitle="Production Supervisor · Initial assignment"
       icon={<UserPlus />}
       onClose={onClose}
-      size="md"
+      size="form"
       closeOnBackdrop={!saving}
       closeOnEscape={!saving}
       footer={assignedName ? (

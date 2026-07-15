@@ -143,7 +143,7 @@ export default function TechnicianMidChangeModal({ onClose, onChanged }: Props) 
       subtitle="Interchange two active technician assignments"
       icon={<ArrowLeftRight />}
       onClose={onClose}
-      size="md"
+      size="form"
       footer={footer}
       closeOnBackdrop={!saving}
       closeOnEscape={!saving}

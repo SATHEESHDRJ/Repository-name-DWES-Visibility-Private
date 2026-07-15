@@ -109,7 +109,7 @@ export async function buildCompletionReport(a: any, prisma: PrismaService) {
       })
       : [],
   ]);
-  const contributorUserMap = new Map(contributorUsers.map(user => [user.id, user]));
+  const contributorUserMap = new Map<number, any>(contributorUsers.map((user: any) => [user.id, user] as [number, any]));
   const assignmentMap = new Map(panelAssignments.map(assignment => [assignment.id, assignment]));
   const now = Date.now();
   const contributors = panelAssignments.map(segment => {

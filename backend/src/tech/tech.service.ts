@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 
 export interface CableStatus { src: boolean; dst: boolean; note: string; issue?: boolean; }
 
-interface MidChangeRequestPayload {
+export interface MidChangeRequestPayload {
   requestId: string;
   sourceAssignmentId: number;
   targetAssignmentId: number;
@@ -806,8 +806,8 @@ export class TechService {
         ? this.prisma.projects.findMany({ where: { code: { in: projectCodes } } })
         : [],
     ]);
-    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
-    const projectMap = new Map(projects.map(project => [project.code, project]));
+    const technicianMap = new Map<number, any>(technicians.map((technician: any) => [technician.id, technician] as [number, any]));
+    const projectMap = new Map<string, any>(projects.map((project: any) => [project.code, project] as [string, any]));
     const present = (assignment: typeof active[number]) => ({
       id: assignment.id,
       project_code: assignment.project_code,

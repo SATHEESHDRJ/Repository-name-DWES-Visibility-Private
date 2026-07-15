@@ -15,6 +15,7 @@ function workflowPrisma(overrides = {}) {
     tech_assignments: {
       findUnique: async () => null,
       findFirst: async () => null,
+      findMany: async () => [],
       create: async ({ data }) => ({ id: 2, ...data }),
       update: async ({ data }) => ({ id: 1, ...data }),
       delete: async () => ({}),
@@ -22,10 +23,17 @@ function workflowPrisma(overrides = {}) {
     },
     users: {
       findUnique: async () => null,
+      findMany: async () => [],
       ...(overrides.users || {}),
+    },
+    projects: {
+      findMany: async () => [],
+      ...(overrides.projects || {}),
     },
     tech_audit_log: {
       create: async () => ({}),
+      createMany: async () => ({ count: 0 }),
+      findMany: async () => [],
       ...(overrides.tech_audit_log || {}),
     },
   };
@@ -190,4 +198,114 @@ test('TechService.changeover carries wiring progress and links immutable history
   assert.equal(updates[1].data.handover_to_id, 2);
   assert.equal(updates[1].data.changeover_locked, true);
   assert.equal(result.new_assignment_id, 2);
+});
+
+test('TechService.requestMidChange creates a pending confirmation without changing assignments', async () => {
+  const source = {
+    id: 21, project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A',
+    technician_id: 7, status: 'in_progress', changeover_locked: false,
+  };
+  const target = {
+    id: 22, project_code: 'PRJ_B', frame_id: 'panel-b', panel_name: 'Panel B',
+    technician_id: 8, status: 'in_progress', changeover_locked: false,
+  };
+  const audits = [];
+  let assignmentWrites = 0;
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async ({ where }) => where.id === source.id ? source : target,
+      update: async () => { assignmentWrites += 1; return {}; },
+      create: async () => { assignmentWrites += 1; return {}; },
+    },
+    users: { findUnique: async () => ({ id: 7, full_name: 'Initiator' }) },
+    tech_audit_log: {
+      findMany: async () => [],
+      create: async ({ data }) => { audits.push(data); return { id: 1, ...data }; },
+    },
+  }));
+
+  const result = await service.requestMidChange(7, source.id, target.id, 'Workload balancing');
+  assert.equal(result.request.targetTechnicianId, 8);
+  assert.equal(audits[0].action, 'mid_change_requested');
+  assert.equal(JSON.parse(audits[0].details).reason, 'Workload balancing');
+  assert.equal(assignmentWrites, 0);
+});
+
+test('TechService.requestMidChange blocks duplicate pending requests involving either panel', async () => {
+  const existing = {
+    requestId: 'pending-1', sourceAssignmentId: 31, targetAssignmentId: 32,
+    initiatorId: 7, targetTechnicianId: 8, createdAt: new Date().toISOString(), reason: 'Shift',
+  };
+  const assignments = {
+    31: { id: 31, technician_id: 7, status: 'in_progress', changeover_locked: false },
+    32: { id: 32, technician_id: 8, status: 'in_progress', changeover_locked: false },
+  };
+  const service = new TechService(workflowPrisma({
+    tech_assignments: { findUnique: async ({ where }) => assignments[where.id] },
+    users: { findUnique: async () => ({ id: 7, full_name: 'Initiator' }) },
+    tech_audit_log: {
+      findMany: async () => [{ action: 'mid_change_requested', details: JSON.stringify(existing) }],
+    },
+  }));
+  await assert.rejects(
+    () => service.requestMidChange(7, 31, 32, 'Another request'),
+    err => err instanceof ConflictException && err.message.includes('pending Mid Change'),
+  );
+});
+
+test('TechService.confirmMidChange atomically closes both segments and creates interchanged continuations', async () => {
+  const request = {
+    requestId: 'swap-1', sourceAssignmentId: 41, targetAssignmentId: 42,
+    initiatorId: 7, targetTechnicianId: 8, createdAt: new Date().toISOString(), reason: 'Workload balancing',
+  };
+  const source = {
+    id: 41, project_code: 'PRJ_A', frame_id: 'panel-a', panel_name: 'Panel A', technician_id: 7,
+    assigned_by: 2, status: 'in_progress', started_at: new Date(Date.now() - 60_000),
+    changeover_locked: false, cables_total: 4, cables_src_done: 2, cables_dst_done: 1,
+    cable_status: '{}', total_wiring_seconds: 0, approved_at: null, approved_by: 2,
+  };
+  const target = {
+    id: 42, project_code: 'PRJ_B', frame_id: 'panel-b', panel_name: 'Panel B', technician_id: 8,
+    assigned_by: 2, status: 'in_progress', started_at: new Date(Date.now() - 120_000),
+    changeover_locked: false, cables_total: 6, cables_src_done: 4, cables_dst_done: 3,
+    cable_status: '{}', total_wiring_seconds: 0, approved_at: null, approved_by: 2,
+  };
+  const updates = [];
+  const creates = [];
+  const auditBatches = [];
+  const service = new TechService(workflowPrisma({
+    tech_assignments: {
+      findUnique: async ({ where }) => where.id === source.id ? source : target,
+      findMany: async () => [],
+      update: async ({ where, data }) => {
+        updates.push({ where, data });
+        return { ...(where.id === source.id ? source : target), ...data };
+      },
+      create: async ({ data }) => {
+        const created = { id: 100 + creates.length, ...data };
+        creates.push(created);
+        return created;
+      },
+    },
+    users: {
+      findUnique: async ({ where }) => ({ id: where.id, full_name: where.id === 7 ? 'Tech A' : 'Tech B' }),
+    },
+    tech_audit_log: {
+      findMany: async () => [{ action: 'mid_change_requested', details: JSON.stringify(request) }],
+      createMany: async ({ data }) => { auditBatches.push(data); return { count: data.length }; },
+    },
+  }));
+
+  const result = await service.confirmMidChange(8, request.requestId);
+  assert.equal(creates.length, 2);
+  assert.equal(creates[0].technician_id, 7);
+  assert.equal(creates[0].frame_id, 'panel-b');
+  assert.equal(creates[0].cables_src_done, 4);
+  assert.equal(creates[1].technician_id, 8);
+  assert.equal(creates[1].frame_id, 'panel-a');
+  assert.equal(creates[1].cables_src_done, 2);
+  assert.ok(updates.some(update => update.where.id === 41 && update.data.changeover_locked === true));
+  assert.ok(updates.some(update => update.where.id === 42 && update.data.changeover_locked === true));
+  assert.equal(auditBatches[0].length, 3);
+  assert.equal(result.message, 'Mid Change confirmed and both active assignments were interchanged');
 });
