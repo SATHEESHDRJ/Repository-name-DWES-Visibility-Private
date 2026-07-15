@@ -194,6 +194,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
             >
               <X size={18} />
             </button>
+            <span className="modal-title-icon modal-title-icon--success" aria-hidden="true"><ShieldCheck /></span>
             <div className="flex-1 min-w-0">
               <div
                 className="text-[15px] font-bold text-slate-900 break-words"

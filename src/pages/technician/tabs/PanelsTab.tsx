@@ -1,7 +1,8 @@
 import { useMemo, useState, type CSSProperties } from 'react';
-import { Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
+import { ArrowLeftRight, Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
 import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
+import TechnicianMidChangeModal from '../../../components/technician/TechnicianMidChangeModal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
@@ -49,6 +50,7 @@ export default function PanelsTab({
   const [submitPanel, setSubmitPanel] = useState<any | null>(null);
   const [hideTarget, setHideTarget] = useState<any | null>(null);
   const [gaOpen, setGaOpen] = useState(false);
+  const [midChangeOpen, setMidChangeOpen] = useState(false);
 
   const hasAssignment = panels.length > 0;
   const headerPanel = selectedPanel;
@@ -119,6 +121,18 @@ export default function PanelsTab({
         <button
           type="button"
           className="btn-primary tech-dash-action-btn"
+          disabled={!panels.some(panel => panel.status === 'in_progress')}
+          title={panels.some(panel => panel.status === 'in_progress')
+            ? 'Request or confirm an interchange with another active technician'
+            : 'Start a panel before using Mid Change'}
+          onClick={() => setMidChangeOpen(true)}
+        >
+          <ArrowLeftRight size={16} />
+          Mid Change
+        </button>
+        <button
+          type="button"
+          className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment}
           title={hasAssignment ? 'Open digital wiring for the selected panel' : AWAITING_ASSIGNMENT}
           aria-label={hasAssignment ? 'Digital Wiring Monitor' : AWAITING_ASSIGNMENT}
@@ -270,6 +284,15 @@ export default function PanelsTab({
           panelName={gaTarget.panel_name}
           projectName={gaTarget.project_name || gaTarget.project_code}
           onClose={() => setGaOpen(false)}
+        />
+      )}
+
+      {midChangeOpen && (
+        <TechnicianMidChangeModal
+          onClose={() => setMidChangeOpen(false)}
+          onChanged={() => {
+            onRefresh();
+          }}
         />
       )}
 

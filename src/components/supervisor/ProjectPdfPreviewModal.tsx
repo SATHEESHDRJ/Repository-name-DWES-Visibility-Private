@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import PdfDocumentViewer, { asPdfBlob } from '../ui/PdfDocumentViewer';
 import { projectsApi } from '../../services/api';
 import { sanitizeFilenameSegment } from '../../utils/reportFilename';
-import { Download } from '../ui/icons';
+import { Download, FileText } from '../ui/icons';
 
 interface ProjectPdfPreviewModalProps {
   projectCode: string;
@@ -62,6 +62,7 @@ export default function ProjectPdfPreviewModal({
   return (
     <Modal
       title={title}
+      icon={<FileText />}
       onClose={onClose}
       size={modalFullscreen ? 'fullscreen' : 'team'}
       bodyClassName="modal-body-flush"

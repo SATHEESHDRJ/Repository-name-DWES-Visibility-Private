@@ -11,6 +11,16 @@ import * as crypto from 'crypto';
 
 export interface CableStatus { src: boolean; dst: boolean; note: string; issue?: boolean; }
 
+interface MidChangeRequestPayload {
+  requestId: string;
+  sourceAssignmentId: number;
+  targetAssignmentId: number;
+  initiatorId: number;
+  targetTechnicianId: number;
+  createdAt: string;
+  reason: string;
+}
+
 const OTP_MAX_ATTEMPTS = 5;
 
 function generateOtpCode(): string {
@@ -46,6 +56,29 @@ function hasCableWork(assignment: {
   return Object.values(parseCS(assignment.cable_status)).some(state => Boolean(state?.src || state?.dst));
 }
 
+function parseMidChangeDetails(raw: string | null | undefined): MidChangeRequestPayload | null {
+  try {
+    const value = JSON.parse(raw || '{}') as Partial<MidChangeRequestPayload>;
+    if (!value.requestId || !value.sourceAssignmentId || !value.targetAssignmentId
+      || !value.initiatorId || !value.targetTechnicianId || !value.createdAt) return null;
+    return value as MidChangeRequestPayload;
+  } catch {
+    return null;
+  }
+}
+
+function pendingMidChangePayloads(rows: Array<{ action: string; details?: string | null }>): MidChangeRequestPayload[] {
+  const requested = new Map<string, MidChangeRequestPayload>();
+  const resolved = new Set<string>();
+  for (const row of rows) {
+    const payload = parseMidChangeDetails(row.details);
+    if (!payload) continue;
+    if (row.action === 'mid_change_requested') requested.set(payload.requestId, payload);
+    else resolved.add(payload.requestId);
+  }
+  return [...requested.values()].filter(payload => !resolved.has(payload.requestId));
+}
+
 @Injectable()
 export class TechService {
   constructor(private prisma: PrismaService) {}
@@ -78,6 +111,15 @@ export class TechService {
       },
     });
     if (existing) throw new ConflictException('This panel already has an active technician assignment');
+
+    const technicianActive = await this.prisma.tech_assignments.findFirst({
+      where: {
+        technician_id: dto.technician_id,
+        status: { in: ['assigned', 'in_progress', 'paused'] },
+        changeover_locked: { not: true },
+      },
+    });
+    if (technicianActive) throw new ConflictException('This technician is already assigned to an active panel');
 
     assertPanelNameUniqueForWrite(dto.project_code, dto.frame_id);
 
@@ -124,7 +166,11 @@ export class TechService {
 
   async myPanels(techId: number) {
     const assignments = await this.prisma.tech_assignments.findMany({
-      where: { technician_id: techId, is_hidden: { not: true } },
+      where: {
+        technician_id: techId,
+        is_hidden: { not: true },
+        changeover_locked: { not: true },
+      },
       orderBy: { assigned_at: 'desc' },
     });
 
@@ -737,6 +783,329 @@ export class TechService {
       technician_whatsapp: newTech.whatsapp_number,
       ...cableCounts,
     };
+  }
+
+  async midChangeCandidates(technicianId: number) {
+    const active = await this.prisma.tech_assignments.findMany({
+      where: {
+        status: 'in_progress',
+        changeover_locked: { not: true },
+        is_hidden: { not: true },
+      },
+      orderBy: { started_at: 'asc' },
+    });
+    const mine = active.filter(assignment => assignment.technician_id === technicianId);
+    const candidates = active.filter(assignment => assignment.technician_id !== technicianId);
+    const technicianIds = [...new Set(active.map(assignment => assignment.technician_id))];
+    const projectCodes = [...new Set(active.map(assignment => assignment.project_code))];
+    const [technicians, projects] = await Promise.all([
+      technicianIds.length
+        ? this.prisma.users.findMany({ where: { id: { in: technicianIds }, is_active: true } })
+        : [],
+      projectCodes.length
+        ? this.prisma.projects.findMany({ where: { code: { in: projectCodes } } })
+        : [],
+    ]);
+    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+    const projectMap = new Map(projects.map(project => [project.code, project]));
+    const present = (assignment: typeof active[number]) => ({
+      id: assignment.id,
+      project_code: assignment.project_code,
+      project_name: projectMap.get(assignment.project_code)?.name || assignment.project_code,
+      frame_id: assignment.frame_id,
+      panel_name: assignment.panel_name || assignment.frame_id,
+      technician_id: assignment.technician_id,
+      technician_name: technicianMap.get(assignment.technician_id)?.full_name || `Tech #${assignment.technician_id}`,
+      technician_username: technicianMap.get(assignment.technician_id)?.username || '',
+      cables_total: assignment.cables_total || 0,
+      cables_src_done: assignment.cables_src_done || 0,
+      cables_dst_done: assignment.cables_dst_done || 0,
+      started_at: assignment.started_at,
+    });
+    return {
+      my_assignments: mine.map(present),
+      candidates: candidates.map(present),
+    };
+  }
+
+  async midChangeRequests(technicianId: number) {
+    const events = await this.prisma.tech_audit_log.findMany({
+      where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
+      orderBy: { created_at: 'desc' },
+      take: 500,
+    });
+    const pending = pendingMidChangePayloads(events)
+      .filter(request => request.initiatorId === technicianId || request.targetTechnicianId === technicianId);
+    if (pending.length === 0) return [];
+
+    const assignmentIds = [...new Set(pending.flatMap(request => [request.sourceAssignmentId, request.targetAssignmentId]))];
+    const technicianIds = [...new Set(pending.flatMap(request => [request.initiatorId, request.targetTechnicianId]))];
+    const assignments = await this.prisma.tech_assignments.findMany({ where: { id: { in: assignmentIds } } });
+    const technicians = await this.prisma.users.findMany({ where: { id: { in: technicianIds } } });
+    const assignmentMap = new Map(assignments.map(assignment => [assignment.id, assignment]));
+    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+
+    return pending.map(request => {
+      const source = assignmentMap.get(request.sourceAssignmentId);
+      const target = assignmentMap.get(request.targetAssignmentId);
+      return {
+        ...request,
+        direction: request.targetTechnicianId === technicianId ? 'incoming' : 'outgoing',
+        initiator_name: technicianMap.get(request.initiatorId)?.full_name || `Tech #${request.initiatorId}`,
+        target_technician_name: technicianMap.get(request.targetTechnicianId)?.full_name || `Tech #${request.targetTechnicianId}`,
+        source: source ? {
+          project_code: source.project_code,
+          frame_id: source.frame_id,
+          panel_name: source.panel_name || source.frame_id,
+          status: source.status,
+        } : null,
+        target: target ? {
+          project_code: target.project_code,
+          frame_id: target.frame_id,
+          panel_name: target.panel_name || target.frame_id,
+          status: target.status,
+        } : null,
+      };
+    });
+  }
+
+  async requestMidChange(technicianId: number, sourceAssignmentId: number, targetAssignmentId: number, reason = '') {
+    if (sourceAssignmentId === targetAssignmentId) throw new BadRequestException('Select a different technician and panel');
+    const cleanReason = reason.trim().slice(0, 120);
+    if (!cleanReason) throw new BadRequestException('Mid Change reason is required');
+    const requestId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+
+    const payload = await this.prisma.$transaction(async tx => {
+      const [source, target, initiator, events] = await Promise.all([
+        tx.tech_assignments.findUnique({ where: { id: sourceAssignmentId } }),
+        tx.tech_assignments.findUnique({ where: { id: targetAssignmentId } }),
+        tx.users.findUnique({ where: { id: technicianId } }),
+        tx.tech_audit_log.findMany({
+          where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
+          orderBy: { created_at: 'desc' },
+          take: 500,
+        }),
+      ]);
+      if (!source || !target) throw new NotFoundException('One of the active assignments no longer exists');
+      if (source.technician_id !== technicianId) throw new ForbiddenException('You can only exchange your own active assignment');
+      if (target.technician_id === technicianId) throw new BadRequestException('You cannot select yourself for Mid Change');
+      if (source.status !== 'in_progress' || target.status !== 'in_progress'
+        || source.changeover_locked || target.changeover_locked) {
+        throw new ConflictException('Both technicians must still be actively working before Mid Change can be requested');
+      }
+      const duplicate = pendingMidChangePayloads(events).find(request => (
+        [request.sourceAssignmentId, request.targetAssignmentId].includes(source.id)
+        || [request.sourceAssignmentId, request.targetAssignmentId].includes(target.id)
+      ));
+      if (duplicate) throw new ConflictException('A pending Mid Change already involves one of these assignments');
+
+      const request: MidChangeRequestPayload = {
+        requestId,
+        sourceAssignmentId: source.id,
+        targetAssignmentId: target.id,
+        initiatorId: technicianId,
+        targetTechnicianId: target.technician_id,
+        createdAt,
+        reason: cleanReason,
+      };
+      await tx.tech_audit_log.create({
+        data: {
+          technician_id: technicianId,
+          technician_name: initiator?.full_name || '',
+          project_code: source.project_code,
+          frame_id: source.frame_id,
+          panel_name: source.panel_name || '',
+          action: 'mid_change_requested',
+          details: JSON.stringify(request),
+        },
+      });
+      return request;
+    }, { isolationLevel: 'Serializable' });
+
+    return { message: 'Mid Change request sent for technician confirmation', request: payload };
+  }
+
+  async rejectMidChange(technicianId: number, requestId: string) {
+    const events = await this.prisma.tech_audit_log.findMany({
+      where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
+      orderBy: { created_at: 'desc' },
+      take: 500,
+    });
+    const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
+    if (!request) throw new NotFoundException('Pending Mid Change request not found');
+    if (request.targetTechnicianId !== technicianId) throw new ForbiddenException('Only the selected technician can reject this request');
+    const technician = await this.prisma.users.findUnique({ where: { id: technicianId } });
+    await this.prisma.tech_audit_log.create({
+      data: {
+        technician_id: technicianId,
+        technician_name: technician?.full_name || '',
+        action: 'mid_change_rejected',
+        details: JSON.stringify(request),
+      },
+    });
+    return { message: 'Mid Change request rejected', request_id: requestId };
+  }
+
+  async confirmMidChange(technicianId: number, requestId: string) {
+    const changedAt = new Date();
+    const result = await this.prisma.$transaction(async tx => {
+      const events = await tx.tech_audit_log.findMany({
+        where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
+        orderBy: { created_at: 'desc' },
+        take: 500,
+      });
+      const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
+      if (!request) throw new NotFoundException('Pending Mid Change request not found');
+      if (request.targetTechnicianId !== technicianId) {
+        throw new ForbiddenException('Only the selected technician can confirm this request');
+      }
+
+      let source = await tx.tech_assignments.findUnique({ where: { id: request.sourceAssignmentId } });
+      let target = await tx.tech_assignments.findUnique({ where: { id: request.targetAssignmentId } });
+      if (!source || !target) throw new NotFoundException('One of the assignments no longer exists');
+      if (source.technician_id !== request.initiatorId || target.technician_id !== request.targetTechnicianId) {
+        throw new ConflictException('Technician assignments changed before confirmation');
+      }
+      if (source.status !== 'in_progress' || target.status !== 'in_progress'
+        || source.changeover_locked || target.changeover_locked) {
+        throw new ConflictException('Both technicians must remain actively working until the exchange is confirmed');
+      }
+
+      const priorCrossAssignments = await tx.tech_assignments.findMany({
+        where: {
+          OR: [
+            { project_code: target.project_code, frame_id: target.frame_id, technician_id: source.technician_id },
+            { project_code: source.project_code, frame_id: source.frame_id, technician_id: target.technician_id },
+          ],
+        },
+        select: { id: true },
+      });
+      if (priorCrossAssignments.length > 0) {
+        throw new ConflictException('This technician/panel interchange already exists in the permanent assignment history');
+      }
+
+      const [initiator, targetTechnician] = await Promise.all([
+        tx.users.findUnique({ where: { id: request.initiatorId } }),
+        tx.users.findUnique({ where: { id: request.targetTechnicianId } }),
+      ]);
+      const elapsed = (assignment: typeof source) => {
+        if (!assignment?.started_at) return assignment?.total_wiring_seconds || 0;
+        return (assignment.total_wiring_seconds || 0)
+          + Math.max(0, Math.floor((changedAt.getTime() - assignment.started_at.getTime()) / 1000));
+      };
+      source = await tx.tech_assignments.update({
+        where: { id: source.id },
+        data: {
+          status: 'paused',
+          paused_at: changedAt,
+          pause_reason: `Mid Change to ${target.panel_name || target.frame_id}`,
+          total_wiring_seconds: elapsed(source),
+          changeover_locked: true,
+        },
+      });
+      target = await tx.tech_assignments.update({
+        where: { id: target.id },
+        data: {
+          status: 'paused',
+          paused_at: changedAt,
+          pause_reason: `Mid Change to ${source.panel_name || source.frame_id}`,
+          total_wiring_seconds: elapsed(target),
+          changeover_locked: true,
+        },
+      });
+
+      const createContinuation = (
+        panel: typeof source,
+        incomingTechnicianId: number,
+        handoverFromId: number,
+      ) => ({
+        project_code: panel.project_code,
+        frame_id: panel.frame_id,
+        panel_name: panel.panel_name,
+        technician_id: incomingTechnicianId,
+        assigned_by: panel.assigned_by,
+        assigned_at: changedAt,
+        status: 'in_progress',
+        started_at: changedAt,
+        cables_total: panel.cables_total,
+        cables_src_done: panel.cables_src_done,
+        cables_dst_done: panel.cables_dst_done,
+        cable_status: panel.cable_status,
+        total_wiring_seconds: 0,
+        supervisor_approved: true,
+        approved_at: panel.approved_at || changedAt,
+        approved_by: panel.approved_by || panel.assigned_by,
+        handover_from_id: handoverFromId,
+        is_hidden: false,
+        report_submitted: false,
+        rework_requested: false,
+        rework_reason: '',
+        changeover_locked: false,
+        qc_status: 'not_ready',
+        otp_code: generateOtpCode(),
+        qr_code: generateQrIdentity(),
+        otp_verified: false,
+        qr_panel_verified: false,
+        otp_expires_at: new Date(changedAt.getTime() + 24 * 60 * 60 * 1000),
+        otp_attempts: 0,
+      });
+
+      const initiatorContinuation = await tx.tech_assignments.create({
+        data: createContinuation(target, request.initiatorId, target.id),
+      });
+      const targetContinuation = await tx.tech_assignments.create({
+        data: createContinuation(source, request.targetTechnicianId, source.id),
+      });
+      await Promise.all([
+        tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } }),
+        tx.tech_assignments.update({ where: { id: target.id }, data: { handover_to_id: initiatorContinuation.id } }),
+      ]);
+
+      const confirmedPayload = JSON.stringify(request);
+      await tx.tech_audit_log.createMany({
+        data: [
+          {
+            technician_id: technicianId,
+            technician_name: targetTechnician?.full_name || '',
+            project_code: target.project_code,
+            frame_id: target.frame_id,
+            panel_name: target.panel_name || '',
+            action: 'mid_change_confirmed',
+            details: confirmedPayload,
+          },
+          {
+            technician_id: request.initiatorId,
+            technician_name: initiator?.full_name || '',
+            project_code: target.project_code,
+            frame_id: target.frame_id,
+            panel_name: target.panel_name || '',
+            action: 'mid_change_swap',
+            details: JSON.stringify({ requestId, from: source.id, to: initiatorContinuation.id, at: changedAt.toISOString() }),
+          },
+          {
+            technician_id: request.targetTechnicianId,
+            technician_name: targetTechnician?.full_name || '',
+            project_code: source.project_code,
+            frame_id: source.frame_id,
+            panel_name: source.panel_name || '',
+            action: 'mid_change_swap',
+            details: JSON.stringify({ requestId, from: target.id, to: targetContinuation.id, at: changedAt.toISOString() }),
+          },
+        ],
+      });
+
+      return {
+        request,
+        changed_at: changedAt.toISOString(),
+        initiator_assignment_id: initiatorContinuation.id,
+        target_assignment_id: targetContinuation.id,
+        initiator_panel_name: target.panel_name || target.frame_id,
+        target_panel_name: source.panel_name || source.frame_id,
+      };
+    }, { isolationLevel: 'Serializable' });
+
+    return { message: 'Mid Change confirmed and both active assignments were interchanged', ...result };
   }
 
   async verifyOtp(assignmentId: number, techId: number, code: string) {

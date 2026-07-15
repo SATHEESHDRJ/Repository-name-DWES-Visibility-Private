@@ -136,7 +136,7 @@ export default function HistoryTab() {
       </div>
 
       {selected && (
-        <Modal title={`Inspection — ${selected.panel_name}`} onClose={() => setSelected(null)} size="lg">
+        <Modal title={`Inspection — ${selected.panel_name}`} icon={<ClipboardList />} onClose={() => setSelected(null)} size="lg">
           {detailLoading ? (
             <div className="empty-state"><p className="empty-text">Loading...</p></div>
           ) : (

@@ -5,7 +5,7 @@ import { projectsApi, supervisorApi } from '../../services/api';
 import { buildPanelReportFilename } from '../../utils/reportFilename';
 import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { DWES_REPORT_PREVIEW_POLL_MS } from '../../constants/refreshIntervals';
-import { Download } from './icons';
+import { Download, FileText } from './icons';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 
@@ -108,6 +108,7 @@ export default function ReportPreviewModal({
       // flight, completion only once the panel is fully wired and approved.
       title={report?.reportTitle ?? 'Panel Report'}
       subtitle={`${panelName} · Read-only`}
+      icon={<FileText />}
       onClose={onClose}
       size="xl"
       footer={(

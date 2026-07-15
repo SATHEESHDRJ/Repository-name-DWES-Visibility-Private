@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import FileViewer, { type FileViewerType } from './FileViewer';
 import EngineeringModelViewer, { type EngineeringModelFormat } from './EngineeringModelViewer';
 import PanelDrawingUploadModal from '../supervisor/PanelDrawingUploadModal';
-import { AlertTriangle, CheckCircle, Download, FileText, Plus, RefreshCw, ShieldCheck, Trash2, Upload } from './icons';
+import { AlertTriangle, CheckCircle, Download, FileText, Plus, RefreshCw, ShieldCheck, Trash2, Upload, PenTool } from './icons';
 import { projectsApi } from '../../services/api';
 import {
   canDownloadPanelDrawingSlot,
@@ -1099,6 +1099,7 @@ export default function PanelGaDrawingModal({
       <Modal
         title={PANEL_3D_ENABLED ? '3D GA / 2D Drawing View' : '2D Drawing View'}
         subtitle={`${projectName || projectCode} · ${panelName} · Panel-specific · ${PANEL_3D_ENABLED && supervisor ? 'Supervisor review enabled' : 'Read-only viewer'}`}
+        icon={<PenTool />}
         onClose={onClose}
         size="fullscreen"
         bodyClassName="modal-body-flush"

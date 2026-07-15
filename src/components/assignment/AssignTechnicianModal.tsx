@@ -64,8 +64,13 @@ export default function AssignTechnicianModal({
   }, [lockSelection, initialProjectCode, initialPanelId, panelsRefreshKey]);
 
   const selectedPanel = panels.find(f => f.id === panelId);
+  const selectedProject = projects.find(project => project.code === projectCode);
+  const selectedTechnician = techs.find(tech => String(tech.id) === selTech);
   const scheduleReady = panelReady(selectedPanel);
-  const canAssign = Boolean(projectCode && panelId && scheduleReady && selTech);
+  const canAssign = Boolean(
+    projectCode && panelId && scheduleReady && selectedTechnician
+    && selectedTechnician.availability_status !== 'ASSIGNED',
+  );
 
   const handleAssign = async () => {
     if (!projectCode || !panelId) {
@@ -117,7 +122,7 @@ export default function AssignTechnicianModal({
             type="button"
           >
             <UserPlus size={16} />
-            {saving ? 'Assigning…' : 'Assign'}
+            {saving ? 'Assigning…' : 'Assign Technician'}
           </button>
         </>
       ) : (
@@ -135,7 +140,10 @@ export default function AssignTechnicianModal({
               <div className="text-[13px] font-semibold text-emerald-800 break-words" title={lockedPanelName ?? undefined}>
                 {lockedPanelName}
               </div>
-              <div className="text-[11px] text-emerald-600 mt-0.5">Project: {projectCode}</div>
+              <div className="text-[11px] text-emerald-600 mt-0.5 whitespace-normal break-words" title={selectedProject?.name || projectCode}>
+                Project: {selectedProject?.name || projectCode}
+              </div>
+              <div className="text-[10px] text-emerald-600/80 break-all" title={projectCode}>{projectCode}</div>
             </div>
           ) : (
             <>
@@ -184,8 +192,8 @@ export default function AssignTechnicianModal({
               >
                 <option value="">Select technician…</option>
                 {techs.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name} · @{t.username}
+                  <option key={t.id} value={t.id} disabled={t.availability_status === 'ASSIGNED'}>
+                    {t.username || t.full_name || `Tech #${t.id}`} — {t.availability_status === 'ASSIGNED' ? 'ASSIGNED' : 'AVAILABLE'}
                   </option>
                 ))}
               </select>

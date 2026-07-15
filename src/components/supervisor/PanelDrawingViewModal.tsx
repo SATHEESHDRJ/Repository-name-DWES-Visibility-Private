@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Modal from '../Modal';
 import FileViewer, { type FileViewerType } from '../ui/FileViewer';
+import { FileImage } from '../ui/icons';
 import { projectsApi } from '../../services/api';
 
 export interface PanelDrawingSummary {
@@ -88,6 +89,7 @@ export default function PanelDrawingViewModal({
     <Modal
       title="View Drawing"
       subtitle={`${panelLabel} · ${drawing.original_name}`}
+      icon={<FileImage />}
       onClose={onClose}
       size="fullscreen"
       bodyClassName="modal-body-flush"

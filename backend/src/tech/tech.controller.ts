@@ -67,6 +67,49 @@ export class TechController {
     return this.svc.myAssignmentDetail(id, user.id);
   }
 
+  @Get('mid-change/candidates')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeCandidates(@CurrentUser() user: User) {
+    return this.svc.midChangeCandidates(user.id);
+  }
+
+  @Get('mid-change/requests')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeRequests(@CurrentUser() user: User) {
+    return this.svc.midChangeRequests(user.id);
+  }
+
+  @Post('mid-change/request')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  requestMidChange(
+    @Body() body: { source_assignment_id: number; target_assignment_id: number; reason: string },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.requestMidChange(
+      user.id,
+      Number(body.source_assignment_id),
+      Number(body.target_assignment_id),
+      body.reason || '',
+    );
+  }
+
+  @Post('mid-change/:requestId/confirm')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  confirmMidChange(@Param('requestId') requestId: string, @CurrentUser() user: User) {
+    return this.svc.confirmMidChange(user.id, requestId);
+  }
+
+  @Post('mid-change/:requestId/reject')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  rejectMidChange(@Param('requestId') requestId: string, @CurrentUser() user: User) {
+    return this.svc.rejectMidChange(user.id, requestId);
+  }
+
   @Post('start/:id')
   @UseGuards(RolesGuard)
   @Roles('wiring_technician')
