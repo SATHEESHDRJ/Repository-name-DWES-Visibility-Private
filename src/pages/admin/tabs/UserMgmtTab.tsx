@@ -542,6 +542,7 @@ function ChangeRoleModal({ user, role, saving, onRoleChange, onClose, onSave }: 
     <Modal
       title="Change User Role"
       subtitle={`${user.full_name} · @${user.username}`}
+      icon={<UserCog />}
       onClose={onClose}
       size="sm"
       typography="user-management"
@@ -549,6 +550,7 @@ function ChangeRoleModal({ user, role, saving, onRoleChange, onClose, onSave }: 
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn-primary" disabled={saving || role === user.role} onClick={onSave}>
+            <UserCog size={16} />
             {saving ? 'Saving…' : 'Change Role'}
           </button>
         </div>
@@ -577,6 +579,8 @@ function UserDeleteConfirmModal({ user, saving, onClose, onConfirm }: {
     <Modal
       title="Delete User"
       subtitle={`${user.full_name} · @${user.username}`}
+      icon={<Trash2 />}
+      iconTone="danger"
       onClose={onClose}
       size="sm"
       typography="user-management"
@@ -628,6 +632,7 @@ function UserDetailsModal({ user, editData, setEditData, saving, mode, onClose, 
   return (
     <Modal
       title={mode === 'edit' ? 'Edit User' : 'User Details'}
+      icon={mode === 'edit' ? <Pencil /> : <User />}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -775,12 +780,15 @@ function ResetPasswordModal({ user, saving, onClose, onReset }: {
   return (
     <Modal
       title={`Reset Password — ${user.full_name}`}
+      icon={<KeyRound />}
+      iconTone="warning"
       onClose={onClose}
       typography="user-management"
       footer={!done ? (
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
           <button type="button" onClick={handleSubmit} disabled={saving || password.length < 6 || password !== confirm} className="btn-warning">
+            <KeyRound size={16} />
             {saving ? 'Resetting…' : 'Reset Password'}
           </button>
         </div>
@@ -822,6 +830,7 @@ function AddUserModal({ newUser, setNewUser, saving, onClose, onCreate }: {
   return (
     <Modal
       title="Add New User"
+      icon={<UserPlus />}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -829,6 +838,7 @@ function AddUserModal({ newUser, setNewUser, saving, onClose, onCreate }: {
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
           <button type="button" onClick={onCreate} disabled={saving || !valid} className="btn-primary">
+            <UserPlus size={16} />
             {saving ? 'Creating…' : 'Create User'}
           </button>
         </div>

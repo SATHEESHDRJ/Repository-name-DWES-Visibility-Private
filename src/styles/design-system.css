@@ -5300,6 +5300,14 @@
   .upload-target-header-divider {
     @apply hidden tablet-land:block w-px bg-slate-200 mx-4 self-stretch shrink-0;
   }
+  @media (min-width: 1024px) {
+    .upload-target-header-grid {
+      grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 0.8fr);
+    }
+    .upload-target-header-divider {
+      margin-inline: 4px;
+    }
+  }
   @media (max-width: 639px) {
     .upload-target-header-grid {
       grid-template-columns: minmax(0, 1fr);
