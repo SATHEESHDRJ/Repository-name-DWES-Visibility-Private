@@ -175,7 +175,7 @@ export default function Topbar({
 
                 {showBioPanel && (
                   <div className="bio-panel-dropdown" role="dialog" aria-label="Fingerprint sign-in settings">
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                    <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
                       <div>
                         <p className="text-sm font-semibold">Fingerprint sign-in</p>
                         <p className="text-xs mt-0.5">Enrolled devices on this server</p>
@@ -184,12 +184,12 @@ export default function Topbar({
                         type="button"
                         title="Close fingerprint settings"
                         onClick={() => setShowBioPanel(false)}
-                        className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors"
+                        className="p-1.5 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg transition-colors"
                       >
                         <X size={16} />
                       </button>
                     </div>
-                    <div className="bio-panel-dropdown-body px-5 py-4">
+                    <div className="bio-panel-dropdown-body px-4 py-3">
                       <BiometricSettings />
                     </div>
                   </div>

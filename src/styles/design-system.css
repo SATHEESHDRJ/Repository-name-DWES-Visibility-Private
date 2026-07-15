@@ -548,7 +548,9 @@
     backdrop-filter: blur(7px);
   }
   .project-gate-dialog {
-    @apply relative z-[1] w-full max-w-3xl rounded-2xl overflow-hidden border;
+    @apply relative z-[1] w-full rounded-2xl overflow-hidden border;
+    max-width: min(680px, calc(100vw - 24px));
+    max-height: min(88vh, 760px);
     background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
     border-color: rgba(15, 23, 42, 0.16);
     box-shadow:
@@ -556,7 +558,7 @@
       0 8px 20px rgba(15, 23, 42, 0.25);
   }
   .project-gate-header {
-    @apply px-5 tablet-land:px-7 py-5 tablet-land:py-6;
+    @apply px-5 py-4;
     border-bottom: 1px solid rgba(148, 163, 184, 0.32);
   }
   .project-gate-kicker {
@@ -564,16 +566,16 @@
     color: #1d4ed8;
   }
   .project-gate-title {
-    @apply text-[22px] tablet-land:text-[26px] font-semibold mt-1.5;
+    @apply text-[20px] tablet-land:text-[22px] font-semibold mt-1;
     color: #0f172a;
   }
   .project-gate-subtitle {
-    @apply text-[13px] tablet-land:text-[14px] mt-2;
+    @apply text-[13px] mt-1.5;
     color: #475569;
   }
   .project-gate-body {
-    @apply px-5 tablet-land:px-7 py-4 tablet-land:py-5;
-    min-height: 240px;
+    @apply px-5 py-4 overflow-y-auto;
+    min-height: 200px;
   }
   .project-gate-state {
     @apply flex items-center gap-3 rounded-xl px-4 py-3 text-sm;
@@ -588,11 +590,11 @@
   .project-gate-error-title { @apply text-sm font-semibold; }
   .project-gate-error-sub { @apply text-xs mt-0.5; }
   .project-gate-list {
-    @apply grid gap-3 max-h-[50vh] overflow-y-auto pr-1;
+    @apply grid gap-2.5 max-h-[48vh] overflow-y-auto pr-1;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
   .project-gate-item {
-    @apply text-left rounded-xl border px-4 py-3 min-h-[96px] relative;
+    @apply text-left rounded-xl border px-3.5 py-3 min-h-[84px] relative;
     border-color: #cbd5e1;
     background: var(--t-surface-white);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease;
@@ -620,7 +622,7 @@
     overflow-wrap: anywhere;
   }
   .project-gate-item-meta {
-    @apply mt-2 grid gap-1 text-[11px] text-slate-600;
+    @apply mt-1.5 grid gap-0.5 text-[11px] text-slate-600;
   }
   .project-gate-item-meta > span {
     @apply inline-flex items-center gap-1.5;
@@ -637,7 +639,7 @@
     transform: scale(1);
   }
   .project-gate-footer {
-    @apply px-5 tablet-land:px-7 py-4 flex items-center justify-between gap-3 flex-wrap;
+    @apply px-5 py-3.5 flex items-center justify-between gap-2.5 flex-wrap;
     border-top: 1px solid rgba(148, 163, 184, 0.32);
     background: rgba(var(--t-surface-white-rgb), 0.56);
   }
@@ -810,7 +812,7 @@
   }
   .topbar-bio-anchor { @apply relative shrink-0 flex items-center; }
   .bio-panel-dropdown {
-    @apply absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border z-[100] overflow-hidden;
+    @apply absolute right-0 top-full mt-2 w-[min(21rem,calc(100vw-1.5rem))] rounded-xl border z-[100] overflow-hidden;
     max-height: min(70vh, calc(100dvh - 5rem));
     background: var(--glass-bg-solid, var(--t-surface-white));
     border-color: var(--glass-border-strong, rgba(15, 23, 42, 0.10));
@@ -2446,7 +2448,13 @@
   .modal-box-team,
   .modal-box-full,
   .modal-box-fullscreen {
-    @apply w-full flex flex-col max-h-[90vh] min-w-0 overflow-hidden;
+    @apply w-full flex flex-col min-w-0 overflow-hidden;
+    max-height: min(88vh, 820px);
+    --modal-pad-x: 20px;
+    --modal-header-y: 14px;
+    --modal-body-y: 16px;
+    --modal-footer-y: 14px;
+    --modal-content-gap: 12px;
     border-radius: 16px;
     background: var(--glass-bg-solid, var(--color-surface));
     border: 1px solid var(--glass-border-strong, var(--color-outline-variant));
@@ -2455,16 +2463,16 @@
     margin: auto;
     animation: modalPopIn 260ms var(--ease-out-back) both;
   }
-  .modal-box-sm   { max-width: min(420px, 100%); }
-  .modal-box      { max-width: min(560px, 100%); }
-  .modal-box-lg   { max-width: min(720px, 100%); }
-  .modal-box-form { max-width: min(560px, 100%); }
-  .modal-box-wide { max-width: min(720px, 100%); }
-  .modal-box-xl   { max-width: min(900px, 100%); }
+  .modal-box-sm   { max-width: min(400px, 100%); }
+  .modal-box      { max-width: min(520px, 100%); }
+  .modal-box-lg   { max-width: min(680px, 100%); }
+  .modal-box-form { max-width: min(520px, 100%); }
+  .modal-box-wide { max-width: min(680px, 100%); }
+  .modal-box-xl   { max-width: min(860px, 100%); }
   /* User / team management — wide list, single vertical scroll */
   .modal-box-team {
-    max-width: min(900px, 96vw);
-    max-height: min(90vh, 880px);
+    max-width: min(880px, 96vw);
+    max-height: min(88vh, 840px);
   }
   .modal-box-team .modal-body {
     @apply py-3 px-3 tablet-land:px-4 overflow-hidden flex flex-col min-h-0;
@@ -4595,7 +4603,8 @@
     background: rgba(37, 99, 235, 0.08);
   }
   .modal-header {
-    @apply px-6 py-5 flex items-start justify-between gap-4 shrink-0 min-w-0;
+    @apply flex items-center justify-between gap-3 shrink-0 min-w-0;
+    padding: var(--modal-header-y, 14px) var(--modal-pad-x, 20px);
     border-bottom: 1px solid var(--glass-border-strong, var(--color-outline-variant));
     background: linear-gradient(180deg, var(--glass-bg-subtle, var(--color-surface-variant, #F8FAFC)) 0%, var(--glass-bg-solid, var(--color-surface)) 100%);
   }
@@ -4621,10 +4630,10 @@
   }
   .modal-close-btn {
     @apply inline-flex items-center justify-center shrink-0 rounded-xl border transition-colors;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
     color: var(--color-on-surface-variant, #64748B);
     border-color: var(--color-outline-variant, #E2E8F0);
     background: var(--color-surface);
@@ -4639,17 +4648,59 @@
     outline-offset: 2px;
   }
   .modal-body {
-    @apply px-6 py-6 flex flex-col gap-4 overflow-y-auto flex-1 min-w-0;
+    @apply flex flex-col overflow-y-auto flex-1 min-w-0;
+    padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px);
+    gap: var(--modal-content-gap, 12px);
     color: var(--color-on-surface);
   }
   .modal-footer {
-    @apply px-6 py-5 flex flex-wrap items-center justify-end gap-2 tablet-land:gap-3 shrink-0;
+    @apply flex flex-wrap items-center justify-end gap-2 shrink-0;
+    padding: var(--modal-footer-y, 14px) var(--modal-pad-x, 20px);
     border-top: 1px solid var(--color-outline-variant);
     background: var(--color-surface-variant, #F8FAFC);
   }
   .modal-footer :is(.btn-primary, .btn-primary-lg, .btn-secondary, .btn-danger, .btn-warning) {
-    min-height: 44px;
+    min-height: 40px;
     min-width: 44px;
+  }
+
+  /* Shared modal density. These rules intentionally outrank the project-wide
+     touch-form defaults, whose label margins and 32px field margins are too
+     spacious inside bounded dialogs. Full-screen workspaces retain their own
+     component-specific layout rules. */
+  .modal-typography .form-group {
+    gap: 6px;
+    margin-bottom: 0;
+  }
+  .modal-typography .form-label,
+  .modal-typography .modal-body label:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) {
+    margin-bottom: 0;
+  }
+  .modal-typography :is(.form-input, .form-select) {
+    min-height: 40px;
+    height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+  .modal-typography .form-textarea {
+    min-height: 84px;
+    padding: 9px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+  :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
+    .modal-body :is(.gap-4, .gap-5, .gap-6) {
+    gap: 12px;
+  }
+  :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
+    .modal-body :is(.mb-4, .mb-5, .mb-6) {
+    margin-bottom: 12px;
+  }
+  :is(.modal-box, .modal-box-sm, .modal-box-lg, .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-team)
+    .modal-body :is(.mt-4, .mt-5, .mt-6) {
+    margin-top: 12px;
   }
   /* Modal body content — long entity names wrap; tooltips on title attr when clipped.
      Tailwind v4: never @apply .modal-long-text from other @layer components rules;
@@ -8253,20 +8304,20 @@
       margin-bottom: 0;
     }
 
-    .modal-box-sm   { max-width: min(420px, 92vw); }   /* confirms              */
-    .modal-box      { max-width: min(560px, 92vw); }   /* standard dialogs      */
-    .modal-box-lg   { max-width: min(720px, 94vw); }   /* medium dialogs        */
-    .modal-box-form { max-width: min(560px, 94vw); }   /* medium form dialogs   */
-    .modal-box-wide { max-width: min(720px, 94vw); }   /* large dialogs         */
-    .modal-box-xl   { max-width: min(900px, 94vw); }   /* viewer/wizard dialogs */
-    .modal-box-team { max-width: min(900px, 96vw); max-height: min(90vh, 880px); }
+    .modal-box-sm   { max-width: min(400px, 92vw); }   /* confirms              */
+    .modal-box      { max-width: min(520px, 92vw); }   /* standard dialogs      */
+    .modal-box-lg   { max-width: min(680px, 94vw); }   /* medium dialogs        */
+    .modal-box-form { max-width: min(520px, 94vw); }   /* medium form dialogs   */
+    .modal-box-wide { max-width: min(680px, 94vw); }   /* large dialogs         */
+    .modal-box-xl   { max-width: min(860px, 94vw); }   /* viewer/wizard dialogs */
+    .modal-box-team { max-width: min(880px, 96vw); max-height: min(88vh, 840px); }
     .modal-box-full { max-width: min(92vw, 1200px); max-height: 90vh; }
     .modal-box-fullscreen { max-width: 98vw; max-height: 96vh; }
 
     /* Consistent internal density */
-    .modal-header { padding: 20px 24px; }
-    .modal-body   { padding: 24px; gap: 16px; }
-    .modal-footer { padding: 20px 24px; gap: 8px; }
+    .modal-header { padding: 14px 20px; }
+    .modal-body   { padding: 16px 20px; gap: 12px; }
+    .modal-footer { padding: 14px 20px; gap: 8px; }
     .modal-title  { font-size: 18px; }
 
     /* Dropdown menus: uniform width floor so short menus don't look stubby */

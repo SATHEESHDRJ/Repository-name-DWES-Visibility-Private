@@ -174,11 +174,11 @@ export default function HardResetTab() {
       {showModal && (
         <div className="modal-overlay z-[210]" onClick={closeModal}>
           <div
-            className="modal-box overflow-hidden"
+            className="modal-box hard-reset-modal overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="px-6 pt-6 pb-4 border-b border-red-100 bg-red-50">
+            <div className="hard-reset-modal__header border-b border-red-100 bg-red-50">
               <div className="flex items-center gap-2 mb-1">
                 <ShieldAlert size={18} className="text-red-600" />
                 <span className="text-[15px] font-bold text-red-800">Confirm Hard Reset</span>
@@ -186,7 +186,7 @@ export default function HardResetTab() {
               <div className="text-[12px] text-red-600">This action is recoverable from the backup — but irreversible within the app.</div>
             </div>
 
-            <div className="p-6 overflow-y-auto min-h-0">
+            <div className="hard-reset-modal__body overflow-y-auto min-h-0">
               {!result ? (
                 <>
                   {modalPrecheckLoading ? (
@@ -231,7 +231,7 @@ export default function HardResetTab() {
 
                       {resetErr && <div className="form-error mb-3">{resetErr}</div>}
 
-                      <div className="flex gap-3">
+                      <div className="hard-reset-modal__actions flex gap-2">
                         <button
                           type="button"
                           onClick={closeModal}

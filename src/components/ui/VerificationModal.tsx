@@ -183,7 +183,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
       <div className="modal-box-full relative">
 
         {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="px-6 pt-5 pb-4 border-b border-slate-200 shrink-0">
+        <div className="px-5 pt-4 pb-3 border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <button
               type="button"
@@ -452,7 +452,7 @@ export default function VerificationModal({ projectCode, frameId, onClose, onVer
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-[var(--t-surface-white)] shrink-0 rounded-b-2xl">
+        <div className="px-5 py-3 border-t border-slate-200 bg-[var(--t-surface-white)] shrink-0 rounded-b-2xl">
           <div className="flex items-center gap-4">
 
             {/* Left: status summary + progress */}
