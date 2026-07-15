@@ -187,6 +187,8 @@ function drawProgressBar(doc: PDFKit.PDFDocument, x: number, y: number, w: numbe
 export async function buildPanelCompletionReportPdf(data: PanelCompletionReportData): Promise<Buffer> {
   const isCompletion = data.reportKind === 'completion';
   const reportTitle = data.reportTitle;
+  const hasContributionPage = data.contributions.length > 1 || data.midChangeHistory.length > 0;
+  const reportPageCount = hasContributionPage ? 2 : 1;
   // Reference is derived from the project + panel the reader can actually see —
   // no internal frame identifier is printed anywhere in the document.
   const refCode = `${data.project.code}-${data.panel.name}`
@@ -436,7 +438,7 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
   // ── Footer ────────────────────────────────────────────────────────────────
   drawEnterpriseFooter(doc, {
     pageNumber: 1,
-    totalPages: 1,
+    totalPages: reportPageCount,
     projectCode: data.project.code,
     generatedAt: data.generatedAt,
     left: ML,
@@ -445,13 +447,83 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
     confidentialNote: 'Confidential — Management and Client Review Copy',
   });
 
+  if (hasContributionPage) {
+    doc.addPage({ size: 'A4', margin: 0 });
+    drawBox(doc, 0, 0, PAGE_W, 54, { fill: C.charcoalDeep });
+    drawBox(doc, 0, 54, PAGE_W, 2.5, { fill: C.teal });
+    drawText(doc, 'TECHNICIAN CONTRIBUTION & MID CHANGE HISTORY', ML, 17, {
+      font: F.bold, size: 12, color: C.white,
+    }, { width: CW, lineBreak: false });
+    drawText(doc, `${clip(data.project.name, 70)} · ${clip(data.panel.name, 50)}`, ML, 34, {
+      font: F.reg, size: 7.5, color: C.slate300,
+    }, { width: CW, lineBreak: false, ellipsis: true });
+
+    let detailY = 76;
+    const columns = [
+      { label: 'Technician', x: ML, w: 105 },
+      { label: 'Work period', x: ML + 105, w: 148 },
+      { label: 'Duration', x: ML + 253, w: 58 },
+      { label: 'Contribution', x: ML + 311, w: 112 },
+      { label: 'Progress', x: ML + 423, w: 88 },
+    ];
+    drawBox(doc, ML, detailY, CW, 22, { fill: C.charcoal });
+    columns.forEach(column => drawText(doc, column.label.toUpperCase(), column.x + 6, detailY + 7, {
+      font: F.bold, size: 6, color: C.white,
+    }, { width: column.w - 12, lineBreak: false }));
+    detailY += 22;
+
+    data.contributions.forEach((contribution, index) => {
+      const rowH = 43;
+      drawBox(doc, ML, detailY, CW, rowH, {
+        fill: index % 2 === 0 ? C.white : C.panel,
+        stroke: C.border,
+        strokeWidth: 0.5,
+      });
+      const values = [
+        `${contribution.technician.fullName}${contribution.technician.username ? ` (@${contribution.technician.username})` : ''}`,
+        `${fmtDateTime(contribution.startedAt)} → ${contribution.endedAt ? fmtDateTime(contribution.endedAt) : 'Active'}`,
+        contribution.durationHuman || '—',
+        `${contribution.cablesCompleted} cables · ${contribution.sourceEndsCompleted} src · ${contribution.destinationEndsCompleted} dst`,
+        `${contribution.progressBefore} → ${contribution.progressAfter}`,
+      ];
+      columns.forEach((column, columnIndex) => drawText(doc, values[columnIndex], column.x + 6, detailY + 7, {
+        font: columnIndex === 0 ? F.bold : F.reg,
+        size: 7,
+        color: C.ink,
+      }, { width: column.w - 12, height: rowH - 12, lineBreak: true, ellipsis: true }));
+      detailY += rowH;
+    });
+
+    if (data.midChangeHistory.length > 0) {
+      detailY += 14;
+      detailY = drawSectionHeading(doc, detailY, 'Permanent Mid Change audit');
+      data.midChangeHistory.forEach(entry => {
+        drawText(doc, `${fmtDateTime(entry.at)} · ${entry.technicianName || 'Technician'} · ${entry.action.replace(/_/g, ' ')}`, ML + 8, detailY, {
+          font: F.reg, size: 7.5, color: C.slate700,
+        }, { width: CW - 16, lineBreak: false, ellipsis: true });
+        detailY += 14;
+      });
+    }
+
+    drawEnterpriseFooter(doc, {
+      pageNumber: 2,
+      totalPages: reportPageCount,
+      projectCode: data.project.code,
+      generatedAt: data.generatedAt,
+      left: ML,
+      right: MR,
+      y: PAGE_H - 28,
+      confidentialNote: 'Confidential — Management and Client Review Copy',
+    });
+  }
+
   doc.end();
   const raw = await done;
   const pdf = await PDFLibDocument.load(raw);
-  if (pdf.getPageCount() > 1) {
+  if (pdf.getPageCount() > reportPageCount) {
     const trimmed = await PDFLibDocument.create();
-    const [page0] = await trimmed.copyPages(pdf, [0]);
-    trimmed.addPage(page0);
+    const pages = await trimmed.copyPages(pdf, Array.from({ length: reportPageCount }, (_, index) => index));
+    pages.forEach(page => trimmed.addPage(page));
     return Buffer.from(await trimmed.save());
   }
   return raw;

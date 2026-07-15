@@ -27,6 +27,26 @@ export interface PanelCompletionReportPreviewData {
   technicians: { fullName: string; username: string }[];
   technician: { fullName: string; username: string } | null;
   midChangeTechnician: { fullName: string; username: string } | null;
+  contributions: {
+    assignmentId: number;
+    technician: { fullName: string; username: string };
+    startedAt: string | null;
+    endedAt: string | null;
+    durationSeconds: number;
+    durationHuman: string;
+    cablesCompleted: number;
+    sourceEndsCompleted: number;
+    destinationEndsCompleted: number;
+    progressBefore: number;
+    progressAfter: number;
+    sessionLog: { loginAt: string; logoutAt: string | null }[];
+  }[];
+  midChangeHistory: {
+    action: string;
+    technicianName: string;
+    at: string | null;
+    details: string;
+  }[];
   supervisor: { fullName: string } | null;
   assignedBy: { fullName: string } | null;
   cables: {
@@ -191,6 +211,58 @@ export default function PanelCompletionReportPreview({ data }: { data: PanelComp
           ['Technician logout(s)', logoutTimes],
         ]} />
       </section>
+
+      {(data.contributions || []).length > 0 && (
+        <section className="pcr-section pcr-section--titled">
+          <h3 className="pcr-section-title">Technician contribution &amp; Mid Change history</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-[10px] leading-4 text-slate-700">
+              <thead>
+                <tr className="border-b border-slate-300 bg-slate-50 text-[9px] uppercase tracking-wide text-slate-500">
+                  <th className="px-2 py-1.5">Technician</th>
+                  <th className="px-2 py-1.5">Work period</th>
+                  <th className="px-2 py-1.5">Duration</th>
+                  <th className="px-2 py-1.5">Cable contribution</th>
+                  <th className="px-2 py-1.5">Progress</th>
+                  <th className="px-2 py-1.5">Login / logout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.contributions.map(contribution => (
+                  <tr key={contribution.assignmentId} className="border-b border-slate-200 align-top">
+                    <td className="max-w-[150px] whitespace-normal break-words px-2 py-2 font-semibold text-slate-900">
+                      {contribution.technician.fullName}
+                      {contribution.technician.username && <span className="block font-normal text-slate-500">@{contribution.technician.username}</span>}
+                    </td>
+                    <td className="px-2 py-2">{fmt(contribution.startedAt)}<span className="block text-slate-500">to {contribution.endedAt ? fmt(contribution.endedAt) : 'Active'}</span></td>
+                    <td className="px-2 py-2">{contribution.durationHuman || '—'}</td>
+                    <td className="px-2 py-2">
+                      <strong>{contribution.cablesCompleted} cables</strong>
+                      <span className="block text-slate-500">{contribution.sourceEndsCompleted} src · {contribution.destinationEndsCompleted} dst</span>
+                    </td>
+                    <td className="px-2 py-2">{contribution.progressBefore} → {contribution.progressAfter} complete</td>
+                    <td className="px-2 py-2">
+                      {contribution.sessionLog.length > 0
+                        ? contribution.sessionLog.map((session, index) => (
+                          <span className="block" key={`${contribution.assignmentId}-${index}`}>
+                            {fmt(session.loginAt)} → {session.logoutAt ? fmt(session.logoutAt) : 'Active'}
+                          </span>
+                        ))
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(data.midChangeHistory || []).length > 0 && (
+            <p className="mt-2 text-[10px] leading-4 text-slate-600">
+              <strong>Mid Change audit:</strong>{' '}
+              {data.midChangeHistory.map(entry => `${entry.technicianName || 'Technician'} · ${entry.action.replace(/_/g, ' ')} · ${fmt(entry.at)}`).join(' | ')}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Zone 6 — remarks */}
       <section className="pcr-section pcr-section--titled">
