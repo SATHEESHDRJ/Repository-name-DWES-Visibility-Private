@@ -65,6 +65,23 @@ test('TechService.assignFrame rejects a panel that already has an active assignm
   }
 });
 
+test('TechService.assignFrame rejects a technician who already has an active panel', async () => {
+  let lookup = 0;
+  const service = new TechService(workflowPrisma({
+    users: { findUnique: async () => ({ id: 8, role: 'wiring_technician' }) },
+    tech_assignments: {
+      findFirst: async () => {
+        lookup += 1;
+        return lookup === 1 ? null : { id: 55, technician_id: 8, status: 'in_progress' };
+      },
+    },
+  }));
+  await assert.rejects(
+    () => service.assignFrame({ project_code: 'PRJ', frame_id: 'frame', technician_id: 8, assigned_by_id: 1 }),
+    err => err instanceof ConflictException && err.message.includes('already assigned to an active panel'),
+  );
+});
+
 test('TechService.deleteAssignment only removes an original assigned-before-start row', async () => {
   const deleted = [];
   const service = new TechService(workflowPrisma({
