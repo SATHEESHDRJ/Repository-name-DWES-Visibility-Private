@@ -7,7 +7,7 @@ import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
@@ -1126,6 +1126,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       {confirmReupload && selectedProject && selectedPanel && (
         <Modal
           title="Replace Wiring Schedule"
+          icon={<RefreshCw />}
           size="default"
           onClose={() => setConfirmReupload(false)}
           footer={(
@@ -1451,6 +1452,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       {deleteProjectTarget && (
         <Modal
           title={PROJECT_DELETE_MODAL_TITLE}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={() => {
             if (deleting) return;
             setDeleteProjectTarget(null);
@@ -1479,6 +1482,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                 onClick={() => void handlePermanentDeleteConfirm()}
                 disabled={deleting || !deleteProjectConfirmed}
               >
+                <Trash2 size={16} />
                 {deleting ? 'Deleting…' : PROJECT_DELETE_CONFIRM_BUTTON}
               </button>
             </div>
@@ -1549,12 +1553,14 @@ function PanelDraftOverlay({
     <Modal
       title={isEditing ? 'Edit Panel' : 'Add Panel'}
       subtitle="Panel name, type, and voltage level"
+      icon={<PanelTop />}
       size="sm"
       onClose={onCancel}
       footer={(
         <div className="flex items-center justify-end gap-3 w-full">
           <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
           <button type="button" className="btn-primary" onClick={handleConfirm} disabled={submitted && !valid}>
+            {isEditing ? <Save size={16} /> : <Plus size={16} />}
             {isEditing ? 'Save Panel' : 'Add Panel'}
           </button>
         </div>
@@ -1779,6 +1785,7 @@ function AddPanelModal({
   return (
     <Modal
       title="Add Panel"
+      icon={<PanelTop />}
       size="wide"
       onClose={onClose}
       closeOnEscape={!saving}
@@ -1788,6 +1795,7 @@ function AddPanelModal({
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
+            <Plus size={16} />
             {saving ? 'Adding…' : 'Add Panel'}
           </button>
         </div>
@@ -1874,6 +1882,7 @@ function EditPanelModal({
   return (
     <Modal
       title="Edit Panel"
+      icon={<PanelTop />}
       onClose={onClose}
       footer={(
         <div className="flex items-center justify-end gap-3 w-full">
@@ -1881,6 +1890,7 @@ function EditPanelModal({
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || wouldDuplicate} type="button">
+            <Save size={16} />
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -1973,6 +1983,7 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
   return (
     <Modal
       title="Edit Project"
+      icon={<Pencil />}
       onClose={onClose}
       footer={(
         <div className="flex items-center justify-end gap-3 w-full">
@@ -1980,6 +1991,7 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
+            <Save size={16} />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
@@ -1988,26 +2000,38 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
       <div className="flex flex-col gap-4">
         <div className="form-group">
           <label className="form-label">Project Numbering</label>
-          <input value={project.code} title="Project Numbering" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><Hash size={18} /></span>
+            <input value={project.code} title="Project Numbering" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+          </div>
         </div>
 
         <InputField label="Project / Substation Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />
 
         <div className="form-group">
           <label className="form-label">Client</label>
-          <input value={project.client} title="Client" readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><Building2 size={18} /></span>
+            <input value={project.client} title="Client" readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
+          </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">State</label>
-          <select title="Project state" value={state} onChange={event => setState(event.target.value as ProjectState)} className="form-select">
-            {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
-          </select>
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><Flag size={18} /></span>
+            <select title="Project state" value={state} onChange={event => setState(event.target.value as ProjectState)} className="form-select">
+              {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">Description</label>
-          <textarea value={description} onChange={event => setDescription(event.target.value)} rows={3} title="Description" placeholder="Optional project description" className="form-textarea" />
+          <div className="field-with-icon field-with-icon--top">
+            <span className="field-lead-icon"><FileText size={18} /></span>
+            <textarea value={description} onChange={event => setDescription(event.target.value)} rows={3} title="Description" placeholder="Optional project description" className="form-textarea" />
+          </div>
         </div>
 
         {error && (

@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import { projectsApi, supervisorApi, usersApi } from '../../services/api';
 import type { Project } from '../../types';
 import ProjectPanelSelect, { type FramePanel } from './ProjectPanelSelect';
-import { ArrowRight, CheckCircle, TriangleAlert } from '../ui/icons';
+import { ArrowRight, CheckCircle, TriangleAlert, UserPlus, User, Check } from '../ui/icons';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 
 export interface AssignTechnicianModalProps {
@@ -105,6 +105,7 @@ export default function AssignTechnicianModal({
   return (
     <Modal
       title="Assign Technician to Panel"
+      icon={<UserPlus />}
       onClose={onClose}
       footer={!result ? (
         <>
@@ -115,11 +116,15 @@ export default function AssignTechnicianModal({
             className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             type="button"
           >
+            <UserPlus size={16} />
             {saving ? 'Assigning…' : 'Assign'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button">
+          <Check size={16} />
+          Done
+        </button>
       )}
     >
       {!result ? (
@@ -168,20 +173,23 @@ export default function AssignTechnicianModal({
 
           <div className={`mb-4 transition-opacity duration-200 ${scheduleReady && panelId ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
             <label className="form-label mb-1">Technician</label>
-            <select
-              value={selTech}
-              onChange={e => { setSelTech(e.target.value); setError(''); }}
-              disabled={!scheduleReady || !panelId}
-              className="form-select disabled:cursor-not-allowed"
-              aria-label="Select technician"
-            >
-              <option value="">Select technician…</option>
-              {techs.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.full_name} · @{t.username}
-                </option>
-              ))}
-            </select>
+            <div className="field-with-icon">
+              <span className="field-lead-icon"><User size={18} /></span>
+              <select
+                value={selTech}
+                onChange={e => { setSelTech(e.target.value); setError(''); }}
+                disabled={!scheduleReady || !panelId}
+                className="form-select disabled:cursor-not-allowed"
+                aria-label="Select technician"
+              >
+                <option value="">Select technician…</option>
+                {techs.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name} · @{t.username}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {error && <div className="form-error">{error}</div>}

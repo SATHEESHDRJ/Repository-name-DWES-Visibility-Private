@@ -2241,7 +2241,7 @@
   .ws-col-row {
     @apply flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50;
   }
-  .ws-col-name { @apply flex-1 text-[13px] text-slate-700 truncate min-w-0; }
+  .ws-col-name { @apply flex-1 text-[13px] text-slate-700 break-words min-w-0; overflow-wrap: anywhere; }
   .ws-col-action {
     @apply flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200
            text-slate-500 hover:bg-[var(--t-surface-white)] shrink-0;
@@ -2534,13 +2534,16 @@
     @apply w-11 h-11 text-[13px];
   }
   .um-user-name {
-    @apply text-[14px] font-bold text-slate-900 truncate leading-tight;
+    @apply text-[14px] font-bold text-slate-900 leading-tight break-words;
+    overflow-wrap: anywhere;
   }
   .um-user-username {
-    @apply font-mono text-[12px] text-blue-700 truncate;
+    @apply font-mono text-[12px] text-blue-700 break-words;
+    overflow-wrap: anywhere;
   }
   .um-user-emp {
-    @apply text-[11px] text-slate-500 truncate mt-0.5;
+    @apply text-[11px] text-slate-500 break-words mt-0.5;
+    overflow-wrap: anywhere;
   }
   .um-user-badges {
     @apply flex flex-wrap items-center gap-1;
@@ -2576,7 +2579,8 @@
     background: linear-gradient(180deg, #F8FAFC 0%, var(--t-surface-white) 100%);
   }
   .um-edit-hero-name {
-    @apply text-[16px] font-bold text-slate-900 truncate;
+    @apply text-[16px] font-bold text-slate-900 break-words;
+    overflow-wrap: anywhere;
   }
   .um-edit-grid {
     @apply flex flex-col gap-3 p-3 tablet-land:p-4 overflow-y-auto max-h-[min(62vh,580px)];
@@ -2660,10 +2664,12 @@
     border-color: var(--color-outline-variant, #E2E8F0);
   }
   .um-assignment-panel {
-    @apply text-[13px] font-semibold text-slate-900 truncate;
+    @apply text-[13px] font-semibold text-slate-900 break-words;
+    overflow-wrap: anywhere;
   }
   .um-assignment-code {
-    @apply text-[11px] text-slate-500 font-mono truncate;
+    @apply text-[11px] text-slate-500 font-mono break-words;
+    overflow-wrap: anywhere;
   }
   .um-assignment-remove {
     @apply text-[12px] font-semibold text-red-600 hover:text-red-800 shrink-0;
@@ -2965,7 +2971,8 @@
     height: var(--wu-header-h);
     padding: 0 0.625rem;
     text-align: left;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -2977,13 +2984,15 @@
   }
   .wu-grid-row-header th:last-child { border-right: 0; }
   .wu-grid-header-text {
-    @apply block truncate max-w-[140px];
+    @apply block whitespace-normal break-words max-w-[140px];
+    overflow-wrap: anywhere;
   }
   .wu-grid-table--fullview .wu-grid-header-text {
     max-width: none;
     overflow: visible;
     text-overflow: clip;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     padding-right: 8px;
   }
   .wu-grid-th-header {
@@ -3165,9 +3174,10 @@
     padding: 0.4rem 0.625rem;
     vertical-align: middle;
     max-width: 160px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
     color: var(--wu-text);
     font-weight: 500;
     border-bottom: 1px solid var(--wu-border);
@@ -3175,8 +3185,10 @@
   }
   .wu-grid-table--fullview .wu-grid-td {
     max-width: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .wu-grid-table--fullview .wu-map-select {
     max-width: none;
@@ -3706,13 +3718,13 @@
   .tech-status-indicator.is-compact .tech-status-indicator__dot { @apply h-2.5 w-2.5 ring-1; }
   .tech-status-indicator.is-prominent { @apply min-w-0 gap-2 px-2.5 py-1.5 text-[11px]; }
   .tech-status-indicator.is-prominent .tech-status-indicator__dot { @apply h-6 w-6 ring-[3px]; }
-  .sac-tech-name { @apply text-[12px] font-bold text-slate-900 truncate leading-tight; }
-  .sac-tech-id { @apply text-[9px] text-slate-500 truncate font-mono; }
+  .sac-tech-name { @apply text-[12px] font-bold text-slate-900 break-words leading-tight; overflow-wrap: anywhere; }
+  .sac-tech-id { @apply text-[9px] text-slate-500 break-words font-mono; overflow-wrap: anywhere; }
   .sac-tech-context-row {
-    @apply flex items-center gap-1 mt-0.5 pl-1 text-[10px] text-slate-600 min-w-0;
+    @apply flex flex-wrap items-center gap-1 mt-0.5 pl-1 text-[10px] text-slate-600 min-w-0;
   }
-  .sac-tech-proj { @apply font-mono text-slate-500; }
-  .sac-tech-panel { @apply font-semibold text-slate-700; }
+  .sac-tech-proj { @apply font-mono text-slate-500 break-words; overflow-wrap: anywhere; }
+  .sac-tech-panel { @apply font-semibold text-slate-700 break-words; overflow-wrap: anywhere; }
   .sac-tech-sep { @apply text-slate-300; }
   .sac-tech-context--idle { @apply text-emerald-700 font-semibold not-italic; }
   .sac-tech-metrics { @apply grid grid-cols-3 gap-0.5 mt-0.5 pl-1; }
@@ -3795,11 +3807,12 @@
     @apply border-emerald-400 bg-emerald-50/50;
   }
   .sac-board-card-top { @apply flex items-start justify-between gap-1; }
-  .sac-board-panel { @apply text-[11px] font-bold text-slate-900 truncate; }
+  .sac-board-panel { @apply text-[11px] font-bold text-slate-900 break-words; overflow-wrap: anywhere; }
   .sac-board-kpi { @apply text-[10px] font-bold tabular-nums text-blue-700 shrink-0; }
   .sac-board-meta {
-    @apply flex items-center gap-0.5 text-[9px] text-slate-500 mt-0.5 min-w-0;
+    @apply flex flex-wrap items-center gap-0.5 text-[9px] text-slate-500 mt-0.5 min-w-0;
   }
+  .sac-board-meta > .truncate { @apply whitespace-normal break-words overflow-visible; text-overflow: clip; overflow-wrap: anywhere; }
   .sac-board-tags { @apply flex flex-wrap items-center gap-0.5 mt-1; }
   .sac-board-status {
     @apply text-[8px] font-bold uppercase tracking-wide text-slate-600 bg-slate-100 rounded px-1;
@@ -3873,10 +3886,11 @@
     border-color: var(--glass-border-strong, #E2E8F0);
   }
   .sac-rec-top { @apply flex items-center justify-between gap-1; }
-  .sac-rec-name { @apply text-[11px] font-bold text-slate-800 truncate; }
+  .sac-rec-name { @apply text-[11px] font-bold text-slate-800 break-words; overflow-wrap: anywhere; }
   .sac-rec-score { @apply text-[10px] font-bold text-blue-600 tabular-nums; }
   .sac-rec-reasons {
-    @apply mt-0.5 text-[9px] text-slate-500 truncate;
+    @apply mt-0.5 text-[9px] text-slate-500 break-words;
+    overflow-wrap: anywhere;
   }
   .sac-rec-assign {
     @apply mt-1 text-[10px] font-bold text-blue-700 hover:text-blue-900 min-h-[28px] px-1;
@@ -3986,10 +4000,12 @@
     @apply flex-1 min-w-[140px];
   }
   .rwa-project-title {
-    @apply text-[13px] font-bold text-slate-900 leading-tight truncate;
+    @apply text-[13px] font-bold text-slate-900 leading-tight break-words;
+    overflow-wrap: anywhere;
   }
   .rwa-project-meta {
-    @apply text-[11px] text-slate-500 mt-0.5 truncate;
+    @apply text-[11px] text-slate-500 mt-0.5 break-words;
+    overflow-wrap: anywhere;
   }
   .rwa-project-code {
     @apply font-mono text-[10px] text-slate-400 ml-1;
@@ -4048,7 +4064,8 @@
     @apply font-semibold;
   }
   .rwa-panel-cell--tech .rwa-panel-tech {
-    @apply text-[11px] font-medium text-slate-700 truncate max-w-full;
+    @apply text-[11px] font-medium text-slate-700 break-words max-w-full;
+    overflow-wrap: anywhere;
   }
   .rwa-panel-cell--progress {
     @apply flex items-center gap-1.5 flex-wrap;
@@ -4057,7 +4074,8 @@
     @apply flex-1 min-w-[48px] max-w-[100px] h-1.5;
   }
   .rwa-panel-name {
-    @apply text-[12px] font-semibold text-slate-900 truncate;
+    @apply text-[12px] font-semibold text-slate-900 break-words;
+    overflow-wrap: anywhere;
   }
   .rwa-panel-pill {
     @apply inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide shrink-0;
@@ -4321,7 +4339,8 @@
     @apply sticky top-0 z-10 border-b border-slate-200 bg-slate-100 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap;
   }
   .file-viewer-spreadsheet td {
-    @apply border-b border-slate-100 px-2 py-1 whitespace-nowrap max-w-[280px] truncate;
+    @apply border-b border-slate-100 px-2 py-1 whitespace-normal max-w-[280px] break-words;
+    overflow-wrap: anywhere;
   }
   .file-viewer-spreadsheet-idx {
     @apply sticky left-0 z-[1] bg-slate-50 text-center text-[11px] text-slate-500 font-medium w-10 min-w-10;
@@ -4358,7 +4377,11 @@
     @apply text-[10px] font-semibold uppercase tracking-wide text-slate-500;
   }
   .panel-file-metadata-item dd {
-    @apply mt-0.5 font-medium text-slate-800 truncate;
+    @apply mt-0.5 font-medium text-slate-800 break-words;
+    overflow-wrap: anywhere;
+  }
+  .panel-file-metadata-item:first-child {
+    grid-column: span 2;
   }
   .panel-file-upload-section {
     @apply rounded-xl border border-dashed p-3;
@@ -4440,7 +4463,8 @@
     @apply text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0 select-none;
   }
   .pcr-meta-item dd {
-    @apply text-[13px] font-medium text-slate-800 mt-0.5 m-0 truncate;
+    @apply text-[13px] font-medium text-slate-800 mt-0.5 m-0 break-words;
+    overflow-wrap: anywhere;
   }
   .pcr-personnel {
     @apply flex flex-wrap gap-2 px-5 py-4 border-b border-slate-100;
@@ -4452,7 +4476,8 @@
     @apply text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none;
   }
   .pcr-person-name {
-    @apply text-[13px] font-semibold text-slate-800 mt-1 truncate;
+    @apply text-[13px] font-semibold text-slate-800 mt-1 break-words;
+    overflow-wrap: anywhere;
   }
   .pcr-kpi-row {
     @apply grid gap-2 px-5 py-4 border-b border-slate-100;
@@ -4543,7 +4568,8 @@
     @apply text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none;
   }
   .pcr-sig-name {
-    @apply text-[12px] font-medium text-slate-700 mt-1 truncate;
+    @apply text-[12px] font-medium text-slate-700 mt-1 break-words;
+    overflow-wrap: anywhere;
   }
   .pcr-sig-line {
     @apply border-b border-slate-300 mt-6 mb-1;
@@ -4608,12 +4634,33 @@
     border-bottom: 1px solid var(--glass-border-strong, var(--color-outline-variant));
     background: linear-gradient(180deg, var(--glass-bg-subtle, var(--color-surface-variant, #F8FAFC)) 0%, var(--glass-bg-solid, var(--color-surface)) 100%);
   }
+  .modal-header-lead {
+    @apply flex items-center gap-3 min-w-0 flex-1;
+  }
   .modal-header-text {
     @apply flex flex-col gap-1 min-w-0 flex-1;
   }
   .modal-header-actions {
     @apply flex items-center gap-2 shrink-0;
   }
+  /* Tinted title-icon chip — consistent size/placement across every dialog. */
+  .modal-title-icon {
+    @apply inline-flex items-center justify-center shrink-0 rounded-[10px];
+    width: 34px;
+    height: 34px;
+    color: var(--color-primary, #2563EB);
+    background: rgba(37, 99, 235, 0.10);
+    border: 1px solid rgba(37, 99, 235, 0.20);
+  }
+  .modal-title-icon .ui-icon,
+  .modal-title-icon svg {
+    font-size: 20px !important;
+    width: 20px;
+    height: 20px;
+  }
+  .modal-title-icon--danger  { color: #DC2626; background: rgba(220, 38, 38, 0.10);  border-color: rgba(220, 38, 38, 0.20); }
+  .modal-title-icon--warning { color: #D97706; background: rgba(217, 119, 6, 0.10);  border-color: rgba(217, 119, 6, 0.20); }
+  .modal-title-icon--success { color: #059669; background: rgba(5, 150, 105, 0.10);  border-color: rgba(5, 150, 105, 0.20); }
   .modal-title {
     @apply text-lg tablet-land:text-xl font-bold min-w-0 m-0;
     line-height: 1.3;
@@ -4720,6 +4767,39 @@
     .modal-body :is(.mt-4, .mt-5, .mt-6) {
     margin-top: 12px;
   }
+  /* Reusable leading-icon field shell. Wrap any raw input/select/textarea/date
+     control so every data-entry field carries a consistent muted leading icon
+     (18px, slate-400, 12px inset) without per-site padding classes. Mirrors the
+     TabletFields InputField/SelectField look used by the New Project modal. */
+  .field-with-icon {
+    @apply relative flex items-center min-w-0;
+  }
+  .field-with-icon > .field-lead-icon {
+    @apply absolute inline-flex items-center justify-center pointer-events-none;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    z-index: 1;
+  }
+  .field-with-icon > .field-lead-icon .ui-icon,
+  .field-with-icon > .field-lead-icon svg {
+    font-size: 18px !important;
+    width: 18px;
+    height: 18px;
+  }
+  .field-with-icon > :is(input, select, textarea, .form-input, .form-input-lg, .form-select, .form-textarea) {
+    padding-left: 38px;
+  }
+  /* Textareas: pin the icon to the first line instead of vertical-centring it. */
+  .field-with-icon--top {
+    @apply items-start;
+  }
+  .field-with-icon--top > .field-lead-icon {
+    top: 11px;
+    transform: none;
+  }
+
   /* Modal body content — long entity names wrap; tooltips on title attr when clipped.
      Tailwind v4: never @apply .modal-long-text from other @layer components rules;
      inline min-w-0 break-words + overflow-wrap instead (see file header). */
@@ -4731,6 +4811,16 @@
     @apply text-[13px] font-semibold min-w-0 break-words;
     overflow-wrap: anywhere;
     color: var(--color-on-surface, #0F172A);
+  }
+  /* Identity and metadata values must be readable without hover. A title on
+     truncated modal text previously exposed the full value only as a tooltip,
+     which also failed on touch devices. */
+  .modal-typography .modal-body [title].truncate,
+  .modal-typography .modal-body .um-badge[title] {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .modal-meta {
     @apply text-[11px] leading-snug;
@@ -5185,9 +5275,9 @@
   }
   .upload-target-header-grid {
     display: grid;
-    gap: var(--bento-gap);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    @apply px-4 pb-4 pt-2;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    @apply px-4 pb-3 pt-2;
   }
   .upload-target-header-block {
     @apply flex flex-col gap-0.5 min-w-0 flex-1;
@@ -5197,16 +5287,26 @@
     @apply inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500;
   }
   .upload-target-header-value {
-    @apply text-[18px] tablet-land:text-[22px] font-bold text-slate-900 leading-tight truncate m-0;
+    @apply text-[16px] tablet-land:text-[18px] font-bold text-slate-900 leading-snug break-words m-0;
+    overflow-wrap: anywhere;
   }
   .upload-target-header-value--panel {
     @apply text-blue-900;
   }
   .upload-target-header-meta {
-    @apply text-[11px] text-slate-400 m-0 truncate;
+    @apply text-[11px] text-slate-500 m-0 break-words;
+    overflow-wrap: anywhere;
   }
   .upload-target-header-divider {
     @apply hidden tablet-land:block w-px bg-slate-200 mx-4 self-stretch shrink-0;
+  }
+  @media (max-width: 639px) {
+    .upload-target-header-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .upload-target-header-block--panel {
+      @apply border-t border-slate-200 pt-2;
+    }
   }
 
   .duplicate-panel-warning {
@@ -5664,7 +5764,8 @@
     @apply text-[10px] font-semibold uppercase tracking-wide text-slate-400;
   }
   .upload-view-file-meta-row dd {
-    @apply text-slate-700 font-medium truncate m-0;
+    @apply text-slate-700 font-medium break-words m-0;
+    overflow-wrap: anywhere;
   }
 
   .drawing-dropzone {
@@ -7669,8 +7770,8 @@
     @apply text-[10px] font-black uppercase tracking-[0.14em];
     color: var(--t-faint, #94a3b8);
   }
-  .dwf-workspace-title { @apply text-[20px] sm:text-[22px] font-bold leading-tight truncate text-slate-900; }
-  .dwf-workspace-sub { @apply text-[13px] truncate mt-0.5; color: var(--t-muted, #64748b); }
+  .dwf-workspace-title { @apply text-[20px] sm:text-[22px] font-bold leading-tight break-words text-slate-900; overflow-wrap: anywhere; }
+  .dwf-workspace-sub { @apply text-[13px] break-words mt-0.5; color: var(--t-muted, #64748b); overflow-wrap: anywhere; }
   .dwf-workspace-metrics { @apply flex flex-wrap items-center gap-2 shrink-0; }
   .dwf-workspace-progress {
     @apply h-1.5 shrink-0 overflow-hidden;
@@ -7881,7 +7982,7 @@
     width: 10px; height: 10px; border-radius: 9999px; flex-shrink: 0;
     border: 1px solid rgba(15, 23, 42, 0.18);
   }
-  .wsg-mselect-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wsg-mselect-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
   .wsg-mselect-reset {
     display: block; width: 100%; min-height: 34px; margin-top: 2px; padding: 4px 8px;
     border-radius: 7px; border-top: 1px solid var(--t-border, #e2e8f0);
@@ -8039,15 +8140,15 @@
   .wsg-insp-end-tag { @apply inline-flex items-center gap-1 text-[10px] font-bold tracking-wider; color: var(--t-faint, #94a3b8); }
   .wsg-insp-end.src.done .wsg-insp-end-tag { color: #15803d; }
   .wsg-insp-end.dst.done .wsg-insp-end-tag { color: #b45309; }
-  .wsg-insp-end-dev { @apply font-mono text-[12px] font-bold max-w-full overflow-hidden text-ellipsis whitespace-nowrap; color: var(--t-text, #0f172a); }
+  .wsg-insp-end-dev { @apply font-mono text-[12px] font-bold max-w-full whitespace-normal break-words; color: var(--t-text, #0f172a); overflow-wrap: anywhere; }
   .wsg-insp-end-term { @apply font-mono text-[11px]; color: var(--t-muted, #64748b); }
   .wsg-insp-fields {
     @apply grid grid-cols-2 gap-x-3 gap-y-1.5 px-3 py-2 border-t;
     border-color: var(--t-border, #e2e8f0);
   }
   .wsg-insp-field { @apply flex flex-col min-w-0; }
-  .wsg-insp-field-h { @apply text-[9.5px] font-bold uppercase tracking-wider overflow-hidden text-ellipsis whitespace-nowrap; color: var(--t-faint, #94a3b8); }
-  .wsg-insp-field-v { @apply font-mono text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap; color: var(--t-text, #1e293b); }
+  .wsg-insp-field-h { @apply text-[9.5px] font-bold uppercase tracking-wider whitespace-normal break-words; color: var(--t-faint, #94a3b8); overflow-wrap: anywhere; }
+  .wsg-insp-field-v { @apply font-mono text-[11.5px] whitespace-normal break-words; color: var(--t-text, #1e293b); overflow-wrap: anywhere; }
   .wsg-insp-note-row {
     @apply flex items-center gap-2 px-3 py-2 border-t mt-auto sticky bottom-0;
     background: var(--t-card, var(--t-surface-white));
@@ -8116,7 +8217,8 @@
     @apply text-[10px] font-bold uppercase tracking-[0.07em] text-slate-400;
   }
   .dwv-meta-value {
-    @apply text-[13px] font-semibold text-slate-800 truncate;
+    @apply text-[13px] font-semibold text-slate-800 break-words;
+    overflow-wrap: anywhere;
   }
 
   /* The only scroll container: vertical + horizontal, fills remaining height */
@@ -8144,11 +8246,12 @@
   }
 
   .dwv-table tbody td {
-    @apply px-3 py-1.5 whitespace-nowrap text-slate-700 align-middle;
+    @apply px-3 py-1.5 whitespace-normal text-slate-700 align-middle break-words;
     border-bottom: 1px solid var(--t-border, #eef2f7);
     max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
   }
 
   .dwv-table tbody tr:nth-child(even) td { background: var(--t-surface, #f8fafc); }
@@ -9894,11 +9997,13 @@
     @apply flex min-w-0 flex-col;
   }
   .pa-project-copy strong {
-    @apply truncate text-[14px] font-bold;
+    @apply text-[14px] font-bold break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface, #0F172A);
   }
   .pa-project-copy > span:last-child {
-    @apply truncate text-[11px];
+    @apply text-[11px] break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface-variant, #64748B);
   }
   .pa-kicker {
@@ -9949,10 +10054,12 @@
     @apply flex min-w-0 flex-col;
   }
   .pa-changeover-heading strong {
-    @apply truncate text-[13px] font-bold text-slate-900;
+    @apply text-[13px] font-bold text-slate-900 break-words;
+    overflow-wrap: anywhere;
   }
   .pa-changeover-heading div > span:last-child {
-    @apply truncate text-[10px] text-slate-600;
+    @apply text-[10px] text-slate-600 break-words;
+    overflow-wrap: anywhere;
   }
   .pa-transfer-count {
     @apply flex min-w-[96px] flex-col rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center;
@@ -10060,11 +10167,13 @@
   .pa-panel-copy { @apply flex min-w-0 flex-1 flex-col; }
   .pa-panel-title-row { @apply flex min-w-0 items-start justify-between gap-2; }
   .pa-panel-title-row strong {
-    @apply min-w-0 flex-1 truncate text-[12px] font-extrabold;
+    @apply min-w-0 flex-1 text-[12px] font-extrabold break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface, #0F172A);
   }
   .pa-panel-id {
-    @apply mt-0.5 truncate text-[9px] font-medium;
+    @apply mt-0.5 text-[9px] font-medium break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface-variant, #94A3B8);
   }
   .pa-status { @apply px-2 py-0.5 text-[9px]; }
@@ -10077,7 +10186,8 @@
     @apply mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1;
   }
   .pa-panel-meta > span {
-    @apply flex min-w-0 items-center gap-1 truncate text-[10px] font-semibold;
+    @apply flex min-w-0 items-center gap-1 text-[10px] font-semibold break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface-variant, #64748B);
   }
   .pa-progress-row { @apply mt-2 flex min-w-0 items-center gap-2; }
@@ -10139,11 +10249,13 @@
   .pa-tech-copy { @apply flex min-w-0 flex-1 flex-col; }
   .pa-tech-copy > span { @apply flex min-w-0 items-baseline gap-1.5; }
   .pa-tech-copy strong {
-    @apply min-w-0 truncate text-[11px] font-extrabold;
+    @apply min-w-0 text-[11px] font-extrabold break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface, #0F172A);
   }
   .pa-tech-copy small {
-    @apply truncate text-[9px];
+    @apply text-[9px] break-words;
+    overflow-wrap: anywhere;
     color: var(--color-on-surface-variant, #64748B);
   }
   .pa-tech-status { @apply px-2 py-1 text-[9px]; }

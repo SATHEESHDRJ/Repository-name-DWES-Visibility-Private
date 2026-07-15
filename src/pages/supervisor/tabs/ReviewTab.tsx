@@ -7,7 +7,7 @@ import Modal from '../../../components/Modal';
 
 import ReportPreviewModal from '../../../components/ui/ReportPreviewModal';
 
-import { FileText, CheckSquare, TriangleAlert } from '../../../components/ui/icons';
+import { FileText, CheckSquare, TriangleAlert, ClipboardCheck, Check } from '../../../components/ui/icons';
 
 import PendingApprovalsSection from './PendingApprovalsSection';
 
@@ -297,6 +297,8 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
       title="Review Panel"
 
+      icon={<ClipboardCheck />}
+
       onClose={onClose}
 
       footer={(
@@ -305,7 +307,7 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
 
-          <button onClick={handleSave} disabled={saving} className="btn-primary" type="button">{saving ? 'Saving...' : 'Submit Review'}</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary" type="button"><Check size={16} />{saving ? 'Saving...' : 'Submit Review'}</button>
 
         </>
 
@@ -349,7 +351,13 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
         <label className="form-label mb-1">Notes (optional)</label>
 
-        <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={3} placeholder="Additional review notes..." className="form-textarea" />
+        <div className="field-with-icon field-with-icon--top">
+
+          <span className="field-lead-icon"><FileText size={18} /></span>
+
+          <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={3} placeholder="Additional review notes..." className="form-textarea" />
+
+        </div>
 
       </div>
 

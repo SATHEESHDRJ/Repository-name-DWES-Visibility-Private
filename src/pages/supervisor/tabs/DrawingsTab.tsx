@@ -213,16 +213,17 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
   const canUpload = !!file && !uploading && (dupInfo?.kind !== 'same' || dupChoice === 'replace');
 
   return (
-    <Modal title="Upload Drawing" onClose={onClose}
+    <Modal title="Upload Drawing" icon={<Upload />} onClose={onClose}
       footer={!done ? (
         <>
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
           <button onClick={handleUpload} disabled={!canUpload} className="btn-primary" type="button">
+            <Upload size={16} />
             {uploading ? 'Uploading…' : dupChoice === 'replace' ? 'Replace & Upload' : 'Upload'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button"><CheckCircle size={16} />Done</button>
       )}>
       {!done ? (
         <>

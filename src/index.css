@@ -652,11 +652,11 @@
 .panel-drawing-upload { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
 .panel-drawing-target { display: grid; grid-template-columns: minmax(100px, auto) minmax(0, 1fr); gap: 6px 14px; padding: 12px; border: 1px solid #dbe4ef; border-radius: 11px; background: #f8fafc; font-size: 12px; }
 .panel-drawing-target span { color: #64748b; }
-.panel-drawing-target strong { overflow: hidden; color: #1e293b; text-overflow: ellipsis; white-space: nowrap; }
+.panel-drawing-target strong { color: #1e293b; overflow-wrap: anywhere; white-space: normal; }
 .panel-drawing-existing, .panel-drawing-selected-file { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 12px; border: 1px solid #dbe4ef; border-radius: 10px; background: var(--t-surface-white, #fff); }
 .panel-drawing-existing > div, .panel-drawing-selected-file > div { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; }
 .panel-drawing-existing span, .panel-drawing-selected-file span { color: #64748b; font-size: 11px; }
-.panel-drawing-existing strong, .panel-drawing-selected-file strong { overflow: hidden; color: #1e293b; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.panel-drawing-existing strong, .panel-drawing-selected-file strong { color: #1e293b; overflow-wrap: anywhere; white-space: normal; font-size: 13px; }
 .panel-drawing-existing small { color: #64748b; font-size: 11px; }
 .panel-drawing-selected-file > button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; color: #64748b; }
 .panel-drawing-selected-file > button:hover { color: #dc2626; background: #fef2f2; }
@@ -998,7 +998,8 @@
 .modal-typography--user-management :is(.form-input, .form-select) { border-color: #d5deea; border-radius: 9px; background: #fbfcfe; }
 .modal-typography--user-management :is(.form-input, .form-select):focus { border-color: #4f7fe2; box-shadow: 0 0 0 3px rgba(59, 130, 246, .12); }
 .modal-typography--user-management .modal-footer { background: #f8fafc; border-top-color: #e3e9f1; }
-.modal-typography--user-management { max-width: calc(100vw - 28px) !important; max-height: calc(100dvh - 28px) !important; overflow: hidden; }
+.modal-typography--user-management { max-height: calc(100dvh - 28px) !important; overflow: hidden; }
+.modal-box-team.modal-typography--user-management { max-width: min(880px, calc(100vw - 28px)) !important; }
 .modal-typography--user-management .modal-body { min-width: 0; max-width: 100%; overflow-x: hidden; overflow-y: auto; }
 .admin-role-change, .admin-delete-user-confirm { display: grid; gap: 15px; min-width: 0; }
 .admin-modal-section-heading { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid #dde6f1; border-radius: 10px; color: #4f46e5; background: #f8faff; }
@@ -1013,7 +1014,7 @@
 .admin-delete-user-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 0; }
 .admin-delete-user-summary > div { min-width: 0; padding: 10px; border: 1px solid #e2e8f0; border-radius: 9px; background: #f8fafc; }
 .admin-delete-user-summary dt { color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-.admin-delete-user-summary dd { margin: 3px 0 0; overflow: hidden; color: #1e293b; font-size: 12px; font-weight: 700; text-overflow: ellipsis; }
+.admin-delete-user-summary dd { margin: 3px 0 0; color: #1e293b; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
 .admin-delete-user-check { display: flex; align-items: flex-start; gap: 9px; color: #475569; font-size: 12px; line-height: 1.4; }
 .admin-delete-user-check input { width: 16px; height: 16px; min-height: 0; margin-top: 1px; accent-color: #dc2626; }
 

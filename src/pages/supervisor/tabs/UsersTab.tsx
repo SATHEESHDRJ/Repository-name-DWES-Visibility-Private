@@ -65,7 +65,7 @@ function AssignedPanelBadge({ panels }: { panels?: string[] }) {
       title={title}
       className="um-badge bg-amber-50 text-amber-700 border-amber-200"
     >
-      <span className="truncate">{panels[0]}</span>
+      <span className="break-words [overflow-wrap:anywhere]">{panels[0]}</span>
       {extra > 0 && <span className="shrink-0 ml-0.5">+{extra}</span>}
     </span>
   );

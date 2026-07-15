@@ -386,6 +386,7 @@ export default function PdfDrawingUploadModal({
   return (
     <Modal
       title={modalTitle}
+      icon={showViewer ? <FileText /> : <Upload />}
       onClose={onClose}
       size={showViewer && fileType === 'pdf' ? 'fullscreen' : undefined}
       bodyClassName={showViewer && fileType === 'pdf' ? 'modal-body-flush' : undefined}

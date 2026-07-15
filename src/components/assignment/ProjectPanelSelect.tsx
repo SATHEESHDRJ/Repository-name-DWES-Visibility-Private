@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader } from '../ui/icons';
+import { Loader, FolderKanban, PanelTop } from '../ui/icons';
 import { projectsApi } from '../../services/api';
 import type { Project } from '../../types';
 import { isVerifiedFrame } from './frameUtils';
@@ -152,18 +152,21 @@ export default function ProjectPanelSelect({
     >
       <label className="flex flex-col gap-1 min-w-0 flex-1 sm:flex-initial sm:min-w-[200px]">
         <span className="text-[13px] font-semibold text-slate-600">{projectLabel}</span>
-        <select
-          value={selectedProjectCode}
-          onChange={e => handleProjectChange(e.target.value)}
-          disabled={disabled}
-          className="form-select w-full"
-          aria-label={projectLabel}
-        >
-          <option value="">{projectPlaceholder}</option>
-          {projects.map(p => (
-            <option key={p.code} value={p.code}>{p.name}</option>
-          ))}
-        </select>
+        <div className="field-with-icon">
+          <span className="field-lead-icon"><FolderKanban size={18} /></span>
+          <select
+            value={selectedProjectCode}
+            onChange={e => handleProjectChange(e.target.value)}
+            disabled={disabled}
+            className="form-select w-full"
+            aria-label={projectLabel}
+          >
+            <option value="">{projectPlaceholder}</option>
+            {projects.map(p => (
+              <option key={p.code} value={p.code}>{p.name}</option>
+            ))}
+          </select>
+        </div>
       </label>
 
       {showPanelSelect && (
@@ -176,6 +179,8 @@ export default function ProjectPanelSelect({
             {panelLabel}
             {loadingPanels && <Loader size={14} className="text-slate-400" aria-hidden />}
           </span>
+          <div className="field-with-icon">
+          <span className="field-lead-icon"><PanelTop size={18} /></span>
           <select
             value={selectedPanelId}
             onChange={e => onPanelChange(e.target.value)}
@@ -219,6 +224,7 @@ export default function ProjectPanelSelect({
               ))
             )}
           </select>
+          </div>
         </label>
       )}
     </div>

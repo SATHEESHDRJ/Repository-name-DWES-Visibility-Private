@@ -106,6 +106,7 @@ export default function PanelDrawingUploadModal({
     <Modal
       title={`${existingAsset ? 'Replace' : 'Upload'} ${cfg.label}`}
       subtitle={`${projectName || projectCode} · ${panelName}`}
+      icon={<Upload />}
       onClose={onClose}
       size="lg"
       closeOnBackdrop={!uploading}

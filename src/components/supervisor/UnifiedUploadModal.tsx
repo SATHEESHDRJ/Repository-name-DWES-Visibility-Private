@@ -5,7 +5,7 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal
 import { projectsApi, uploadApi } from '../../services/api';
 import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import {
-  FileText, SendHorizonal, Upload, Trash2, ExternalLink, CheckCircle, FileSpreadsheet,
+  FileText, SendHorizonal, Upload, Trash2, ExternalLink, CheckCircle, FileSpreadsheet, Check,
 } from '../ui/icons';
 
 type FileRecord = {
@@ -290,10 +290,12 @@ export default function UnifiedUploadModal({
   return (
     <Modal
       title="Upload Files"
+      icon={<Upload />}
       onClose={onClose}
       size="lg"
       footer={(
         <button type="button" onClick={onClose} className="pj-btn-primary">
+          <Check size={16} />
           Done
         </button>
       )}

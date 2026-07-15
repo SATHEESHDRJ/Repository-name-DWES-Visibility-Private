@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supervisorApi } from '../../../services/api';
 import Badge from '../../../components/Badge';
 import Modal from '../../../components/Modal';
-import { RefreshCw, Check, X, ArrowRight, CheckCircle, MessageCircle } from '../../../components/ui/icons';
+import { RefreshCw, Check, X, ArrowRight, CheckCircle, MessageCircle, Pencil, SendHorizonal } from '../../../components/ui/icons';
 
 function whatsAppReworkUrl(phone: string, panelName: string, projectCode: string, reason: string) {
   const digits = phone.replace(/\D/g, '');
@@ -128,10 +128,11 @@ export default function PendingApprovalsSection() {
       )}
 
       {showRework && (
-        <Modal title="Request Changes" onClose={() => setShowRework(null)}
+        <Modal title="Request Changes" icon={<Pencil />} iconTone="warning" onClose={() => setShowRework(null)}
           footer={<>
             <button onClick={() => setShowRework(null)} className="btn-secondary" type="button">Cancel</button>
             <button onClick={handleRework} disabled={saving} className="btn-danger" type="button">
+              <SendHorizonal size={16} />
               {saving ? 'Sending…' : 'Send Request'}
             </button>
           </>}>
@@ -142,9 +143,12 @@ export default function PendingApprovalsSection() {
             <label className="form-label mb-1">
               Reason (min 5 chars)
             </label>
-            <textarea value={reworkReason} onChange={e => setReworkReason(e.target.value)} rows={3}
-              placeholder="Describe what needs to change before wiring can start…"
-              className="form-textarea" />
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><MessageCircle size={18} /></span>
+              <textarea value={reworkReason} onChange={e => setReworkReason(e.target.value)} rows={3}
+                placeholder="Describe what needs to change before wiring can start…"
+                className="form-textarea" />
+            </div>
             {showRework.technician_whatsapp && (
               <p className="text-[12px] text-slate-500 mt-2 flex items-center gap-1">
                 <MessageCircle size={14} className="text-green-600" />

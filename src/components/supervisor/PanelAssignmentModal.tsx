@@ -25,6 +25,8 @@ import {
   Info,
   Lock,
   Search,
+  Tag,
+  MessageCircle,
   TriangleAlert,
   UserMinus,
   UserPlus,
@@ -494,6 +496,7 @@ export default function PanelAssignmentModal({
     <Modal
       title="Workflow / Panel Assignment"
       subtitle={`${projectName || projectCode} · Production Supervisor controls`}
+      icon={<Users />}
       onClose={onClose}
       size="xl"
       bodyClassName="panel-assignment-modal-body"
@@ -663,23 +666,29 @@ export default function PanelAssignmentModal({
               <div className="pa-changeover-fields">
                 <label>
                   <span>Changeover reason <b>*</b></span>
-                  <select
-                    className="form-select"
-                    value={changeoverReason}
-                    onChange={event => { setChangeoverReason(event.target.value as ChangeoverReason | ''); setError(''); }}
-                  >
-                    <option value="">Select reason…</option>
-                    {CHANGEOVER_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
-                  </select>
+                  <div className="field-with-icon">
+                    <span className="field-lead-icon"><Tag size={18} /></span>
+                    <select
+                      className="form-select"
+                      value={changeoverReason}
+                      onChange={event => { setChangeoverReason(event.target.value as ChangeoverReason | ''); setError(''); }}
+                    >
+                      <option value="">Select reason…</option>
+                      {CHANGEOVER_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                    </select>
+                  </div>
                 </label>
                 <label>
                   <span>Supervisor notes {changeoverReason === 'Other' && <b>*</b>}</span>
-                  <input
-                    className="form-input"
-                    value={changeoverNotes}
-                    onChange={event => { setChangeoverNotes(event.target.value); setError(''); }}
-                    placeholder={changeoverReason === 'Other' ? 'Reason details required' : 'Optional confirmation note'}
-                  />
+                  <div className="field-with-icon">
+                    <span className="field-lead-icon"><MessageCircle size={18} /></span>
+                    <input
+                      className="form-input"
+                      value={changeoverNotes}
+                      onChange={event => { setChangeoverNotes(event.target.value); setError(''); }}
+                      placeholder={changeoverReason === 'Other' ? 'Reason details required' : 'Optional confirmation note'}
+                    />
+                  </div>
                 </label>
               </div>
             )}

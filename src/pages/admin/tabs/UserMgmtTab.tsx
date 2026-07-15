@@ -5,7 +5,7 @@ import Modal from '../../../components/Modal';
 import { InputField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import {
-  Eye, Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog,
+  Eye, Pencil, KeyRound, Lock, Unlock, Trash2, Search, Plus, User, UserCog, UserPlus,
   CheckCircle2, UserX, Phone, Calendar, Hash,
 } from '../../../components/ui/icons';
 import { Input } from '../../../components/ui/Input';

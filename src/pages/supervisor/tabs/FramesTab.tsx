@@ -752,6 +752,7 @@ export function UploadFrameModal({
     <>
     <Modal
       title={modalTitle}
+      icon={<FileSpreadsheet />}
       onClose={handleModalClose}
       size={
         inMappingUpload ? 'fullscreen' : 'lg'
