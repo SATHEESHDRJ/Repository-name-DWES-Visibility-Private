@@ -1201,6 +1201,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         <Modal
           title="New Project"
           size="wide"
+          bodyClassName="pj-create-project-modal-body"
           onClose={closeCreateModal}
           closeOnBackdrop={false}
           closeOnEscape={!saving}

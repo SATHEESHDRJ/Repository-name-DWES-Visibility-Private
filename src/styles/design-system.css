@@ -4934,38 +4934,90 @@
   }
 
   /* New Project modal — compact two-column form */
+  .modal-box-wide:has(.pj-create-project-modal-body) {
+    max-width: min(680px, calc(100vw - 32px));
+    max-height: min(88vh, 760px);
+  }
+  .modal-box-wide:has(.pj-create-project-modal-body) .modal-header {
+    @apply px-5 py-3.5 items-center;
+  }
+  .modal-box-wide:has(.pj-create-project-modal-body) .modal-close-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .modal-box-wide:has(.pj-create-project-modal-body) .modal-footer {
+    @apply px-5 py-3 gap-2;
+  }
+  .modal-box-wide:has(.pj-create-project-modal-body) .modal-footer :is(.btn-primary, .btn-secondary) {
+    min-height: 40px;
+  }
+  .pj-create-project-modal-body {
+    @apply px-5 py-4 gap-0;
+  }
   .pj-create-project-form {
-    @apply flex flex-col gap-5 min-w-0;
+    @apply flex flex-col gap-3 min-w-0;
+  }
+  .pj-create-project-form .form-group {
+    @apply gap-1.5;
+    margin-bottom: 0;
+  }
+  .pj-create-project-form .form-label {
+    @apply text-[11px] leading-4;
+    margin-bottom: 0;
+  }
+  .pj-create-project-form .form-input {
+    @apply h-10 min-h-10 rounded-[10px] px-3 text-[13px];
+  }
+  .pj-create-project-form .form-input.pl-10 {
+    padding-left: 2.25rem;
+  }
+  .pj-create-project-form .form-group .absolute.left-3 {
+    left: 0.625rem;
+  }
+  .pj-create-project-form .form-group .absolute.left-3 svg {
+    width: 16px;
+    height: 16px;
   }
   .pj-create-section {
-    @apply flex flex-col gap-4 min-w-0;
+    @apply flex flex-col gap-3 min-w-0;
   }
   .pj-create-section-title {
-    @apply text-[12px] font-bold uppercase tracking-[0.08em] text-slate-500 m-0;
+    @apply text-[11px] leading-4 font-bold uppercase tracking-[0.08em] text-slate-500 m-0;
   }
   .pj-create-grid-2 {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0;
+    @apply grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 min-w-0;
+  }
+  .pj-create-grid-2--single {
+    @apply items-end;
   }
   .pj-create-extra-panels {
     @apply flex flex-col gap-2.5 pt-1 border-t border-slate-100;
   }
   .pj-create-panels-block {
-    @apply flex flex-col gap-3 pt-1 border-t border-slate-200;
+    @apply flex flex-col gap-2 pt-2 border-t border-slate-200;
+  }
+  .pj-create-project-form .pj-create-panels-block > .flex {
+    @apply gap-2;
+  }
+  .pj-create-project-form .pj-panel-list-empty {
+    @apply px-3 py-4 rounded-[10px] text-[12px] leading-5;
   }
   .pj-panel-draft-card {
     @apply rounded-[12px] border border-slate-200 bg-slate-50/60 p-3.5;
   }
   .pj-create-previews {
-    @apply gap-3 pt-1 border-t border-slate-200;
+    @apply gap-2 pt-2 border-t border-slate-200;
   }
   .pj-create-preview-block {
-    @apply flex flex-col gap-1.5 min-w-0;
+    @apply flex flex-col gap-1 min-w-0;
   }
   .pj-create-preview-label {
     @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400;
   }
   .pj-create-preview-value {
-    @apply w-full px-3.5 py-2.5 rounded-[10px] border border-slate-200 bg-slate-50 text-[13px] text-slate-700 min-h-[44px] flex items-center break-words;
+    @apply w-full px-3 py-2 rounded-[10px] border border-slate-200 bg-slate-50 text-[13px] text-slate-700 min-h-[40px] flex items-center break-words;
   }
   .pj-create-preview-value--ready {
     @apply bg-emerald-50/80 border-emerald-200 text-emerald-900 font-medium leading-snug;
