@@ -6,6 +6,15 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-15 — UI — Global top header: remove Project card, slightly taller bar
+
+User request (`DWES_TOP_HEADER_UPDATE_15_JULY_2026.md`): remove the Project / Active-Project card from the global top header (project selection stays only in the Production Supervisor workspace) and give the header a little more vertical breathing room, keeping the dark design, auth controls, responsiveness, and live clock unchanged.
+
+- **Project pill removed** (`Topbar.tsx`): deleted the `topbar-project-pill` block (icon + "Project" label + value that showed `No Project Available` / `Selection Required` / active code / live-wiring state). Removed its now-unused imports/locals (`FolderKanban`, `useLiveWiringStore`, `liveWiring`, `isTechLive`) and stopped destructuring the pill-only props. The remaining right-hand controls (user card, biometric button, logout, clock) stay flush-right via the existing `.topbar-controls` `justify-end`/`ml-auto` — no gap is left. `TopbarProps` still declares the project props and `AppShell` still passes them (AppShell's project-context reconciliation keeps the selection store clean for the Supervisor workspace); the header just no longer renders them. Project selection remains solely in the Supervisor **Projects** tab.
+- **Noticeably taller header** (`design-system.css`): `.topbar` vertical padding doubled `0.625rem → 1.25rem` (base) and `0.75rem → 1.5rem` (≥1024px); pre-hydration `--dash-topbar-height` fallback bumped `4rem → 5.5rem` / `4.5rem → 6rem` to match (runtime value is still measured by AppShell's ResizeObserver). Height now ~88px tablet / ~100px desktop. Controls remain vertically centered (`items-center`). No color, control, clock, or responsive-breakpoint changes.
+- **Scope:** the header is a single shared component (`AppShell` → `Topbar`, used by every authenticated role via `DashboardShell`), so the change applies uniformly across all role pages. Login page has its own layout and is unaffected.
+- **Verify:** `tsc -b` typecheck clean; `oxlint` clean; live Vite dev server (`:5175`) confirmed serving the updated module (0 `topbar-project-pill` / `No Project Available` occurrences) and the new padding; app loads with no console errors. Visual confirmation of the authenticated header is via an in-app refresh (header renders only when signed in).
+
 ## 2026-07-15 — Data/Cleanup — Complete project-data reset; demo project seeding removed; project delete is now a hard delete
 
 User request (`DWES_COMPLETE_PROJECT_DATA_RESET_15_JULY_2026.md`): permanently delete all existing project data (preserving users, auth, RBAC, settings, schema, and the Fastify migration) and stop demo/legacy seed logic from recreating old projects after restart.

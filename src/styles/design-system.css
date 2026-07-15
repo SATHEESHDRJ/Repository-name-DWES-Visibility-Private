@@ -280,10 +280,10 @@
        width/content (it grows when the row wraps on tablet portrait), so no
        hardcoded number is correct. Layout fill is done with flexbox (below), NOT
        calc(100dvh - this); this var now only positions the mobile drawer. */
-    --dash-topbar-height: 4rem;
+    --dash-topbar-height: 5.5rem;
   }
   @media (min-width: 1024px) {
-    .app-shell { --dash-topbar-height: 4.5rem; }
+    .app-shell { --dash-topbar-height: 6rem; }
   }
   /* Height model: .app-shell is min-height:100dvh flex-column; the sticky topbar
      takes its natural (variable) height in-flow, and .dash-layout fills the rest
@@ -341,12 +341,12 @@
   /* ── Topbar — balanced, flat application header ──
      One row: brand, project, user, actions, clock. Every control sizes off
      --topbar-control-h, so the row keeps equal control heights at every width.
-     Height lands between the old floating-card bar and a cramped one:
-     ~64px on tablet, ~72px from laptop up. */
+     Height lands between the old floating-card bar and a spacious one:
+     ~88px on tablet, ~100px from laptop up. */
   .topbar {
     @apply relative sticky top-0 z-50 shrink-0 min-w-0;
     --topbar-control-h: 44px;
-    padding: 0.625rem 1.125rem;
+    padding: 1.25rem 1.125rem;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%);
     border-bottom: 1px solid rgba(56, 189, 248, 0.12);
     backdrop-filter: blur(20px) saturate(180%);
@@ -356,7 +356,7 @@
       0 2px 10px rgba(2, 6, 23, 0.24);
   }
   @media (min-width: 1024px) {
-    .topbar { --topbar-control-h: 46px; padding: 0.75rem 1.5rem; }
+    .topbar { --topbar-control-h: 46px; padding: 1.5rem 1.5rem; }
   }
   .topbar::before {
     content: '';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Fingerprint, FolderKanban, LogOut, Menu, X } from '../ui/icons';
+import { Fingerprint, LogOut, Menu, X } from '../ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import Avatar from './Avatar';
@@ -9,7 +9,6 @@ import { useBiometricAvailable } from '../../hooks/useBiometric';
 import { adminApi } from '../../services/api';
 import MyProfileModal from '../profile/MyProfileModal';
 import type { ActiveProjectContext } from '../../store/useProjectSelectionStore';
-import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 
 const ROLE_LABELS: Record<string, string> = {
   system_admin:      'System Admin',
@@ -45,15 +44,9 @@ export default function Topbar({
   onTabChange,
   onMenuClick,
   showMenuButton = false,
-  activeProject = null,
-  projectSelectionRequired = false,
-  projectContextLoading = false,
-  noProjectAvailable = false,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const liveWiring = useLiveWiringStore();
-  const isTechLive = user?.role === 'wiring_technician' && liveWiring.live;
   const [clock, setClock] = useState(new Date());
   const [showBioPanel, setShowBioPanel] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -139,37 +132,6 @@ export default function Topbar({
         )}
 
         <div className="topbar-controls">
-          <div
-            className={`topbar-project-pill topbar-float topbar-float--light${projectSelectionRequired ? ' topbar-project-pill--required' : ''}${isTechLive ? ' topbar-project-pill--live' : ''}`}
-            aria-live="polite"
-            title={isTechLive
-              ? `Wiring in progress — ${liveWiring.projectName || liveWiring.projectCode || ''}`
-              : projectSelectionRequired
-                ? 'Project selection required before using the application'
-                : `Active Project: ${activeProject?.code ?? ''}`}
-          >
-            <div className="topbar-project-icon" aria-hidden="true">
-              <FolderKanban size={16} strokeWidth={1.75} />
-            </div>
-            <div className="topbar-project-meta min-w-0">
-              <span className="topbar-project-label">Project</span>
-              <span className="topbar-project-value">
-                {isTechLive
-                  ? (liveWiring.projectName || liveWiring.projectCode || 'In progress')
-                  : projectContextLoading
-                    ? 'Loading…'
-                  : projectSelectionRequired
-                    ? 'Selection Required'
-                    : noProjectAvailable
-                      ? 'No Project Available'
-                      : (activeProject?.code ?? 'Unassigned')}
-              </span>
-            </div>
-            {isTechLive && (
-              <span className="topbar-live-dot" aria-label="Wiring in progress" />
-            )}
-          </div>
-
           {user?.role === 'system_admin' && deployMode && (
             <span className={`topbar-env topbar-float-pill${deployMode === 'cloud' ? ' topbar-env--cloud' : ''}`}>
               {deployMode === 'cloud' ? 'Cloud Hosted' : 'Local Intranet'}
