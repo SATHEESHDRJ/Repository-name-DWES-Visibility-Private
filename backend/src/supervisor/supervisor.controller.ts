@@ -75,6 +75,11 @@ export class SupervisorController {
     return this.svc.frameProgress(code, frameId);
   }
 
+  @Get('panel-activity/:code/:frameId')
+  panelActivity(@Param('code') code: string, @Param('frameId') frameId: string) {
+    return this.svc.panelActivity(code, frameId);
+  }
+
   @Get('wiring-schedule/:code/:frameId/xlsx')
   async wiringScheduleXlsx(
     @Param('code') code: string,

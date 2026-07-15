@@ -129,6 +129,214 @@ export class SupervisorService {
     return { assignments: result, frameId, projectCode, polled_at: new Date().toISOString() };
   }
 
+  /**
+   * Compact, database-backed activity summary for the supervisor Project Information card.
+   * Historical handover rows remain immutable; the latest unlocked row represents the
+   * current technician while contribution counts are calculated from cable snapshots.
+   */
+  async panelActivity(projectCode: string, frameId: string) {
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    });
+    const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
+      ?? FrameStore.getFrameFromDisk(projectCode, frameId);
+    const frameTotal = frame?.cable_count || 0;
+
+    if (assignments.length === 0) {
+      return {
+        project_code: projectCode,
+        frame_id: frameId,
+        panel_name: frame?.panel_name || frameId,
+        assigned: false,
+        status: 'not_assigned',
+        status_label: 'Not Assigned',
+        work_state_label: 'Not Started',
+        technician: null,
+        assigned_at: null,
+        wiring_started_at: null,
+        last_activity_at: null,
+        completed_at: null,
+        completed_by: null,
+        has_started: false,
+        is_completed: false,
+        cables_total: frameTotal,
+        cables_completed: 0,
+        cables_remaining: frameTotal,
+        completion_percentage: 0,
+        mid_change: null,
+      };
+    }
+
+    const technicianIds = [...new Set(assignments.map(assignment => assignment.technician_id))];
+    const [technicians, auditRows, sessionRows] = await Promise.all([
+      this.prisma.users.findMany({ where: { id: { in: technicianIds } } }),
+      this.prisma.tech_audit_log.findMany({
+        where: { project_code: projectCode, frame_id: frameId },
+        orderBy: { created_at: 'asc' },
+      }),
+      this.prisma.session_log.findMany({
+        where: { user_id: { in: technicianIds } },
+        orderBy: { created_at: 'asc' },
+      }),
+    ]);
+    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+    const assignmentMap = new Map(assignments.map(assignment => [assignment.id, assignment]));
+    const current = [...assignments].reverse().find(assignment => (
+      !assignment.is_hidden && !assignment.changeover_locked
+    )) ?? assignments[assignments.length - 1];
+    const currentTechnician = technicianMap.get(current.technician_id);
+    const currentStatus = parseCS(current.cable_status);
+    const cablesTotal = current.cables_total || frameTotal;
+    const cablesCompleted = Object.values(currentStatus).filter(state => Boolean(state?.src && state?.dst)).length;
+    const cablesRemaining = Math.max(0, cablesTotal - cablesCompleted);
+    const completionPercentage = assignedCableKpiPercent(cablesCompleted, cablesTotal);
+
+    const currentAssignedAtMs = current.assigned_at?.getTime() || 0;
+    const currentAuditRows = auditRows.filter(row => (
+      row.technician_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const currentSessionRows = sessionRows.filter(row => (
+      row.user_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const latestSession = currentSessionRows[currentSessionRows.length - 1] ?? null;
+    const latestAudit = currentAuditRows[currentAuditRows.length - 1] ?? null;
+    const latestTimestamp = [
+      current.assigned_at,
+      current.started_at,
+      current.paused_at,
+      current.completed_at,
+      latestAudit?.created_at,
+      latestSession?.created_at,
+    ].filter((value): value is Date => value instanceof Date)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+    const pauseReason = (current.pause_reason || '').trim();
+    const normalizedPauseReason = pauseReason.toLowerCase();
+    let status = current.status || 'assigned';
+    let statusLabel = 'Not Started';
+    if (status === 'completed') {
+      status = 'completed';
+      statusLabel = 'Completed';
+    } else if (status === 'paused' && normalizedPauseReason.includes('lunch')) {
+      status = 'lunch_break';
+      statusLabel = 'On Lunch Break';
+    } else if (status === 'paused' && normalizedPauseReason.includes('tea')) {
+      status = 'tea_break';
+      statusLabel = 'On Tea Break';
+    } else if (status === 'paused') {
+      statusLabel = 'Paused';
+    } else if (status === 'in_progress' && latestSession?.action === 'logout') {
+      status = 'logged_out';
+      statusLabel = 'Logged Out';
+    } else if (status === 'in_progress') {
+      statusLabel = 'Working';
+    } else if (status === 'assigned') {
+      statusLabel = 'Not Started';
+    } else {
+      statusLabel = status.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    const contributions = assignments.map(segment => {
+      const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
+      const before = parseCS(baseline?.cable_status);
+      const after = parseCS(segment.cable_status);
+      const segmentCompleted = Object.keys(after).filter(index => (
+        after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
+      )).length;
+      const segmentHasWork = Object.keys(after).some(index => (
+        (after[index]?.src && !before[index]?.src) || (after[index]?.dst && !before[index]?.dst)
+      ));
+      const technician = technicianMap.get(segment.technician_id);
+      return {
+        assignment_id: segment.id,
+        technician_id: segment.technician_id,
+        technician_name: technician?.full_name || technician?.username || `Technician #${segment.technician_id}`,
+        technician_username: technician?.username || '',
+        cables_completed: segmentCompleted,
+        has_recorded_work: segmentHasWork,
+        assigned_at: segment.assigned_at,
+        started_at: segment.started_at,
+        ended_at: segment.completed_at || (segment.changeover_locked ? segment.paused_at : null),
+      };
+    });
+
+    const currentContribution = contributions.find(item => item.assignment_id === current.id);
+    const previous = current.handover_from_id
+      ? assignmentMap.get(current.handover_from_id)
+      : assignments.length > 1 ? assignments[assignments.length - 2] : null;
+    const previousContribution = previous
+      ? contributions.find(item => item.assignment_id === previous.id)
+      : null;
+    const midChangeAudit = [...auditRows].reverse().find(row => (
+      ['mid_changeover', 'mid_change_confirmed', 'mid_change_swap'].includes(row.action)
+    ));
+    const incomingStartAudit = currentAuditRows.find(row => ['start', 'resume'].includes(row.action));
+    const incomingStarted = Boolean(
+      currentContribution
+      && (currentContribution.has_recorded_work || incomingStartAudit || current.status === 'completed')
+    );
+    const previousTechnician = previous ? technicianMap.get(previous.technician_id) : null;
+
+    const completedAssignment = [...assignments].reverse().find(assignment => (
+      assignment.status === 'completed' || assignment.completed_at
+    ));
+    const completedTechnician = completedAssignment
+      ? technicianMap.get(completedAssignment.technician_id)
+      : null;
+    const firstStartedAt = assignments.find(assignment => assignment.started_at)?.started_at ?? null;
+
+    return {
+      project_code: projectCode,
+      frame_id: frameId,
+      panel_name: frame?.panel_name || current.panel_name || frameId,
+      assigned: true,
+      status,
+      status_label: statusLabel,
+      work_state_label: statusLabel,
+      pause_reason: pauseReason || null,
+      technician: {
+        id: current.technician_id,
+        name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+        username: currentTechnician?.username || '',
+      },
+      assigned_at: current.assigned_at,
+      wiring_started_at: firstStartedAt,
+      last_activity_at: latestTimestamp,
+      completed_at: completedAssignment?.completed_at || null,
+      completed_by: completedAssignment ? {
+        id: completedAssignment.technician_id,
+        name: completedTechnician?.full_name || completedTechnician?.username || `Technician #${completedAssignment.technician_id}`,
+        username: completedTechnician?.username || '',
+      } : null,
+      has_started: Boolean(firstStartedAt || cablesCompleted > 0),
+      is_completed: status === 'completed',
+      cables_total: cablesTotal,
+      cables_completed: cablesCompleted,
+      cables_remaining: cablesRemaining,
+      completion_percentage: completionPercentage,
+      mid_change: previous && current.technician_id !== previous.technician_id ? {
+        occurred: true,
+        changed_at: midChangeAudit?.created_at || current.assigned_at,
+        original_technician: {
+          id: previous.technician_id,
+          name: previousTechnician?.full_name || previousTechnician?.username || `Technician #${previous.technician_id}`,
+          username: previousTechnician?.username || '',
+          cables_completed: previousContribution?.cables_completed || 0,
+        },
+        incoming_technician: {
+          id: current.technician_id,
+          name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+          username: currentTechnician?.username || '',
+          cables_completed: currentContribution?.cables_completed || 0,
+        },
+        incoming_started: incomingStarted,
+      } : null,
+    };
+  }
+
   async review(id: number, reviewStatus: string, reviewNotes: string, reviewerId: number) {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id } });
     if (!a) throw new NotFoundException(`Assignment ${id} not found`);

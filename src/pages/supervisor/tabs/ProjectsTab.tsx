@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { projectsApi } from '../../../services/api';
+import { projectsApi, supervisorApi } from '../../../services/api';
 import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
 import type { Project, ProjectState } from '../../../types';
 import Modal from '../../../components/Modal';
@@ -7,7 +7,7 @@ import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronRight, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
@@ -42,6 +42,7 @@ import { useProjectSelectionStore } from '../../../store/useProjectSelectionStor
 import { useAuthStore } from '../../../store/useAuthStore';
 import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
 import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { onWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 
 export interface ProjectsTabProps {
   onOpenTechnicianWorkflow?: (opts: {
@@ -75,6 +76,44 @@ interface PanelDraft {
   panelType: string;
   voltageLevel: string;
   systemType: string;
+}
+
+interface PanelActivityTechnician {
+  id: number;
+  name: string;
+  username: string;
+}
+
+interface PanelMidChangeActivity {
+  occurred: boolean;
+  changed_at: string | null;
+  original_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_started: boolean;
+}
+
+interface PanelActivityData {
+  project_code: string;
+  frame_id: string;
+  panel_name: string;
+  assigned: boolean;
+  status: string;
+  status_label: string;
+  work_state_label: string;
+  pause_reason?: string | null;
+  technician: PanelActivityTechnician | null;
+  assigned_at: string | null;
+  wiring_started_at: string | null;
+  last_activity_at: string | null;
+  completed_at: string | null;
+  completed_by: PanelActivityTechnician | null;
+  has_started: boolean;
+  is_completed: boolean;
+  cables_total: number;
+  cables_completed: number;
+  cables_remaining: number;
+  completion_percentage: number;
+  mid_change: PanelMidChangeActivity | null;
 }
 
 function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
@@ -124,6 +163,19 @@ function panelDraftToApiPayload(p: PanelDraft) {
   };
 }
 
+function formatActivityDateTime(value?: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabProps = {}) {
   const dialog = useAppDialog();
   const perms = usePermissions();
@@ -144,13 +196,15 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [selectedPanelId, setSelectedPanelId] = useState('');
   const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
   const [loadingPanels, setLoadingPanels] = useState(false);
+  const [panelActivity, setPanelActivity] = useState<PanelActivityData | null>(null);
+  const [panelActivityLoading, setPanelActivityLoading] = useState(false);
+  const [panelActivityError, setPanelActivityError] = useState('');
   const [showWiringUpload, setShowWiringUpload] = useState(false);
   const [wiringUploadReplacing, setWiringUploadReplacing] = useState(false);
   const [showWiringView, setShowWiringView] = useState(false);
   const [showGaDrawingView, setShowGaDrawingView] = useState(false);
   const [confirmReupload, setConfirmReupload] = useState(false);
-  const [editMenuOpen, setEditMenuOpen] = useState(false);
-  const editMenuRef = useRef<HTMLDivElement>(null);
+  const [showManagement, setShowManagement] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [showTeam, setShowTeam] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -169,6 +223,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [numberingCheck, setNumberingCheck] = useState<{ code: string; available: boolean; reason?: string } | null>(null);
   const projectRequests = useLatestRequest();
   const panelRequests = useLatestRequest();
+  const activityRequests = useLatestRequest();
   const numberingRequests = useLatestRequest();
 
   const resetCreateForm = useCallback(() => {
@@ -240,29 +295,58 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       });
   }, [panelRequests]);
 
+  const reloadPanelActivity = useCallback((projectCode: string, frameId: string, options?: { silent?: boolean }) => {
+    const request = activityRequests.begin();
+    if (!options?.silent) setPanelActivityLoading(true);
+    setPanelActivityError('');
+    return supervisorApi.panelActivity(projectCode, frameId, request.signal)
+      .then(data => {
+        if (!activityRequests.isLatest(request.id)) return;
+        setPanelActivity(data as PanelActivityData);
+      })
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !activityRequests.isLatest(request.id)) return;
+        setPanelActivity(null);
+        setPanelActivityError('Technician activity could not be loaded.');
+      })
+      .finally(() => {
+        if (activityRequests.isLatest(request.id)) setPanelActivityLoading(false);
+      });
+  }, [activityRequests]);
+
   useEffect(() => { void load(); }, [load]);
   useDwesRefresh(load);
 
-
   useEffect(() => {
-    if (!editMenuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (editMenuRef.current && !editMenuRef.current.contains(e.target as Node)) {
-        setEditMenuOpen(false);
-      }
-    };
-    const onEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setEditMenuOpen(false); };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', onEscape);
+    if (!selectedProject?.code || !selectedPanelId) {
+      activityRequests.cancel();
+      setPanelActivity(null);
+      setPanelActivityLoading(false);
+      setPanelActivityError('');
+      return;
+    }
+    const projectCode = selectedProject.code;
+    const frameId = selectedPanelId;
+    void reloadPanelActivity(projectCode, frameId);
+    const refreshTimer = window.setInterval(() => {
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    }, 12_000);
+    const unsubscribe = onWorkflowChanged(detail => {
+      if (detail.projectCode && detail.projectCode !== projectCode) return;
+      if (detail.frameId && detail.frameId !== frameId) return;
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    });
     return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', onEscape);
+      window.clearInterval(refreshTimer);
+      unsubscribe();
+      activityRequests.cancel();
     };
-  }, [editMenuOpen]);
+  }, [activityRequests, reloadPanelActivity, selectedPanelId, selectedProject?.code]);
+
 
   useEffect(() => {
     setDuplicateBannerDismissed(false);
-    setEditMenuOpen(false);
+    setShowManagement(false);
   }, [selectedProject?.code, selectedPanelId]);
 
   useEffect(() => onFramesChanged((detail) => {
@@ -890,88 +974,19 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                     <span>Drawing View</span>
                   </button>
 
-                  <div className="pj-info-action-menu" ref={editMenuRef}>
-                    <button
-                      type="button"
-                      className="pj-info-action pj-info-action--edit"
-                      onClick={() => setEditMenuOpen(open => !open)}
-                      disabled={deleting || deletingPanelId !== null}
-                      aria-expanded={editMenuOpen}
-                      aria-haspopup="menu"
-                      title="Edit project and panels, or delete this project"
-                    >
-                      {(deleting || deletingPanelId !== null)
-                        ? <span className="btn-spinner" aria-hidden />
-                        : <Pencil size={16} strokeWidth={1.75} aria-hidden />}
-                      <span>Edit</span>
-                      <ChevronDown
-                        size={14}
-                        strokeWidth={2}
-                        aria-hidden
-                        className={`pj-info-action-caret${editMenuOpen ? ' is-open' : ''}`}
-                      />
-                    </button>
-
-                    {editMenuOpen && (
-                      <div className="pj-toolbar-dropdown pj-edit-menu" role="menu" aria-label="Project management">
-                        <span className="pj-edit-menu-label">Project</span>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="pj-toolbar-dropdown-item"
-                          onClick={() => { setEditMenuOpen(false); setShowEdit(selectedProject); }}
-                        >
-                          <span className="pj-edit-menu-ico"><FolderKanban size={16} strokeWidth={1.75} aria-hidden /></span>
-                          <span>Edit project information</span>
-                        </button>
-
-                        <span className="pj-edit-menu-label">Panel</span>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="pj-toolbar-dropdown-item"
-                          disabled={!selectedPanel}
-                          onClick={() => {
-                            if (!selectedPanel) return;
-                            setEditMenuOpen(false);
-                            setShowEditPanel(selectedPanel);
-                          }}
-                          title={selectedPanel ? undefined : 'Select a panel first'}
-                        >
-                          <span className="pj-edit-menu-ico"><LayoutGrid size={16} strokeWidth={1.75} aria-hidden /></span>
-                          <span>Edit panel information</span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="pj-toolbar-dropdown-item pj-toolbar-dropdown-item--danger"
-                          disabled={!selectedPanel || deletingPanelId !== null}
-                          onClick={() => {
-                            if (!selectedPanel) return;
-                            setEditMenuOpen(false);
-                            handleDeletePanel(selectedPanel);
-                          }}
-                          title={selectedPanel ? 'Remove this panel' : 'Select a panel first'}
-                        >
-                          <span className="pj-edit-menu-ico pj-edit-menu-ico--danger"><Trash2 size={16} strokeWidth={1.75} aria-hidden /></span>
-                          <span>Remove panel</span>
-                        </button>
-
-                        <div className="pj-edit-menu-divider" aria-hidden />
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="pj-toolbar-dropdown-item pj-toolbar-dropdown-item--danger"
-                          disabled={deleting}
-                          onClick={() => { setEditMenuOpen(false); handleDelete(selectedProject); }}
-                          title="Permanently delete this project and all of its data"
-                        >
-                          <span className="pj-edit-menu-ico pj-edit-menu-ico--danger"><Trash2 size={16} strokeWidth={1.75} aria-hidden /></span>
-                          <span>Delete Project Permanently</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    className="pj-info-action pj-info-action--edit"
+                    onClick={() => setShowManagement(true)}
+                    disabled={deleting || deletingPanelId !== null}
+                    aria-haspopup="dialog"
+                    title="Manage project and panel information"
+                  >
+                    {(deleting || deletingPanelId !== null)
+                      ? <span className="btn-spinner" aria-hidden />
+                      : <Pencil size={16} strokeWidth={1.75} aria-hidden />}
+                    <span>Edit</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1066,6 +1081,14 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                 </p>
               </div>
             </div>
+          )}
+
+          {selectedPanel && (
+            <PanelTechnicianActivity
+              activity={panelActivity}
+              loading={panelActivityLoading}
+              error={panelActivityError}
+            />
           )}
 
           {selectedPanel && perms.canManageProjects && (
@@ -1413,6 +1436,98 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         />
       )}
 
+      {showManagement && selectedProject && (
+        <Modal
+          title="Project & Panel Management"
+          subtitle={`${projectDetails?.substationName ?? selectedProject.name} · ${selectedPanel?.panel_name ?? 'No panel selected'}`}
+          icon={<Pencil />}
+          size="sm"
+          bodyClassName="pj-management-modal-body"
+          onClose={() => setShowManagement(false)}
+        >
+          <div className="pj-management-actions" aria-label="Project and panel management actions">
+            <section className="pj-management-section" aria-labelledby="pj-management-project-heading">
+              <h3 id="pj-management-project-heading" className="pj-management-section-title">Project</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                onClick={() => {
+                  setShowManagement(false);
+                  setShowEdit(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><FolderKanban size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Project Information</strong>
+                  <small>Update the project name, state, or description.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section" aria-labelledby="pj-management-panel-heading">
+              <h3 id="pj-management-panel-heading" className="pj-management-section-title">Panel</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                disabled={!selectedPanel}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  setShowEditPanel(selectedPanel);
+                }}
+                title={selectedPanel ? undefined : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Panel Information</strong>
+                  <small>{selectedPanel ? `Update ${selectedPanel.panel_name} details.` : 'Select a panel to enable this action.'}</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={!selectedPanel || deletingPanelId !== null}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  handleDeletePanel(selectedPanel);
+                }}
+                title={selectedPanel ? 'Remove this panel' : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Remove Panel</strong>
+                  <small>Remove the selected panel after safety confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section pj-management-section--danger" aria-labelledby="pj-management-danger-heading">
+              <h3 id="pj-management-danger-heading" className="pj-management-section-title">Danger zone</h3>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={deleting}
+                onClick={() => {
+                  setShowManagement(false);
+                  handleDelete(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Delete Project Permanently</strong>
+                  <small>Delete this project and its associated data after confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+          </div>
+        </Modal>
+      )}
+
       {showEdit && <EditProjectModal project={showEdit} onClose={() => setShowEdit(null)} onSaved={handleEditSaved} />}
       {showAddPanel && selectedProject && (
         <AddPanelModal
@@ -1507,6 +1622,145 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         </Modal>
       )}
     </div>
+  );
+}
+
+function PanelTechnicianActivity({
+  activity,
+  loading,
+  error,
+}: {
+  activity: PanelActivityData | null;
+  loading: boolean;
+  error: string;
+}) {
+  if (loading && !activity) {
+    return (
+      <section className="pj-tech-activity pj-tech-activity--loading" aria-label="Technician activity" aria-busy="true">
+        <div className="pj-tech-activity-skeleton is-wide" />
+        <div className="pj-tech-activity-skeleton" />
+        <div className="pj-tech-activity-skeleton" />
+      </section>
+    );
+  }
+
+  if (error && !activity) {
+    return (
+      <section className="pj-tech-activity pj-tech-activity--error" aria-label="Technician activity">
+        <TriangleAlert size={16} aria-hidden />
+        <span>{error}</span>
+      </section>
+    );
+  }
+
+  if (!activity) return null;
+
+  const technicianName = activity.technician?.name || 'Not Assigned';
+  const technicianUsername = activity.technician?.username ? `@${activity.technician.username}` : '';
+  const progress = Math.min(100, Math.max(0, activity.completion_percentage || 0));
+
+  return (
+    <section className="pj-tech-activity" aria-labelledby="pj-tech-activity-title">
+      <div className="pj-tech-activity-header">
+        <div className="pj-tech-activity-heading">
+          <span className="pj-tech-activity-icon" aria-hidden><UserCog size={18} strokeWidth={1.75} /></span>
+          <div>
+            <h4 id="pj-tech-activity-title">Technician activity</h4>
+            <p>Live assignment and wiring progress from the selected panel.</p>
+          </div>
+        </div>
+        <div className="pj-tech-activity-badges">
+          <span className="pj-tech-status-badge" data-status={activity.status}>{activity.status_label}</span>
+          <span className="pj-tech-start-badge" data-complete={activity.is_completed || undefined}>
+            {activity.is_completed ? 'Panel Completed' : activity.has_started ? 'Panel Started' : 'Not Started'}
+          </span>
+        </div>
+      </div>
+
+      <div className="pj-tech-activity-grid">
+        <div className="pj-tech-activity-person">
+          <span className="pj-tech-activity-label">Assigned technician</span>
+          <strong title={technicianName}>{technicianName}</strong>
+          {technicianUsername && <small title={technicianUsername}>{technicianUsername}</small>}
+        </div>
+        <div className="pj-tech-activity-stat">
+          <span className="pj-tech-activity-label">Assigned</span>
+          <strong>{formatActivityDateTime(activity.assigned_at)}</strong>
+        </div>
+        <div className="pj-tech-activity-stat">
+          <span className="pj-tech-activity-label">Wiring started</span>
+          <strong>{activity.has_started ? formatActivityDateTime(activity.wiring_started_at) : 'Not Started'}</strong>
+        </div>
+        <div className="pj-tech-activity-stat">
+          <span className="pj-tech-activity-label">Last activity</span>
+          <strong>{formatActivityDateTime(activity.last_activity_at)}</strong>
+        </div>
+      </div>
+
+      {activity.pause_reason && ['paused', 'lunch_break', 'tea_break'].includes(activity.status) && (
+        <p className="pj-tech-pause-reason"><strong>Pause reason:</strong> {activity.pause_reason}</p>
+      )}
+
+      <div className="pj-tech-progress">
+        <div className="pj-tech-progress-header">
+          <span>Wiring completion</span>
+          <strong>{progress}%</strong>
+        </div>
+        <div
+          className="pj-tech-progress-track"
+          role="progressbar"
+          aria-label="Panel wiring completion"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+        >
+          <span style={{ width: `${progress}%` }} />
+        </div>
+        <div className="pj-tech-progress-counts">
+          <span><strong>{activity.cables_completed}</strong> completed</span>
+          <span><strong>{activity.cables_remaining}</strong> remaining</span>
+          <span><strong>{activity.cables_total}</strong> total</span>
+        </div>
+      </div>
+
+      {activity.is_completed && (
+        <div className="pj-tech-completed-by">
+          <span className="pj-tech-activity-label">Completed by</span>
+          <strong>{activity.completed_by?.name || technicianName}</strong>
+          {activity.completed_by?.username && <small>@{activity.completed_by.username}</small>}
+          <time>{formatActivityDateTime(activity.completed_at)}</time>
+        </div>
+      )}
+
+      {activity.mid_change?.occurred && (
+        <div className="pj-mid-change">
+          <div className="pj-mid-change-header">
+            <div>
+              <h5>Mid Change</h5>
+              <p>{formatActivityDateTime(activity.mid_change.changed_at)}</p>
+            </div>
+            <span className="pj-mid-change-state" data-started={activity.mid_change.incoming_started || undefined}>
+              {activity.mid_change.incoming_started ? 'Incoming Started' : 'Incoming Not Started'}
+            </span>
+          </div>
+          <div className="pj-mid-change-flow">
+            <div className="pj-mid-change-tech">
+              <span>Original technician</span>
+              <strong>{activity.mid_change.original_technician.name}</strong>
+              {activity.mid_change.original_technician.username && <small>@{activity.mid_change.original_technician.username}</small>}
+              <b>{activity.mid_change.original_technician.cables_completed} cables completed</b>
+            </div>
+            <ChevronRight className="pj-mid-change-arrow" size={19} strokeWidth={2} aria-hidden />
+            <div className="pj-mid-change-tech is-incoming">
+              <span>Incoming technician</span>
+              <strong>{activity.mid_change.incoming_technician.name}</strong>
+              {activity.mid_change.incoming_technician.username && <small>@{activity.mid_change.incoming_technician.username}</small>}
+              <b>{activity.mid_change.incoming_technician.cables_completed} cables completed</b>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

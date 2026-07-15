@@ -440,6 +440,12 @@ export const supervisorApi = {
   frameProgress: (projectCode: string, frameId: string) =>
     api.get(`/supervisor/frame-progress/${projectCode}/${frameId}`).then(r => r.data),
 
+  panelActivity: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(
+      `/supervisor/panel-activity/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { signal },
+    ).then(r => r.data),
+
   completionReport: (id: number) =>
     api.get(`/supervisor/completion-report/${id}`).then(r => r.data),
 

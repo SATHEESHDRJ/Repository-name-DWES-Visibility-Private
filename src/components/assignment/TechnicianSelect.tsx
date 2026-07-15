@@ -17,6 +17,8 @@ interface TechnicianSelectProps {
   onChange: (id: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /** Render the complete list in-place so only its rows scroll inside a modal. */
+  inlineList?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export default function TechnicianSelect({
   onChange,
   disabled = false,
   placeholder = 'Select an available technician…',
+  inlineList = false,
 }: TechnicianSelectProps) {
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -116,6 +119,57 @@ export default function TechnicianSelect({
     if (event.key === 'Tab') close();
   };
 
+  const optionList = (
+    <div
+      className={`tech-select-menu${inlineList ? ' is-inline' : ''}`}
+      ref={menuRef}
+      role="listbox"
+      aria-label="Technicians"
+    >
+      {sorted.length === 0 ? (
+        <div className="tech-select-empty">No technicians found.</div>
+      ) : sorted.map(option => {
+        const isSelected = String(option.id) === value;
+        const isActive = option.id === activeId;
+        const optionDisabled = disabled || option.assigned;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="option"
+            aria-selected={isSelected}
+            aria-disabled={optionDisabled || undefined}
+            disabled={optionDisabled}
+            className={
+              `tech-select-option${option.assigned ? ' is-disabled' : ''}`
+              + `${isActive ? ' is-active' : ''}${isSelected ? ' is-selected' : ''}`
+            }
+            onMouseEnter={() => { if (!optionDisabled) setActiveId(option.id); }}
+            onClick={() => { if (!optionDisabled) { onChange(String(option.id)); close(); } }}
+            tabIndex={inlineList && !optionDisabled ? 0 : -1}
+          >
+            <span className="tech-select-copy">
+              <strong title={option.name}>{option.name}</strong>
+              {option.username && <small title={`@${option.username}`}>@{option.username}</small>}
+            </span>
+            <span className={`tech-select-status ${option.assigned ? 'is-assigned' : 'is-available'}`}>
+              <span className="tech-select-dot" aria-hidden="true" />
+              {option.assigned ? 'Assigned' : 'Available'}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (inlineList) {
+    return (
+      <div className="tech-select tech-select--inline" ref={rootRef}>
+        {optionList}
+      </div>
+    );
+  }
+
   return (
     <div className="tech-select" ref={rootRef} onKeyDown={handleKeyDown}>
       <button
@@ -144,41 +198,7 @@ export default function TechnicianSelect({
         <ChevronDown size={16} className={`tech-select-chevron${open ? ' is-open' : ''}`} aria-hidden="true" />
       </button>
 
-      {open && (
-        <div className="tech-select-menu" ref={menuRef} role="listbox" aria-label="Technicians">
-          {sorted.length === 0 ? (
-            <div className="tech-select-empty">No technicians found.</div>
-          ) : sorted.map(option => {
-            const isSelected = String(option.id) === value;
-            const isActive = option.id === activeId;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                aria-disabled={option.assigned || undefined}
-                className={
-                  `tech-select-option${option.assigned ? ' is-disabled' : ''}`
-                  + `${isActive ? ' is-active' : ''}${isSelected ? ' is-selected' : ''}`
-                }
-                onMouseEnter={() => { if (!option.assigned) setActiveId(option.id); }}
-                onClick={() => { if (!option.assigned) { onChange(String(option.id)); close(); } }}
-                tabIndex={-1}
-              >
-                <span className="tech-select-copy">
-                  <strong title={option.name}>{option.name}</strong>
-                  {option.username && <small title={`@${option.username}`}>@{option.username}</small>}
-                </span>
-                <span className={`tech-select-status ${option.assigned ? 'is-assigned' : 'is-available'}`}>
-                  <span className="tech-select-dot" aria-hidden="true" />
-                  {option.assigned ? 'Assigned' : 'Available'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {open && optionList}
     </div>
   );
 }

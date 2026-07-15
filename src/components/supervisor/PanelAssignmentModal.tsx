@@ -79,6 +79,10 @@ export default function PanelAssignmentModal({
   ));
   const assignedTechnicianIds = new Set(activeAssignments.map(assignment => assignment.technician_id));
   const selectedTechnician = technicians.find(technician => String(technician.id) === selectedTechnicianId);
+  const availableTechnicianCount = technicians.filter(technician => (
+    !assignedTechnicianIds.has(technician.id) && technician.availability_status !== 'ASSIGNED'
+  )).length;
+  const assignedTechnicianCount = technicians.length - availableTechnicianCount;
   const resolvedPanelName = panel?.panel_name || panelName || panelId;
   const resolvedCableCount = Number(panel?.cable_count ?? cableCount ?? 0);
   const scheduleReady = resolvedCableCount > 0;
@@ -115,7 +119,8 @@ export default function PanelAssignmentModal({
       subtitle={`${projectName || projectCode} · ${resolvedPanelName}`}
       icon={<UserPlus />}
       onClose={onClose}
-      size="form"
+      size="lg"
+      bodyClassName="assign-technician-modal-body"
       closeOnBackdrop={!saving}
       closeOnEscape={!saving}
       footer={assignedName ? (
@@ -135,45 +140,52 @@ export default function PanelAssignmentModal({
         </>
       )}
     >
-      <div className="space-y-3">
-        <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3" aria-label="Selected project and panel">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Project Name</span>
-              <strong className="mt-0.5 block whitespace-normal break-words text-[13px] leading-5 text-slate-900" title={projectName || projectCode}>
+      <div className="assign-technician-shell">
+        <section className="assign-technician-context" aria-label="Selected project and panel">
+          <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Project Name</span>
+              <strong className="assign-technician-context-value" title={projectName || projectCode}>
                 {projectName || projectCode}
               </strong>
-              <span className="block whitespace-normal break-all text-[11px] text-slate-500" title={projectCode}>{projectCode}</span>
-            </div>
-            <div className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Panel Name</span>
-              <strong className="mt-0.5 block whitespace-normal break-words text-[13px] leading-5 text-slate-900" title={resolvedPanelName}>
+              <span className="assign-technician-context-meta" title={projectCode}>{projectCode}</span>
+          </div>
+          <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Panel Name</span>
+              <strong className="assign-technician-context-value" title={resolvedPanelName}>
                 {resolvedPanelName}
               </strong>
-              <span className="block text-[11px] text-slate-500">{resolvedCableCount} assigned cables</span>
-            </div>
+              <span className="assign-technician-context-meta">{resolvedCableCount} assigned cables</span>
           </div>
         </section>
 
-        {loading && <p className="text-[12px] text-slate-500">Loading technician availability…</p>}
+        {loading && <p className="assign-technician-loading">Loading technician availability…</p>}
 
         {!loading && panelAssignment && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-5 text-amber-800">
+          <div className="assign-technician-notice" role="status">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
             <span>This panel already has an active technician assignment. Mid Change is available only from the Technician Dashboard.</span>
           </div>
         )}
 
         {!loading && !scheduleReady && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-5 text-amber-800">
+          <div className="assign-technician-notice" role="status">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
             <span>Upload the panel wiring schedule before assigning a technician.</span>
           </div>
         )}
 
         {!assignedName && (
-          <div>
-            <span className="form-label mb-1 block">Technician</span>
+          <section className="assign-technician-picker" aria-labelledby="assign-technician-list-heading">
+            <div className="assign-technician-picker-header">
+              <div>
+                <h3 id="assign-technician-list-heading">Technicians</h3>
+                <p>Select one available technician for this panel.</p>
+              </div>
+              <div className="assign-technician-counts" aria-label="Technician availability summary">
+                <span className="is-available"><i aria-hidden="true" />{availableTechnicianCount} available</span>
+                <span className="is-assigned"><i aria-hidden="true" />{assignedTechnicianCount} assigned</span>
+              </div>
+            </div>
             <TechnicianSelect
               options={technicians.map(technician => ({
                 id: technician.id,
@@ -185,15 +197,16 @@ export default function PanelAssignmentModal({
               value={selectedTechnicianId}
               onChange={id => { setSelectedTechnicianId(id); setError(''); }}
               disabled={loading || Boolean(panelAssignment) || !scheduleReady}
+              inlineList
             />
-          </div>
+          </section>
         )}
 
         {assignedName && (
-          <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">
+          <div className="assign-technician-success">
             <CheckCircle size={18} className="mt-0.5 shrink-0" />
-            <div className="min-w-0 text-[12px] leading-5">
-              <strong className="block whitespace-normal break-words">{assignedName}</strong>
+            <div>
+              <strong>{assignedName}</strong>
               <span>was assigned to {resolvedPanelName}. The panel is now available on the technician dashboard.</span>
             </div>
           </div>
