@@ -828,14 +828,16 @@ export class TechService {
     };
   }
 
-  async midChangeRequests(technicianId: number) {
+  async midChangeRequests(technicianId?: number) {
     const events = await this.prisma.tech_audit_log.findMany({
       where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
       orderBy: { created_at: 'desc' },
       take: 500,
     });
     const pending = pendingMidChangePayloads(events)
-      .filter(request => request.initiatorId === technicianId || request.targetTechnicianId === technicianId);
+      .filter(request => technicianId == null
+        || request.initiatorId === technicianId
+        || request.targetTechnicianId === technicianId);
     if (pending.length === 0) return [];
 
     const assignmentIds = [...new Set(pending.flatMap(request => [request.sourceAssignmentId, request.targetAssignmentId]))];
@@ -850,7 +852,9 @@ export class TechService {
       const target = assignmentMap.get(request.targetAssignmentId);
       return {
         ...request,
-        direction: request.targetTechnicianId === technicianId ? 'incoming' : 'outgoing',
+        direction: technicianId == null
+          ? 'supervisor'
+          : request.targetTechnicianId === technicianId ? 'incoming' : 'outgoing',
         initiator_name: technicianMap.get(request.initiatorId)?.full_name || `Tech #${request.initiatorId}`,
         target_technician_name: technicianMap.get(request.targetTechnicianId)?.full_name || `Tech #${request.targetTechnicianId}`,
         source: source ? {

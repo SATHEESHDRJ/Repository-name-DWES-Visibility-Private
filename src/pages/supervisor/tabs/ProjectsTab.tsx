@@ -1201,6 +1201,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       {showCreate && (
         <Modal
           title="New Project"
+          icon={<FolderKanban />}
           size="wide"
           bodyClassName="pj-create-project-modal-body"
           onClose={closeCreateModal}

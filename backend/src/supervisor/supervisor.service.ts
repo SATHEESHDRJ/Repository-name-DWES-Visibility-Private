@@ -96,7 +96,6 @@ export class SupervisorService {
   async frameProgress(projectCode: string, frameId: string) {
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
-      orderBy: { assigned_at: 'asc' },
       orderBy: { assigned_at: 'desc' },
     });
     if (assignments.length === 0) return { assignments: [], frameId, projectCode };
@@ -213,37 +212,7 @@ export class SupervisorService {
   }
 
   async pendingChangeovers() {
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: {
-        OR: [
-          { status: { in: ['paused', 'in_progress'] } },
-          {
-            status: 'assigned',
-            OR: [
-              { handover_from_id: { not: null } },
-              { cables_src_done: { gt: 0 } },
-              { cables_dst_done: { gt: 0 } },
-            ],
-          },
-        ],
-        changeover_locked: { not: true },
-        is_hidden: { not: true },
-      },
-      orderBy: { assigned_at: 'desc' },
-    });
-    const techIds = [...new Set(assignments.map(a => a.technician_id))];
-    const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
-    const techMap = new Map(techs.map(t => [t.id, t]));
-    return assignments.map(a => {
-      const counts = this.countCableProgress(a.cable_status, a.cables_total);
-      return {
-        ...a,
-        cable_status: undefined,
-        technician_name: techMap.get(a.technician_id)?.full_name || '',
-        total_cables: counts.cables_total,
-        ...counts,
-      };
-    });
+    return this.techService.midChangeRequests();
   }
 
   async changeoverCandidate(projectCode: string, frameId: string) {
