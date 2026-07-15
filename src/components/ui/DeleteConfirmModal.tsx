@@ -234,6 +234,8 @@ export default function DeleteConfirmModal({
     <Modal
       title={title}
       subtitle={subtitle}
+      icon={<Trash2 />}
+      iconTone="danger"
       onClose={handleClose}
       size={size}
       typography={typography}

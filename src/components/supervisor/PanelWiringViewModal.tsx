@@ -1,4 +1,5 @@
 import Modal from '../Modal';
+import { Cable } from '../ui/icons';
 import DigitalWiringMonitor from './digital-wiring-monitor/DigitalWiringMonitor';
 
 interface Props {
@@ -29,6 +30,7 @@ export default function PanelWiringViewModal({
     <Modal
       title="Digital Wiring View"
       subtitle={`${panelLabel} · Read-only supervisor view`}
+      icon={<Cable />}
       onClose={onClose}
       size="fullscreen"
       bodyClassName="modal-body-flush"

@@ -1,4 +1,5 @@
 import Modal from '../Modal';
+import { PenTool } from '../ui/icons';
 
 interface Props {
   panelName: string;
@@ -9,7 +10,7 @@ interface Props {
 /** Stub GA 3D/2D drawing viewer — detailed layout in a later prompt. */
 export default function GaDrawingViewModal({ panelName, projectLabel, onClose }: Props) {
   return (
-    <Modal title="GA 3D/2D Drawing View" onClose={onClose} size="lg">
+    <Modal title="GA 3D/2D Drawing View" icon={<PenTool />} onClose={onClose} size="lg">
       <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center">
         <p className="text-sm text-slate-600">
           <span className="font-semibold text-slate-800">{panelName}</span>

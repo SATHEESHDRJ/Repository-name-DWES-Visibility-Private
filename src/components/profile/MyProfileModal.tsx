@@ -3,7 +3,7 @@ import { authApi, usersApi } from '../../services/api';
 import Modal from '../Modal';
 import { InputField } from '../ui/TabletFields';
 import { useAuthStore } from '../../store/useAuthStore';
-import { Lock, User, Phone, CheckCircle2 } from '../ui/icons';
+import { Lock, User, Phone, CheckCircle2, Save, Check } from '../ui/icons';
 
 export default function MyProfileModal({ onClose }: { onClose: () => void }) {
   const { user, token } = useAuthStore();
@@ -53,6 +53,7 @@ export default function MyProfileModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="My Profile"
+      icon={<User />}
       onClose={onClose}
       size="lg"
       footer={!done ? (
@@ -61,12 +62,14 @@ export default function MyProfileModal({ onClose }: { onClose: () => void }) {
             Cancel
           </button>
           <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
+            <Save size={16} />
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       ) : (
         <div className="flex justify-end w-full">
           <button type="button" onClick={onClose} className="btn-primary">
+            <Check size={16} />
             Done
           </button>
         </div>

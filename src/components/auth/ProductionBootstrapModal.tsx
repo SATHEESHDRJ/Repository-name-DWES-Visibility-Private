@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '../Modal';
-import { Fingerprint, Lock } from '../ui/icons';
+import { Fingerprint, Lock, Save } from '../ui/icons';
 import { usersApi, authApi } from '../../services/api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useEnrollBiometric } from '../../hooks/useBiometric';
@@ -77,6 +77,7 @@ export default function ProductionBootstrapModal({ bootstrap, onComplete }: Prop
           ? 'Production security requires a new password before you continue.'
           : 'Enroll WebAuthn on this device to complete production setup.'
       }
+      icon={stepPassword ? <Lock /> : <Fingerprint />}
       size="sm"
       onClose={() => { /* forced — no dismiss */ }}
       closeOnBackdrop={false}
@@ -89,6 +90,7 @@ export default function ProductionBootstrapModal({ bootstrap, onComplete }: Prop
             className="btn-primary"
             disabled={saving}
           >
+            <Save size={16} />
             {saving ? 'Saving…' : 'Update password'}
           </button>
         ) : (
@@ -118,40 +120,49 @@ export default function ProductionBootstrapModal({ bootstrap, onComplete }: Prop
           </div>
           <div>
             <label className="form-label" htmlFor="bootstrap-current">Current password</label>
-            <input
-              id="bootstrap-current"
-              type="password"
-              className="form-input w-full"
-              value={currentPassword}
-              onChange={e => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
+            <div className="field-with-icon">
+              <span className="field-lead-icon"><Lock size={18} /></span>
+              <input
+                id="bootstrap-current"
+                type="password"
+                className="form-input w-full"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
           </div>
           <div>
             <label className="form-label" htmlFor="bootstrap-new">New password</label>
-            <input
-              id="bootstrap-new"
-              type="password"
-              className="form-input w-full"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
+            <div className="field-with-icon">
+              <span className="field-lead-icon"><Lock size={18} /></span>
+              <input
+                id="bootstrap-new"
+                type="password"
+                className="form-input w-full"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
           </div>
           <div>
             <label className="form-label" htmlFor="bootstrap-confirm">Confirm new password</label>
-            <input
-              id="bootstrap-confirm"
-              type="password"
-              className="form-input w-full"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
+            <div className="field-with-icon">
+              <span className="field-lead-icon"><Lock size={18} /></span>
+              <input
+                id="bootstrap-confirm"
+                type="password"
+                className="form-input w-full"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </div>
           </div>
           {passwordError && (
             <p className="form-error" role="alert">{passwordError}</p>
