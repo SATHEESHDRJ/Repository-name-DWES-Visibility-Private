@@ -4800,6 +4800,129 @@
     transform: none;
   }
 
+  /* Technician dropdown (TechnicianSelect.tsx) — replaces a native <select>
+     whose OS-drawn popup could open upward and escape the dialog. The menu
+     always opens DOWNWARD inside the modal, scrolls internally when long, and
+     each row shows name + @username + an availability dot/badge
+     (green = available/selectable, amber = assigned/disabled). */
+  .tech-select {
+    @apply relative w-full min-w-0;
+  }
+  .tech-select-trigger {
+    @apply flex w-full items-center gap-2 rounded-[10px] border text-left transition-colors;
+    min-height: 40px;
+    height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+    background: var(--t-surface-white, #fff);
+    border-color: var(--color-outline-variant, #E2E8F0);
+    color: var(--color-on-surface, #0F172A);
+  }
+  .tech-select-trigger:hover:not(:disabled) {
+    border-color: var(--color-outline, #CBD5E1);
+  }
+  .tech-select-trigger:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+  .tech-select-trigger:focus-visible,
+  .tech-select-trigger.is-open {
+    border-color: var(--color-primary, #2563EB);
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+  }
+  .tech-select-lead {
+    @apply inline-flex shrink-0 items-center justify-center;
+    color: #94a3b8;
+  }
+  .tech-select-placeholder {
+    @apply min-w-0 flex-1 truncate text-slate-400;
+  }
+  .tech-select-value {
+    @apply flex min-w-0 flex-1 items-center gap-2;
+  }
+  .tech-select-value strong {
+    @apply truncate text-[13.5px] font-semibold;
+  }
+  .tech-select-value small {
+    @apply truncate font-mono text-[12px] text-slate-500;
+  }
+  .tech-select-chevron {
+    @apply shrink-0 text-slate-400 transition-transform;
+  }
+  .tech-select-chevron.is-open {
+    transform: rotate(180deg);
+  }
+  .tech-select-menu {
+    @apply absolute left-0 right-0 flex flex-col overflow-y-auto rounded-xl border;
+    top: calc(100% + 6px);
+    max-height: min(15rem, 42vh);
+    z-index: 40;
+    padding: 4px;
+    background: var(--glass-bg-solid, var(--t-surface-white, #fff));
+    border-color: var(--color-outline-variant, #E2E8F0);
+    box-shadow: 0 12px 32px rgb(15 23 42 / 0.16);
+  }
+  .tech-select-option {
+    @apply flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors;
+  }
+  .tech-select-option.is-active {
+    background: rgba(37, 99, 235, 0.08);
+  }
+  .tech-select-option.is-selected .tech-select-copy strong {
+    color: #1d4ed8;
+  }
+  .tech-select-option.is-disabled {
+    @apply cursor-not-allowed;
+    opacity: 0.55;
+  }
+  .tech-select-copy {
+    @apply flex min-w-0 flex-col;
+  }
+  .tech-select-copy strong {
+    @apply truncate text-[13px] font-semibold leading-5 text-slate-800;
+  }
+  .tech-select-copy small {
+    @apply truncate font-mono text-[11.5px] leading-4 text-slate-500;
+  }
+  .tech-select-status {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide;
+  }
+  .tech-select-dot {
+    @apply shrink-0;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+  }
+  .tech-select-status.is-available {
+    color: #047857;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+  }
+  .tech-select-status.is-available .tech-select-dot {
+    background: #10b981;
+  }
+  .tech-select-status.is-assigned {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .tech-select-status.is-assigned .tech-select-dot {
+    background: #f59e0b;
+  }
+  .tech-select-value .tech-select-dot {
+    width: 8px;
+    height: 8px;
+  }
+  .tech-select-value .tech-select-dot.is-available {
+    background: #10b981;
+  }
+  .tech-select-value .tech-select-dot.is-assigned {
+    background: #f59e0b;
+  }
+  .tech-select-empty {
+    @apply px-3 py-4 text-center text-[12px] text-slate-500;
+  }
+
   /* Modal body content — long entity names wrap; tooltips on title attr when clipped.
      Tailwind v4: never @apply .modal-long-text from other @layer components rules;
      inline min-w-0 break-words + overflow-wrap instead (see file header). */

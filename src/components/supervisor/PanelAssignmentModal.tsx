@@ -3,8 +3,9 @@ import Modal from '../Modal';
 import { projectsApi, supervisorApi, usersApi } from '../../services/api';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import type { FramePanel } from '../assignment/ProjectPanelSelect';
+import TechnicianSelect from '../assignment/TechnicianSelect';
 import type { AssignmentRow, TechUser } from '../../utils/assignmentCenterUtils';
-import { CheckCircle, TriangleAlert, User, UserPlus } from '../ui/icons';
+import { CheckCircle, TriangleAlert, UserPlus } from '../ui/icons';
 
 /** Kept for compatibility with callers; supervisor workflow now performs initial assignment only. */
 export type TechnicianWorkflowSection = 'assign' | 'deassign' | 'changeover';
@@ -171,30 +172,21 @@ export default function PanelAssignmentModal({
         )}
 
         {!assignedName && (
-          <label className="block">
-            <span className="form-label mb-1">Technician</span>
-            <div className="field-with-icon">
-              <span className="field-lead-icon"><User size={18} /></span>
-              <select
-                className="form-select"
-                value={selectedTechnicianId}
-                onChange={event => { setSelectedTechnicianId(event.target.value); setError(''); }}
-                disabled={loading || Boolean(panelAssignment) || !scheduleReady}
-                aria-label="Select an available technician"
-              >
-                <option value="">Select an available technician…</option>
-                {technicians.map(technician => {
-                  const assigned = assignedTechnicianIds.has(technician.id)
-                    || technician.availability_status === 'ASSIGNED';
-                  return (
-                    <option key={technician.id} value={technician.id} disabled={assigned}>
-                      {technician.username || technician.full_name || `Tech #${technician.id}`} — {assigned ? 'ASSIGNED' : 'AVAILABLE'}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          </label>
+          <div>
+            <span className="form-label mb-1 block">Technician</span>
+            <TechnicianSelect
+              options={technicians.map(technician => ({
+                id: technician.id,
+                name: technician.full_name || technician.username || `Tech #${technician.id}`,
+                username: technician.username,
+                assigned: assignedTechnicianIds.has(technician.id)
+                  || technician.availability_status === 'ASSIGNED',
+              }))}
+              value={selectedTechnicianId}
+              onChange={id => { setSelectedTechnicianId(id); setError(''); }}
+              disabled={loading || Boolean(panelAssignment) || !scheduleReady}
+            />
+          </div>
         )}
 
         {assignedName && (
