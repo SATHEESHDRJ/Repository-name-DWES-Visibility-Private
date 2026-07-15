@@ -5117,6 +5117,113 @@
     @apply text-[13px] font-normal text-slate-500 mt-1 max-w-md mx-auto;
   }
 
+  /* Edit Project Information — shared compact modal/form language */
+  .modal-box-form:has(.pj-edit-project-modal-body) {
+    max-width: min(620px, calc(100vw - 32px));
+    max-height: min(88vh, 700px);
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-header {
+    @apply px-5 py-3.5 items-center;
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-header-text {
+    @apply min-w-0;
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-title,
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-subtitle {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-close-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-footer {
+    @apply px-5 py-3 gap-2;
+  }
+  .modal-box-form:has(.pj-edit-project-modal-body) .modal-footer :is(.btn-primary, .btn-secondary) {
+    min-height: 40px;
+  }
+  .pj-edit-project-modal-body {
+    @apply px-5 py-4 gap-0;
+  }
+  .pj-edit-project-form {
+    @apply flex flex-col gap-3 min-w-0;
+  }
+  .pj-edit-section {
+    @apply flex flex-col gap-2.5 min-w-0;
+  }
+  .pj-edit-section + .pj-edit-section {
+    @apply pt-3 border-t border-slate-200;
+  }
+  .pj-edit-section-title {
+    @apply text-[11px] leading-4 font-bold uppercase tracking-[0.08em] text-slate-500 m-0;
+  }
+  .pj-edit-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 min-w-0;
+  }
+  .pj-edit-project-form .form-group {
+    @apply gap-1.5 min-w-0;
+    margin-bottom: 0;
+  }
+  .pj-edit-project-form .form-label {
+    @apply text-[11px] leading-4;
+    margin-bottom: 0;
+  }
+  .pj-edit-project-form :is(.form-input, .form-select) {
+    @apply min-h-10 rounded-[10px] text-[13px];
+  }
+  .pj-edit-project-form input.form-input,
+  .pj-edit-project-form select.form-select {
+    height: 40px;
+  }
+  .pj-edit-project-form .form-textarea {
+    @apply min-h-[82px] rounded-[10px] text-[13px] leading-5 resize-y;
+  }
+  .pj-edit-project-form .field-lead-icon {
+    left: 0.625rem;
+  }
+  .pj-edit-project-form .field-lead-icon svg,
+  .pj-edit-project-form .form-group .absolute.left-3 svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pj-edit-project-form .form-group .absolute.left-3 {
+    left: 0.625rem;
+  }
+  .pj-edit-project-form .form-input.pl-10 {
+    padding-left: 2.25rem;
+  }
+  .pj-edit-readonly-value {
+    @apply flex items-center w-full h-auto min-h-10 py-2 pr-3 bg-slate-50 text-slate-600 cursor-default whitespace-normal break-words leading-5;
+    padding-left: 2.25rem;
+    overflow-wrap: anywhere;
+  }
+  .pj-edit-validation {
+    @apply flex items-start gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium leading-5 text-amber-800;
+  }
+  .pj-edit-validation svg {
+    @apply shrink-0 mt-0.5;
+  }
+  .pj-edit-validation--error {
+    @apply border-red-200 bg-red-50 text-red-700;
+  }
+  .pj-edit-field-hint {
+    @apply mt-0 text-[10px] leading-4 text-slate-400;
+  }
+  @media (max-width: 520px) {
+    .modal-box-form:has(.pj-edit-project-modal-body) {
+      max-width: calc(100vw - 20px);
+      max-height: calc(100vh - 20px);
+    }
+    .modal-box-form:has(.pj-edit-project-modal-body) .modal-header,
+    .pj-edit-project-modal-body,
+    .modal-box-form:has(.pj-edit-project-modal-body) .modal-footer {
+      @apply px-4;
+    }
+  }
+
   /* New Project modal — compact two-column form */
   .modal-box-wide:has(.pj-create-project-modal-body) {
     max-width: min(680px, calc(100vw - 32px));

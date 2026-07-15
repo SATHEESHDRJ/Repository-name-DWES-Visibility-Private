@@ -7,7 +7,7 @@ import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag } from '../../../components/ui/icons';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
 import { UploadFrameModal } from './FramesTab';
 import { TeamManagementModal } from './UsersTab';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
@@ -1947,15 +1947,26 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
   const [state, setState] = useState<ProjectState>(project.project_state);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleSave = async () => {
+  const trimmedName = name.trim();
+  const nameError = submitted && !trimmedName ? 'Project / Substation Name is required.' : '';
+
+  const closeModal = () => {
+    if (!saving) onClose();
+  };
+
+  const handleSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    setSubmitted(true);
+    if (!trimmedName) return;
     setSaving(true);
     setError('');
     try {
       const [legacyLocation = '', legacyRegion = ''] = (meta?.locationRegion || '')
         .split(/\s*\/\s*/)
         .map(part => part.trim());
-      const nextMeta = meta ? { ...meta, substationName: name.trim() } : null;
+      const nextMeta = meta ? { ...meta, substationName: trimmedName } : null;
       const savedName = nextMeta?.substationName
         ? buildProjectFullName(
             nextMeta.substationName,
@@ -1964,7 +1975,7 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
             nextMeta.region || legacyRegion,
             nextMeta.projectNumbering || project.code,
           )
-        : name.trim();
+        : trimmedName;
       let updated: Project = await projectsApi.update(project.code, {
         name: savedName,
         description: mergeProjectDescription(nextMeta, description),
@@ -1983,64 +1994,102 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
 
   return (
     <Modal
-      title="Edit Project"
+      title="Edit Project Information"
+      subtitle={`${project.name} · ${project.code}`}
       icon={<Pencil />}
-      onClose={onClose}
+      size="form"
+      bodyClassName="pj-edit-project-modal-body"
+      onClose={closeModal}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
       footer={(
-        <div className="flex items-center justify-end gap-3 w-full">
-          <button className="btn-secondary" onClick={onClose} type="button">
-            Cancel
+        <>
+          <button className="btn-secondary" onClick={closeModal} disabled={saving} type="button">Cancel</button>
+          <button className="btn-primary" disabled={saving} type="submit" form="edit-project-form">
+            <Save size={16} strokeWidth={1.75} />
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
-            <Save size={16} />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+        </>
       )}
     >
-      <div className="flex flex-col gap-4">
-        <div className="form-group">
-          <label className="form-label">Project Numbering</label>
-          <div className="field-with-icon">
-            <span className="field-lead-icon"><Hash size={18} /></span>
-            <input value={project.code} title="Project Numbering" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
-          </div>
-        </div>
-
-        <InputField label="Project / Substation Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />
-
-        <div className="form-group">
-          <label className="form-label">Client</label>
-          <div className="field-with-icon">
-            <span className="field-lead-icon"><Building2 size={18} /></span>
-            <input value={project.client} title="Client" readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">State</label>
-          <div className="field-with-icon">
-            <span className="field-lead-icon"><Flag size={18} /></span>
-            <select title="Project state" value={state} onChange={event => setState(event.target.value as ProjectState)} className="form-select">
-              {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Description</label>
-          <div className="field-with-icon field-with-icon--top">
-            <span className="field-lead-icon"><FileText size={18} /></span>
-            <textarea value={description} onChange={event => setDescription(event.target.value)} rows={3} title="Description" placeholder="Optional project description" className="form-textarea" />
-          </div>
-        </div>
-
-        {error && (
-          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
-            {error}
+      <form id="edit-project-form" className="pj-edit-project-form" onSubmit={handleSave} noValidate>
+        {(nameError || error) && (
+          <div className={`pj-edit-validation ${error ? 'pj-edit-validation--error' : ''}`} role="alert">
+            <TriangleAlert size={17} strokeWidth={1.75} />
+            <span>{error || 'Complete the required project information before saving.'}</span>
           </div>
         )}
-      </div>
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Project identity</h3>
+          <div className="pj-edit-grid">
+            <div className="form-group min-w-0">
+              <label className="form-label">Project Numbering</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Hash size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value font-mono" role="textbox" aria-readonly="true" title={project.code}>
+                  {project.code}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Client</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Building2 size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value" role="textbox" aria-readonly="true" title={project.client}>
+                  {project.client}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Editable details</h3>
+          <div className="pj-edit-grid">
+            <InputField
+              label="Project / Substation Name *"
+              icon={<FolderKanban size={17} strokeWidth={1.5} />}
+              value={name}
+              onChange={value => { setName(value); setError(''); }}
+              placeholder="Enter project or substation name"
+              error={nameError}
+            />
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Project State</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Flag size={17} strokeWidth={1.5} /></span>
+                <select
+                  title="Project state"
+                  value={state}
+                  onChange={event => { setState(event.target.value as ProjectState); setError(''); }}
+                  className="form-select"
+                >
+                  {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group min-w-0">
+            <label className="form-label">Description</label>
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><FileText size={17} strokeWidth={1.5} /></span>
+              <textarea
+                value={description}
+                onChange={event => { setDescription(event.target.value); setError(''); }}
+                rows={3}
+                title="Description"
+                placeholder="Optional project description"
+                className="form-textarea"
+              />
+            </div>
+            <p className="pj-edit-field-hint">Internal project notes only. Existing project metadata and panel data remain unchanged.</p>
+          </div>
+        </section>
+      </form>
     </Modal>
   );
 }
