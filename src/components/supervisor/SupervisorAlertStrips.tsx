@@ -22,7 +22,11 @@ export default function SupervisorAlertStrips({ onNavigate }: Props) {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => { loadCounts(); }, [loadCounts]);
+  useEffect(() => {
+    loadCounts();
+    const timer = window.setInterval(loadCounts, 12_000);
+    return () => window.clearInterval(timer);
+  }, [loadCounts]);
 
   useDwesRefresh(loadCounts, { listenFrames: true });
 

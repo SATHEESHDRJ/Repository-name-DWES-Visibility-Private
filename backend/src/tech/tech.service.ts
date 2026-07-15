@@ -133,21 +133,50 @@ export class TechService {
     const qrCode = generateQrIdentity();
     const otpExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const assignment = await this.prisma.tech_assignments.create({
-      data: {
-        project_code: dto.project_code, frame_id: dto.frame_id, panel_name: frame.panel_name,
-        technician_id: dto.technician_id, assigned_by: dto.assigned_by_id,
-        status: 'assigned', cables_total: frame.cable_count || cablesList.length,
-        cable_status: JSON.stringify(cableStatus),
-        supervisor_approved: true,
-        cables_src_done: 0, cables_dst_done: 0,
-        is_hidden: false, report_submitted: false,
-        rework_requested: false, rework_reason: '', changeover_locked: false,
-        qc_status: 'not_ready',
-        otp_code: otpCode, qr_code: qrCode, otp_verified: false, qr_panel_verified: false,
-        otp_expires_at: otpExpires, otp_attempts: 0,
-      },
-    });
+    let assignment;
+    try {
+      assignment = await this.prisma.$transaction(async tx => {
+        const [panelActive, technicianStillActive] = await Promise.all([
+          tx.tech_assignments.findFirst({
+            where: {
+              project_code: dto.project_code,
+              frame_id: dto.frame_id,
+              status: { in: ['assigned', 'in_progress', 'paused'] },
+              changeover_locked: { not: true },
+            },
+          }),
+          tx.tech_assignments.findFirst({
+            where: {
+              technician_id: dto.technician_id,
+              status: { in: ['assigned', 'in_progress', 'paused'] },
+              changeover_locked: { not: true },
+            },
+          }),
+        ]);
+        if (panelActive) throw new ConflictException('This panel already has an active technician assignment');
+        if (technicianStillActive) throw new ConflictException('This technician is already assigned to an active panel');
+        return tx.tech_assignments.create({
+          data: {
+            project_code: dto.project_code, frame_id: dto.frame_id, panel_name: frame.panel_name,
+            technician_id: dto.technician_id, assigned_by: dto.assigned_by_id,
+            status: 'assigned', cables_total: frame.cable_count || cablesList.length,
+            cable_status: JSON.stringify(cableStatus),
+            supervisor_approved: true,
+            cables_src_done: 0, cables_dst_done: 0,
+            is_hidden: false, report_submitted: false,
+            rework_requested: false, rework_reason: '', changeover_locked: false,
+            qc_status: 'not_ready',
+            otp_code: otpCode, qr_code: qrCode, otp_verified: false, qr_panel_verified: false,
+            otp_expires_at: otpExpires, otp_attempts: 0,
+          },
+        });
+      }, { isolationLevel: 'Serializable' });
+    } catch (error: any) {
+      if (error?.code === 'P2034') {
+        throw new ConflictException('Assignment availability changed. Refresh and select an available technician again.');
+      }
+      throw error;
+    }
 
     const qrPayload = generateQrPayload(dto.project_code, dto.frame_id, assignment.id);
     await this.logAudit(tech.id, tech.full_name || '', dto.project_code, dto.frame_id, frame.panel_name,
