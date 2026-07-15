@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ArrowLeftRight, Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
 import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
@@ -51,6 +51,19 @@ export default function PanelsTab({
   const [hideTarget, setHideTarget] = useState<any | null>(null);
   const [gaOpen, setGaOpen] = useState(false);
   const [midChangeOpen, setMidChangeOpen] = useState(false);
+  const [pendingMidChanges, setPendingMidChanges] = useState(0);
+
+  const refreshMidChangeCount = () => {
+    techApi.midChangeRequests()
+      .then(rows => setPendingMidChanges(Array.isArray(rows) ? rows.length : 0))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshMidChangeCount();
+    const timer = window.setInterval(refreshMidChangeCount, 12_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const hasAssignment = panels.length > 0;
   const headerPanel = selectedPanel;
@@ -128,7 +141,7 @@ export default function PanelsTab({
           onClick={() => setMidChangeOpen(true)}
         >
           <ArrowLeftRight size={16} />
-          Mid Change
+          Mid Change{pendingMidChanges > 0 ? ` (${pendingMidChanges})` : ''}
         </button>
         <button
           type="button"
@@ -292,6 +305,7 @@ export default function PanelsTab({
           onClose={() => setMidChangeOpen(false)}
           onChanged={() => {
             onRefresh();
+            refreshMidChangeCount();
           }}
         />
       )}

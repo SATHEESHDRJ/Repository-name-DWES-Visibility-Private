@@ -96,6 +96,7 @@ export class SupervisorService {
   async frameProgress(projectCode: string, frameId: string) {
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
       orderBy: { assigned_at: 'desc' },
     });
     if (assignments.length === 0) return { assignments: [], frameId, projectCode };
@@ -314,15 +315,25 @@ export class SupervisorService {
       const { hashed_password: _hashed_password, ...safeTech } = tech || ({} as any);
       return { assignment: { ...a, cable_status: parseCS(a.cable_status) }, technician: tech ? safeTech : null, kpi };
     });
-    const totalSrc = assignments.reduce((s, a) => s + (a.cables_src_done || 0), 0);
-    const totalDst = assignments.reduce((s, a) => s + (a.cables_dst_done || 0), 0);
+    const latestAssignment = assignments[assignments.length - 1];
+    const totalSrc = latestAssignment?.cables_src_done || 0;
+    const totalDst = latestAssignment?.cables_dst_done || 0;
     const overallKpi = frame.cable_count > 0 ? Math.round(((totalSrc + totalDst) / (frame.cable_count * 2)) * 100) : 0;
 
     const mergedStatus: Record<string, any> = {};
     for (const a of assignments) {
       const cs = parseCS(a.cable_status);
       for (const [idx, st] of Object.entries(cs)) {
-        mergedStatus[idx] = { ...(st as any), technician_id: a.technician_id };
+        const previous = mergedStatus[idx] || {};
+        const state = st as any;
+        mergedStatus[idx] = {
+          ...state,
+          src_technician_id: state.src && !previous.src ? a.technician_id : previous.src_technician_id,
+          dst_technician_id: state.dst && !previous.dst ? a.technician_id : previous.dst_technician_id,
+          technician_id: state.dst && !previous.dst
+            ? a.technician_id
+            : state.src && !previous.src ? a.technician_id : previous.technician_id,
+        };
       }
     }
     const cablesWithStatus = frame.cables.map((c, i) => {
@@ -529,6 +540,74 @@ export class SupervisorService {
     ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow, column: COLS } };
     ws.pageSetup.printTitlesRow = `${headerRow}:${headerRow}`;
     ws.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Panel Completion Report&R&8Page &P of &N`;
+
+    if (data.contributions.length > 0) {
+      const history = wb.addWorksheet('Technician Contributions', {
+        pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+      });
+      history.columns = [
+        { header: 'Technician', key: 'technician', width: 30 },
+        { header: 'Username', key: 'username', width: 18 },
+        { header: 'Work Start', key: 'start', width: 24 },
+        { header: 'Work End', key: 'end', width: 24 },
+        { header: 'Duration', key: 'duration', width: 14 },
+        { header: 'Cables Completed', key: 'cables', width: 18 },
+        { header: 'Source Ends', key: 'source', width: 14 },
+        { header: 'Destination Ends', key: 'destination', width: 18 },
+        { header: 'Progress Before', key: 'before', width: 17 },
+        { header: 'Progress After', key: 'after', width: 17 },
+        { header: 'Login / Logout Details', key: 'sessions', width: 48 },
+      ];
+      const historyHeader = history.getRow(1);
+      historyHeader.height = 24;
+      historyHeader.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: WHITE } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_BG } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = boxBorder;
+      });
+      data.contributions.forEach(contribution => {
+        const row = history.addRow({
+          technician: contribution.technician.fullName,
+          username: contribution.technician.username,
+          start: fmt(contribution.startedAt),
+          end: contribution.endedAt ? fmt(contribution.endedAt) : 'Active',
+          duration: contribution.durationHuman,
+          cables: contribution.cablesCompleted,
+          source: contribution.sourceEndsCompleted,
+          destination: contribution.destinationEndsCompleted,
+          before: contribution.progressBefore,
+          after: contribution.progressAfter,
+          sessions: contribution.sessionLog.length
+            ? contribution.sessionLog.map(session => `${fmt(session.loginAt)} → ${session.logoutAt ? fmt(session.logoutAt) : 'Active'}`).join('\n')
+            : '—',
+        });
+        row.height = Math.max(20, contribution.sessionLog.length * 15);
+        row.eachCell({ includeEmpty: true }, cell => {
+          cell.font = { size: 9, color: { argb: INK } };
+          cell.alignment = { vertical: 'top', wrapText: true };
+          cell.border = boxBorder;
+        });
+      });
+      if (data.midChangeHistory.length > 0) {
+        const titleRow = history.addRow([]);
+        history.mergeCells(`A${titleRow.number}:K${titleRow.number}`);
+        titleRow.getCell(1).value = 'PERMANENT MID CHANGE AUDIT';
+        titleRow.getCell(1).font = { bold: true, color: { argb: WHITE } };
+        titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+        data.midChangeHistory.forEach(entry => {
+          const auditRow = history.addRow([fmt(entry.at), entry.technicianName, entry.action.replace(/_/g, ' '), entry.details]);
+          history.mergeCells(`D${auditRow.number}:K${auditRow.number}`);
+          auditRow.eachCell({ includeEmpty: true }, cell => {
+            cell.alignment = { vertical: 'top', wrapText: true };
+            cell.border = boxBorder;
+          });
+        });
+      }
+      history.views = [{ state: 'frozen', ySplit: 1, showGridLines: false }];
+      history.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 11 } };
+      history.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Technician Contribution History&R&8Page &P of &N`;
+    }
 
     return Buffer.from(await wb.xlsx.writeBuffer());
   }

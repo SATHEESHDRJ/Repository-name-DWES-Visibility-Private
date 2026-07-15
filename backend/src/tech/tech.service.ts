@@ -927,23 +927,25 @@ export class TechService {
   }
 
   async rejectMidChange(technicianId: number, requestId: string) {
-    const events = await this.prisma.tech_audit_log.findMany({
-      where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
-      orderBy: { created_at: 'desc' },
-      take: 500,
-    });
-    const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
-    if (!request) throw new NotFoundException('Pending Mid Change request not found');
-    if (request.targetTechnicianId !== technicianId) throw new ForbiddenException('Only the selected technician can reject this request');
-    const technician = await this.prisma.users.findUnique({ where: { id: technicianId } });
-    await this.prisma.tech_audit_log.create({
-      data: {
-        technician_id: technicianId,
-        technician_name: technician?.full_name || '',
-        action: 'mid_change_rejected',
-        details: JSON.stringify(request),
-      },
-    });
+    await this.prisma.$transaction(async tx => {
+      const events = await tx.tech_audit_log.findMany({
+        where: { action: { in: ['mid_change_requested', 'mid_change_confirmed', 'mid_change_rejected'] } },
+        orderBy: { created_at: 'desc' },
+        take: 500,
+      });
+      const request = pendingMidChangePayloads(events).find(item => item.requestId === requestId);
+      if (!request) throw new NotFoundException('Pending Mid Change request not found');
+      if (request.targetTechnicianId !== technicianId) throw new ForbiddenException('Only the selected technician can reject this request');
+      const technician = await tx.users.findUnique({ where: { id: technicianId } });
+      await tx.tech_audit_log.create({
+        data: {
+          technician_id: technicianId,
+          technician_name: technician?.full_name || '',
+          action: 'mid_change_rejected',
+          details: JSON.stringify(request),
+        },
+      });
+    }, { isolationLevel: 'Serializable' });
     return { message: 'Mid Change request rejected', request_id: requestId };
   }
 

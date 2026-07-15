@@ -111,7 +111,7 @@ export default function PanelAssignmentModal({
   return (
     <Modal
       title="Assign Technician"
-      subtitle="Production Supervisor · Initial assignment"
+      subtitle={`${projectName || projectCode} · ${resolvedPanelName}`}
       icon={<UserPlus />}
       onClose={onClose}
       size="form"

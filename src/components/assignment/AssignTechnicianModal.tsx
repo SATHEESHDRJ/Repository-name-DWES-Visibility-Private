@@ -110,6 +110,7 @@ export default function AssignTechnicianModal({
   return (
     <Modal
       title="Assign Technician to Panel"
+      subtitle={`${selectedProject?.name || projectCode || 'Select project'} · ${selectedPanel?.panel_name || initialPanelId || 'Select panel'}`}
       icon={<UserPlus />}
       onClose={onClose}
       footer={!result ? (
