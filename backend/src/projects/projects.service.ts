@@ -34,9 +34,9 @@ export class ProjectsService {
 
   /**
    * Project-numbering availability for the New Project form. The entered numbering
-   * is the project's stable identifier; DWES does not synthesize another code. It stays reserved
-   * after deletion (the row is tombstoned, not removed), so a number can never be
-   * reused for an active, deleted, archived, or tombstoned project.
+   * is the project's stable identifier; DWES does not synthesize another code.
+   * Permanent deletion removes the row entirely (2026-07-15), so a deleted
+   * numbering becomes available again; only existing rows block reuse.
    */
   async codeAvailability(code: string) {
     const trimmed = String(code || '').trim().toUpperCase();
@@ -54,7 +54,7 @@ export class ProjectsService {
       available: false,
       reason: existing.is_active
         ? 'This project numbering is already used by an active project.'
-        : 'This project numbering belongs to a deleted project and stays permanently reserved.',
+        : 'This project numbering belongs to an inactive project.',
     };
   }
 

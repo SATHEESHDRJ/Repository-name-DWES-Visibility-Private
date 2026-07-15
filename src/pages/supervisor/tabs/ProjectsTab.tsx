@@ -434,7 +434,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       })()
     : '';
 
-  // Project numbering must be unique across active, deleted, and tombstoned projects.
+  // Project numbering must be unique across existing projects (deleted numbering
+  // becomes available again after permanent deletion).
   // The backend stays authoritative on create; this only surfaces the clash early.
   useEffect(() => {
     if (!showCreate || !projectNumberingFormatValid) {
@@ -920,7 +921,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                           className="pj-toolbar-dropdown-item"
                           onClick={() => { setEditMenuOpen(false); setShowEdit(selectedProject); }}
                         >
-                          <FolderKanban size={16} strokeWidth={1.5} className="shrink-0 text-slate-500" />
+                          <span className="pj-edit-menu-ico"><FolderKanban size={16} strokeWidth={1.75} aria-hidden /></span>
                           <span>Edit project information</span>
                         </button>
 
@@ -937,7 +938,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                           }}
                           title={selectedPanel ? undefined : 'Select a panel first'}
                         >
-                          <LayoutGrid size={16} strokeWidth={1.5} className="shrink-0 text-slate-500" />
+                          <span className="pj-edit-menu-ico"><LayoutGrid size={16} strokeWidth={1.75} aria-hidden /></span>
                           <span>Edit panel information</span>
                         </button>
                         <button
@@ -952,7 +953,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                           }}
                           title={selectedPanel ? 'Remove this panel' : 'Select a panel first'}
                         >
-                          <Trash2 size={16} strokeWidth={1.5} className="shrink-0" />
+                          <span className="pj-edit-menu-ico pj-edit-menu-ico--danger"><Trash2 size={16} strokeWidth={1.75} aria-hidden /></span>
                           <span>Remove panel</span>
                         </button>
 
@@ -965,7 +966,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                           onClick={() => { setEditMenuOpen(false); handleDelete(selectedProject); }}
                           title="Permanently delete this project and all of its data"
                         >
-                          <Trash2 size={16} strokeWidth={1.5} className="shrink-0" />
+                          <span className="pj-edit-menu-ico pj-edit-menu-ico--danger"><Trash2 size={16} strokeWidth={1.75} aria-hidden /></span>
                           <span>Delete Project Permanently</span>
                         </button>
                       </div>

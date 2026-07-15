@@ -21,13 +21,13 @@ function deletionPrisma(updates) {
     tech_audit_log: { deleteMany: async () => deleted },
     session_log: { deleteMany: async () => deleted },
     projects: {
-      update: async (args) => { updates.push(args); return { ...args.data, code: args.where.code }; },
+      deleteMany: async (args) => { updates.push(args); return { count: 1 }; },
     },
     $transaction: async operations => Promise.all(operations),
   };
 }
 
-test('permanent project deletion leaves an inactive database tombstone and purges every memory store', async () => {
+test('permanent project deletion removes the database row and purges every memory store', async () => {
   const code = 'DELETE-CONSISTENCY';
   const updates = [];
   const original = {
@@ -44,10 +44,8 @@ test('permanent project deletion leaves an inactive database tombstone and purge
   try {
     const result = await permanentlyDeleteProject(deletionPrisma(updates), code, os.tmpdir());
     assert.equal(result.success, true);
-    assert.deepEqual(updates[0], {
-      where: { code },
-      data: { is_active: false, project_state: 'deleted', assigned_technicians: '' },
-    });
+    assert.equal(result.deleted.project_row, 1);
+    assert.deepEqual(updates[0], { where: { code } });
     assert.equal(MockStore.frames.some(row => row.project_code === code), false);
     assert.equal(MockStore.drawings.some(row => row.project_code === code), false);
     assert.equal(MockStore.drawingPackages.some(row => row.project_code === code), false);

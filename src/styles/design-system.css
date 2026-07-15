@@ -1877,19 +1877,49 @@
     box-shadow:
       0 1px 2px rgba(15, 23, 42, 0.06),
       0 12px 32px rgba(15, 23, 42, 0.14);
+    -webkit-overflow-scrolling: touch;
   }
   .pj-edit-menu .pj-toolbar-dropdown-item {
     min-height: 44px;
     height: auto;
-    padding: 10px;
+    padding: 8px 10px;
     gap: 10px;
     border-radius: 8px;
     color: #1E293B;
+    -webkit-tap-highlight-color: transparent;
   }
   .pj-edit-menu .pj-toolbar-dropdown-item svg {
     width: 16px;
     height: 16px;
     color: #64748B;
+  }
+  .pj-edit-menu-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #F1F5F9;
+    color: #475569;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .pj-edit-menu-ico svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pj-edit-menu-ico--danger {
+    background: #FEF2F2;
+    color: #DC2626;
+  }
+  .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico {
+    background: #E2E8F0;
+    color: #334155;
+  }
+  .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico--danger {
+    background: #FEE2E2;
+    color: #B91C1C;
   }
   .pj-edit-menu .pj-toolbar-dropdown-item--danger,
   .pj-edit-menu .pj-toolbar-dropdown-item--danger svg {

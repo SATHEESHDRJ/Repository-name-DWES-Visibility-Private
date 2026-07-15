@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-14 (Login hardened for production — all demo credentials removed from UI, bundle, and API incl. the plaintext-password `login-hints` endpoint; PWA install; compact Project Information actions + Edit menu; project-first New Project with Add Panel overlay and backend numbering-uniqueness; compact post-upload wiring status + re-upload confirmation; SSE live sync for silent cross-user refresh. All builds green; 66/66 + 4/4 tests; live smoke 32/32. **Open bug:** wiring parser drops the first data row — see CHANGELOG)  
+**Last updated:** 2026-07-15 (Complete project-data reset: all 5 canonical seed projects permanently deleted via the app's reset flow; demo project seeding removed from startup **and** dev hard-reset, `seed-projects.ts` deleted; permanent project delete converted from tombstone to true hard delete (numbering reusable after deletion). 39 users, auth, settings, schema, and Fastify migration untouched. Verified: empty supervisor selectors, create+delete lifecycle, restart without reseed. Backups in `backend/uploads/backups/PROJECT_RESET_2026-07-15_*` + `RESET_ALL_2026-07-15T05-15-31*`. **Open bug:** wiring parser drops the first data row — see CHANGELOG)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 

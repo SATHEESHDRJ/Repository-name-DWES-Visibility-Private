@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { WebAuthnStoreService } from '../auth/webauthn-store.service';
-import { CANONICAL_SEED_PROJECTS } from '../common/seed-projects';
 import { clearErrorRingBuffer } from '../admin/admin.service';
 
 const HARD_RESET_PHRASE = 'HARD RESET DB';
@@ -82,7 +81,7 @@ export class DevService {
         mock_store_frames: MockStore.frames.length,
         mock_store_drawings: MockStore.drawings.length,
       },
-      reseed_projects: CANONICAL_SEED_PROJECTS.length,
+      reseed_projects: 0,
       backup_note:
         'Full project backup (Backup/YYYY-MM-DD_HH-mm) + pg_dump of WiringSchemeDB + uploads/<CODE>/ archive to uploads/backups/ before wipe. User accounts preserved; session log and WebAuthn credentials cleared.',
       confirm_phrase: HARD_RESET_PHRASE,
@@ -152,7 +151,6 @@ export class DevService {
     let sessionDel = { count: 0 };
     let projDel = { count: 0 };
     let usersReset = { count: 0 };
-    let projectsReseeded = 0;
 
     try {
       [inspDel, assnDel, hashDel, auditDel, sessionDel, projDel] = await this.prisma.$transaction([
@@ -171,13 +169,6 @@ export class DevService {
         },
       });
       usersReset = { count: userResetResult.count };
-
-      for (const p of CANONICAL_SEED_PROJECTS) {
-        await this.prisma.projects.create({
-          data: { ...p, is_active: true },
-        });
-        projectsReseeded++;
-      }
     } catch (e: any) {
       fkWarnings.push(e?.message || 'Transaction failed — partial state possible');
       return {
@@ -219,14 +210,11 @@ export class DevService {
         webauthn_credentials: webauthnCleared,
         mock_store_cleared: true,
       },
-      reseeded: {
-        projects: projectsReseeded,
-        codes: CANONICAL_SEED_PROJECTS.map(p => p.code),
-      },
+      reseeded: { projects: 0, codes: [] as string[] },
       users_preserved: usersReset.count,
       fk_warnings: fkWarnings,
       message:
-        'DWES hard reset complete. All projects, wiring data, uploads, session log, and WebAuthn credentials cleared. Canonical seed projects restored.',
+        'DWES hard reset complete. All projects, wiring data, uploads, session log, and WebAuthn credentials cleared. No projects are reseeded — create new projects in the app.',
       ts: new Date().toISOString(),
       client_reload_required: true,
     };

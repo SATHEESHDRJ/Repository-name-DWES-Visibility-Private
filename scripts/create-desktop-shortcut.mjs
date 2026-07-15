@@ -10,10 +10,11 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { HTTP_DEV_PORT } from './dwes-ports.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const icoPath = path.join(root, 'public', 'app-icon.ico');
-const PORT = process.env.VITE_PORT || 5173;
+const PORT = Number(process.env.VITE_HTTP_PORT) || HTTP_DEV_PORT;
 const fixScript = path.join(root, 'scripts', 'Create-DWES-Shortcuts.ps1');
 
 if (process.platform !== 'win32') {

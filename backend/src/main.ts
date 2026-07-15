@@ -13,13 +13,10 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { FrameStore } from './frames/frame-store';
-import { CANONICAL_SEED_PROJECTS } from './common/seed-projects';
 import { allowStartupSeed } from './common/demo-mode.util';
 import { loadDemoAccounts } from './common/demo-accounts';
 import { PANEL_DELETION_FILE_TYPE } from './common/deleted-resource.util';
 import * as bcrypt from 'bcryptjs';
-
-const SEED_PROJECTS = CANONICAL_SEED_PROJECTS;
 
 function lanIpv4Addresses(): string[] {
   const addrs: string[] = [];
@@ -144,15 +141,8 @@ async function bootstrap() {
     console.log(`[DWES] Found ${userCount} existing users — skipping seed`);
   }
 
-  if (allowStartupSeed()) {
-    for (const p of SEED_PROJECTS) {
-      const exists = await prisma.projects.findUnique({ where: { code: p.code } });
-      if (!exists) {
-        await prisma.projects.create({ data: { ...p, is_active: true } });
-        console.log(`[DWES] Imported project: ${p.code}`);
-      }
-    }
-  }
+  // Projects are never seeded at startup — every project is created by a
+  // supervisor through the app (demo seed logic removed 2026-07-15).
 
   // The database decides which file-backed records may be loaded. Deleted JSON
   // and backup content must never become application state again.

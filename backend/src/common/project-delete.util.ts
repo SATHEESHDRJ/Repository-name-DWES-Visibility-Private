@@ -34,7 +34,7 @@ export async function permanentlyDeleteProject(
   });
   const assignmentIds = assignments.map(a => a.id);
 
-  const [inspectionDelete, assignmentDelete, hashDelete, auditDelete, sessionDelete] = await prisma.$transaction([
+  const [inspectionDelete, assignmentDelete, hashDelete, auditDelete, sessionDelete, projectDelete] = await prisma.$transaction([
     assignmentIds.length
       ? prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
       : prisma.panel_inspections.deleteMany({ where: { id: { in: [] } } }),
@@ -42,16 +42,9 @@ export async function permanentlyDeleteProject(
     prisma.file_hashes.deleteMany({ where: { project_code: code } }),
     prisma.tech_audit_log.deleteMany({ where: { project_code: code } }),
     prisma.session_log.deleteMany({ where: { project_code: code } }),
-    // Keep a database tombstone. Deleting the row allowed startup seed data to
-    // recreate the same project code after an application restart.
-    prisma.projects.update({
-      where: { code },
-      data: {
-        is_active: false,
-        project_state: 'deleted',
-        assigned_technicians: '',
-      },
-    }),
+    // Hard delete — startup project seeding was removed (2026-07-15), so nothing
+    // recreates a project code after a restart and no tombstone row is kept.
+    prisma.projects.deleteMany({ where: { code } }),
   ]);
 
   FrameStore.blockProject(code);
@@ -75,7 +68,7 @@ export async function permanentlyDeleteProject(
       file_hashes: hashDelete.count,
       audit_logs: auditDelete.count,
       session_logs: sessionDelete.count,
-      project_row: 1,
+      project_row: projectDelete.count,
       uploads_removed: folderRemoved,
       folder_removed: folderRemoved,
     },

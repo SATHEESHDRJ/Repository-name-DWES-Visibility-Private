@@ -171,7 +171,7 @@ export default function HardResetDbTab() {
               <span>{precheck?.backup_note}</span>
             </div>
             <div className="text-[12px] text-slate-600">
-              Preserved: {precheck?.preserved.join('; ')}. After reset, {precheck?.reseed_projects} canonical seed projects are recreated.
+              Preserved: {precheck?.preserved.join('; ')}. After reset, no projects are recreated — all projects are created manually in the app.
             </div>
           </div>
         )}

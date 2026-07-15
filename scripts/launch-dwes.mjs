@@ -21,6 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectWindowsPortOwner, isDwesProcessCommand } from './dwes-process-ownership.mjs';
 import { waitForPostgres } from './wait-for-postgres.mjs';
+import { HTTP_DEV_PORT } from './dwes-ports.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const logsDir = path.join(root, 'logs');
@@ -145,13 +146,16 @@ async function runPhase(name, fn) {
 }
 
 function readFePort() {
+  const envPort = Number(process.env.VITE_HTTP_PORT);
+  if (Number.isInteger(envPort) && envPort > 0 && envPort < 65536) return envPort;
+
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     const dev = pkg.scripts?.dev || '';
     const m = dev.match(/--port\s+(\d+)/);
     if (m) return Number(m[1]);
   } catch { /* fallback */ }
-  return 5175;
+  return HTTP_DEV_PORT;
 }
 
 const FE_PORT = readFePort();

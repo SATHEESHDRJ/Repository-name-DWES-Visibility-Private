@@ -936,14 +936,24 @@
 /* System Administrator — unified DWES executive module. */
 .admin-dashboard-hero { border-color: #dce5f1; background: linear-gradient(118deg, var(--t-surface-white, #fff) 0%, #f7faff 58%, #f4f0ff 100%); box-shadow: 0 8px 26px rgba(28, 55, 92, .065); }
 .admin-dashboard-hero::before { background: linear-gradient(90deg, #2563eb, #7c3aed); }
-.admin-dashboard-hero + .dashboard-kpis { gap: 10px; }
-.admin-dashboard-hero + .dashboard-kpis .kpi-card { min-height: 92px; border-color: #e0e7f0; border-radius: 13px; box-shadow: 0 4px 14px rgba(15, 35, 63, .045); }
 .admin-dashboard-content { display: grid; min-width: 0; }
 .admin-dashboard-content .dash-module { border-color: #dfe6ef; border-radius: 15px; box-shadow: 0 6px 20px rgba(15, 35, 63, .05); }
-.admin-settings-grid { gap: 14px; }
-.admin-settings-grid .dash-module { padding: 18px; }
-.admin-settings-grid :is(.section-title, .card-title) { color: #152b47; letter-spacing: -.015em; }
-.admin-settings-grid :is(.form-input, .form-select, input, select, textarea) { border-radius: 9px; border-color: #d5deea; }
+
+/* System Settings — sectioned layout: Overview / Configuration / Sync / Danger. */
+.admin-settings-page { display: grid; gap: 24px; min-width: 0; }
+.admin-settings-section { display: grid; gap: 13px; min-width: 0; }
+.admin-settings-section-head { display: flex; align-items: center; gap: 11px; padding-bottom: 9px; border-bottom: 1px solid #e2e8f0; }
+.admin-settings-section-ico { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid #dbe4f0; border-radius: 10px; color: #3b5878; background: linear-gradient(180deg, var(--t-surface-white, #fff), #f4f8fd); }
+.admin-settings-section-head h3 { margin: 0; color: #152b47; font-size: .93rem; font-weight: 750; letter-spacing: -.012em; }
+.admin-settings-section-head p { margin: 2px 0 0; color: #7b8899; font-size: .71rem; }
+.admin-settings-section--danger .admin-settings-section-head { border-bottom-color: #f3d4d4; }
+.admin-settings-section--danger .admin-settings-section-ico { border-color: #f3caca; color: #b91c1c; background: linear-gradient(180deg, var(--t-surface-white, #fff), #fef2f2); }
+.admin-settings-section--danger .admin-settings-section-head h3 { color: #8f1d1d; }
+.admin-settings-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; min-width: 0; }
+.admin-settings-duo > * { min-width: 0; }
+.admin-settings-section .dash-module { padding: 18px; }
+.admin-settings-section :is(.section-title, .card-title) { color: #152b47; letter-spacing: -.015em; }
+.admin-settings-section :is(.form-input, .form-select, input, select, textarea) { border-radius: 9px; border-color: #d5deea; }
 
 .admin-user-module { padding: 0 !important; overflow: hidden; }
 .admin-user-management { min-width: 0; }
@@ -1012,8 +1022,7 @@
   .admin-user-search { flex-basis: auto; width: 100%; }
   .admin-status-filter { width: 100%; justify-content: flex-end; }
   .admin-role-filters { width: 100%; }
-  .admin-settings-grid { grid-template-columns: 1fr; }
-  .admin-settings-grid .bento-cell { grid-column: 1 / -1; }
+  .admin-settings-duo { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .admin-user-toolbar-title { align-items: stretch; flex-direction: column; }
