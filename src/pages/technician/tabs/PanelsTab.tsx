@@ -183,12 +183,12 @@ export default function PanelsTab({
           type="button"
           className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment || !gaTarget}
-          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Select a panel first' : 'Open the selected panel drawing viewer'}
-          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : '3D GA / 2D Drawing View'}
+          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Select a panel first' : 'View GA Drawing for the selected panel'}
+          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA View'}
           onClick={() => gaTarget && setGaOpen(true)}
         >
           <FileText size={16} />
-          3D GA / 2D Drawing View
+          GA View
         </button>
       </div>
 

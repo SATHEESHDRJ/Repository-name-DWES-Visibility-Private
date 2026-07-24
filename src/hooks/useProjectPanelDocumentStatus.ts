@@ -12,7 +12,7 @@ const LOADING_DRAWING: DocumentStatus = { availability: 'loading' };
 const LOADING_WIRING: DocumentStatus = { availability: 'loading' };
 const MISSING_DRAWING: DocumentStatus = {
   availability: 'missing',
-  message: 'No Drawing Uploaded',
+  message: 'No GA drawing is available for this panel',
 };
 const MISSING_WIRING: DocumentStatus = {
   availability: 'missing',
@@ -65,7 +65,7 @@ export function useProjectPanelDocumentStatus(
       if (gen !== drawingGenRef.current) return;
       setDrawing({
         availability: 'error',
-        message: apiErrorMessage(err, 'Failed to check drawings for this panel.'),
+        message: apiErrorMessage(err, 'Failed to check GA drawings for this panel.'),
       });
     }
   }, []);

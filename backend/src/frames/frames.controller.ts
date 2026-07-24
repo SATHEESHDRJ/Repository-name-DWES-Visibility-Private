@@ -3,7 +3,6 @@ import { FastifyReply } from 'fastify';
 import { DwesFileInterceptor, type DwesUploadedFile } from '../common/interceptors/fastify-file.interceptor';
 import { FramesService } from './frames.service';
 import { WiringDocumentService } from '../projects/wiring-document.service';
-import { PanelModelService, type PanelModelSpecPatch } from '../panel-model/panel-model.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -16,7 +15,6 @@ export class FramesController {
   constructor(
     private svc: FramesService,
     private wiringDoc: WiringDocumentService,
-    private panelModel: PanelModelService,
   ) {}
 
   @Get('frames')
@@ -263,8 +261,9 @@ export class FramesController {
         can_view: true,
         can_upload_2d: supervisor && !record.drawing_2d,
         can_replace_2d: supervisor && !!record.drawing_2d,
-        can_upload_3d: supervisor && !record.model_3d,
-        can_replace_3d: supervisor && !!record.model_3d,
+        // 3D model slot uploads removed — keep permission keys false for API shape stability.
+        can_upload_3d: false,
+        can_replace_3d: false,
         can_download_2d: supervisor && !!record.drawing_2d,
         can_download_3d: supervisor && !!record.model_3d,
       },
@@ -396,92 +395,6 @@ export class FramesController {
     @Body('confirmed_phrase') phrase: string,
   ) {
     return this.svc.deleteDrawingGuarded(code, drawingId, (phrase || '').trim());
-  }
-
-  // ── Generated 3D panel model (2D drawing → 3D conversion) ──────────────────
-  // Same audience as the drawing package: supervisor + the assigned technician.
-  // Technicians only ever see/stream APPROVED models (enforced in the service).
-
-  /** Model state, revision history and permissions for THIS exact project + panel. */
-  @Get('frames/:id/model')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'wiring_technician')
-  async getPanelModel(@Param('code') code: string, @Param('id') id: string, @CurrentUser() user: User) {
-    await this.assertTechnicianFrameAccess(user, code, id);
-    return this.panelModel.getPanelModels(code, id, user);
-  }
-
-  /** Start a conversion for this panel from its own current drawing package. */
-  @Post('frames/:id/model/convert')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor')
-  convertPanelModel(
-    @Param('code') code: string,
-    @Param('id') id: string,
-    @Body() body: { package_revision?: number },
-    @CurrentUser() user: User,
-  ) {
-    return this.panelModel.convert(code, id, user, body?.package_revision);
-  }
-
-  /** Supervisor correction of the latest model's spec → regenerate (still needs approval). */
-  @Post('frames/:id/model/:modelId/spec')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor')
-  correctPanelModel(
-    @Param('code') code: string,
-    @Param('id') id: string,
-    @Param('modelId') modelId: string,
-    @Body() body: PanelModelSpecPatch,
-    @CurrentUser() user: User,
-  ) {
-    return this.panelModel.updateSpec(code, id, modelId, body ?? {}, user, body?.package_revision);
-  }
-
-  /** Supervisor approval of the latest verified model revision. */
-  @Post('frames/:id/model/:modelId/approve')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor')
-  approvePanelModel(
-    @Param('code') code: string,
-    @Param('id') id: string,
-    @Param('modelId') modelId: string,
-    @Body() body: { package_revision?: number; assumptions_acknowledged?: boolean; verification_notes?: string },
-    @CurrentUser() user: User,
-  ) {
-    return this.panelModel.approve(
-      code,
-      id,
-      modelId,
-      user,
-      body?.package_revision,
-      body?.assumptions_acknowledged === true,
-      body?.verification_notes,
-    );
-  }
-
-  /** Stream one generated GLB revision. Strictly panel-scoped; never cached. */
-  @Get('frames/:id/model/:modelId/file')
-  @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'wiring_technician')
-  async panelModelFile(
-    @Param('code') code: string,
-    @Param('id') id: string,
-    @Param('modelId') modelId: string,
-    @CurrentUser() user: User,
-    @Res() res: FastifyReply,
-  ) {
-    await this.assertTechnicianFrameAccess(user, code, id);
-    const file = this.panelModel.getModelFile(code, id, modelId, user);
-    res.headers({
-      'Content-Type': file.contentType,
-      'Content-Disposition': `inline; filename="${file.filename.replace(/"/g, '')}"`,
-      'Content-Length': String(file.buffer.length),
-      'Cache-Control': 'private, no-store',
-      'ETag': `"${file.sha256}"`,
-      'X-Content-Type-Options': 'nosniff',
-    });
-    res.send(file.buffer);
   }
 
   @Get('director-reports')

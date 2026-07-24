@@ -8,7 +8,6 @@ import {
   type PanelDrawingAssetKind,
   type PanelDrawingPackage,
 } from '../data/mock-store';
-import { PanelModelStore } from '../panel-model/panel-model-store';
 import { DirFreshnessCache } from '../common/metadata-cache';
 
 /** Skips the per-request package-manifest re-scan while the drawings dir is unchanged. */
@@ -142,7 +141,6 @@ export const FrameStore = {
       MockStore.drawings = MockStore.drawings.filter(drawing => options.activeProjectCodes!.has(drawing.project_code));
       MockStore.drawingPackages = MockStore.drawingPackages.filter(record => options.activeProjectCodes!.has(record.project_code));
       MockStore.directorReports = MockStore.directorReports.filter(report => options.activeProjectCodes!.has(report.project_code));
-      MockStore.panelModels = MockStore.panelModels.filter(model => options.activeProjectCodes!.has(model.project_code));
     }
     for (const [projectCode, frameIds] of options.deletedPanelIdsByProject ?? []) {
       for (const frameId of frameIds) this.blockPanel(projectCode, frameId);
@@ -168,8 +166,6 @@ export const FrameStore = {
         }
       }
       this.loadDrawingPackages(dir);
-      PanelModelStore.loadProject(dir);
-      PanelModelStore.evictFrames(dir, deletedFrameIds);
       MockStore.drawingPackages = MockStore.drawingPackages.filter(
         record => record.project_code !== dir || !deletedFrameIds.has(record.frame_id),
       );
@@ -177,7 +173,7 @@ export const FrameStore = {
         drawing => drawing.project_code !== dir || !drawing.frame_id || !deletedFrameIds.has(drawing.frame_id),
       );
     }
-    console.log(`[FrameStore] Loaded ${MockStore.frames.length} frames, ${MockStore.drawingPackages.length} drawing packages and ${MockStore.panelModels.length} generated panel models from disk`);
+    console.log(`[FrameStore] Loaded ${MockStore.frames.length} frames and ${MockStore.drawingPackages.length} drawing packages from disk`);
   },
 
   /** Save a new frame to disk (metadata JSON + Excel file) */

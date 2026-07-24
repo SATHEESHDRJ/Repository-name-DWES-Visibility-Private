@@ -7,7 +7,6 @@ const { permanentlyDeleteProject } = require('../dist/common/project-delete.util
 const { FramesService } = require('../dist/frames/frames.service');
 const { FrameStore } = require('../dist/frames/frame-store');
 const { MockStore } = require('../dist/data/mock-store');
-const { PanelModelStore } = require('../dist/panel-model/panel-model-store');
 
 function deletionPrisma(updates) {
   const deleted = { count: 1 };
@@ -120,55 +119,7 @@ test('permanent panel deletion atomically cascades assignments and writes a data
   }
 });
 
-test('panel delete removes the panel-scoped model directory and leaves other panels intact', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dwes-panel-delete-'));
-  const oldUploadDir = process.env.UPLOAD_DIR;
-  const original = {
-    frames: MockStore.frames,
-    drawings: MockStore.drawings,
-    drawingPackages: MockStore.drawingPackages,
-    directorReports: MockStore.directorReports,
-    panelModels: MockStore.panelModels,
-  };
-  process.env.UPLOAD_DIR = root;
-  try {
-    const code = 'MODEL-CLEANUP';
-    const keptFrameId = 'kept-panel';
-    const deletedFrameId = 'deleted-panel';
-    const keptDir = path.join(root, code, 'models', keptFrameId);
-    const deletedDir = path.join(root, code, 'models', deletedFrameId);
-    fs.mkdirSync(keptDir, { recursive: true });
-    fs.mkdirSync(deletedDir, { recursive: true });
-    fs.writeFileSync(path.join(keptDir, 'keep.model.json'), JSON.stringify({ id: 'keep', project_code: code, frame_id: keptFrameId }));
-    fs.writeFileSync(path.join(deletedDir, 'gone.model.json'), JSON.stringify({ id: 'gone', project_code: code, frame_id: deletedFrameId }));
-    fs.writeFileSync(path.join(deletedDir, 'gone.glb'), Buffer.from('glb'));
-    MockStore.frames = [{ id: deletedFrameId, project_code: code, panel_name: 'Delete Me', cables: [], cable_count: 0 }];
-    MockStore.panelModels = [{ id: 'gone', project_code: code, frame_id: deletedFrameId, revision: 1, status: 'approved', stages: [], sources: [], spec: {} }];
-    const prisma = {
-      projects: { findFirst: async () => ({ code }) },
-      tech_assignments: { findMany: async () => [], deleteMany: async () => ({ count: 0 }) },
-      panel_inspections: { deleteMany: async () => ({ count: 0 }) },
-      tech_audit_log: { deleteMany: async () => ({ count: 0 }) },
-      file_hashes: { create: async () => ({}) },
-      $transaction: async operations => Promise.all(operations),
-    };
-    const service = new FramesService(prisma);
-    await service.remove(code, deletedFrameId);
-    assert.equal(fs.existsSync(deletedDir), false);
-    assert.equal(fs.existsSync(keptDir), true);
-    assert.equal(PanelModelStore.list(code, deletedFrameId).length, 0);
-    assert.equal(fs.existsSync(path.join(root, code, 'models', keptFrameId, 'keep.model.json')), true);
-  } finally {
-    if (oldUploadDir === undefined) delete process.env.UPLOAD_DIR;
-    else process.env.UPLOAD_DIR = oldUploadDir;
-    fs.rmSync(root, { recursive: true, force: true });
-    MockStore.frames = original.frames;
-    MockStore.drawings = original.drawings;
-    MockStore.drawingPackages = original.drawingPackages;
-    MockStore.directorReports = original.directorReports;
-    MockStore.panelModels = original.panelModels;
-  }
-});
+// Removed: panel-scoped generated 3D model directory cleanup (PanelModelStore / panel-model feature retired).
 
 test('application restart loads only active database projects and non-deleted panels from JSON', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dwes-restart-'));

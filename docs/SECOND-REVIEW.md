@@ -1,51 +1,58 @@
-# Second Review — Cursor Agent (fresh eyes)
+# Second Review — Remove 3D Model + GA terminology rename
 
-**Branch:** `change/oci-single-vm-prod-2026-07-09`  
-**Range:** `652c1a1`..`62a2782` (pre-fix audit)  
-**Reviewer:** Cursor Agent (replaces abandoned Claude Code setup)  
-**Date:** 2026-07-09
+**Branch:** `change/remove-3d-and-rename-ga-2026-07-24`  
+**Worktree:** `C:\Users\sathe\OneDrive\Desktop\DWES-remove-3d-ga`  
+**Baseline:** `9f6a4a4` (`feat(dwes): finalize production workflows and responsive dashboards`)  
+**Dirty tree preserved:** `C:\Users\sathe\OneDrive\Desktop\DWES` on `change/3d-model-demo-lab-2026-07-22` (not included)  
+**Reviewer:** Cursor Agent  
+**Date:** 2026-07-24
 
 ## Summary
 
-Five commits after the OCI single-VM package improve cert renewal, Bastion deploy, production bootstrap UI, and E2E/k6 automation. The audit found **three High-severity deploy blockers** in the Bastion CI path (wrong session type, broken OCI CLI config heredoc, missing Bastion public key wiring) plus one High gap (no Terraform `app_instance_id` output). No committed secrets were found. Critical count after fixes: **0**.
+Panel 3D model generation / viewer / demo-lab surface is removed from this release branch. Supervisor Drawing labels are renamed to GA terminology without changing drawing storage paths or 2D upload/view behaviour. PDF/DWG/DXF/image GA uploads remain supported; new 3D slot uploads are rejected. Exclusive Three.js / OCCT / web-ifc frontend dependencies are removed.
+
+## Change-impact (confirmed)
+
+| Area | Action |
+|------|--------|
+| Frontend | `PanelGaDrawingModal` rewritten GA/2D-only; deleted `EngineeringModelViewer` + workers/loaders; removed `panelModel` API helpers/types; Supervisor/Technician labels → GA Upload / GA View |
+| Backend | Deleted `backend/src/panel-model/*`; removed model routes/providers earlier on branch; upload rejects 3D slot/formats |
+| Feature flags | `VITE_ENABLE_PANEL_3D` obsolete (documented in `.env.example` / `features.ts`) |
+| Packages | Removed `three`, `@react-three/drei`, `@react-three/fiber`, `occt-import-js`, `web-ifc` |
+| Tests | Deleted `panel-model.test.cjs` + recovery test; updated drawing-package + deletion-consistency tests |
+| Docs | `CHANGELOG.md`, `PROJECT_STATUS.md`, this `SECOND-REVIEW.md` |
+| Data | **No** deletion of existing GA drawings, Excel, reports, projects, panels, or wiring records |
+
+## Verification
+
+| Check | Result |
+|-------|--------|
+| Frontend `npm run build` | **PASS** |
+| Backend `prisma generate && nest build` | **PASS** |
+| Backend automated tests | **PASS 83/83** |
+| Browser smoke (`/`, `/technician`, role routes) | **NOT RUN** (dev server not exercised this pass) |
+| Git `origin` / push / `v*` tag | **BLOCKED** — no remotes configured on this worktree |
+| GitHub Actions → OCIR → OCI deploy | **BLOCKED** — no origin |
+| OCI 3D artifact cleanup | **NOT STARTED** — requires healthy post-deploy image + verified backup |
 
 ## Findings
 
-| Severity | Location | Finding | Recommendation |
-|----------|----------|---------|----------------|
-| **High** | `infra/oci/scripts/deploy-via-bastion.sh:18-46` | Used `create-port-forwarding-session` and `eval "$SSH_CMD" ... @host` — port-forward sessions do not provide managed SSH to the VM; first tag deploy would fail. | Switch to `create-managed-ssh-session` with `target-resource-operating-system-user-name` and pass remote script via `bash -s`. **FIXED** |
-| **High** | `.github/workflows/deploy-production-oci.yml:69-76` | OCI `~/.oci/config` heredoc was YAML-indented, writing invalid config (`          [DEFAULT]`). OCI CLI auth would fail in deploy job. | Write config with unindented `echo` lines. **FIXED** |
-| **High** | `.github/workflows/deploy-production-oci.yml:78-90` | `OCI_BASTION_SSH_PUBLIC_KEY` not written; script expected `${SSH_KEY}.pub` beside private key file. Bastion session create would fail. | Write public key to `/tmp/dwes_bastion_key.pub` from secret. **FIXED** |
-| **High** | `infra/oci/terraform/outputs.tf` | No `app_instance_id` output; `OCI_VM_INSTANCE_ID` secret had no terraform source. | Add `output "app_instance_id"`. **FIXED** |
-| **Medium** | `infra/oci/terraform/cloud-init.yaml` | Cert sync cron weekly (`0 3 * * 0`); certbot renew copies PEMs but nginx reload only via sync script. | Run sync daily (`0 3 * * *`). **FIXED** |
-| **Medium** | `infra/docker/docker-compose.yml:100` | Certbot renew loop does not reload nginx (hook copies to shared volume only). | Daily host `sync-letsencrypt-to-nginx.sh` cron mitigates; document in runbook. |
-| **Medium** | `docs/HUMAN-ACTIONS.md` §D | Missing `OCI_BASTION_SSH_PUBLIC_KEY` in secrets table. | Add secret before first deploy. **FIXED in HUMAN-ACTIONS** |
-| **Low** | `infra/oci/scripts/deploy-via-bastion.sh:36` | `git fetch --tags origin` assumes `/opt/dwes` remote named `origin`. | Document in deploy prompt; verify on VM bootstrap. |
-| **Low** | `e2e/tests/role-journeys.spec.ts` | Loose heading matchers may flake on UI copy changes. | Acceptable for smoke; tighten later. |
+| Severity | Finding | Status |
+|----------|---------|--------|
+| **High (deploy)** | No git remote `origin` — cannot push, tag, or run approved Actions deploy | **Blocker** — add remote before release |
+| **Medium** | Drawing package API still exposes `model_3d` / `can_download_3d` keys (false/null) for shape stability | Acceptable; optional later cleanup |
+| **Low** | Browser role smoke and live GA open not verified in this pass | Run before production tag |
+| **Low** | Orphan historical files under `uploads/<project>/models/` on disk (if any) are not deleted by this code change | Inventory + backup after OCI deploy only |
 
-## No issues found
+## Protected functions (unchanged by design)
 
-- No committed JWT secrets, API keys, or `.env` files in diff range.
-- `login-hints` / demo seed gated when `DEMO_MODE=false` (verified in prior pass).
-- Certbot deploy-hook now targets `/nginx-out` mounted to `${DATA_ROOT}/ssl/nginx`.
-- `RP_ID` / `RP_ORIGIN` / `CORS_ORIGINS` templated from `DWES_DOMAIN` in `.env.production.example`.
-- Production bootstrap RBAC allows `ops_director` self-password (`users-rbac.ts`).
-- Bind mounts under `/mnt/dwes-data/{postgres,uploads,auth,backups,ssl}` consistent across compose and cloud-init.
+Technician DWS redesign (other branch), Excel upload/parsing, auth/JWT/WebAuthn/RBAC, assignment, Pause/Resume/SKIP/OPEN END, Mid Change, QA/QC, Director reports, completion reports, existing GA drawing files.
 
-## Needs human confirmation
+## Rollback
 
-- OCI Bastion managed SSH with user `dwes` (cloud-init creates user; verify SSH username on first Bastion session).
-- Windows Application Control blocking `terraform-provider-oci` locally — use Docker `hashicorp/terraform` image or CI for validate/plan (not a deploy blocker).
+- Local: `git switch` / reset to baseline `9f6a4a4` on this branch, or discard the worktree.
+- Production: keep previous production image/tag until a successful `v*` deploy exists (none created this session).
 
----
+## Verdict
 
-## Finding → fix table (post-remediation)
-
-| Finding | Fix | Commit |
-|---------|-----|--------|
-| Bastion port-forwarding session + wrong SSH target | `create-managed-ssh-session` + `bash -s` remote script | *(this commit)* |
-| OCI CLI config heredoc indentation | Unindented `echo` block in workflow | *(this commit)* |
-| Missing Bastion SSH public key in CI | Write `OCI_BASTION_SSH_PUBLIC_KEY` to `.pub` file | *(this commit)* |
-| Missing `app_instance_id` terraform output | Added `outputs.tf` entry | *(this commit)* |
-| Weekly cert nginx reload | Daily cert sync cron in cloud-init | *(this commit)* |
-| HUMAN-ACTIONS missing public key secret | Updated §D | *(this commit)* |
+**PASS WITH WARNINGS** — implementation and automated verification complete locally; **do not deploy** until `origin` exists, SECOND-REVIEW browser smoke is completed, and change-management backup/tag gates pass.

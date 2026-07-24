@@ -10,7 +10,6 @@ import {
   type PanelDrawingPackage,
 } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
-import { PanelModelStore } from '../panel-model/panel-model-store';
 import { parseWiringSheet } from './parse-wiring';
 import { convertCadDrawingPreview } from './drawing-preview-converter';
 import { isSafeInlineSvg } from '../common/safe-svg.util';
@@ -24,18 +23,19 @@ import {
 
 const REQUIRED_FIELDS = ['ferrule'];
 
-const DRAWING_EXTENSIONS: Record<PanelDrawingAssetKind, Set<string>> = {
-  '2d': new Set(['pdf', 'dwg', 'dxf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tif', 'tiff']),
-  '3d': new Set(['glb', 'gltf', 'step', 'stp', 'ifc', 'obj', 'fbx', 'stl']),
-};
+/** GA / 2D drawing uploads only. 3D model formats are rejected (panel 3D feature removed). */
+const DRAWING_2D_EXTENSIONS = new Set([
+  'pdf', 'dwg', 'dxf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tif', 'tiff',
+]);
+
+const REJECTED_3D_EXTENSIONS = new Set([
+  'glb', 'gltf', 'step', 'stp', 'ifc', 'obj', 'fbx', 'stl',
+]);
 
 const NORMALIZED_CONTENT_TYPES: Record<string, string> = {
   pdf: 'application/pdf', dwg: 'application/acad', dxf: 'image/vnd.dxf',
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
   webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml', tif: 'image/tiff', tiff: 'image/tiff',
-  glb: 'model/gltf-binary', gltf: 'model/gltf+json', obj: 'model/obj', stl: 'model/stl',
-  step: 'application/step', stp: 'application/step', ifc: 'application/x-step',
-  fbx: 'application/octet-stream',
 };
 
 const MIME_ALIASES: Record<string, Set<string>> = {
@@ -46,11 +46,6 @@ const MIME_ALIASES: Record<string, Set<string>> = {
   gif: new Set(['image/gif']), webp: new Set(['image/webp']), bmp: new Set(['image/bmp']),
   svg: new Set(['image/svg+xml']),
   tif: new Set(['image/tiff']), tiff: new Set(['image/tiff']),
-  glb: new Set(['model/gltf-binary']), gltf: new Set(['model/gltf+json', 'application/json']),
-  obj: new Set(['model/obj', 'text/plain']), stl: new Set(['model/stl', 'application/sla', 'text/plain']),
-  step: new Set(['application/step', 'model/step']), stp: new Set(['application/step', 'model/step']),
-  ifc: new Set(['application/x-step', 'application/ifc']),
-  fbx: new Set(['application/octet-stream', 'application/vnd.autodesk.fbx']),
 };
 
 function safeUploadName(filename: string): string {
@@ -65,8 +60,7 @@ function extensionOf(filename: string): string {
 
 function inferredAssetKind(filename: string): PanelDrawingAssetKind | null {
   const ext = extensionOf(filename);
-  if (DRAWING_EXTENSIONS['2d'].has(ext)) return '2d';
-  if (DRAWING_EXTENSIONS['3d'].has(ext)) return '3d';
+  if (DRAWING_2D_EXTENSIONS.has(ext)) return '2d';
   return null;
 }
 
@@ -91,32 +85,20 @@ function hasBasicSignature(buffer: Buffer, ext: string): boolean {
     case 'tiff': return buffer.subarray(0, 4).equals(Buffer.from([0x49, 0x49, 0x2a, 0x00])) || buffer.subarray(0, 4).equals(Buffer.from([0x4d, 0x4d, 0x00, 0x2a]));
     case 'dwg': return /^AC10\d{2}/.test(buffer.subarray(0, 6).toString('ascii'));
     case 'dxf': return /(?:^|\r?\n)\s*0\s*\r?\n\s*SECTION/i.test(ascii);
-    case 'glb': return startsWithAscii(buffer, 'glTF');
-    case 'gltf': {
-      try {
-        const json = JSON.parse(buffer.toString('utf8')) as { asset?: { version?: unknown } };
-        return typeof json?.asset?.version === 'string';
-      } catch { return false; }
-    }
-    case 'step':
-    case 'stp': return /^ISO-10303-21\s*;/i.test(ascii);
-    case 'ifc': return /^ISO-10303-21\s*;/i.test(ascii) && /FILE_SCHEMA\s*\(\s*\(\s*['"]IFC/i.test(ascii);
-    case 'fbx': return startsWithAscii(buffer, 'Kaydara FBX Binary') || /^;\s*FBX/i.test(ascii);
-    case 'obj': return /(?:^|\r?\n)\s*(?:v|vn|vt|f|o|g)\s+/m.test(ascii);
-    case 'stl': {
-      if (/^solid(?:\s|$)/i.test(ascii)) return /(?:^|\r?\n)\s*(?:facet|endsolid)(?:\s|$)/im.test(ascii);
-      if (buffer.length < 84) return false;
-      const triangles = buffer.readUInt32LE(80);
-      return 84 + triangles * 50 === buffer.length;
-    }
     default: return false;
   }
 }
 
 function validateDrawingAsset(buffer: Buffer, filename: string, suppliedContentType: string, kind: PanelDrawingAssetKind) {
+  if (kind !== '2d') {
+    throw new BadRequestException('Only the GA Drawing (2D) slot accepts new uploads. 3D model uploads are no longer supported.');
+  }
   const ext = extensionOf(filename);
-  if (!DRAWING_EXTENSIONS[kind].has(ext)) {
-    throw new BadRequestException(`${kind === '2d' ? '2D drawing' : '3D model'} format .${ext || '(none)'} is not supported`);
+  if (REJECTED_3D_EXTENSIONS.has(ext)) {
+    throw new BadRequestException('3D model uploads are no longer supported. Upload a GA drawing (PDF, DWG, DXF, or image).');
+  }
+  if (!DRAWING_2D_EXTENSIONS.has(ext)) {
+    throw new BadRequestException(`GA drawing format .${ext || '(none)'} is not supported`);
   }
   if (!hasBasicSignature(buffer, ext)) {
     throw new BadRequestException(`The uploaded .${ext} file signature is invalid or does not match its extension`);
@@ -131,12 +113,12 @@ function validateDrawingAsset(buffer: Buffer, filename: string, suppliedContentT
 }
 
 function previewMetadata(ext: string, filename: string, contentType: string): PanelDrawingAsset['preview'] {
-  const requiresConversion = ['dwg', 'dxf', 'step', 'stp', 'ifc'].includes(ext);
+  const requiresConversion = ['dwg', 'dxf'].includes(ext);
   if (requiresConversion) {
     return {
       filename: '',
       content_type: '',
-      format: ['dwg', 'dxf'].includes(ext) ? 'pdf' : 'glb',
+      format: 'pdf',
       status: 'failed',
       error: 'A secure browser preview has not been generated. The original engineering source file is preserved unchanged.',
     };
@@ -352,7 +334,13 @@ export class UploadService {
 
     const safeName = safeUploadName(filename);
     const kind = inferredAssetKind(safeName);
-    if (!kind) throw new BadRequestException('Unsupported drawing or 3D model format');
+    if (!kind) {
+      const ext = extensionOf(safeName);
+      if (REJECTED_3D_EXTENSIONS.has(ext)) {
+        throw new BadRequestException('3D model uploads are no longer supported. Upload a GA drawing (PDF, DWG, DXF, or image).');
+      }
+      throw new BadRequestException('Unsupported GA drawing format');
+    }
 
     const frameId = targetFrameId?.trim();
     if (frameId) {
@@ -512,16 +500,6 @@ export class UploadService {
       FrameStore.archiveDrawingFile(projectCode, previous.id, previous.original_name);
       FrameStore.removeDrawing(projectCode, previous.id, previous.original_name);
       MockStore.drawings = MockStore.drawings.filter(d => d.id !== previous.id);
-    }
-    // A new 2D drawing revision supersedes every generated 3D model of THIS panel
-    // (read-only history is preserved; nothing is overwritten or deleted).
-    if (kind === '2d') {
-      PanelModelStore.supersedeActive(
-        projectCode,
-        frameId,
-        null,
-        `Superseded by new 2D drawing revision ${next.revision}`,
-      );
     }
     return next;
   }

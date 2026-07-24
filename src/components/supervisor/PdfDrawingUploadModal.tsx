@@ -18,7 +18,7 @@ import {
 
 const MAX_SIZE_MB = 50;
 
-type DrawingFileType = 'pdf' | 'dwg' | 'model3d';
+type DrawingFileType = 'pdf' | 'dwg';
 
 interface ProjectDrawing {
   id: string;
@@ -45,12 +45,6 @@ const DRAWING_FILE_CONFIG: Record<DrawingFileType, {
     accept: '.dwg,application/acad,application/x-acad',
     hint: '.dwg only',
     test: /\.dwg$/i,
-  },
-  model3d: {
-    label: '3D GA',
-    accept: '.glb,.gltf,.obj,.stl,model/gltf-binary,model/gltf+json',
-    hint: '.glb, .gltf, .obj, or .stl',
-    test: /\.(glb|gltf|obj|stl)$/i,
   },
 };
 
@@ -278,10 +272,10 @@ export default function PdfDrawingUploadModal({
   const showViewer = mode === 'populated';
   const showUpload = mode === 'empty' || mode === 'replacing';
   const modalTitle = showViewer
-    ? `View ${cfg.label} Drawing`
+    ? `View GA Drawing`
     : mode === 'replacing'
-      ? `Replace ${cfg.label} Drawing`
-      : `Upload ${cfg.label} Drawing`;
+      ? `Replace GA Drawing`
+      : `Upload GA Drawing`;
 
   const uploadControls = (
     <div className="panel-file-upload-section flex flex-col gap-4">
@@ -377,7 +371,7 @@ export default function PdfDrawingUploadModal({
       {done && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] bg-green-50 border border-green-200 text-[13px] text-green-800">
           <CheckCircle size={16} className="shrink-0" strokeWidth={1.5} />
-          {cfg.label} drawing uploaded successfully.
+          GA Drawing uploaded successfully.
         </div>
       )}
     </div>

@@ -77,17 +77,17 @@ export default function DrawingsTab() {
           <button onClick={() => setShowUpload(true)} disabled={!selProject}
             className="btn-primary" type="button">
             <Upload size={18} />
-            <span>Upload Drawing</span>
+            <span>Upload GA Drawing</span>
           </button>
         )}
       </div>
 
-      {loading && <div className="empty-state"><p className="empty-text">Loading drawings...</p></div>}
+      {loading && <div className="empty-state"><p className="empty-text">Loading GA drawings...</p></div>}
 
       {!loading && drawings.length === 0 && (
         <div className="empty-state history-empty-state">
           <div className="history-empty-icon"><Map size={32} /></div>
-          No drawings uploaded for this project. GA drawings and schematics can be uploaded here.
+          No GA drawing is available for this panel. GA drawings and schematics can be uploaded here.
         </div>
       )}
 
@@ -213,7 +213,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
   const canUpload = !!file && !uploading && (dupInfo?.kind !== 'same' || dupChoice === 'replace');
 
   return (
-    <Modal title="Upload Drawing" icon={<Upload />} onClose={onClose}
+    <Modal title="Upload GA Drawing" icon={<Upload />} onClose={onClose}
       footer={!done ? (
         <>
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>

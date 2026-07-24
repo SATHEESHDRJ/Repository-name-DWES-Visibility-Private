@@ -18,7 +18,6 @@ import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelC
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
 import type { DocumentStatus } from '../../../utils/documentAvailability';
-import { PANEL_3D_ENABLED } from '../../../config/features';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
@@ -701,15 +700,15 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const gateHint = loading
     ? 'Loading projects from the database…'
     : !selectedProject
-    ? 'Select a project and panel to enable wiring upload, drawing upload, and reports.'
+    ? 'Select a project and panel to enable wiring upload, GA upload, and reports.'
     : loadingPanels
       ? 'Loading panels for this project…'
       : projectPanels.length === 0
         ? 'No Panels Available — add a panel when creating or editing the project.'
         : !selectedPanelId
-          ? 'Select a panel to enable wiring upload, drawing upload, and reports.'
+          ? 'Select a panel to enable wiring upload, GA upload, and reports.'
           : duplicateBlocked && !duplicateBannerDismissed
-            ? 'Resolve duplicate panel names before wiring upload, drawing upload, reports, or workflow.'
+            ? 'Resolve duplicate panel names before wiring upload, GA upload, reports, or workflow.'
             : '';
 
   return (
@@ -816,10 +815,10 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               }}
               disabled={!actionGated}
               className="pj-btn-primary pj-action-btn"
-              title={actionGated ? `Upload drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+              title={actionGated ? `Upload GA Drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
             >
               <FileText size={16} strokeWidth={1.5} />
-              <span>Drawing</span>
+              <span>GA Upload</span>
             </button>
           )}
 
@@ -862,7 +861,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             {perms.canManageProjects && (
               <div className="pj-project-info-card-actions-wrap">
                 <div className="pj-doc-status-row" aria-label="Document availability">
-                  <DocumentAvailabilityBadge label="Drawing" status={drawingDoc} />
+                  <DocumentAvailabilityBadge label="GA Drawing" status={drawingDoc} />
                   <DocumentAvailabilityBadge label="Wiring Schedule" status={wiringDoc} />
                 </div>
                 <div className="pj-project-info-card-actions" role="group" aria-label="Project actions">
@@ -907,7 +906,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                     className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}`}
                     onClick={() => {
                       if (drawingDoc.availability === 'error') {
-                        setToast({ message: drawingDoc.message ?? 'Failed to open drawing.', tone: 'warn' });
+                        setToast({ message: drawingDoc.message ?? 'Failed to open GA drawing.', tone: 'warn' });
                         return;
                       }
                       setShowGaDrawingView(true);
@@ -916,16 +915,16 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                     aria-busy={drawingLoading || undefined}
                     title={
                       drawingLoading
-                        ? 'Checking drawings…'
+                        ? 'Checking GA drawings…'
                         : !selectedPanel
                           ? 'Select a panel first'
                           : drawingReady
-                            ? `${PANEL_3D_ENABLED ? '2D drawing and 3D model' : '2D drawing'} for ${selectedPanel.panel_name}`
-                            : `Upload or view drawings for ${selectedPanel.panel_name}`
+                            ? `View GA Drawing for ${selectedPanel.panel_name}`
+                            : `Upload or view GA drawing for ${selectedPanel.panel_name}`
                     }
                   >
                     {drawingLoading ? <span className="btn-spinner" aria-hidden /> : <FileText size={16} strokeWidth={1.75} aria-hidden />}
-                    <span>Drawing View</span>
+                    <span>GA View</span>
                   </button>
 
                   <button

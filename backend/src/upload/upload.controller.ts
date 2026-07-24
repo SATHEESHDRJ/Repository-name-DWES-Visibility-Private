@@ -108,7 +108,9 @@ export class UploadController {
     @CurrentUser() user: User,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    if (slot !== '2d' && slot !== '3d') throw new BadRequestException('Drawing slot must be 2d or 3d');
+    if (slot !== '2d') {
+      throw new BadRequestException('GA Drawing slot must be 2d. 3D model uploads are no longer supported.');
+    }
     return this.svc.uploadPanelDrawingAsset(
       code,
       frameId,

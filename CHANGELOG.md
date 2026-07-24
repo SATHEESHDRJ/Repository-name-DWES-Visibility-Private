@@ -6,6 +6,17 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-24 — Remove panel 3D model / demo lab + Supervisor GA terminology
+
+- **Scope:** Isolated worktree `C:\Users\sathe\OneDrive\Desktop\DWES-remove-3d-ga`, branch `change/remove-3d-and-rename-ga-2026-07-24`, baseline `9f6a4a4`. Dirty Demo Lab tree on `change/3d-model-demo-lab-2026-07-22` left untouched.
+- **Removed:** `backend/src/panel-model/*`, generated-model API helpers, `EngineeringModelViewer` + STEP/IFC workers/loaders, `panelModel` types/recovery util/tests, exclusive FE deps (`three`, `@react-three/*`, `occt-import-js`, `web-ifc`), `VITE_ENABLE_PANEL_3D` feature surface.
+- **Preserved:** Existing GA/2D drawing upload/view/download APIs and storage paths; PDF/DWG/DXF/image GA uploads remain; Excel, reports, projects/panels/wiring data untouched. Drawing package `model_3d` field retained as null/read-only for API shape stability; new 3D slot uploads rejected.
+- **Supervisor labels:** Drawing → **GA Upload** / **GA View** / **Upload GA Drawing** / **View GA Drawing**; success/empty states use GA Drawing terminology.
+- **Verified:** `npm run build` (FE) exit 0; backend `prisma generate && nest build` exit 0; backend tests **83/83**. No git `origin` — push/tag/OCI deploy **blocked**.
+- **Restore point:** branch `change/remove-3d-and-rename-ga-2026-07-24` from `9f6a4a4`.
+
+---
+
 ## 2026-07-15 — Fix — Parser sub-header hardening (first-row retention) + documented admin redirect
 
 - **Parser root cause** (`excel-headers.ts` `isSubHeaderRow`): the generic "short digit-free text" fallback could classify a first DATA row of device names/colours (no digits, no "/") as a wire-spec sub-header and skip it — the remaining first-row-drop vector. Hardened: (1) a bare-numeric cell (serial/terminal) or a "left/right" pair marks the row as data outright; (2) only **strong** header evidence counts (wire specs or keyword/regex labels via new `looksLikeStrongHeaderLabel`), never the loose fallback. Genuine multi-row spec headers are still skipped. No test expectations changed, no dummy rows, no special-casing.

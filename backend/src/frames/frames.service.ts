@@ -6,7 +6,6 @@ import { spawnSync } from 'child_process';
 import { MockStore, Cable, CompareResult, FrameData, type PanelDrawingAssetKind } from '../data/mock-store';
 import { PrismaService } from '../prisma/prisma.service';
 import { FrameStore } from './frame-store';
-import { PanelModelStore } from '../panel-model/panel-model-store';
 import {
   assertPanelNameUniqueForWrite,
   assertPatchPanelNameAllowed,
@@ -216,7 +215,6 @@ export class FramesService {
     ]);
     FrameStore.removeDrawingPackage(projectCode, frameId);
     FrameStore.remove(projectCode, frameId);
-    PanelModelStore.removeFrame(projectCode, frameId);
     MockStore.frames.splice(idx, 1);
     FrameStore.blockPanel(projectCode, frameId);
     return { message: 'Frame deleted' };

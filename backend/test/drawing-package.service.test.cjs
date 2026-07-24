@@ -82,27 +82,27 @@ function withDrawingStore(fn) {
     });
 }
 
-test('panel drawing package keeps a stable id and preserves the other slot', () => withDrawingStore(async () => {
+test('panel drawing package keeps a stable id for GA (2D) uploads', () => withDrawingStore(async () => {
   const service = new UploadService(prisma());
   const twoD = pdf();
   const first = await service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '2d', twoD.data, twoD.name, twoD.type, 4);
-  const threeD = glb();
-  const second = await service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '3d', threeD.data, threeD.name, threeD.type, 4);
+  const secondPdf = pdf('drawing-rev2.pdf');
+  const second = await service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '2d', secondPdf.data, secondPdf.name, secondPdf.type, 4);
 
   assert.equal(first.id, second.id);
   assert.equal(second.revision, 2);
-  assert.equal(second.drawing_2d.id, first.drawing_2d.id);
-  assert.equal(second.model_3d.kind, '3d');
+  assert.equal(second.model_3d, null);
   assert.equal(second.drawing_2d.sha256.length, 64);
+  assert.notEqual(second.drawing_2d.id, first.drawing_2d.id);
 
   MockStore.drawingPackages = [];
   const reloaded = FrameStore.getDrawingPackage('PKG_SCOPE', 'frame_a');
   assert.equal(reloaded.id, second.id);
   assert.equal(reloaded.drawing_2d.id, second.drawing_2d.id);
-  assert.equal(reloaded.model_3d.id, second.model_3d.id);
+  assert.equal(reloaded.model_3d, null);
 }));
 
-test('legacy replacement rejects cross-panel and cross-slot drawing ids', () => withDrawingStore(async () => {
+test('legacy replacement rejects cross-panel drawing ids and 3D model uploads', () => withDrawingStore(async () => {
   const service = new UploadService(prisma());
   const twoD = pdf();
   const record = await service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '2d', twoD.data, twoD.name, twoD.type, 4);
@@ -116,15 +116,15 @@ test('legacy replacement rejects cross-panel and cross-slot drawing ids', () => 
   const threeD = glb();
   await assert.rejects(
     service.uploadDrawing('PKG_SCOPE', threeD.data, threeD.name, threeD.type, drawingId, 'frame_a'),
-    /2D drawing with a 3D model/i,
+    /3D model uploads are no longer supported/i,
   );
 }));
 
-test('slot validation rejects mismatched file signatures', () => withDrawingStore(async () => {
+test('slot validation rejects 3D model slot uploads', () => withDrawingStore(async () => {
   const service = new UploadService(prisma());
   await assert.rejects(
     service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '3d', Buffer.from('%PDF-1.4'), 'fake.glb', 'application/octet-stream', 4),
-    /signature is invalid/i,
+    /3D model uploads are no longer supported/i,
   );
 }));
 
@@ -144,16 +144,13 @@ test('panel SVG drawings are accepted only when they contain no executable conte
   );
 }));
 
-test('browser-incompatible engineering source is preserved and reports no fake preview', () => withDrawingStore(async () => {
+test('3D engineering source uploads are rejected after panel 3D removal', () => withDrawingStore(async () => {
   const service = new UploadService(prisma());
   const source = Buffer.from("ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('DWES'),'2;1');\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;");
-  const record = await service.uploadPanelDrawingAsset(
-    'PKG_SCOPE', 'frame_a', '3d', source, 'panel.step', 'application/step', 4,
+  await assert.rejects(
+    service.uploadPanelDrawingAsset('PKG_SCOPE', 'frame_a', '3d', source, 'panel.step', 'application/step', 4),
+    /3D model uploads are no longer supported/i,
   );
-  assert.equal(record.model_3d.preview.status, 'failed');
-  assert.match(record.model_3d.preview.error, /original engineering source file is preserved/i);
-  const stored = FrameStore.getDrawingFile('PKG_SCOPE', record.model_3d.id);
-  assert.deepEqual(stored.buffer, source);
 }));
 
 test('unconfigured DWG conversion remains explicitly failed and preserves its source', () => withDrawingStore(async () => {

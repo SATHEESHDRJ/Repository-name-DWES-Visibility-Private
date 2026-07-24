@@ -6,20 +6,15 @@ import { uploadApi } from '../../services/api';
 import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import type { PanelDrawingAsset, PanelDrawingSlot } from '../../types/panelDrawing';
 
-const SLOT_CONFIG: Record<PanelDrawingSlot, {
+const SLOT_CONFIG: Record<'2d', {
   label: string;
   accept: string;
   extensions: string[];
 }> = {
   '2d': {
-    label: '2D Drawing',
+    label: 'GA Drawing',
     accept: '.pdf,.dwg,.dxf,.png,.jpg,.jpeg,.webp,.bmp,.svg,.tif,.tiff,application/pdf,image/*',
     extensions: ['pdf', 'dwg', 'dxf', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'svg', 'tif', 'tiff'],
-  },
-  '3d': {
-    label: '3D Model',
-    accept: '.glb,.gltf,.step,.stp,.ifc,.obj,.fbx,.stl,model/gltf-binary,model/gltf+json',
-    extensions: ['glb', 'gltf', 'step', 'stp', 'ifc', 'obj', 'fbx', 'stl'],
   },
 };
 
@@ -54,7 +49,10 @@ export default function PanelDrawingUploadModal({
 }) {
   const dialog = useAppDialog();
   const inputRef = useRef<HTMLInputElement>(null);
-  const cfg = SLOT_CONFIG[slot];
+  if (slot !== '2d') {
+    throw new Error('Only the GA Drawing (2D) slot accepts uploads. 3D model uploads are no longer supported.');
+  }
+  const cfg = SLOT_CONFIG['2d'];
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -77,10 +75,10 @@ export default function PanelDrawingUploadModal({
     if (!file || uploading) return;
     if (existingAsset) {
       const confirmed = await dialog.confirm({
-        title: `Replace ${cfg.label}?`,
+        title: 'Replace GA Drawing?',
         message: `This replaces “${existingAsset.original_name}” for panel ${panelName}. The replacement remains linked only to project ${projectCode} and this panel.`,
         tone: 'warning',
-        confirmText: `Replace ${cfg.label}`,
+        confirmText: 'Replace GA Drawing',
       });
       if (!confirmed) return;
     }
@@ -91,12 +89,12 @@ export default function PanelDrawingUploadModal({
     try {
       const form = new FormData();
       form.append('file', file);
-      await uploadApi.panelDrawingSlot(projectCode, frameId, slot, form, setProgress);
+      await uploadApi.panelDrawingSlot(projectCode, frameId, '2d', form, setProgress);
       setDone(true);
       emitDocumentsChanged({ projectCode, frameId, kind: 'drawing', action: existingAsset ? 'replaced' : 'uploaded' });
       onUploaded();
     } catch (err: any) {
-      setError(err?.response?.data?.message || `Unable to upload this ${cfg.label.toLowerCase()}.`);
+      setError(err?.response?.data?.message || 'Unable to upload this GA drawing.');
     } finally {
       setUploading(false);
     }
@@ -104,7 +102,7 @@ export default function PanelDrawingUploadModal({
 
   return (
     <Modal
-      title={`${existingAsset ? 'Replace' : 'Upload'} ${cfg.label}`}
+      title={existingAsset ? 'Replace GA Drawing' : 'Upload GA Drawing'}
       subtitle={`${projectName || projectCode} · ${panelName}`}
       icon={<Upload />}
       onClose={onClose}
@@ -191,15 +189,9 @@ export default function PanelDrawingUploadModal({
         ) : (
           <div className="panel-drawing-upload-success" role="status">
             <CheckCircle size={30} />
-            <strong>{cfg.label} uploaded successfully.</strong>
-            <span>The viewer will reload this panel’s shared drawing record.</span>
+            <strong>GA Drawing uploaded successfully.</strong>
+            <span>The viewer will reload this panel’s shared GA drawing record.</span>
           </div>
-        )}
-
-        {slot === '3d' && (
-          <p className="panel-drawing-format-note">
-            STEP/STP and IFC files are displayed only after the secure engineering preview is ready. DWES never generates a model from the 2D drawing.
-          </p>
         )}
 
         {error && (

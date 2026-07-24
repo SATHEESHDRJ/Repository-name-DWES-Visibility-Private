@@ -1,5 +1,4 @@
 import axios from 'axios';
-import type { PanelModelSpecPatchRequest } from '../types/panelModel';
 import { DWES_CLIENT_ID, DWES_CLIENT_ID_HEADER } from '../utils/clientId';
 
 const api = axios.create({
@@ -211,34 +210,6 @@ export const projectsApi = {
 
   panelDrawingSlotDownload: (code: string, frameId: string, slot: '2d' | '3d') =>
     api.get(`/projects/${code}/frames/${frameId}/drawing/${slot}/download`, { responseType: 'blob' })
-      .then(r => r.data as Blob),
-
-  // ── Generated 3D panel model (2D drawing → 3D conversion), strictly panel-scoped ──
-  panelModel: (code: string, frameId: string, signal?: AbortSignal) =>
-    api.get(`/projects/${code}/frames/${frameId}/model`, { signal }).then(r => r.data),
-
-  panelModelConvert: (code: string, frameId: string, packageRevision: number, signal?: AbortSignal) =>
-    api.post(`/projects/${code}/frames/${frameId}/model/convert`, { package_revision: packageRevision }, { signal }).then(r => r.data),
-
-  panelModelSpec: (code: string, frameId: string, modelId: string, patch: PanelModelSpecPatchRequest, signal?: AbortSignal) =>
-    api.post(`/projects/${code}/frames/${frameId}/model/${modelId}/spec`, patch, { signal }).then(r => r.data),
-
-  panelModelApprove: (
-    code: string,
-    frameId: string,
-    modelId: string,
-    packageRevision: number,
-    assumptionsAcknowledged: boolean,
-    verificationNotes?: string,
-    signal?: AbortSignal,
-  ) => api.post(`/projects/${code}/frames/${frameId}/model/${modelId}/approve`, {
-    package_revision: packageRevision,
-    assumptions_acknowledged: assumptionsAcknowledged,
-    ...(verificationNotes?.trim() ? { verification_notes: verificationNotes.trim() } : {}),
-  }, { signal }).then(r => r.data),
-
-  panelModelFile: (code: string, frameId: string, modelId: string, signal?: AbortSignal) =>
-    api.get(`/projects/${code}/frames/${frameId}/model/${modelId}/file`, { responseType: 'blob', signal })
       .then(r => r.data as Blob),
 
   // Fetch a drawing file as a Blob (auth header is attached by the axios interceptor;
