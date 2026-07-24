@@ -1,16 +1,17 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 // Compile is run first, so we import from the compiled dist folder
 const { parseWiringSheet } = require('../dist/upload/parse-wiring');
 const { findHeaderRow, dataStartRow } = require('../dist/upload/excel-headers');
 
-function createSheetBuffer(aoa, sheetName = 'Sheet1') {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+// Fixtures are built with exceljs — the same library the production
+// SafeExcelReader parses with (xlsx/SheetJS is deliberately not a dependency).
+async function createSheetBuffer(aoa, sheetName = 'Sheet1') {
+  const wb = new ExcelJS.Workbook();
+  wb.addWorksheet(sheetName).addRows(aoa);
+  return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
 const mapping = {
@@ -33,8 +34,8 @@ test('Excel Parser Regression - One header and six cables (E2E format)', async (
     [6, 'F-006', 'SRC-DEV-6', 'X6', 'DST-DEV-6', 'Y6'],
   ];
 
-  const buf = createSheetBuffer(aoa, 'WIRING');
-  const parsed = parseWiringSheet(buf, 'WIRING', mapping);
+  const buf = await createSheetBuffer(aoa, 'WIRING');
+  const parsed = await parseWiringSheet(buf, 'WIRING', mapping);
 
   assert.equal(parsed.cables.length, 6, `Expected 6 cables, got ${parsed.cables.length}`);
   assert.equal(parsed.cables[0].ferrule, 'F-001');
@@ -49,8 +50,8 @@ test('Excel Parser Regression - Data begins immediately after header row', async
     [1, 'F-001', 'SRC-DEV-1', 'X1', 'DST-DEV-1', 'Y1'],
   ];
 
-  const buf = createSheetBuffer(aoa);
-  const parsed = parseWiringSheet(buf, 'Sheet1', mapping);
+  const buf = await createSheetBuffer(aoa);
+  const parsed = await parseWiringSheet(buf, 'Sheet1', mapping);
 
   assert.equal(parsed.cables.length, 1);
   assert.equal(parsed.cables[0].ferrule, 'F-001');
@@ -65,8 +66,8 @@ test('Excel Parser Regression - Empty and blank rows ignored', async (t) => {
     [],
   ];
 
-  const buf = createSheetBuffer(aoa);
-  const parsed = parseWiringSheet(buf, 'Sheet1', mapping);
+  const buf = await createSheetBuffer(aoa);
+  const parsed = await parseWiringSheet(buf, 'Sheet1', mapping);
 
   assert.equal(parsed.cables.length, 2);
   assert.equal(parsed.cables[0].ferrule, 'F-001');
@@ -97,7 +98,7 @@ test('Excel Parser Regression - Actual DWES schedule format (WIRE NO pairs, LENG
     [5, 'F-005', '=H001-X4', '1', '-K3', '1', 'BLUE', '1.5sq mm', '3.1', ''],
     [6, 'F-006', '=H001-X4', '2', '-K3', '2', 'BLACK', '1.5sq mm', '3.1', ''],
   ];
-  const parsed = parseWiringSheet(createSheetBuffer(aoa, 'WIRING'), 'WIRING', dwesMapping);
+  const parsed = await parseWiringSheet(await createSheetBuffer(aoa, 'WIRING'), 'WIRING', dwesMapping);
 
   assert.equal(parsed.cables.length, 6, `Expected 6 cables, got ${parsed.cables.length}`);
   assert.deepEqual(parsed.cables.map(c => c.ferrule), ['F-001', 'F-002', 'F-003', 'F-004', 'F-005', 'F-006']);
@@ -115,7 +116,7 @@ test('Excel Parser Regression - Digit-free first data row is NOT skipped as a su
     ['', 'CT', 'MAIN', 'A', 'RELAY', 'B'],
     ['', 'PT', 'AUX', 'C', 'METER', 'D'],
   ];
-  const parsed = parseWiringSheet(createSheetBuffer(aoa), 'Sheet1', mapping);
+  const parsed = await parseWiringSheet(await createSheetBuffer(aoa), 'Sheet1', mapping);
 
   assert.equal(parsed.cables.length, 2, `Expected 2 cables, got ${parsed.cables.length}`);
   assert.equal(parsed.cables[0].ferrule, 'CT');
@@ -129,7 +130,7 @@ test('Excel Parser Regression - Genuine wire-spec sub-header row is still skippe
     [1, 'F-001', 'SRC-DEV-1', 'X1', 'DST-DEV-1', 'Y1'],
     [2, 'F-002', 'SRC-DEV-2', 'X2', 'DST-DEV-2', 'Y2'],
   ];
-  const parsed = parseWiringSheet(createSheetBuffer(aoa), 'Sheet1', mapping);
+  const parsed = await parseWiringSheet(await createSheetBuffer(aoa), 'Sheet1', mapping);
 
   assert.equal(parsed.cables.length, 2, `Expected 2 cables (spec row skipped), got ${parsed.cables.length}`);
   assert.equal(parsed.cables[0].ferrule, 'F-001');
@@ -145,19 +146,17 @@ test('Excel Parser Regression - Alternative header positions (Metadata at top)',
     [2, 'F-002', 'SRC-DEV-2', 'X2', 'DST-DEV-2', 'Y2'],
   ];
 
-  const buf = createSheetBuffer(aoa);
-  
-  const wb = XLSX.read(buf, { type: 'buffer' });
-  const ws = wb.Sheets['Sheet1'];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  
-  const headerIdx = findHeaderRow(rows);
+  const buf = await createSheetBuffer(aoa);
+
+  // findHeaderRow/dataStartRow are pure functions over unknown[][] — the aoa is
+  // exactly the row shape the production reader hands them.
+  const headerIdx = findHeaderRow(aoa);
   assert.equal(headerIdx, 3, `Expected header index 3, got ${headerIdx}`);
 
-  const dataStart = dataStartRow(rows, headerIdx);
+  const dataStart = dataStartRow(aoa, headerIdx);
   assert.equal(dataStart, 4, `Expected data start row 4, got ${dataStart}`);
 
-  const parsed = parseWiringSheet(buf, 'Sheet1', mapping, headerIdx);
+  const parsed = await parseWiringSheet(buf, 'Sheet1', mapping, headerIdx);
   assert.equal(parsed.cables.length, 2);
   assert.equal(parsed.cables[0].ferrule, 'F-001');
   assert.equal(parsed.cables[1].ferrule, 'F-002');
