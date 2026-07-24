@@ -19,6 +19,7 @@ import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAv
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
 import type { DocumentStatus } from '../../../utils/documentAvailability';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
+import ButtonHintPopover from '../../../components/ui/ButtonHintPopover';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
 import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
@@ -156,6 +157,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [wiringUploadReplacing, setWiringUploadReplacing] = useState(false);
   const [showWiringView, setShowWiringView] = useState(false);
   const [showGaDrawingView, setShowGaDrawingView] = useState(false);
+  const [gaUploadHintOpen, setGaUploadHintOpen] = useState(false);
+  const gaUploadBtnRef = useRef<HTMLButtonElement>(null);
   const [confirmReupload, setConfirmReupload] = useState(false);
   const [showManagement, setShowManagement] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
@@ -711,6 +714,10 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             ? 'Resolve duplicate panel names before wiring upload, GA upload, reports, or workflow.'
             : '';
 
+  useEffect(() => {
+    if (actionGated && gaUploadHintOpen) setGaUploadHintOpen(false);
+  }, [actionGated, gaUploadHintOpen]);
+
   return (
     <div className="flex flex-col gap-4 min-w-0">
       <div className="pj-project-select-row">
@@ -808,14 +815,20 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
 
           {perms.canManageProjects && (
             <button
+              ref={gaUploadBtnRef}
               type="button"
               onClick={() => {
+                if (!selectedProject || !selectedPanelId || !selectedPanel || !actionGated) {
+                  setGaUploadHintOpen(true);
+                  return;
+                }
+                setGaUploadHintOpen(false);
                 setDuplicateBannerDismissed(false);
                 setShowGaDrawingView(true);
               }}
-              disabled={!actionGated}
-              className="pj-btn-primary pj-action-btn"
-              title={actionGated ? `Upload GA Drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+              aria-disabled={!actionGated}
+              className={`pj-btn-primary pj-action-btn${!actionGated ? ' is-gated' : ''}`}
+              title={actionGated ? `Upload GA for ${selectedPanel!.panel_name}` : undefined}
             >
               <FileText size={16} strokeWidth={1.5} />
               <span>GA Upload</span>
@@ -1171,6 +1184,18 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           message={toast.message}
           tone={toast.tone}
           onDismiss={() => setToast(null)}
+        />
+      )}
+
+      {gaUploadHintOpen && (
+        <ButtonHintPopover
+          anchorEl={gaUploadBtnRef.current}
+          message={
+            !selectedProject || !selectedPanelId || !selectedPanel
+              ? 'Select a project and an active panel before opening GA Upload'
+              : (gateHint || 'Select a project and an active panel before opening GA Upload')
+          }
+          onDismiss={() => setGaUploadHintOpen(false)}
         />
       )}
 

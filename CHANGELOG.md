@@ -6,6 +6,16 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-24 — Supervisor GA Upload gated hint → anchored popover
+
+- **Scope:** Same clean worktree/branch `change/remove-3d-and-rename-ga-2026-07-24` (`DWES-remove-3d-ga`). Dirty Demo Lab tree untouched.
+- **UX:** Gated **GA Upload** click (no project/panel) shows compact **ButtonHintPopover** beside the button: “Select a project and an active panel before opening GA Upload”. Auto-dismiss ~3.2s, click-outside / Escape dismiss, edge flip/clamp. No bottom-right toast for this gate. Other toasts unchanged.
+- **Files:** `ProjectsTab.tsx`, `ButtonHintPopover.tsx`, `design-system.css` (`.is-gated`, wrap-friendly popover text).
+- **Verified:** FE `npm run build` exit 0; Playwright smoke — popover PASS, no corner toast, click-outside PASS, auto-dismiss PASS, GA View label PASS, no 3D Model. Deploy still blocked (no `origin` / `gh` auth).
+- **Restore point:** branch tip after this change (parent `b3f182c`).
+
+---
+
 ## 2026-07-24 — Remove panel 3D model / demo lab + Supervisor GA terminology
 
 - **Scope:** Isolated worktree `C:\Users\sathe\OneDrive\Desktop\DWES-remove-3d-ga`, branch `change/remove-3d-and-rename-ga-2026-07-24`, baseline `9f6a4a4`. Dirty Demo Lab tree on `change/3d-model-demo-lab-2026-07-22` left untouched.

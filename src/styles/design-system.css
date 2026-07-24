@@ -1826,8 +1826,8 @@
     @apply fixed z-[600] pointer-events-none;
   }
   .button-hint-popover {
-    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold
-           shadow-md whitespace-nowrap max-w-[min(280px,calc(100vw-16px))];
+    @apply flex items-start gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold
+           shadow-md whitespace-normal max-w-[min(280px,calc(100vw-16px))];
     animation: button-hint-in 0.14s ease-out both;
   }
   .button-hint-popover.warn {
@@ -6584,6 +6584,10 @@
   .pj-actions-grid .pj-btn-primary:disabled,
   .pj-action-block .pj-btn-primary:disabled,
   .pj-action-block .pj-btn-secondary:disabled {
+    @apply opacity-45 cursor-not-allowed;
+  }
+  /* Clickable gated toolbar control (shows anchored hint instead of native disabled). */
+  .pj-actions-grid .pj-btn-primary.pj-action-btn.is-gated {
     @apply opacity-45 cursor-not-allowed;
   }
 

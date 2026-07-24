@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-24 (Remove panel 3D model feature + Supervisor GA Upload/GA View rename on branch `change/remove-3d-and-rename-ga-2026-07-24` in worktree `DWES-remove-3d-ga`; baseline `9f6a4a4`; FE+BE builds green; backend tests 83/83; deploy blocked — no git `origin`. Dirty Demo Lab worktree preserved on `change/3d-model-demo-lab-2026-07-22`. Earlier — 2026-07-15 Release-readiness / Device Preview / Mid Change notes below.)  
+**Last updated:** 2026-07-24 (Supervisor GA Upload gated validation uses anchored `ButtonHintPopover` beside the button — not corner toast; GA Upload/GA View labels; 3D Model removed on `change/remove-3d-and-rename-ga-2026-07-24` in `DWES-remove-3d-ga`; FE build green; deploy blocked — no git `origin`. Dirty Demo Lab worktree preserved.)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES` (+ clean worktree `DWES-remove-3d-ga`)  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
