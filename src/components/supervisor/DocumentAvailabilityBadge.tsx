@@ -2,12 +2,12 @@ import type { DocumentStatus } from '../../utils/documentAvailability';
 import { drawingStatusLabel, wiringStatusLabel } from '../../utils/documentAvailability';
 
 interface Props {
-  label: 'Drawing' | 'Wiring Schedule';
+  label: 'GA Drawing' | 'Wiring Schedule';
   status: DocumentStatus;
 }
 
 export default function DocumentAvailabilityBadge({ label, status }: Props) {
-  const text = label === 'Drawing' ? drawingStatusLabel(status) : wiringStatusLabel(status);
+  const text = label === 'GA Drawing' ? drawingStatusLabel(status) : wiringStatusLabel(status);
   const title = status.message
     ?? (status.availability === 'available' && status.fileName
       ? status.fileName

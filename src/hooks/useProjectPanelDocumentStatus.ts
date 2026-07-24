@@ -12,7 +12,7 @@ const LOADING_DRAWING: DocumentStatus = { availability: 'loading' };
 const LOADING_WIRING: DocumentStatus = { availability: 'loading' };
 const MISSING_DRAWING: DocumentStatus = {
   availability: 'missing',
-  message: 'No Drawing Uploaded',
+  message: 'No GA Drawing Uploaded',
 };
 const MISSING_WIRING: DocumentStatus = {
   availability: 'missing',

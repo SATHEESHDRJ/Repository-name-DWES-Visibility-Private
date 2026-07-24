@@ -158,7 +158,7 @@ export default function PdfDrawingUploadModal({
       const raw = await projectsApi.drawingFile(projectCode, existingDrawing.id);
       setViewBlob(raw);
     } catch {
-      setViewError('Failed to load drawing file.');
+      setViewError('Failed to load GA drawing file.');
     } finally {
       setViewLoading(false);
     }
@@ -170,12 +170,12 @@ export default function PdfDrawingUploadModal({
   }, [mode, existingDrawing, loadViewBlob, duplicateBlocked]);
 
   const confirmReplaceDrawing = async (): Promise<boolean> => {
-    const name = existingDrawing?.original_name || `${cfg.label} drawing`;
+    const name = existingDrawing?.original_name || `${cfg.label} GA drawing`;
     const panelLabel = panelName || projectName || projectCode;
     return dialog.confirm({
-      title: `Replace ${cfg.label} drawing?`,
+      title: `Replace ${cfg.label} GA drawing?`,
       message:
-        `This will replace the current drawing for panel ${panelLabel}. The current file ("${name}") will be archived to uploads/backups/ before overwrite.`,
+        `This will replace the current GA drawing for panel ${panelLabel}. The current file ("${name}") will be archived to uploads/backups/ before overwrite.`,
       tone: 'warning',
       confirmText: 'Replace Upload',
     });
@@ -252,7 +252,7 @@ export default function PdfDrawingUploadModal({
       anchor.click();
       URL.revokeObjectURL(href);
     } catch {
-      setViewError('Failed to download drawing.');
+      setViewError('Failed to download GA drawing.');
     }
   };
 
@@ -264,16 +264,16 @@ export default function PdfDrawingUploadModal({
   const showViewer = mode === 'populated';
   const showUpload = mode === 'empty' || mode === 'replacing';
   const modalTitle = showViewer
-    ? `View ${cfg.label} Drawing`
+    ? `View GA Drawing (${cfg.label})`
     : mode === 'replacing'
-      ? `Replace ${cfg.label} Drawing`
-      : `Upload ${cfg.label} Drawing`;
+      ? `Replace GA Drawing (${cfg.label})`
+      : `Upload GA Drawing (${cfg.label})`;
 
   const uploadControls = (
     <div className="panel-file-upload-section flex flex-col gap-4">
       {mode === 'replacing' && (
         <p className="text-[13px] text-slate-600">
-          Select a new {cfg.label} file to replace the current drawing.
+          Select a new {cfg.label} file to replace the current GA drawing.
         </p>
       )}
       {duplicateBlocked && (
@@ -315,7 +315,7 @@ export default function PdfDrawingUploadModal({
           type="file"
           accept={cfg.accept}
           className="sr-only"
-          aria-label={`Select ${cfg.label} drawing`}
+          aria-label={`Select ${cfg.label} GA drawing`}
           onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f); e.target.value = ''; }}
         />
       </button>
@@ -363,7 +363,7 @@ export default function PdfDrawingUploadModal({
       {done && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] bg-green-50 border border-green-200 text-[13px] text-green-800">
           <CheckCircle size={16} className="shrink-0" strokeWidth={1.5} />
-          {cfg.label} drawing uploaded successfully.
+          {cfg.label} GA drawing uploaded successfully.
         </div>
       )}
     </div>
@@ -418,12 +418,12 @@ export default function PdfDrawingUploadModal({
     >
       {mode === 'loading' ? (
         <div className="flex items-center justify-center py-12 text-slate-500 text-[13px]">
-          Checking for existing drawing…
+          Checking for existing GA drawing…
         </div>
       ) : !panelId && !panelName ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500 text-[13px]">
           <TriangleAlert size={24} className="text-amber-500" />
-          <p>Select a panel before uploading a drawing.</p>
+          <p>Select a panel before uploading a GA drawing.</p>
         </div>
       ) : (
         <div className="panel-file-popup flex flex-col gap-4">

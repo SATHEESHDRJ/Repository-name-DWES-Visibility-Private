@@ -56,11 +56,11 @@ export default function PanelDrawingViewModal({
         const apiMsg = (err as { response?: { data?: { message?: string }; status?: number }; message?: string })?.response?.data?.message;
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 404) {
-          setError(apiMsg || 'Drawing file not found on disk — it may have been removed.');
+          setError(apiMsg || 'GA drawing file not found on disk — it may have been removed.');
         } else if (status === 403) {
-          setError(apiMsg || 'You do not have permission to view this drawing.');
+          setError(apiMsg || 'You do not have permission to view this GA drawing.');
         } else {
-          setError(apiMsg || 'Failed to load drawing — the file may have been removed, or you may not have access.');
+          setError(apiMsg || 'Failed to load GA drawing — the file may have been removed, or you may not have access.');
         }
       }
     } finally {
@@ -86,7 +86,7 @@ export default function PanelDrawingViewModal({
 
   return (
     <Modal
-      title="View Drawing"
+      title="GA View"
       subtitle={`${panelLabel} · ${drawing.original_name}`}
       onClose={onClose}
       size="fullscreen"

@@ -6,6 +6,16 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-24 — Supervisor — GA Upload / GA View UI labels (Projects tab)
+
+- **Scope:** Supervisor Projects tab toolbar + Project Information card only. Drawing upload/view APIs, storage paths, permissions unchanged.
+- **UI:** Renamed toolbar **Drawing** → **GA Upload**; Project Information **View Drawing** → **GA View**; availability badge **GA Drawing**; modal titles/messages use **GA Drawing** terminology (`PdfDrawingUploadModal`, `PanelDrawingViewModal`, type picker).
+- **UX:** When GA Upload is clicked without a project/panel selected, an anchored `ButtonHintPopover` appears beside the button (not bottom-right toast).
+- **Files:** `src/pages/supervisor/tabs/ProjectsTab.tsx`, `src/components/supervisor/{PdfDrawingUploadModal,PanelDrawingViewModal,DocumentAvailabilityBadge,UploadTargetHeader}.tsx`, `src/hooks/useProjectPanelDocumentStatus.ts`
+- **Restore:** branch `change/supervisor-ga-ui-2026-07-24`
+
+---
+
 ## 2026-07-12 — Supervisor — Digital Wiring Monitor converted-view-only + compact Panel Assignment modal (interlocked)
 
 - **Scope:** `src/components/supervisor/digital-wiring-monitor/{DigitalWiringMonitor,WiringScheduleMonitorGrid,CableInspectorPanel}.tsx`, `src/components/supervisor/PanelAssignmentModal.tsx` (new), `src/components/supervisor/TechnicianWorkflowModal.tsx` (shim repoint), `src/utils/assignmentCenterUtils.ts`, `backend/src/tech/tech.service.ts`. Merged from branch `claude/supervisor-panel-assignment-workflow-139414`.

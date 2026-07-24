@@ -18,6 +18,7 @@ import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelC
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
+import ButtonHintPopover from '../../../components/ui/ButtonHintPopover';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
 import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
 import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
@@ -201,6 +202,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [showWiringView, setShowWiringView] = useState(false);
   const [reportMenuOpen, setReportMenuOpen] = useState(false);
   const reportMenuRef = useRef<HTMLDivElement>(null);
+  const gaUploadBtnRef = useRef<HTMLButtonElement>(null);
+  const [gaUploadHint, setGaUploadHint] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
@@ -656,16 +659,20 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     selectedPanel?.panel_name,
     duplicateBannerDismissed,
   );
+  const gaUploadSelectionReady = Boolean(
+    selectedProject && selectedPanelId && !loadingPanels && projectPanels.length > 0,
+  );
+  const gaUploadDisabled = gaUploadSelectionReady && !actionGated;
   const gateHint = !selectedProject
-    ? 'Select a project and panel to enable wiring upload, drawing upload, and reports.'
+    ? 'Select a project and panel to enable wiring upload, GA upload, and reports.'
     : loadingPanels
       ? 'Loading panels for this project…'
       : projectPanels.length === 0
         ? 'No Panels Available — add a panel when creating or editing the project.'
         : !selectedPanelId
-          ? 'Select a panel to enable wiring upload, drawing upload, and reports.'
+          ? 'Select a panel to enable wiring upload, GA upload, and reports.'
           : duplicateBlocked && !duplicateBannerDismissed
-            ? 'Resolve duplicate panel names before wiring upload, drawing upload, reports, or workflow.'
+            ? 'Resolve duplicate panel names before wiring upload, GA upload, reports, or workflow.'
             : '';
 
   return (
@@ -764,17 +771,29 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
 
           {perms.canManageProjects && (
             <button
+              ref={gaUploadBtnRef}
               type="button"
               onClick={() => {
+                if (!gaUploadSelectionReady) {
+                  setGaUploadHint(
+                    gateHint
+                      || (!selectedProject
+                        ? 'Select a project first.'
+                        : !selectedPanelId
+                          ? 'Select a panel first.'
+                          : 'Select a project and panel first.'),
+                  );
+                  return;
+                }
                 setDuplicateBannerDismissed(false);
                 setShowDrawingPicker(true);
               }}
-              disabled={!actionGated}
+              disabled={gaUploadDisabled}
               className="pj-btn-primary pj-action-btn"
-              title={actionGated ? `Upload drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+              title={actionGated ? `Upload GA drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
             >
               <FileText size={16} strokeWidth={1.5} />
-              <span>Drawing</span>
+              <span>GA Upload</span>
             </button>
           )}
 
@@ -854,7 +873,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             {perms.canManageProjects && (
               <div className="pj-project-info-card-actions-wrap">
                 <div className="pj-doc-status-row" aria-label="Document availability">
-                  <DocumentAvailabilityBadge label="Drawing" status={drawingDoc} />
+                  <DocumentAvailabilityBadge label="GA Drawing" status={drawingDoc} />
                   <DocumentAvailabilityBadge label="Wiring Schedule" status={wiringDoc} />
                 </div>
                 <div className="pj-project-info-card-actions" role="group" aria-label="Project actions">
@@ -872,7 +891,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                   className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}${!drawingReady && !drawingLoading ? ' pj-info-action--unavailable' : ''}`}
                   onClick={() => {
                     if (drawingDoc.availability === 'error') {
-                      setToast({ message: drawingDoc.message ?? 'Failed to open drawing.', tone: 'warn' });
+                      setToast({ message: drawingDoc.message ?? 'Failed to open GA drawing.', tone: 'warn' });
                       return;
                     }
                     if (drawingReady) setShowDrawingView(true);
@@ -881,16 +900,16 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                   aria-busy={drawingLoading || undefined}
                   title={
                     drawingLoading
-                      ? 'Checking drawings…'
+                      ? 'Checking GA drawings…'
                       : drawingDoc.availability === 'error'
-                        ? drawingDoc.message ?? 'Drawing check failed'
+                        ? drawingDoc.message ?? 'GA drawing check failed'
                         : drawingReady
-                          ? `View drawing: ${drawingDoc.drawing!.original_name}`
-                          : 'No Drawing Uploaded'
+                          ? `View GA drawing: ${drawingDoc.drawing!.original_name}`
+                          : 'No GA Drawing Uploaded'
                   }
                 >
                   {drawingLoading ? <span className="btn-spinner" aria-hidden /> : <FileText size={16} strokeWidth={1.75} aria-hidden />}
-                  <span>View Drawing</span>
+                  <span>GA View</span>
                 </button>
                 <button
                   type="button"
@@ -1057,7 +1076,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
 
       {showDrawingPicker && selectedProject && (
         <Modal
-          title="Drawing Upload"
+          title="GA Upload"
           onClose={() => setShowDrawingPicker(false)}
           size="sm"
           footer={(
@@ -1067,7 +1086,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           )}
         >
           <p className="text-[13px] text-slate-600 mb-4">
-            Choose the drawing file type for <strong>{selectedPanel?.panel_name ?? selectedProject.name}</strong>
+            Choose the GA drawing file type for <strong>{selectedPanel?.panel_name ?? selectedProject.name}</strong>
             {selectedPanel ? ` (${selectedProject.name})` : ''}.
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -1141,7 +1160,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           fileType={drawingUploadType}
           onClose={() => setDrawingUploadType(null)}
           onUploaded={() => {
-            setToast({ message: `${drawingUploadType.toUpperCase()} drawing uploaded.`, tone: 'success' });
+            setToast({ message: `${drawingUploadType.toUpperCase()} GA drawing uploaded.`, tone: 'success' });
             if (selectedProject) {
               emitDocumentsChanged({
                 projectCode: selectedProject.code,
@@ -1171,6 +1190,14 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           frameId={selectedPanelId}
           panelLabel={selectedPanel.panel_name}
           onClose={() => setShowWiringView(false)}
+        />
+      )}
+
+      {gaUploadHint && (
+        <ButtonHintPopover
+          anchorEl={gaUploadBtnRef.current}
+          message={gaUploadHint}
+          onDismiss={() => setGaUploadHint(null)}
         />
       )}
 
