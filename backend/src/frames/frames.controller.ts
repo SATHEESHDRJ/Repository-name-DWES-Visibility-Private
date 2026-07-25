@@ -227,6 +227,67 @@ export class FramesController {
     return this.svc.getDrawings(code);
   }
 
+  /**
+   * Modern UI contract (donor 0605265): stable panel GA package.
+   * Express Phase A adapter — returns 2D-only shape; 3D slot always empty/disabled.
+   * Full twin-layouts package persistence still uses legacy drawings until Express
+   * uploadPanelDrawingAsset is ported; empty package lets the modal open safely.
+   */
+  @Get('frames/:id/drawing')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor', 'wiring_technician', 'system_admin', 'ops_director', 'qaqc_engineer')
+  async getPanelDrawingPackage(
+    @Param('code') code: string,
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    await this.svc.findOne(code, id);
+    if (user.role === 'wiring_technician') {
+      await this.assertTechnicianProjectAccess(user, code);
+    }
+    const legacy = this.svc.getDrawings(code).filter((d: any) => !d.frame_id || d.frame_id === id);
+    const drawing2d = legacy[0]
+      ? {
+          id: legacy[0].id,
+          kind: '2d',
+          original_name: legacy[0].original_name || legacy[0].filename || 'GA Drawing',
+          content_type: legacy[0].content_type || 'application/pdf',
+          uploaded_at: legacy[0].uploaded_at || null,
+        }
+      : null;
+    const supervisor = user.role === 'prod_supervisor' || user.role === 'system_admin';
+    return {
+      project_code: code,
+      frame_id: id,
+      drawing_2d: drawing2d,
+      model_3d: null,
+      permissions: {
+        can_view: true,
+        can_upload_2d: supervisor && !drawing2d,
+        can_replace_2d: supervisor && !!drawing2d,
+        can_upload_3d: false,
+        can_replace_3d: false,
+        can_download_2d: supervisor && !!drawing2d,
+        can_download_3d: false,
+      },
+    };
+  }
+
+  @Get('frames/:id/drawings')
+  @UseGuards(RolesGuard)
+  @Roles('prod_supervisor', 'wiring_technician', 'system_admin', 'ops_director', 'qaqc_engineer')
+  async getPanelDrawingsList(
+    @Param('code') code: string,
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    await this.svc.findOne(code, id);
+    if (user.role === 'wiring_technician') {
+      await this.assertTechnicianProjectAccess(user, code);
+    }
+    return this.svc.getDrawings(code).filter((d: any) => !d.frame_id || d.frame_id === id);
+  }
+
   // Additive read-only: stream a drawing file inline. Technicians may open it ONLY if they have an
   // assignment on this project; other authenticated roles per existing rules. No schema change.
   @Get('drawings/:id/file')

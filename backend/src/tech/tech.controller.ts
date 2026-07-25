@@ -60,6 +60,35 @@ export class TechController {
   @Roles('wiring_technician')
   myPanels(@CurrentUser() user: User) { return this.svc.myPanels(user.id); }
 
+  @Get('mid-change/targets')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeTargets(@CurrentUser() user: User) {
+    return this.svc.midChangeTargets(user.id);
+  }
+
+  @Get('mid-change/requests')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeRequests(@CurrentUser() user: User) {
+    return this.svc.midChangeRequests(user.id);
+  }
+
+  @Post('mid-change/execute')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  executeMidChange(
+    @Body() body: { source_assignment_id: number; target_technician_id: number; reason: string },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.executeMidChange(
+      user.id,
+      Number(body.source_assignment_id),
+      Number(body.target_technician_id),
+      body.reason || '',
+    );
+  }
+
   @Get('my-assignment/:id')
   @UseGuards(RolesGuard)
   @Roles('wiring_technician')

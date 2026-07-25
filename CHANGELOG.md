@@ -11,8 +11,9 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 - **Scope:** Controlled UI-only restore on `change/remove-3d-and-ga-ui-local-2026-07-25` after verified safety backup. Donor: `0605265` (`change/remove-3d-and-rename-ga-2026-07-24`). Not a full-branch merge. Demo Lab `4468cd1` used as visual reference only (no Demo Lab / 3D directories copied).
 - **Restored:** Richer `design-system.css` / themes, modern `AppShell` / Topbar / Sidebar, role dashboards (Supervisor, Technician, QA/QC, Director, Admin), Login polish, shared modals/cards, PWA `public/sw.js`.
 - **Preserved Phase A:** GA Upload / GA View / GA Drawing terminology; GA Upload `ButtonHintPopover` beside button; no Three.js packages; no 3D Model / Demo Lab / EngineeringModelViewer / GLB generation.
+- **Backend contract (minimal, Express Phase A):** Ported donor `EventsModule` (SSE `/api/events/stream`); `GET supervisor/panel-activity`; tech `mid-change/targets|requests|execute`; Express adapter `GET projects/:code/frames/:id/drawing` (2D-only permissions; `can_upload_3d` false). Full Fastify donor drawing-package upload/store not merged (platform mismatch).
 - **Safety backup (local only):** `C:\Users\sathe\OneDrive\Desktop\DWES-SAFETY-BACKUPS\pre-modern-ui-20260725-104757` — branch `backup/pre-modern-ui-d0cba70-20260725`, tag `backup-pre-modern-ui-d0cba70-20260725-104757`, bundle + source/uploads/data zips + `database-pre-modern-ui.dump`. See `BACKUP-MANIFEST.md` in that folder.
-- **Files:** `src/**`, `public/**` (from donor tree); docs this entry.
+- **Files:** `src/**`, `public/**` (from donor tree); `backend/src/events/**`, selected supervisor/tech/frames/app.module/kpi helpers; docs this entry.
 - **Not pushed / not deployed.**
 
 ---

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TechService } from '../tech/tech.service';
 import { MockStore } from '../data/mock-store';
@@ -9,6 +9,7 @@ import { buildCompletionReport } from '../common/completion-report.helper';
 import { getReportLogoBuffer, REPORT_COMPANY, REPORT_SYSTEM } from '../common/report-branding';
 import { collectPanelCompletionReportData } from '../common/panel-completion-report.helper';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
+import { assignedCableKpiPercent } from '../common/kpi.constants';
 
 interface AnyUser { id: number; role: string | null; full_name: string | null; }
 
@@ -74,14 +75,14 @@ export class SupervisorService {
     };
   }
 
-  // Full completion report for any assignment — supervisor/admin view
+  // Full completion report for any assignment â€” supervisor/admin view
   async completionReport(assignmentId: number) {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException(`Assignment ${assignmentId} not found`);
     return buildCompletionReport(a, this.prisma);
   }
 
-  // Real-time progress for a specific frame — polled by supervisor every ~12s
+  // Real-time progress for a specific frame â€” polled by supervisor every ~12s
   async frameProgress(projectCode: string, frameId: string) {
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
@@ -159,7 +160,7 @@ export class SupervisorService {
       where: { id }, data: { supervisor_approved: true, approved_at: new Date(), approved_by: approver.id },
     });
     console.log(`[WHATSAPP] Assignment ${id} approved by ${approver.full_name}`);
-    return { message: 'Assignment approved — technician may now start', assignment: { id, supervisor_approved: true } };
+    return { message: 'Assignment approved â€” technician may now start', assignment: { id, supervisor_approved: true } };
   }
 
   async requestRework(id: number, reason: string, requester: AnyUser) {
@@ -261,6 +262,210 @@ export class SupervisorService {
     return this.techService.changeover(oldAssignmentId, newTechId, supervisorId, changeoverReason, reasonNotes);
   }
 
+  async panelActivity(projectCode: string, frameId: string) {
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    });
+    const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
+      ?? FrameStore.getFrameFromDisk(projectCode, frameId);
+    const frameTotal = frame?.cable_count || 0;
+
+    if (assignments.length === 0) {
+      return {
+        project_code: projectCode,
+        frame_id: frameId,
+        panel_name: frame?.panel_name || frameId,
+        assigned: false,
+        status: 'not_assigned',
+        status_label: 'Not Assigned',
+        work_state_label: 'Not Started',
+        technician: null,
+        assigned_at: null,
+        wiring_started_at: null,
+        last_activity_at: null,
+        completed_at: null,
+        completed_by: null,
+        has_started: false,
+        is_completed: false,
+        cables_total: frameTotal,
+        cables_completed: 0,
+        cables_remaining: frameTotal,
+        completion_percentage: 0,
+        mid_change: null,
+      };
+    }
+
+    const technicianIds = [...new Set(assignments.map(assignment => assignment.technician_id))];
+    const [technicians, auditRows, sessionRows] = await Promise.all([
+      this.prisma.users.findMany({ where: { id: { in: technicianIds } } }),
+      this.prisma.tech_audit_log.findMany({
+        where: { project_code: projectCode, frame_id: frameId },
+        orderBy: { created_at: 'asc' },
+      }),
+      this.prisma.session_log.findMany({
+        where: { user_id: { in: technicianIds } },
+        orderBy: { created_at: 'asc' },
+      }),
+    ]);
+    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+    const assignmentMap = new Map(assignments.map(assignment => [assignment.id, assignment]));
+    const current = [...assignments].reverse().find(assignment => (
+      !assignment.is_hidden && !assignment.changeover_locked
+    )) ?? assignments[assignments.length - 1];
+    const currentTechnician = technicianMap.get(current.technician_id);
+    const currentStatus = parseCS(current.cable_status);
+    const cablesTotal = current.cables_total || frameTotal;
+    const cablesCompleted = Object.values(currentStatus).filter(state => Boolean(state?.src && state?.dst)).length;
+    const cablesRemaining = Math.max(0, cablesTotal - cablesCompleted);
+    const completionPercentage = assignedCableKpiPercent(cablesCompleted, cablesTotal);
+
+    const currentAssignedAtMs = current.assigned_at?.getTime() || 0;
+    const currentAuditRows = auditRows.filter(row => (
+      row.technician_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const currentSessionRows = sessionRows.filter(row => (
+      row.user_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const latestSession = currentSessionRows[currentSessionRows.length - 1] ?? null;
+    const latestAudit = currentAuditRows[currentAuditRows.length - 1] ?? null;
+    const latestTimestamp = [
+      current.assigned_at,
+      current.started_at,
+      current.paused_at,
+      current.completed_at,
+      latestAudit?.created_at,
+      latestSession?.created_at,
+    ].filter((value): value is Date => value instanceof Date)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+    const pauseReason = (current.pause_reason || '').trim();
+    const normalizedPauseReason = pauseReason.toLowerCase();
+    let status = current.status || 'assigned';
+    let statusLabel = 'Not Started';
+    if (status === 'completed') {
+      status = 'completed';
+      statusLabel = 'Completed';
+    } else if (status === 'paused' && normalizedPauseReason.includes('lunch')) {
+      status = 'lunch_break';
+      statusLabel = 'On Lunch Break';
+    } else if (status === 'paused' && normalizedPauseReason.includes('tea')) {
+      status = 'tea_break';
+      statusLabel = 'On Tea Break';
+    } else if (status === 'paused') {
+      statusLabel = 'Paused';
+    } else if (status === 'in_progress' && latestSession?.action === 'logout') {
+      status = 'logged_out';
+      statusLabel = 'Logged Out';
+    } else if (status === 'in_progress') {
+      statusLabel = 'Working';
+    } else if (status === 'assigned') {
+      statusLabel = 'Not Started';
+    } else {
+      statusLabel = status.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    const contributions = assignments.map(segment => {
+      const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
+      const before = parseCS(baseline?.cable_status);
+      const after = parseCS(segment.cable_status);
+      const segmentCompleted = Object.keys(after).filter(index => (
+        after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
+      )).length;
+      const segmentHasWork = Object.keys(after).some(index => (
+        (after[index]?.src && !before[index]?.src) || (after[index]?.dst && !before[index]?.dst)
+      ));
+      const technician = technicianMap.get(segment.technician_id);
+      return {
+        assignment_id: segment.id,
+        technician_id: segment.technician_id,
+        technician_name: technician?.full_name || technician?.username || `Technician #${segment.technician_id}`,
+        technician_username: technician?.username || '',
+        cables_completed: segmentCompleted,
+        has_recorded_work: segmentHasWork,
+        assigned_at: segment.assigned_at,
+        started_at: segment.started_at,
+        ended_at: segment.completed_at || (segment.changeover_locked ? segment.paused_at : null),
+      };
+    });
+
+    const currentContribution = contributions.find(item => item.assignment_id === current.id);
+    const previous = current.handover_from_id
+      ? assignmentMap.get(current.handover_from_id)
+      : assignments.length > 1 ? assignments[assignments.length - 2] : null;
+    const previousContribution = previous
+      ? contributions.find(item => item.assignment_id === previous.id)
+      : null;
+    const midChangeAudit = [...auditRows].reverse().find(row => (
+      ['mid_changeover', 'mid_change_confirmed', 'mid_change_swap'].includes(row.action)
+    ));
+    const incomingStartAudit = currentAuditRows.find(row => ['start', 'resume'].includes(row.action));
+    const incomingStarted = Boolean(
+      currentContribution
+      && (currentContribution.has_recorded_work || incomingStartAudit || current.status === 'completed')
+    );
+    const previousTechnician = previous ? technicianMap.get(previous.technician_id) : null;
+
+    const completedAssignment = [...assignments].reverse().find(assignment => (
+      assignment.status === 'completed' || assignment.completed_at
+    ));
+    const completedTechnician = completedAssignment
+      ? technicianMap.get(completedAssignment.technician_id)
+      : null;
+    const firstStartedAt = assignments.find(assignment => assignment.started_at)?.started_at ?? null;
+
+    return {
+      project_code: projectCode,
+      frame_id: frameId,
+      panel_name: frame?.panel_name || current.panel_name || frameId,
+      assigned: true,
+      status,
+      status_label: statusLabel,
+      work_state_label: statusLabel,
+      pause_reason: pauseReason || null,
+      technician: {
+        id: current.technician_id,
+        name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+        username: currentTechnician?.username || '',
+      },
+      assigned_at: current.assigned_at,
+      wiring_started_at: firstStartedAt,
+      last_activity_at: latestTimestamp,
+      completed_at: completedAssignment?.completed_at || null,
+      completed_by: completedAssignment ? {
+        id: completedAssignment.technician_id,
+        name: completedTechnician?.full_name || completedTechnician?.username || `Technician #${completedAssignment.technician_id}`,
+        username: completedTechnician?.username || '',
+      } : null,
+      has_started: Boolean(firstStartedAt || cablesCompleted > 0),
+      is_completed: status === 'completed',
+      cables_total: cablesTotal,
+      cables_completed: cablesCompleted,
+      cables_remaining: cablesRemaining,
+      completion_percentage: completionPercentage,
+      mid_change: previous && current.technician_id !== previous.technician_id ? {
+        occurred: true,
+        changed_at: midChangeAudit?.created_at || current.assigned_at,
+        original_technician: {
+          id: previous.technician_id,
+          name: previousTechnician?.full_name || previousTechnician?.username || `Technician #${previous.technician_id}`,
+          username: previousTechnician?.username || '',
+          cables_completed: previousContribution?.cables_completed || 0,
+        },
+        incoming_technician: {
+          id: current.technician_id,
+          name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+          username: currentTechnician?.username || '',
+          cables_completed: currentContribution?.cables_completed || 0,
+        },
+        incoming_started: incomingStarted,
+      } : null,
+    };
+  }
+
+
   async panelReport(projectCode: string, frameId: string) {
     assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
@@ -308,7 +513,7 @@ export class SupervisorService {
   }
 
   /**
-   * Panel Completion Report — professional, management-quality Excel export.
+   * Panel Completion Report â€” professional, management-quality Excel export.
    * Live data (project status, KPIs, timeline, working hours, approval) from the
    * DB via collectPanelCompletionReportData, plus a fully-styled cable execution
    * table. Branded, print-friendly (landscape, fit-to-width, repeating header).
@@ -323,7 +528,7 @@ export class SupervisorService {
     const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
     const techMap = new Map(techs.map(t => [t.id, t]));
 
-    // ── palette (ARGB) ──
+    // â”€â”€ palette (ARGB) â”€â”€
     const A = (hex: string) => `FF${hex}`;
     const NAVY = A('0F2557'), BLUE = A('2563EB'), INK = A('0F172A'), SLATE = A('475569');
     const LABEL = A('64748B'), BORDER = A('CBD5E1'), ZEBRA = A('F5F8FC'), HEAD_BG = A('1E293B'), WHITE = A('FFFFFF');
@@ -332,9 +537,9 @@ export class SupervisorService {
     const boxBorder = { top: thin, left: thin, right: thin, bottom: thin };
 
     const fmt = (d: Date | null | undefined): string => {
-      if (!d) return '—';
+      if (!d) return 'â€”';
       const dt = d instanceof Date ? d : new Date(d);
-      if (isNaN(dt.getTime())) return '—';
+      if (isNaN(dt.getTime())) return 'â€”';
       const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()];
       return `${String(dt.getUTCDate()).padStart(2, '0')} ${mon} ${dt.getUTCFullYear()} ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')} UTC`;
     };
@@ -355,7 +560,7 @@ export class SupervisorService {
     ws.columns = [6, 16, 22, 22, 14, 10, 8, 8, 14, 22, 34].map(w => ({ width: w }));
     const mergeRow = (r: number) => { try { ws.mergeCells(`A${r}:${LAST}${r}`); } catch { /* merged */ } };
 
-    // ── Header: logo on WHITE, company on the right, then navy title band ──
+    // â”€â”€ Header: logo on WHITE, company on the right, then navy title band â”€â”€
     try { ws.mergeCells('A1:D1'); } catch { /* */ }
     try { ws.mergeCells('E1:K1'); } catch { /* */ }
     ws.getRow(1).height = 44;
@@ -365,7 +570,7 @@ export class SupervisorService {
     const logoBuf = getReportLogoBuffer();
     if (logoBuf) {
       const id = wb.addImage({ buffer: logoBuf as any, extension: 'png' });
-      const h = 38, w = Math.round((h * 332) / 175); // aspect-correct (native 332×175)
+      const h = 38, w = Math.round((h * 332) / 175); // aspect-correct (native 332Ã—175)
       ws.addImage(id, { tl: { col: 0.1, row: 0.15 }, ext: { width: w, height: h } });
     }
     const co = ws.getCell('E1');
@@ -375,19 +580,19 @@ export class SupervisorService {
 
     mergeRow(2); ws.getRow(2).height = 22;
     const t2 = ws.getCell('A2');
-    t2.value = `PANEL COMPLETION REPORT — ${data.panel.name}`;
+    t2.value = `PANEL COMPLETION REPORT â€” ${data.panel.name}`;
     t2.font = { bold: true, size: 12, color: { argb: WHITE } };
     t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
     t2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
 
     mergeRow(3); ws.getRow(3).height = 16;
     const t3 = ws.getCell('A3');
-    t3.value = `${projectCode.replace(/_/g, ' ')}  ·  Client: ${data.project.client || '—'}  ·  Generated ${fmt(data.generatedAt)}`;
+    t3.value = `${projectCode.replace(/_/g, ' ')}  Â·  Client: ${data.project.client || 'â€”'}  Â·  Generated ${fmt(data.generatedAt)}`;
     t3.font = { size: 9, color: { argb: SLATE } };
     t3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUEBG } };
     t3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
 
-    // ── Summary section ──
+    // â”€â”€ Summary section â”€â”€
     const bar = (r: number, text: string) => {
       mergeRow(r); ws.getRow(r).height = 18;
       const c = ws.getCell(`A${r}`);
@@ -415,25 +620,25 @@ export class SupervisorService {
       put('F', 'H', 'K', l2, v2);
     };
 
-    const reworkLabel = data.rework.count > 0 ? `${data.rework.count} · ${data.rework.status}` : 'None';
+    const reworkLabel = data.rework.count > 0 ? `${data.rework.count} Â· ${data.rework.status}` : 'None';
     const approvalText = data.approval.approved
-      ? `Approved · ${fmt(data.approval.approvedAt)}`
+      ? `Approved Â· ${fmt(data.approval.approvedAt)}`
       : data.technician ? 'Pending supervisor approval' : 'Not yet submitted';
 
     // Substation = first segment of the composite project name (matches the PDF).
-    const substation = (data.project.name || '').split(/\s+[–—-]\s+/)[0].trim() || data.project.name || '—';
+    const substation = (data.project.name || '').split(/\s+[â€“â€”-]\s+/)[0].trim() || data.project.name || 'â€”';
     bar(5, 'EXECUTION SUMMARY');
     pair(6, 'Project', substation, 'Final status', data.reportStatusLabel);
     pair(7, 'Panel / subpanel', data.panel.name, 'Completion', `${data.completionPercent}%`);
-    pair(8, 'Client', data.project.client || '—', 'Cables (done / total)', `${data.cables.completed} / ${data.cables.total}`);
-    pair(9, 'Region / location', data.project.locationRegion || '—', 'Wiring KPI', `${data.kpi}%`);
-    pair(10, 'Voltage', data.panel.voltageLevel || '—', 'Rework', reworkLabel);
-    pair(11, 'Assigned technician', data.technician?.fullName || '—', 'Production supervisor', data.supervisor?.fullName || '—');
+    pair(8, 'Client', data.project.client || 'â€”', 'Cables (done / total)', `${data.cables.completed} / ${data.cables.total}`);
+    pair(9, 'Region / location', data.project.locationRegion || 'â€”', 'Wiring KPI', `${data.kpi}%`);
+    pair(10, 'Voltage', data.panel.voltageLevel || 'â€”', 'Rework', reworkLabel);
+    pair(11, 'Assigned technician', data.technician?.fullName || 'â€”', 'Production supervisor', data.supervisor?.fullName || 'â€”');
     pair(12, 'Wiring start', fmt(data.wiring.startedAt), 'Wiring completion', fmt(data.wiring.completedAt));
     pair(13, 'Working hours', data.totalWorkingHours, 'Project duration', `${data.projectDurationDays} day(s)`);
-    pair(14, 'Approval', approvalText, 'Approved by', data.approval.approvedBy?.fullName || '—');
+    pair(14, 'Approval', approvalText, 'Approved by', data.approval.approvedBy?.fullName || 'â€”');
 
-    // ── Cable execution detail table ──
+    // â”€â”€ Cable execution detail table â”€â”€
     bar(16, 'CABLE EXECUTION DETAIL');
     const headerRow = 17;
     const headers = ['#', 'Ferrule', 'Source', 'Destination', 'Wire Color', 'Size', 'Src', 'Dst', 'Status', 'Technician', 'Remarks'];
@@ -461,8 +666,8 @@ export class SupervisorService {
       const row = ws.getRow(r);
       row.values = [
         cable.sno ?? idx + 1, cable.ferrule || '', cable.source || '', cable.destination || '',
-        cable.color || '', cable.size || '', src ? 'YES' : '—', dst ? 'YES' : '—',
-        status, tech?.full_name || '—', cs?.note || '',
+        cable.color || '', cable.size || '', src ? 'YES' : 'â€”', dst ? 'YES' : 'â€”',
+        status, tech?.full_name || 'â€”', cs?.note || '',
       ];
       row.height = 15;
       const zebra = (r - headerRow) % 2 === 0;
@@ -491,16 +696,16 @@ export class SupervisorService {
       c.border = boxBorder;
     }
 
-    // ── Freeze header, filter, print titles, footer ──
+    // â”€â”€ Freeze header, filter, print titles, footer â”€â”€
     ws.views = [{ state: 'frozen', ySplit: headerRow, showGridLines: false }];
     ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow, column: COLS } };
     ws.pageSetup.printTitlesRow = `${headerRow}:${headerRow}`;
-    ws.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Panel Completion Report&R&8Page &P of &N`;
+    ws.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} â€” Confidential&C&8Panel Completion Report&R&8Page &P of &N`;
 
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 
-  // ── Wiring Schedule Excel Export (professional, color-coded, visually guided) ──
+  // â”€â”€ Wiring Schedule Excel Export (professional, color-coded, visually guided) â”€â”€
 
   async wiringScheduleXlsx(projectCode: string, frameId: string): Promise<Buffer> {
     assertPanelNameUniqueForWrite(projectCode, frameId);
@@ -511,7 +716,7 @@ export class SupervisorService {
     const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'DWES — Digital Wiring Execution System';
+    wb.creator = 'DWES â€” Digital Wiring Execution System';
     wb.created = new Date();
 
     const sheetName = (frame.panel_name || frameId).replace(/[\\/*?[\]:]/g, '').slice(0, 31);
@@ -526,27 +731,27 @@ export class SupervisorService {
       properties: { defaultRowHeight: 18 },
     });
 
-    // ── Column definitions (A–N, 14 columns) ───────────────────────────────
+    // â”€â”€ Column definitions (Aâ€“N, 14 columns) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws.columns = [
       { key: 'sno',     width: 6  },   // A  S.No
       { key: 'panel',   width: 14 },   // B  Panel
       { key: 'srcDev',  width: 14 },   // C  Source Device
       { key: 'srcTerm', width: 10 },   // D  Source Terminal
       { key: 'ferrA',   width: 24 },   // E  Ferrule (A)
-      { key: 'ferrB',   width: 24 },   // F  Ferrule (B) — reversed
+      { key: 'ferrB',   width: 24 },   // F  Ferrule (B) â€” reversed
       { key: 'ref',     width: 12 },   // G  Reference
       { key: 'src',     width: 18 },   // H  Source
       { key: 'dst',     width: 18 },   // I  Destination
-      { key: 'color',   width: 16 },   // J  Wire Color ← color-coded cell
+      { key: 'color',   width: 16 },   // J  Wire Color â† color-coded cell
       { key: 'size',    width: 14 },   // K  Wire Size
       { key: 'sign',    width: 12 },   // L  Sign Mark
-      { key: 'length',  width: 12 },   // M  Length (m) ← data-bar
+      { key: 'length',  width: 12 },   // M  Length (m) â† data-bar
       { key: 'remarks', width: 34 },   // N  Remarks
     ];
     const NCOLS = 14;
     const lastCol = 'N';
 
-    // ── Header block rows 1-6 ─────────────────────────────────────────────
+    // â”€â”€ Header block rows 1-6 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const NAVY = '0F2557';
     const APP_BLUE = '2563EB';
     const INFO_BG = 'EFF6FF';
@@ -554,7 +759,7 @@ export class SupervisorService {
 
     const merge = (rowNum: number) => ws.mergeCells(`A${rowNum}:${lastCol}${rowNum}`);
 
-    // Row 1 — Company / system banner (logo + title)
+    // Row 1 â€” Company / system banner (logo + title)
     merge(1);
     ws.getRow(1).height = 52;
     const logoBuf = getReportLogoBuffer();
@@ -567,31 +772,31 @@ export class SupervisorService {
     }
     const r1 = ws.getCell('A1');
     r1.value = logoBuf
-      ? `  DWES — Digital Wiring Execution System`
-      : 'DWES — Digital Wiring Execution System';
+      ? `  DWES â€” Digital Wiring Execution System`
+      : 'DWES â€” Digital Wiring Execution System';
     r1.font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
     r1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
     r1.alignment = { horizontal: 'left', vertical: 'middle', indent: logoBuf ? 12 : 1 };
 
-    // Row 2 — Panel / report title
+    // Row 2 â€” Panel / report title
     merge(2);
     const r2 = ws.getCell('A2');
-    r2.value = `Wiring Schedule — ${frame.panel_name || frameId}`;
+    r2.value = `Wiring Schedule â€” ${frame.panel_name || frameId}`;
     r2.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: APP_BLUE } };
     r2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(2).height = 24;
 
-    // Row 3 — Project / client
+    // Row 3 â€” Project / client
     merge(3);
     const r3 = ws.getCell('A3');
-    r3.value = `Project: ${projectCode}   |   Client: ${project?.client || '—'}   |   ${project?.name || ''}`;
+    r3.value = `Project: ${projectCode}   |   Client: ${project?.client || 'â€”'}   |   ${project?.name || ''}`;
     r3.font = { size: 10, color: { argb: INFO_FG } };
     r3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: INFO_BG } };
     r3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(3).height = 18;
 
-    // Row 4 — Frame / total cables
+    // Row 4 â€” Frame / total cables
     merge(4);
     const r4 = ws.getCell('A4');
     r4.value = `Frame ID: ${frameId}   |   Total Cables: ${frame.cable_count || frame.cables.length}`;
@@ -600,7 +805,7 @@ export class SupervisorService {
     r4.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(4).height = 18;
 
-    // Row 5 — Generated timestamp
+    // Row 5 â€” Generated timestamp
     merge(5);
     const r5 = ws.getCell('A5');
     r5.value = `Generated: ${new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC`;
@@ -609,12 +814,12 @@ export class SupervisorService {
     r5.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(5).height = 15;
 
-    // Row 6 — blank separator
+    // Row 6 â€” blank separator
     merge(6);
     ws.getRow(6).height = 6;
     ws.getCell('A6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E2E8F0' } };
 
-    // ── Column header row (Row 7) ─────────────────────────────────────────
+    // â”€â”€ Column header row (Row 7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const COL_HEADERS = [
       'S.No', 'Panel', 'Source Device', 'Src Terminal',
       'Ferrule (A)', 'Ferrule (B)', 'Reference', 'Source', 'Destination',
@@ -637,7 +842,7 @@ export class SupervisorService {
     // Auto-filter on column header row
     ws.autoFilter = { from: { row: 7, column: 1 }, to: { row: 7, column: NCOLS } };
 
-    // ── Cable color → cell fill map ───────────────────────────────────────
+    // â”€â”€ Cable color â†’ cell fill map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     type ColorDef = { bg: string; fg: string };
     const COLOR_MAP: Record<string, ColorDef> = {
       'BLUE':           { bg: '4472C4', fg: 'FFFFFF' },
@@ -659,7 +864,7 @@ export class SupervisorService {
     const ZEBRA_ODD  = 'FFFFFF';
     const ZEBRA_EVEN = 'F1F5F9';  // slate-100
 
-    // ── Cable data rows (starting at row 8) ──────────────────────────────
+    // â”€â”€ Cable data rows (starting at row 8) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const FIRST_ROW = 8;
     frame.cables.forEach((cable: any, idx: number) => {
       const rowNum = FIRST_ROW + idx;
@@ -667,7 +872,7 @@ export class SupervisorService {
       dRow.height  = 18;
       const zebraFg = idx % 2 === 0 ? ZEBRA_ODD : ZEBRA_EVEN;
 
-      // Parse length string "2.5m" → 2.5
+      // Parse length string "2.5m" â†’ 2.5
       const lenNum = parseFloat(String(cable.length || '').replace(/[^0-9.]/g, '')) || 0;
 
       // Derive reversed ferrule (Ferrule B)
@@ -729,7 +934,7 @@ export class SupervisorService {
 
     const lastDataRow = FIRST_ROW + frame.cables.length - 1;
 
-    // ── Data-bar conditional format on Length column (M) ─────────────────
+    // â”€â”€ Data-bar conditional format on Length column (M) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (frame.cables.length > 0) {
       ws.addConditionalFormatting({
         ref: `M${FIRST_ROW}:M${lastDataRow}`,

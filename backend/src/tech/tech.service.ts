@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -114,7 +114,7 @@ export class TechService {
       orderBy: { assigned_at: 'desc' },
     });
 
-    // Resolve each assignment's project (code → name/client) in one query (no schema change).
+    // Resolve each assignment's project (code â†’ name/client) in one query (no schema change).
     const codes = [...new Set(assignments.map(a => a.project_code))];
     const projects = codes.length
       ? await this.prisma.projects.findMany({ where: { code: { in: codes } } })
@@ -221,7 +221,7 @@ export class TechService {
     return { ...updated, cable_status: parseCS(updated.cable_status) };
   }
 
-  /** Reopen a completed panel for rework — edit, never reset. Progress
+  /** Reopen a completed panel for rework â€” edit, never reset. Progress
    *  (cable_status, src/dst counters, started_at) is fully preserved; if the
    *  report was already submitted it is un-submitted and review reset so the
    *  supervisor re-reviews. Audit trail appended to review_notes. */
@@ -230,7 +230,7 @@ export class TechService {
     if (!a) throw new NotFoundException('Assignment not found');
     if (a.technician_id !== techId) throw new ForbiddenException('Not your assignment');
 
-    // Idempotent: already reopened → return current state, no writes.
+    // Idempotent: already reopened â†’ return current state, no writes.
     if (a.status === 'in_progress') {
       return { ...a, cable_status: parseCS(a.cable_status) };
     }
@@ -240,7 +240,7 @@ export class TechService {
 
     const wasSubmitted = !!a.report_submitted;
     if (wasSubmitted && !reason.trim()) {
-      throw new BadRequestException('A rework reason is required — this report was already submitted for review');
+      throw new BadRequestException('A rework reason is required â€” this report was already submitted for review');
     }
 
     const tech = await this.prisma.users.findUnique({ where: { id: techId } });
@@ -266,7 +266,7 @@ export class TechService {
     const updated = await this.prisma.tech_assignments.update({ where: { id: assignmentId }, data });
     await this.logAudit(
       techId, techName, a.project_code, a.frame_id, a.panel_name || '', 'rework',
-      `Reopened for rework${wasSubmitted ? ' (report un-submitted, review reset)' : ''}${reason.trim() ? ` — ${reason.trim()}` : ''}`,
+      `Reopened for rework${wasSubmitted ? ' (report un-submitted, review reset)' : ''}${reason.trim() ? ` â€” ${reason.trim()}` : ''}`,
     );
     return { ...updated, cable_status: parseCS(updated.cable_status) };
   }
@@ -338,7 +338,7 @@ export class TechService {
     const src_done = Object.values(cs).filter((c: any) => c.src).length;
     const dst_done = Object.values(cs).filter((c: any) => c.dst).length;
 
-    // Auto-start: assigned/paused → in_progress on first cable action
+    // Auto-start: assigned/paused â†’ in_progress on first cable action
     const autoStart: Record<string, any> = {};
     if (a.status === 'assigned' || a.status === 'paused') {
       autoStart.status = 'in_progress';
@@ -356,7 +356,7 @@ export class TechService {
     return { assignment_id: assignmentId, cable_index: cableIndex, action, cables_src_done: src_done, cables_dst_done: dst_done };
   }
 
-  /** DEMO_MODE bulk helpers — single write, same cable_status shape as normal marking. */
+  /** DEMO_MODE bulk helpers â€” single write, same cable_status shape as normal marking. */
   async devCableBulk(
     assignmentId: number,
     techId: number,
@@ -432,7 +432,7 @@ export class TechService {
   }
 
   /**
-   * Resolve frame for technician wiring — prefer on-disk JSON when MockStore has a stale
+   * Resolve frame for technician wiring â€” prefer on-disk JSON when MockStore has a stale
    * or empty cables[] entry (common after re-upload while the in-memory id already exists).
    */
   private resolveAssignmentFrame(projectCode: string, frameId: string): FrameData | null {
@@ -455,7 +455,7 @@ export class TechService {
     return disk ?? mem ?? null;
   }
 
-  /** Cable count for status writes — frame JSON length when available, else cables_total (never mutates cables_total). */
+  /** Cable count for status writes â€” frame JSON length when available, else cables_total (never mutates cables_total). */
   private _cableCountForAssignment(a: { project_code: string; frame_id: string; cables_total: number | null }) {
     const frame = this.resolveAssignmentFrame(a.project_code, a.frame_id);
     const fromFrame = Array.isArray(frame?.cables) ? frame!.cables.length : 0;
@@ -506,7 +506,7 @@ export class TechService {
     };
   }
 
-  // Full completion report — includes technician details, project details, and panel rollup
+  // Full completion report â€” includes technician details, project details, and panel rollup
   async completionReport(assignmentId: number, techId: number) {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException('Assignment not found');
@@ -525,7 +525,7 @@ export class TechService {
     const tech = await this.prisma.users.findUnique({ where: { id: techId } });
     const trimmedNotes = (notes || '').trim().slice(0, 500);
     await this.logAudit(techId, tech?.full_name || '', a.project_code, a.frame_id, a.panel_name || '', 'report_submitted',
-      trimmedNotes ? `Report submitted — notes: ${trimmedNotes}` : 'Report submitted');
+      trimmedNotes ? `Report submitted â€” notes: ${trimmedNotes}` : 'Report submitted');
     return { message: 'Report submitted successfully' };
   }
 
@@ -546,11 +546,11 @@ export class TechService {
     const a = await this.prisma.tech_assignments.findUnique({ where: { id: assignmentId } });
     if (!a) throw new NotFoundException('Assignment not found');
     assertPanelNameUniqueForWrite(a.project_code, a.frame_id);
-    // Removal is only allowed until the technician starts. Once started (started_at set —
+    // Removal is only allowed until the technician starts. Once started (started_at set â€”
     // covers in_progress, started-then-paused, and completed), the panel can only be handed
     // over via mid-changeover, which preserves the work already done.
     if (a.started_at != null) {
-      throw new BadRequestException('Cannot remove this assignment — work has already started. Use mid-changeover to hand over to another technician.');
+      throw new BadRequestException('Cannot remove this assignment â€” work has already started. Use mid-changeover to hand over to another technician.');
     }
     await this.prisma.tech_assignments.delete({ where: { id: assignmentId } });
     return { message: 'Assignment deleted' };
@@ -596,7 +596,7 @@ export class TechService {
         data: {
           status: 'paused',
           paused_at: new Date(),
-          pause_reason: `Mid-changeover: ${reason}${reasonNotes.trim() ? ` — ${reasonNotes.trim()}` : ''}`,
+          pause_reason: `Mid-changeover: ${reason}${reasonNotes.trim() ? ` â€” ${reasonNotes.trim()}` : ''}`,
         },
       });
     }
@@ -765,4 +765,309 @@ export class TechService {
       orderBy: { created_at: 'desc' },
     });
   }
+
+  async midChangeTargets(technicianId: number) {
+    const [technicians, activeAssignments, projects] = await Promise.all([
+      this.prisma.users.findMany({ where: { role: 'wiring_technician', is_active: true } }),
+      this.prisma.tech_assignments.findMany({
+        where: {
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+          is_hidden: { not: true },
+        },
+      }),
+      this.prisma.projects.findMany(),
+    ]);
+
+    const projectMap = new Map<string, any>(projects.map(p => [p.code, p]));
+    const assignmentMap = new Map<number, typeof activeAssignments[0]>();
+    for (const a of activeAssignments) {
+      assignmentMap.set(a.technician_id, a);
+    }
+
+    const targets = technicians.map(t => {
+      const a = assignmentMap.get(t.id);
+      return {
+        technician_id: t.id,
+        technician_name: t.full_name || `Tech #${t.id}`,
+        technician_username: t.username,
+        is_me: t.id === technicianId,
+        has_assignment: !!a,
+        assignment: a ? {
+          id: a.id,
+          project_code: a.project_code,
+          project_name: projectMap.get(a.project_code)?.name || a.project_code,
+          frame_id: a.frame_id,
+          panel_name: a.panel_name || a.frame_id,
+          cables_total: a.cables_total || 0,
+          cables_src_done: a.cables_src_done || 0,
+          cables_dst_done: a.cables_dst_done || 0,
+          started_at: a.started_at,
+          status: a.status,
+        } : null,
+      };
+    });
+
+    return targets;
+  }
+
+  async midChangeRequests(technicianId?: number) {
+    // Incoming transfers/interchanges that are 'assigned' waiting for resume.
+    // Without a technicianId (supervisor view) every waiting transfer is returned.
+    const incoming = await this.prisma.tech_assignments.findMany({
+      where: {
+        ...(technicianId != null ? { technician_id: technicianId } : {}),
+        status: 'assigned',
+        handover_from_id: { not: null },
+        changeover_locked: { not: true },
+        is_hidden: { not: true },
+      },
+    });
+
+    if (incoming.length === 0) return [];
+
+    const fromIds = incoming.map(a => a.handover_from_id as number);
+    const previousAssignments = await this.prisma.tech_assignments.findMany({
+      where: { id: { in: fromIds } },
+    });
+    const prevMap = new Map(previousAssignments.map(a => [a.id, a]));
+
+    const techIds = [...new Set(previousAssignments.map(a => a.technician_id))];
+    const prevTechs = await this.prisma.users.findMany({
+      where: { id: { in: techIds } },
+    });
+    const prevTechMap = new Map(prevTechs.map(t => [t.id, t]));
+
+    const describeSegment = (assignment?: (typeof incoming)[number]) => {
+      if (!assignment) return null;
+      const cableStates = parseCS(assignment.cable_status);
+      const total = this._cableCountForAssignment(assignment);
+      const frame = this.resolveAssignmentFrame(assignment.project_code, assignment.frame_id);
+      const cableLabel = (index: number) => {
+        const cable = Array.isArray(frame?.cables) ? (frame!.cables[index] as any) : null;
+        return cable?.ferrule || (cable?.sno != null && String(cable.sno)) || `Cable ${index + 1}`;
+      };
+      let lastCompleted: number | null = null;
+      let nextIncomplete: number | null = null;
+      let completedPairs = 0;
+      for (let i = 0; i < total; i++) {
+        const entry = cableStates[String(i)];
+        if (entry?.src && entry?.dst) { completedPairs += 1; lastCompleted = i; }
+        else if (nextIncomplete == null) nextIncomplete = i;
+      }
+      return {
+        id: assignment.id,
+        project_code: assignment.project_code,
+        frame_id: assignment.frame_id,
+        panel_name: assignment.panel_name || assignment.frame_id,
+        status: assignment.status,
+        cables_total: total,
+        cables_src_done: assignment.cables_src_done || 0,
+        cables_dst_done: assignment.cables_dst_done || 0,
+        cables_completed: completedPairs,
+        cables_remaining: Math.max(0, total - completedPairs),
+        last_completed_index: lastCompleted,
+        last_completed_label: lastCompleted != null ? cableLabel(lastCompleted) : null,
+        next_incomplete_index: nextIncomplete,
+        next_incomplete_label: nextIncomplete != null ? cableLabel(nextIncomplete) : null,
+      };
+    };
+
+    return incoming.map(a => {
+      const prevA = prevMap.get(a.handover_from_id as number);
+      const prevT = prevA ? prevTechMap.get(prevA.technician_id) : null;
+      return {
+        requestId: `transfer-${a.id}`, // Mock requestId to fit UI
+        direction: 'incoming',
+        initiator_name: prevT?.full_name || `Tech #${prevA?.technician_id}`,
+        initiator_username: prevT?.username || '',
+        target_technician_name: 'You',
+        reason: a.pause_reason || 'Mid Change', // Used pause_reason of new assignment to store the reason
+        assigned_at: a.assigned_at,
+        source: describeSegment(prevA),
+        target: describeSegment(a),
+      };
+    });
+  }
+
+  async executeMidChange(initiatorId: number, sourceAssignmentId: number, targetTechnicianId: number, reason = '') {
+    if (initiatorId === targetTechnicianId) throw new BadRequestException('Select a different technician');
+    const cleanReason = reason.trim().slice(0, 120);
+    if (!cleanReason) throw new BadRequestException('Mid Change reason is required');
+    const changedAt = new Date();
+
+    const result = await this.prisma.$transaction(async tx => {
+      let source = await tx.tech_assignments.findUnique({ where: { id: sourceAssignmentId } });
+      if (!source) throw new NotFoundException('Your assignment no longer exists');
+      if (source.technician_id !== initiatorId) throw new ForbiddenException('You can only mid-change your own assignment');
+      if (!['in_progress', 'paused'].includes(String(source.status || '')) || source.changeover_locked) {
+        throw new ConflictException('Your panel segment is no longer eligible for Mid Change');
+      }
+
+      const targetActive = await tx.tech_assignments.findFirst({
+        where: {
+          technician_id: targetTechnicianId,
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+          is_hidden: { not: true },
+        },
+      });
+
+      const [initiator, targetTechnician] = await Promise.all([
+        tx.users.findUnique({ where: { id: initiatorId } }),
+        tx.users.findUnique({ where: { id: targetTechnicianId } }),
+      ]);
+      // The receiving side must be a real, active wiring technician GÇö otherwise the
+      // transfer would strand the panel on an account that can never resume it.
+      if (!targetTechnician || targetTechnician.is_active === false
+        || targetTechnician.role !== 'wiring_technician') {
+        throw new BadRequestException('Select an active wiring technician to receive the panel');
+      }
+
+      const createContinuation = (
+        panel: typeof source,
+        incomingTechnicianId: number,
+        handoverFromId: number,
+      ) => ({
+        project_code: panel.project_code,
+        frame_id: panel.frame_id,
+        panel_name: panel.panel_name,
+        technician_id: incomingTechnicianId,
+        assigned_by: initiatorId, // Tech assigns to tech
+        assigned_at: changedAt,
+        status: 'assigned', // Wait for resume
+        cables_total: panel.cables_total,
+        cables_src_done: panel.cables_src_done,
+        cables_dst_done: panel.cables_dst_done,
+        cable_status: panel.cable_status,
+        total_wiring_seconds: 0,
+        supervisor_approved: true,
+        approved_at: panel.approved_at || changedAt,
+        approved_by: panel.approved_by || panel.assigned_by,
+        handover_from_id: handoverFromId,
+        is_hidden: false,
+        report_submitted: false,
+        rework_requested: false,
+        rework_reason: '',
+        changeover_locked: false,
+        qc_status: 'not_ready',
+        otp_code: generateOtpCode(),
+        qr_code: generateQrIdentity(),
+        otp_verified: false,
+        qr_panel_verified: false,
+        otp_expires_at: new Date(changedAt.getTime() + 24 * 60 * 60 * 1000),
+        otp_attempts: 0,
+        pause_reason: cleanReason,
+      });
+
+      const elapsed = (assignment: typeof source) => {
+        if (!assignment?.started_at || assignment.status === 'paused') {
+          return assignment?.total_wiring_seconds || 0;
+        }
+        return (assignment.total_wiring_seconds || 0)
+          + Math.max(0, Math.floor((changedAt.getTime() - assignment.started_at.getTime()) / 1000));
+      };
+
+      if (!targetActive) {
+        // Direct Transfer
+        source = await tx.tech_assignments.update({
+          where: { id: source.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change transferred to ${targetTechnician?.full_name}`,
+            total_wiring_seconds: elapsed(source),
+            changeover_locked: true,
+          },
+        });
+
+        const targetContinuation = await tx.tech_assignments.create({
+          data: createContinuation(source, targetTechnicianId, source.id),
+        });
+
+        await tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } });
+
+        await tx.tech_audit_log.create({
+          data: {
+            technician_id: initiatorId,
+            technician_name: initiator?.full_name || '',
+            project_code: source.project_code,
+            frame_id: source.frame_id,
+            panel_name: source.panel_name || '',
+            action: 'mid_change_transfer',
+            details: JSON.stringify({ to: targetTechnicianId, to_name: targetTechnician?.full_name, new_assignment_id: targetContinuation.id, reason: cleanReason, at: changedAt.toISOString() }),
+          },
+        });
+
+        return { type: 'transfer', new_assignment_id: targetContinuation.id };
+      } else {
+        // Interchange
+        if (targetActive.status === 'assigned') {
+           throw new ConflictException('The selected technician must start their assigned panel before it can be interchanged');
+        }
+
+        let target = await tx.tech_assignments.update({
+          where: { id: targetActive.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change interchange with ${initiator?.full_name}`,
+            total_wiring_seconds: elapsed(targetActive),
+            changeover_locked: true,
+          },
+        });
+
+        source = await tx.tech_assignments.update({
+          where: { id: source.id },
+          data: {
+            status: 'paused',
+            paused_at: changedAt,
+            pause_reason: `Mid Change interchange with ${targetTechnician?.full_name}`,
+            total_wiring_seconds: elapsed(source),
+            changeover_locked: true,
+          },
+        });
+
+        const initiatorContinuation = await tx.tech_assignments.create({
+          data: createContinuation(target, initiatorId, target.id),
+        });
+        const targetContinuation = await tx.tech_assignments.create({
+          data: createContinuation(source, targetTechnicianId, source.id),
+        });
+
+        await Promise.all([
+          tx.tech_assignments.update({ where: { id: source.id }, data: { handover_to_id: targetContinuation.id } }),
+          tx.tech_assignments.update({ where: { id: target.id }, data: { handover_to_id: initiatorContinuation.id } }),
+        ]);
+
+        await tx.tech_audit_log.createMany({
+          data: [
+            {
+              technician_id: initiatorId,
+              technician_name: initiator?.full_name || '',
+              project_code: source.project_code,
+              frame_id: source.frame_id,
+              panel_name: source.panel_name || '',
+              action: 'mid_change_swap',
+              details: JSON.stringify({ with: targetTechnicianId, with_name: targetTechnician?.full_name, reason: cleanReason, at: changedAt.toISOString() }),
+            },
+            {
+              technician_id: targetTechnicianId,
+              technician_name: targetTechnician?.full_name || '',
+              project_code: target.project_code,
+              frame_id: target.frame_id,
+              panel_name: target.panel_name || '',
+              action: 'mid_change_swap',
+              details: JSON.stringify({ with: initiatorId, with_name: initiator?.full_name, reason: cleanReason, at: changedAt.toISOString() }),
+            },
+          ],
+        });
+
+        return { type: 'interchange', initiator_new_assignment_id: initiatorContinuation.id, target_new_assignment_id: targetContinuation.id };
+      }
+    }, { isolationLevel: 'Serializable' });
+
+    return { message: 'Mid Change executed successfully', ...result };
+  }
+
 }
