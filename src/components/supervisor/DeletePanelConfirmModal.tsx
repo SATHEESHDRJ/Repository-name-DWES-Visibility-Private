@@ -37,7 +37,7 @@ function panelMeta(value: string | null | undefined, fallback?: string): string 
 function panelVoltage(panel: FramePanel, projectCode: string): string {
   return panelMeta(
     panel.voltage_level as string | null | undefined,
-    projectCode.split('_')[0]?.replace(/_/g, ' ') || undefined,
+    projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1],
   );
 }
 

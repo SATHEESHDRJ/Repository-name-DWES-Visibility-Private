@@ -1,4 +1,4 @@
-import { CheckCircle2 } from '../ui/icons';
+import { CheckCircle2, ClipboardCheck, PlayCircle } from '../ui/icons';
 import Modal from '../Modal';
 
 interface Props {
@@ -26,6 +26,7 @@ export default function AssignmentAcknowledgmentModal({
     <Modal
       title="Assignment Acknowledgment"
       subtitle="Please review and acknowledge before starting"
+      icon={<ClipboardCheck />}
       onClose={() => !busy && onClose()}
       size="lg"
       footer={(
@@ -34,6 +35,7 @@ export default function AssignmentAcknowledgmentModal({
             Cancel
           </button>
           <button type="button" className="btn-primary" onClick={onAcknowledge} disabled={busy}>
+            <PlayCircle size={16} />
             {busy ? 'Starting…' : 'Acknowledge & Start'}
           </button>
         </>

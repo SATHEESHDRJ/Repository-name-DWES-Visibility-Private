@@ -148,7 +148,7 @@ export default function DeploymentModeTab() {
       </div>
 
       {/* Mode selection */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <div className="text-[14px] font-bold text-slate-800 select-none">Deployment Mode</div>
           <div className="text-[12px] text-slate-500 mt-0.5 select-none">
@@ -163,7 +163,7 @@ export default function DeploymentModeTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'intranet'
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
@@ -191,7 +191,7 @@ export default function DeploymentModeTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'cloud'
                 ? 'border-indigo-500 bg-indigo-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
@@ -309,7 +309,7 @@ export default function DeploymentModeTab() {
 
       {/* Pricing comparison */}
       {previewPricing && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
             <DollarSign size={18} className="text-slate-500 shrink-0" />
             <div>

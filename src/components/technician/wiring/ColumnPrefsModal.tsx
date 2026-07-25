@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, EyeOff, Pin, Search } from '../../ui/icons';
+import { Eye, EyeOff, Pin, Search, Columns3 } from '../../ui/icons';
 import Modal from '../../Modal';
 import type { ColumnPrefs } from './column-prefs';
 
@@ -42,7 +42,7 @@ export default function ColumnPrefsModal({ excelHeaders, prefs, onSave, onClose 
   };
 
   return (
-    <Modal title="Schedule columns" onClose={onClose}>
+    <Modal title="Schedule columns" icon={<Columns3 />} onClose={onClose}>
       <p className="text-[13px] text-slate-500 mb-3">
         Pin fields on the cable card, or hide columns from the main grid — all Excel data stays available in the details drawer.
       </p>

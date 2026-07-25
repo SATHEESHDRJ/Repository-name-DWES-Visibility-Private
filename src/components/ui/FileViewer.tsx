@@ -60,12 +60,18 @@ function ImageCanvasViewer({
   zoom,
   onZoomChange,
   onWheelZoom,
+  rotation,
+  resetToken,
+  fitMode,
 }: {
   blob: Blob;
   title: string;
   zoom: number;
   onZoomChange: (z: number) => void;
   onWheelZoom: (delta: number) => void;
+  rotation: number;
+  resetToken: number;
+  fitMode: 'width' | 'page' | 'custom';
 }) {
   const [url, setUrl] = useState('');
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -73,6 +79,8 @@ function ImageCanvasViewer({
   const lastPos = useRef({ x: 0, y: 0 });
   const viewportRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+
+  useEffect(() => { setPan({ x: 0, y: 0 }); }, [resetToken]);
 
   useEffect(() => {
     const objectUrl = URL.createObjectURL(blob);
@@ -127,7 +135,7 @@ function ImageCanvasViewer({
   };
 
   const style: CSSProperties = {
-    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
     transformOrigin: 'center center',
   };
 
@@ -148,7 +156,17 @@ function ImageCanvasViewer({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <img src={url} alt={title} className="file-viewer-image" draggable={false} />
+        <img
+          src={url}
+          alt={title}
+          className={`file-viewer-image file-viewer-image--${fitMode}`}
+          draggable={false}
+          style={fitMode === 'width'
+            ? { width: '100%', height: 'auto', maxWidth: 'none', maxHeight: 'none' }
+            : fitMode === 'page'
+              ? { width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' }
+              : { width: 'auto', height: 'auto', maxWidth: 'none', maxHeight: 'none' }}
+        />
       </div>
     </div>
   );
@@ -223,8 +241,10 @@ export default function FileViewer({
 }: FileViewerProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-  const [fitMode, setFitMode] = useState<'fit' | 'custom'>('fit');
+  const [fitMode, setFitMode] = useState<'width' | 'page' | 'custom'>('page');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [resetToken, setResetToken] = useState(0);
   const [sheetData, setSheetData] = useState<{ headers: string[]; rows: string[][]; activeSheet: string } | null>(null);
   const [parseError, setParseError] = useState('');
   const [parsing, setParsing] = useState(false);
@@ -265,8 +285,10 @@ export default function FileViewer({
   const zoomIn = () => applyZoomDelta(ZOOM_STEP);
   const zoomOut = () => applyZoomDelta(-ZOOM_STEP);
   const resetZoom = () => {
-    setFitMode('fit');
+    setFitMode('page');
     setZoom(1);
+    setRotation(0);
+    setResetToken(token => token + 1);
   };
 
   const toggleFullscreen = useCallback(async () => {
@@ -296,7 +318,7 @@ export default function FileViewer({
               <ZoomOut size={18} strokeWidth={1.75} />
             </button>
             <span className="file-viewer-zoom-label" aria-live="polite">
-              {fitMode === 'custom' ? `${Math.round(zoom * 100)}%` : 'Fit'}
+              {fitMode === 'custom' ? `${Math.round(zoom * 100)}%` : fitMode === 'width' ? 'Fit width' : 'Fit page'}
             </span>
             <button type="button" className="file-viewer-btn" onClick={zoomIn} disabled={busy || !!displayError} aria-label="Zoom in">
               <ZoomIn size={18} strokeWidth={1.75} />
@@ -304,12 +326,33 @@ export default function FileViewer({
             <span className="file-viewer-divider" aria-hidden />
             <button
               type="button"
-              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'fit' ? ' is-active' : ''}`}
-              onClick={resetZoom}
+              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'width' ? ' is-active' : ''}`}
+              onClick={() => { setFitMode('width'); setZoom(1); setResetToken(token => token + 1); }}
               disabled={busy || !!displayError}
             >
-              Fit / Reset
+              Fit width
             </button>
+            <button
+              type="button"
+              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'page' ? ' is-active' : ''}`}
+              onClick={() => { setFitMode('page'); setZoom(1); setResetToken(token => token + 1); }}
+              disabled={busy || !!displayError}
+            >
+              Fit page
+            </button>
+            <button type="button" className="file-viewer-btn file-viewer-btn--text" onClick={resetZoom} disabled={busy || !!displayError}>
+              Reset
+            </button>
+            {fileType === 'image' && (
+              <button
+                type="button"
+                className="file-viewer-btn file-viewer-btn--text"
+                onClick={() => setRotation(value => (value + 90) % 360)}
+                disabled={busy || !!displayError}
+              >
+                Rotate 90°
+              </button>
+            )}
           </>
         )}
       </div>
@@ -354,7 +397,8 @@ export default function FileViewer({
         <PdfDocumentViewer
           blob={asPdfBlob(blob)}
           title={title}
-          downloadFilename={fileName}
+          downloadFilename={onDownload ? fileName : undefined}
+          onDownload={onDownload}
           className="file-viewer-pdf"
         />
       );
@@ -368,6 +412,9 @@ export default function FileViewer({
           zoom={zoom}
           onZoomChange={setZoom}
           onWheelZoom={applyZoomDelta}
+          rotation={rotation}
+          resetToken={resetToken}
+          fitMode={fitMode}
         />
       );
     }
@@ -393,7 +440,7 @@ export default function FileViewer({
         </p>
       </div>
     );
-  }, [blob, busy, displayError, fileName, fileType, onRetry, sheetData, sheetName, title, zoom, applyZoomDelta]);
+  }, [blob, busy, displayError, fileName, fileType, fitMode, onDownload, onRetry, resetToken, rotation, sheetData, sheetName, title, zoom, applyZoomDelta]);
 
   return (
     <div

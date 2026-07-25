@@ -1,6 +1,6 @@
-import { useMemo, useState, type CSSProperties } from 'react';
-import { Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
-import GaDrawingViewModal from '../../../components/technician/GaDrawingViewModal';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { ArrowLeftRight, Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
+import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
@@ -49,14 +49,26 @@ export default function PanelsTab({
   const [submitPanel, setSubmitPanel] = useState<any | null>(null);
   const [hideTarget, setHideTarget] = useState<any | null>(null);
   const [gaOpen, setGaOpen] = useState(false);
+  const [midChangeRequests, setMidChangeRequests] = useState<any[]>([]);
+
+  const refreshMidChangeCount = () => {
+    techApi.midChangeRequests()
+      .then(rows => setMidChangeRequests(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshMidChangeCount();
+    const timer = window.setInterval(refreshMidChangeCount, 12_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const incomingMidChange = midChangeRequests.find(request => request.direction === 'incoming');
 
   const hasAssignment = panels.length > 0;
   const headerPanel = selectedPanel;
 
-  const gaTarget = useMemo(() => {
-    if (!headerPanel || headerPanel.status === 'completed') return null;
-    return headerPanel;
-  }, [headerPanel]);
+  const gaTarget = useMemo(() => headerPanel || null, [headerPanel]);
 
   const confirmComplete = async (panel: any) => {
     setSaving(true);
@@ -70,6 +82,20 @@ export default function PanelsTab({
       setSubmitPanel({ ...panel, status: 'completed' });
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not complete panel');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResumeMidChange = async (assignmentId: number) => {
+    setSaving(true);
+    setError('');
+    try {
+      await techApi.start(assignmentId);
+      refreshMidChangeCount();
+      onRefresh();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not resume mid change assignment');
     } finally {
       setSaving(false);
     }
@@ -118,26 +144,46 @@ export default function PanelsTab({
     <div>
       {error && <div className="form-error mb-2">{error}</div>}
 
+      {/* Mid Change is initiated from the Pause popup inside the wiring workstation.
+          This strip surfaces incoming Mid Change transfers so the receiving technician can resume. */}
+      {incomingMidChange && (
+        <div className="tech-midchange-notice mb-4" role="status">
+          <ArrowLeftRight size={16} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <strong>Mid Change panel assigned</strong> — {incomingMidChange.initiator_name} transferred{' '}
+            <strong>{incomingMidChange.target?.panel_name || 'a panel'}</strong> to you.
+          </span>
+          <button
+            type="button"
+            className="btn-primary shrink-0"
+            disabled={saving}
+            onClick={() => handleResumeMidChange(incomingMidChange.target.id)}
+          >
+            {saving ? 'Resuming…' : 'Resume Wiring'}
+          </button>
+        </div>
+      )}
+
       <div className="tech-dash-actions mb-4" role="group" aria-label="Panel actions">
         <button
           type="button"
-          className="btn-primary tech-dash-action-btn"
+          className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment}
           title={hasAssignment ? 'Open digital wiring for the selected panel' : AWAITING_ASSIGNMENT}
-          aria-label={hasAssignment ? 'Digital Wiring View' : AWAITING_ASSIGNMENT}
+          aria-label={hasAssignment ? 'Digital Wiring Monitor' : AWAITING_ASSIGNMENT}
           onClick={() => {
             const panel = headerPanel ?? panels[0];
             if (panel) onOpenDigitalWiring(panel);
           }}
         >
           <Cable size={16} />
-          Digital Wiring View
+          Digital Wiring Monitor
         </button>
         <button
           type="button"
           className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment || !gaTarget}
-          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Not available for completed panels' : 'Open GA View'}
+          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Select a panel first' : 'View GA Drawing for the selected panel'}
           aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA View'}
           onClick={() => gaTarget && setGaOpen(true)}
         >
@@ -267,9 +313,11 @@ export default function PanelsTab({
       )}
 
       {gaOpen && gaTarget && (
-        <GaDrawingViewModal
+        <PanelGaDrawingModal
+          projectCode={gaTarget.project_code}
+          frameId={gaTarget.frame_id}
           panelName={gaTarget.panel_name}
-          projectLabel={gaTarget.project_name || gaTarget.project_code}
+          projectName={gaTarget.project_name || gaTarget.project_code}
           onClose={() => setGaOpen(false)}
         />
       )}

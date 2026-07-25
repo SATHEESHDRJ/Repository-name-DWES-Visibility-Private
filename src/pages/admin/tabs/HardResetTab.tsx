@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldAlert } from '../../../components/ui/icons';
+import { AlertTriangle, CheckCircle2, ShieldAlert, FolderKanban } from '../../../components/ui/icons';
 import { adminApi, projectsApi } from '../../../services/api';
 
 interface Precheck {
@@ -96,7 +96,7 @@ export default function HardResetTab() {
     : 0;
 
   return (
-    <div className="rounded-2xl border border-red-100 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-100 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b border-red-100 bg-red-50 flex items-center gap-3">
         <ShieldAlert size={20} className="text-red-600 shrink-0" />
@@ -113,16 +113,19 @@ export default function HardResetTab() {
         {/* Project selector */}
         <div className="mb-5">
           <label className="form-label mb-1">Select project to reset</label>
-          <select
-            value={selCode}
-            onChange={e => setSelCode(e.target.value)}
-            className="form-select"
-            aria-label="Select project"
-          >
-            {projects.map(p => (
-              <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-            ))}
-          </select>
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><FolderKanban size={18} /></span>
+            <select
+              value={selCode}
+              onChange={e => setSelCode(e.target.value)}
+              className="form-select"
+              aria-label="Select project"
+            >
+              {projects.map(p => (
+                <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Precheck counts */}
@@ -174,11 +177,11 @@ export default function HardResetTab() {
       {showModal && (
         <div className="modal-overlay z-[210]" onClick={closeModal}>
           <div
-            className="modal-box overflow-hidden"
+            className="modal-box hard-reset-modal overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="px-6 pt-6 pb-4 border-b border-red-100 bg-red-50">
+            <div className="hard-reset-modal__header border-b border-red-100 bg-red-50">
               <div className="flex items-center gap-2 mb-1">
                 <ShieldAlert size={18} className="text-red-600" />
                 <span className="text-[15px] font-bold text-red-800">Confirm Hard Reset</span>
@@ -186,7 +189,7 @@ export default function HardResetTab() {
               <div className="text-[12px] text-red-600">This action is recoverable from the backup — but irreversible within the app.</div>
             </div>
 
-            <div className="p-6 overflow-y-auto min-h-0">
+            <div className="hard-reset-modal__body overflow-y-auto min-h-0">
               {!result ? (
                 <>
                   {modalPrecheckLoading ? (
@@ -195,17 +198,20 @@ export default function HardResetTab() {
                     <>
                       <div className="mb-4">
                         <label className="form-label mb-1">Select project to reset</label>
-                        <select
-                          value={modalCode}
-                          onChange={e => { setModalCode(e.target.value); setResetErr(''); }}
-                          className="form-select"
-                          aria-label="Select project to reset"
-                          disabled={resetting}
-                        >
-                          {projects.map(p => (
-                            <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                          <select
+                            value={modalCode}
+                            onChange={e => { setModalCode(e.target.value); setResetErr(''); }}
+                            className="form-select"
+                            aria-label="Select project to reset"
+                            disabled={resetting}
+                          >
+                            {projects.map(p => (
+                              <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       {/* What will be deleted */}
@@ -231,12 +237,12 @@ export default function HardResetTab() {
 
                       {resetErr && <div className="form-error mb-3">{resetErr}</div>}
 
-                      <div className="flex gap-3">
+                      <div className="hard-reset-modal__actions flex gap-2">
                         <button
                           type="button"
                           onClick={closeModal}
                           disabled={resetting}
-                          className="flex-1 h-12 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
+                          className="flex-1 h-12 rounded-xl border border-slate-200 bg-[var(--t-surface-white)] text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
                         >
                           Cancel
                         </button>

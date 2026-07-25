@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, RefreshCw, FileText, CheckSquare, Check, X,
-  SendHorizonal, Building2, ArrowRight, ChevronRight,
+  SendHorizonal, Building2, ArrowRight, ChevronRight, ChevronDown, Pencil, MessageCircle,
 } from '../ui/icons';
 import Modal from '../Modal';
 import ReportPreviewModal from '../ui/ReportPreviewModal';
 import ProjectPdfPreviewModal from './ProjectPdfPreviewModal';
 import { useAppDialog } from '../AppDialogProvider';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import { projectsApi, supervisorApi } from '../../services/api';
 import type { Project } from '../../types';
 import { compactPanelDisplayName, resolveProjectCardDetails } from '../../utils/projectDisplay';
 import { onFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
+import PanelActivityRowDetails from './PanelActivityRowDetails';
 
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned' | 'pending_approval';
 type StatusBucket = 'completed' | 'in_progress' | 'pending_review' | 'not_started';
@@ -122,29 +124,49 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
   const [reworkPanel, setReworkPanel] = useState<PanelRow | null>(null);
   const [projectPdf, setProjectPdf] = useState<{ code: string; title: string } | null>(null);
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set());
+  const requests = useLatestRequest();
 
-  const loadWorkspaceData = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? false;
-    if (!silent) setLoading(true);
+  const loadWorkspaceData = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    const request = requests.begin();
+    if (!silent) {
+      setLoading(true);
+      setProjects([]);
+      setFrames([]);
+      setAssignments([]);
+    }
     try {
-      const projs = await projectsApi.list().catch(() => [] as Project[]);
+      const projs = await projectsApi.list(request.signal) as Project[];
       const [frameLists, panelAssignments] = await Promise.all([
         Promise.all(
           projs.map((p: Project) =>
-            projectsApi.frames(p.code)
-              .then(fs => fs.map((f: any) => ({ ...f, project_code: p.code })))
-              .catch(() => []),
+            projectsApi.frames(p.code, request.signal)
+              .then(fs => fs.map((f: any) => ({ ...f, project_code: p.code }))),
           ),
         ),
-        supervisorApi.allPanels().catch(() => []),
+        supervisorApi.allPanels(request.signal),
       ]);
+      if (!requests.isLatest(request.id)) return;
       setProjects(projs);
       setFrames(frameLists.flat());
       setAssignments(panelAssignments);
+      const validFrameKeys = new Set(frameLists.flat().map((frame: any) => `${frame.project_code}:${frame.id}`));
+      const validProjectCodes = new Set(projs.map(project => project.code));
+      setReportPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setReviewPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setReworkPanel(current => current && validFrameKeys.has(`${current.projectCode}:${current.frameId}`) ? current : null);
+      setProjectPdf(current => current && validProjectCodes.has(current.code) ? current : null);
+    } catch (error: any) {
+      // A failed silent refresh keeps the last good workspace on screen.
+      if (!silent && error?.code !== 'ERR_CANCELED' && requests.isLatest(request.id)) {
+        setProjects([]);
+        setFrames([]);
+        setAssignments([]);
+      }
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && requests.isLatest(request.id)) setLoading(false);
     }
-  }, []);
+  }, [requests]);
 
   const wasActiveRef = useRef(isActive);
   useEffect(() => {
@@ -152,24 +174,36 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
       wasActiveRef.current = false;
       return;
     }
-    const silent = wasActiveRef.current;
     wasActiveRef.current = true;
-    void loadWorkspaceData({ silent });
+    void loadWorkspaceData();
   }, [isActive, loadWorkspaceData]);
 
-  useDwesRefresh(() => {
+  useDwesRefresh(options => {
     if (!isActive) return;
-    return loadWorkspaceData({ silent: true });
+    return loadWorkspaceData(options);
   }, { enabled: isActive });
 
   useEffect(() => {
     return onFramesChanged((detail) => {
-      if (detail.action === 'deleted' && detail.frameId) {
+      if (detail.action === 'deleted') requests.cancel();
+      if (detail.action === 'deleted' && !detail.frameId) {
+        setProjects(prev => prev.filter(project => project.code !== detail.projectCode));
+        setFrames(prev => prev.filter(frame => frame.project_code !== detail.projectCode));
+        setAssignments(prev => prev.filter(assignment => assignment.project_code !== detail.projectCode));
+        setProjectPdf(current => current?.code === detail.projectCode ? null : current);
+      } else if (detail.action === 'deleted' && detail.frameId) {
         setFrames(prev => prev.filter(f => !(f.project_code === detail.projectCode && f.id === detail.frameId)));
         setAssignments(prev => prev.filter(a => !(a.project_code === detail.projectCode && a.frame_id === detail.frameId)));
       }
+      if (detail.action === 'deleted') {
+        const deleted = (panel: PanelRow | null) => panel?.projectCode === detail.projectCode
+          && (!detail.frameId || panel.frameId === detail.frameId);
+        setReportPanel(current => deleted(current) ? null : current);
+        setReviewPanel(current => deleted(current) ? null : current);
+        setReworkPanel(current => deleted(current) ? null : current);
+      }
     });
-  }, []);
+  }, [requests]);
 
   const assignmentByFrame = useMemo(() => {
     const m = new Map<string, any>();
@@ -414,7 +448,9 @@ export default function ReviewApprovalWorkspace({ isActive = true }: { isActive?
         </div>
       )}
 
-      {reportPanel?.assignmentId && (
+      {/* A panel with no assignment yet still has a report — it simply reads as
+          Production Progress with nothing recorded, so it is not gated here. */}
+      {reportPanel && (
         <ReportPreviewModal
           assignmentId={reportPanel.assignmentId}
           projectCode={reportPanel.projectCode}
@@ -587,61 +623,71 @@ function PanelWorkflowRow({
   onRework: () => void;
   onApproveLegacy: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const meta = STATE_META[panel.state];
   const canReview = panel.state === 'completed' || panel.state === 'ready_for_qc';
   const showReport = panel.assignmentId != null && (panel.state === 'completed' || panel.state === 'ready_for_qc' || panel.reportSubmitted);
   const panelLabel = compactPanelDisplayName(panel.panelName);
 
   return (
-    <div className="rwa-panel-row">
-      <div className="rwa-panel-cell rwa-panel-cell--name">
-        <span className="rwa-panel-name" title={panel.panelName}>{panelLabel}</span>
-      </div>
-      <div className="rwa-panel-cell">
-        <span className={`rwa-panel-pill ${meta.pill}`}>{meta.label}</span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--tech">
-        <span className="rwa-panel-tech" title={panel.technician}>{panel.technician}</span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--progress">
-        <progress className="ops-assignment-progress rwa-panel-bar" value={panel.progress} max={100} />
-        <span className="rwa-panel-pct">{panel.progress}%</span>
-        <span className="rwa-cable-stat">
-          {panel.cablesSrc}/{panel.cablesTotal}·{panel.cablesDst}/{panel.cablesTotal}
-        </span>
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--qc">
-        {panel.reviewStatus ? (
-          <span className="rwa-review-chip">{panel.reviewStatus.replace(/_/g, ' ')}</span>
-        ) : (
-          <span className="rwa-review-chip rwa-review-chip--muted">—</span>
-        )}
-        {panel.reportSubmitted && (
-          <span className="rwa-review-chip rwa-review-chip--submitted">Submitted</span>
-        )}
-      </div>
-      <div className="rwa-panel-cell rwa-panel-cell--actions">
-        {panel.needsLegacyApproval && (
-          <>
-            <button type="button" className="rwa-action-btn rwa-action-btn--danger" disabled={saving} onClick={onRework} title="Request changes">
-              <X size={13} />
+    <div className="rwa-panel-row-container flex flex-col border-b border-slate-100 last:border-b-0">
+      <div 
+        className="rwa-panel-row hover:bg-slate-50 cursor-pointer transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="rwa-panel-cell rwa-panel-cell--name flex items-center gap-2">
+          {expanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+          <span className="rwa-panel-name" title={panel.panelName}>{panelLabel}</span>
+        </div>
+        <div className="rwa-panel-cell">
+          <span className={`rwa-panel-pill ${meta.pill}`}>{meta.label}</span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--tech">
+          <span className="rwa-panel-tech" title={panel.technician}>{panel.technician}</span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--progress">
+          <progress className="ops-assignment-progress rwa-panel-bar" value={panel.progress} max={100} />
+          <span className="rwa-panel-pct">{panel.progress}%</span>
+          <span className="rwa-cable-stat">
+            {panel.cablesSrc}/{panel.cablesTotal}·{panel.cablesDst}/{panel.cablesTotal}
+          </span>
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--qc">
+          {panel.reviewStatus ? (
+            <span className="rwa-review-chip">{panel.reviewStatus.replace(/_/g, ' ')}</span>
+          ) : (
+            <span className="rwa-review-chip rwa-review-chip--muted">—</span>
+          )}
+          {panel.reportSubmitted && (
+            <span className="rwa-review-chip rwa-review-chip--submitted">Submitted</span>
+          )}
+        </div>
+        <div className="rwa-panel-cell rwa-panel-cell--actions" onClick={(e) => e.stopPropagation()}>
+          {panel.needsLegacyApproval && (
+            <>
+              <button type="button" className="rwa-action-btn rwa-action-btn--danger" disabled={saving} onClick={onRework} title="Request changes">
+                <X size={13} />
+              </button>
+              <button type="button" className="rwa-action-btn rwa-action-btn--ok" disabled={saving} onClick={onApproveLegacy} title="Approve">
+                <Check size={13} />
+              </button>
+            </>
+          )}
+          {showReport && (
+            <button type="button" className="rwa-action-btn" onClick={onReport} title="Panel report">
+              <FileText size={13} />
             </button>
-            <button type="button" className="rwa-action-btn rwa-action-btn--ok" disabled={saving} onClick={onApproveLegacy} title="Approve">
-              <Check size={13} />
+          )}
+          {canReview && panel.assignmentId && (
+            <button type="button" className="rwa-action-btn rwa-action-btn--primary" onClick={onReview} title="Review">
+              <CheckSquare size={13} />
             </button>
-          </>
-        )}
-        {showReport && (
-          <button type="button" className="rwa-action-btn" onClick={onReport} title="Panel report">
-            <FileText size={13} />
-          </button>
-        )}
-        {canReview && panel.assignmentId && (
-          <button type="button" className="rwa-action-btn rwa-action-btn--primary" onClick={onReview} title="Review">
-            <CheckSquare size={13} />
-          </button>
-        )}
+          )}
+        </div>
       </div>
+      {expanded && (
+        <PanelActivityRowDetails projectCode={panel.projectCode} frameId={panel.frameId} />
+      )}
     </div>
   );
 }
@@ -686,11 +732,13 @@ function ReviewDecisionModal({
   return (
     <Modal
       title={`Review — ${panel.panelName}`}
+      icon={<CheckSquare />}
       onClose={onClose}
       footer={(
         <>
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn-primary" disabled={saving} onClick={() => void handleSave()}>
+            <Check size={16} />
             {saving ? 'Saving…' : 'Submit review'}
           </button>
         </>
@@ -714,7 +762,10 @@ function ReviewDecisionModal({
         ))}
       </div>
       <label className="form-label">Notes (optional)</label>
-      <textarea className="form-textarea" rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Review notes…" />
+      <div className="field-with-icon field-with-icon--top">
+        <span className="field-lead-icon"><FileText size={18} /></span>
+        <textarea className="form-textarea" rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Review notes…" />
+      </div>
       {error && <div className="form-error mt-2">{error}</div>}
     </Modal>
   );
@@ -754,11 +805,14 @@ function ReworkRequestModal({
   return (
     <Modal
       title="Request Changes"
+      icon={<Pencil />}
+      iconTone="warning"
       onClose={onClose}
       footer={(
         <>
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn-danger" disabled={saving} onClick={() => void handleSave()}>
+            <SendHorizonal size={16} />
             {saving ? 'Sending…' : 'Send request'}
           </button>
         </>
@@ -768,7 +822,10 @@ function ReworkRequestModal({
         {panel.panelName} <ArrowRight size={12} className="inline text-slate-400" /> {panel.technician}
       </p>
       <label className="form-label">Reason (min 5 characters)</label>
-      <textarea className="form-textarea" rows={3} value={reason} onChange={e => setReason(e.target.value)} />
+      <div className="field-with-icon field-with-icon--top">
+        <span className="field-lead-icon"><MessageCircle size={18} /></span>
+        <textarea className="form-textarea" rows={3} value={reason} onChange={e => setReason(e.target.value)} />
+      </div>
       {error && <div className="form-error mt-2">{error}</div>}
     </Modal>
   );

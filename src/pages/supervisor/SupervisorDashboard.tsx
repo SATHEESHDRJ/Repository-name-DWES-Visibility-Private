@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FolderKanban, Activity,
 } from '../../components/ui/icons';
@@ -11,6 +11,7 @@ import TechnicianWorkflowModal, {
 } from '../../components/supervisor/TechnicianWorkflowModal';
 import ProjectsTab from './tabs/ProjectsTab';
 import ReviewApprovalSection from './sections/ReviewApprovalSection';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
 
 const TABS = [
   { key: 'projects', label: 'Projects', icon: <FolderKanban size={20} /> },
@@ -42,6 +43,14 @@ export default function SupervisorDashboard() {
     }
     setWorkflow(opts);
   };
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted' || !workflow) return;
+    if (workflow.projectCode === detail.projectCode
+      && (!detail.frameId || workflow.panelId === detail.frameId)) {
+      setWorkflow(null);
+    }
+  }), [workflow]);
 
   return (
     <DashboardShell

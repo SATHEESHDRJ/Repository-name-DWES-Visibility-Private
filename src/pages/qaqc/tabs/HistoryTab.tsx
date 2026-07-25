@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { qaqcApi } from '../../../services/api';
+import { useCallback } from 'react';
 import Modal from '../../../components/Modal';
 import { Eye, ClipboardList, MapPin } from '../../../components/ui/icons';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
+import { onFramesChanged } from '../../../utils/projectFramesEvents';
 
 export default function HistoryTab() {
   const [inspections, setInspections] = useState<any[]>([]);
@@ -9,22 +13,51 @@ export default function HistoryTab() {
   const [filter, setFilter] = useState<'all' | 'PASS' | 'FAIL' | 'CONDITIONAL_PASS'>('all');
   const [selected, setSelected] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const listRequests = useLatestRequest();
+  const detailRequests = useLatestRequest();
 
-  useEffect(() => {
-    setLoading(true);
-    qaqcApi.allInspections().then(d => { setInspections(d); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    const request = listRequests.begin();
+    if (!silent) setLoading(true);
+    if (!silent) setInspections([]);
+    try {
+      const rows = await qaqcApi.allInspections(request.signal);
+      if (listRequests.isLatest(request.id)) setInspections(rows);
+    } catch { /* authoritative empty loading state remains */ }
+    finally { if (listRequests.isLatest(request.id)) setLoading(false); }
+  }, [listRequests]);
+
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    listRequests.cancel();
+    detailRequests.cancel();
+    setInspections(current => current.filter(inspection => (
+      inspection.project_code !== detail.projectCode
+      || (!!detail.frameId && inspection.frame_id !== detail.frameId)
+    )));
+    setSelected((current: any | null) => current?.project_code === detail.projectCode
+      && (!detail.frameId || current.frame_id === detail.frameId)
+      ? null
+      : current);
+  }), [detailRequests, listRequests]);
 
   const filtered = filter === 'all' ? inspections : inspections.filter(i => i.overall_result === filter);
 
   const openDetail = async (i: any) => {
+    const request = detailRequests.begin();
     setDetailLoading(true);
     setSelected(i);
     try {
-      const d = await qaqcApi.getInspection(i.id);
-      setSelected(d);
-    } catch { setSelected(i); }
-    finally { setDetailLoading(false); }
+      const d = await qaqcApi.getInspection(i.id, request.signal);
+      if (detailRequests.isLatest(request.id)) setSelected(d);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED' && detailRequests.isLatest(request.id)) setSelected(null);
+    }
+    finally { if (detailRequests.isLatest(request.id)) setDetailLoading(false); }
   };
 
   const resultBadge = (value: string) => {
@@ -80,7 +113,7 @@ export default function HistoryTab() {
 
       <div className="flex flex-col gap-2">
         {filtered.map(i => (
-          <div key={i.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+          <div key={i.id} className="flex items-center gap-4 p-4 bg-[var(--t-surface-white)] border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-slate-900 truncate">{i.panel_name}</div>
               <div className="text-xs text-slate-500 mt-0.5">{i.project_code} · Technician: {i.technician_name}</div>
@@ -103,7 +136,7 @@ export default function HistoryTab() {
       </div>
 
       {selected && (
-        <Modal title={`Inspection — ${selected.panel_name}`} onClose={() => setSelected(null)} size="lg">
+        <Modal title={`Inspection — ${selected.panel_name}`} icon={<ClipboardList />} onClose={() => setSelected(null)} size="lg">
           {detailLoading ? (
             <div className="empty-state"><p className="empty-text">Loading...</p></div>
           ) : (
@@ -176,7 +209,7 @@ export default function HistoryTab() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {selected.issues.map((iss: any) => (
-                      <div key={iss.id} className="flex flex-col gap-1 p-3 bg-white border border-slate-200 rounded-xl">
+                      <div key={iss.id} className="flex flex-col gap-1 p-3 bg-[var(--t-surface-white)] border border-slate-200 rounded-xl">
                         <div className="flex items-center gap-2">
                           <span className={severityBadge(iss.severity)}>{iss.severity}</span>
                           <span className="text-sm text-slate-700">{iss.description}</span>

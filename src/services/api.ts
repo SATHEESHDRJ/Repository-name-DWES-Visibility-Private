@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DWES_CLIENT_ID, DWES_CLIENT_ID_HEADER } from '../utils/clientId';
 
 const api = axios.create({
   baseURL: '/api',
@@ -9,6 +10,11 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('dwes_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Tags the mutation with this tab, so the live stream can skip its own echo.
+  config.headers[DWES_CLIENT_ID_HEADER] = DWES_CLIENT_ID;
+  if (config.method?.toLowerCase() === 'get') {
+    config.params = { ...(config.params ?? {}), _dwes_ts: Date.now() };
+  }
   return config;
 });
 
@@ -74,8 +80,6 @@ export const authApi = {
   health: () => api.get('/health').then(r => r.data),
 
   env: () => api.get('/env').then(r => r.data),
-
-  hints: () => api.get('/login-hints').then(r => r.data),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -102,9 +106,14 @@ export const usersApi = {
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const projectsApi = {
-  list: () => api.get('/projects').then(r => r.data),
+  list: (signal?: AbortSignal) => api.get('/projects', { signal }).then(r => r.data),
 
   create: (dto: unknown) => api.post('/projects', dto).then(r => r.data),
+
+  /** Backend check that a project numbering is free (deleted numbering stays reserved). */
+  codeAvailable: (code: string, signal?: AbortSignal) =>
+    api.get(`/projects/code-available/${encodeURIComponent(code)}`, { signal })
+      .then(r => r.data as { code: string; available: boolean; reason?: string }),
 
   update: (code: string, dto: unknown) => api.put(`/projects/${code}`, dto).then(r => r.data),
 
@@ -119,8 +128,8 @@ export const projectsApi = {
   frameReportPdf: (code: string, frameId: string) =>
     api.get(`/projects/${code}/frames/${frameId}/report-pdf`, { responseType: 'blob' }).then(r => r.data),
 
-  panelCompletionReport: (code: string, frameId: string) =>
-    api.get(`/projects/${code}/frames/${frameId}/completion-report`).then(r => r.data),
+  panelCompletionReport: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/completion-report`, { signal }).then(r => r.data),
 
   reportPdf: (code: string, frameId?: string) =>
     frameId
@@ -133,15 +142,15 @@ export const projectsApi = {
   submitToDirector: (code: string) =>
     api.post(`/projects/${code}/submit-to-director`).then(r => r.data),
 
-  frames: (code: string) => api.get(`/projects/${code}/frames`).then(r => r.data),
+  frames: (code: string, signal?: AbortSignal) => api.get(`/projects/${code}/frames`, { signal }).then(r => r.data),
 
   createPanel: (
     code: string,
     dto: { name: string; type?: string; voltage_level: string; system_type?: string },
   ) => api.post(`/projects/${code}/frames`, dto).then(r => r.data),
 
-  frame: (code: string, frameId: string) =>
-    api.get(`/projects/${code}/frames/${frameId}`).then(r => r.data),
+  frame: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}`, { signal }).then(r => r.data),
 
   cables: (code: string) => api.get(`/projects/${code}/cables`).then(r => r.data),
 
@@ -184,6 +193,24 @@ export const projectsApi = {
     }).then(r => r.data),
 
   drawings: (code: string) => api.get(`/projects/${code}/drawings`).then(r => r.data),
+
+  panelDrawings: (code: string, frameId: string) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawings`).then(r => r.data),
+
+  panelDrawingFile: (code: string, frameId: string, drawingId: string) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawings/${drawingId}/file`, { responseType: 'blob' })
+      .then(r => r.data as Blob),
+
+  panelDrawing: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawing`, { signal }).then(r => r.data),
+
+  panelDrawingSlotFile: (code: string, frameId: string, slot: '2d' | '3d', signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawing/${slot}/file`, { responseType: 'blob', signal })
+      .then(r => r.data as Blob),
+
+  panelDrawingSlotDownload: (code: string, frameId: string, slot: '2d' | '3d') =>
+    api.get(`/projects/${code}/frames/${frameId}/drawing/${slot}/download`, { responseType: 'blob' })
+      .then(r => r.data as Blob),
 
   // Fetch a drawing file as a Blob (auth header is attached by the axios interceptor;
   // a raw new-tab GET would not carry the JWT). Caller decides inline-open vs download.
@@ -253,6 +280,19 @@ export const uploadApi = {
         : undefined,
     }).then(r => r.data),
 
+  panelDrawingSlot: (
+    code: string,
+    frameId: string,
+    slot: '2d' | '3d',
+    formData: FormData,
+    onProgress?: (pct: number) => void,
+  ) => api.put(`/projects/${code}/frames/${frameId}/drawing/${slot}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress
+      ? e => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
+      : undefined,
+  }).then(r => r.data),
+
   directorReport: (code: string, formData: FormData) =>
     api.post(`/upload/director-report/${code}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -262,7 +302,7 @@ export const uploadApi = {
 // ─── Technician ───────────────────────────────────────────────────────────────
 
 export const techApi = {
-  myPanels: () => api.get('/tech/my-panels').then(r => r.data),
+  myPanels: (signal?: AbortSignal) => api.get('/tech/my-panels', { signal }).then(r => r.data),
 
   start: (id: number) => api.post(`/tech/start/${id}`).then(r => r.data),
 
@@ -295,7 +335,18 @@ export const techApi = {
 
   delete: (id: number) => api.delete(`/tech/assignment/${id}`).then(r => r.data),
 
-  myAssignmentDetail: (id: number) => api.get(`/tech/my-assignment/${id}`).then(r => r.data),
+  myAssignmentDetail: (id: number, signal?: AbortSignal) => api.get(`/tech/my-assignment/${id}`, { signal }).then(r => r.data),
+
+  midChangeTargets: () => api.get('/tech/mid-change/targets').then(r => r.data),
+
+  midChangeRequests: () => api.get('/tech/mid-change/requests').then(r => r.data),
+
+  executeMidChange: (sourceAssignmentId: number, targetTechnicianId: number, reason: string) =>
+    api.post('/tech/mid-change/execute', {
+      source_assignment_id: sourceAssignmentId,
+      target_technician_id: targetTechnicianId,
+      reason,
+    }).then(r => r.data),
 
   completionReport: (id: number) => api.get(`/tech/completion-report/${id}`).then(r => r.data),
 
@@ -315,7 +366,7 @@ export const techApi = {
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 
 export const supervisorApi = {
-  allPanels: () => api.get('/supervisor/all-panels').then(r => r.data),
+  allPanels: (signal?: AbortSignal) => api.get('/supervisor/all-panels', { signal }).then(r => r.data),
 
   reviewPanels: (code: string) => api.get(`/supervisor/review-panels/${code}`).then(r => r.data),
 
@@ -354,6 +405,12 @@ export const supervisorApi = {
   frameProgress: (projectCode: string, frameId: string) =>
     api.get(`/supervisor/frame-progress/${projectCode}/${frameId}`).then(r => r.data),
 
+  panelActivity: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(
+      `/supervisor/panel-activity/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { signal },
+    ).then(r => r.data),
+
   completionReport: (id: number) =>
     api.get(`/supervisor/completion-report/${id}`).then(r => r.data),
 
@@ -372,16 +429,16 @@ export const supervisorApi = {
 // ─── Director ─────────────────────────────────────────────────────────────────
 
 export const directorApi = {
-  stats: () => api.get('/director/stats').then(r => r.data),
+  stats: (signal?: AbortSignal) => api.get('/director/stats', { signal }).then(r => r.data),
 
   projects: () => api.get('/director/projects').then(r => r.data),
 
-  workforce: () => api.get('/director/workforce').then(r => r.data),
+  workforce: (signal?: AbortSignal) => api.get('/director/workforce', { signal }).then(r => r.data),
 
-  activity: (limit?: number) =>
-    api.get('/director/activity', { params: limit ? { limit } : {} }).then(r => r.data),
+  activity: (limit?: number, signal?: AbortSignal) =>
+    api.get('/director/activity', { params: limit ? { limit } : {}, signal }).then(r => r.data),
 
-  projectsSummary: () => api.get('/director/projects-summary').then(r => r.data),
+  projectsSummary: (signal?: AbortSignal) => api.get('/director/projects-summary', { signal }).then(r => r.data),
 
   export: (format: 'csv' | 'xlsx' | 'pdf') =>
     api.get(`/director/export?format=${format}`, { responseType: 'blob' }).then(r => r.data),
@@ -390,7 +447,7 @@ export const directorApi = {
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 export const adminApi = {
-  diagnostics: () => api.get('/admin/diagnostics').then(r => r.data),
+  diagnostics: (signal?: AbortSignal) => api.get('/admin/diagnostics', { signal }).then(r => r.data),
 
   clearCache: () => api.post('/admin/diagnostics/clear-cache').then(r => r.data),
 
@@ -447,8 +504,8 @@ export const adminApi = {
   hardDeletePrecheck: (code: string) =>
     api.get(`/admin/projects/${code}/hard-delete`).then(r => r.data),
 
-  hardDelete: (code: string, confirmedCode = code) =>
-    api.post(`/admin/projects/${code}/hard-delete`, { confirmed_code: confirmedCode }).then(r => r.data),
+  hardDelete: (code: string) =>
+    api.post(`/admin/projects/${code}/hard-delete`).then(r => r.data),
 
   resetAllPrecheck: () =>
     api.get('/admin/reset-all-projects').then(r => r.data),
@@ -469,20 +526,20 @@ export const devApi = {
 // ─── QA/QC ────────────────────────────────────────────────────────────────────
 
 export const qaqcApi = {
-  stats: () => api.get('/qaqc/stats').then(r => r.data),
+  stats: (signal?: AbortSignal) => api.get('/qaqc/stats', { signal }).then(r => r.data),
 
-  readyPanels: () => api.get('/qaqc/ready-panels').then(r => r.data),
+  readyPanels: (signal?: AbortSignal) => api.get('/qaqc/ready-panels', { signal }).then(r => r.data),
 
-  allCompleted: () => api.get('/qaqc/all-completed').then(r => r.data),
+  allCompleted: (signal?: AbortSignal) => api.get('/qaqc/all-completed', { signal }).then(r => r.data),
 
-  panelDetail: (id: number) => api.get(`/qaqc/panel-detail/${id}`).then(r => r.data),
+  panelDetail: (id: number, signal?: AbortSignal) => api.get(`/qaqc/panel-detail/${id}`, { signal }).then(r => r.data),
 
   inspect: (assignmentId: number, dto: unknown) =>
     api.post(`/qaqc/inspect-panel/${assignmentId}`, dto).then(r => r.data),
 
-  getInspection: (id: number) => api.get(`/qaqc/inspection/${id}`).then(r => r.data),
+  getInspection: (id: number, signal?: AbortSignal) => api.get(`/qaqc/inspection/${id}`, { signal }).then(r => r.data),
 
-  allInspections: () => api.get('/qaqc/inspections').then(r => r.data),
+  allInspections: (signal?: AbortSignal) => api.get('/qaqc/inspections', { signal }).then(r => r.data),
 
   myInspections: () => api.get('/qaqc/my-inspections').then(r => r.data),
 };

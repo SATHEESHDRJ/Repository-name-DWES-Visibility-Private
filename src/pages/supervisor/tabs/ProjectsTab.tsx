@@ -1,22 +1,23 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { projectsApi, supervisorApi } from '../../../services/api';
 import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
-import type { Project, ProjectState } from '../../../types';
+import type { Project, ProjectState, PanelActivityData } from '../../../types';
 import Modal from '../../../components/Modal';
 import { InputField, ComboField } from '../../../components/ui/TabletFields';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
-import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Calendar, Hash, FolderKanban, Users, FileDown, FileSpreadsheet, FileText, ChevronDown, LayoutGrid, UserCog } from '../../../components/ui/icons';
+import PanelTechnicianActivity from '../../../components/supervisor/PanelTechnicianActivity';
 import { UploadFrameModal } from './FramesTab';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, Users, FileSpreadsheet, FileText, ChevronRight, LayoutGrid, UserCog, RefreshCw, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
 import { TeamManagementModal } from './UsersTab';
-import PdfDrawingUploadModal from '../../../components/supervisor/PdfDrawingUploadModal';
-import PanelDrawingViewModal from '../../../components/supervisor/PanelDrawingViewModal';
 import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
+import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
 import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
 import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelConfirmModal';
 import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
 import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
+import type { DocumentStatus } from '../../../utils/documentAvailability';
 import Toast, { type ToastTone } from '../../../components/ui/Toast';
 import ButtonHintPopover from '../../../components/ui/ButtonHintPopover';
 import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
@@ -30,7 +31,7 @@ import {
   PROJECT_DELETE_WARNING,
 } from '../../../constants/projectDeletion';
 import {
-  buildProjectReferenceTitle,
+  buildProjectFullName,
   encodeProjectMeta,
   decodeProjectMeta,
   mergeProjectDescription,
@@ -38,10 +39,11 @@ import {
   resolveProjectCardDetails,
   compactPanelDisplayName,
 } from '../../../utils/projectDisplay';
-import { buildPanelReportFilename } from '../../../utils/reportFilename';
 import { useProjectSelectionStore } from '../../../store/useProjectSelectionStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { onWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 
 export interface ProjectsTabProps {
   onOpenTechnicianWorkflow?: (opts: {
@@ -57,22 +59,17 @@ export interface ProjectsTabProps {
 const CLIENTS = ['DEWA', 'SEWA', 'ADDC', 'TRANSCO', 'ENOWA', 'HITACHI', 'ABB', 'SIEMENS', 'GE', 'SCHNEIDER', 'ALSTOM'];
 const VOLTAGES = ['400KV', '220KV', '132KV', '115KV', '69KV', '33KV', '13.8KV', '11KV', '6.6KV'];
 const REGIONS = ['UAE', 'KSA', 'QAT', 'KWT', 'OMN', 'BHR'];
-const YEARS = ['2024', '2025', '2026', '2027'];
-const LOCATION_REGION_PRESETS = [
-  'DUBAI / UAE', 'ABU_DHABI / UAE', 'SHARJAH / UAE', 'FUJAIRAH / UAE',
-  'RIYADH / KSA', 'JEDDAH / KSA', 'NEOM / KSA', 'DOHA / QAT', 'KUWAIT / KWT', 'MUSCAT / OMN', 'MANAMA / BHR',
-];
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const MONTH_YEAR_PRESETS = MONTH_NAMES.flatMap(m => YEARS.map(y => `${m} ${y}`));
 const STATES: ProjectState[] = ['not_started', 'active', 'stopped', 'pending', 'completed', 'in_review', 'submitted_to_director'];
 
 interface CreateForm {
   displayName: string;
   client: string;
-  locationRegion: string;
-  monthYear: string;
-  seq: string;
+  location: string;
+  region: string;
+  projectNumbering: string;
 }
+
+const emptyForm: CreateForm = { displayName: '', client: '', location: '', region: '', projectNumbering: '' };
 
 interface PanelDraft {
   key: string;
@@ -81,6 +78,8 @@ interface PanelDraft {
   voltageLevel: string;
   systemType: string;
 }
+
+
 
 function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
   return {
@@ -93,54 +92,6 @@ function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
   };
 }
 
-function panelNameTypeLabel(panel: Pick<PanelDraft, 'name' | 'panelType'>): string {
-  const name = panel.name.trim();
-  const type = panel.panelType.trim();
-  if (name && type) return `${name} / ${type}`;
-  return name || type;
-}
-
-function parseLocationRegion(raw: string): { location: string; region: string } {
-  const s = raw.trim();
-  if (!s) return { location: '', region: '' };
-  const slashParts = s.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean);
-  if (slashParts.length >= 2) {
-    return { location: slashParts[0], region: slashParts[slashParts.length - 1] };
-  }
-  const commaParts = s.split(/\s*,\s*/).map(p => p.trim()).filter(Boolean);
-  if (commaParts.length >= 2) {
-    return { location: commaParts[0], region: commaParts[commaParts.length - 1] };
-  }
-  const upper = s.toUpperCase();
-  for (const r of REGIONS) {
-    if (upper === r || upper.endsWith(` ${r}`)) {
-      const loc = s.slice(0, s.toUpperCase().lastIndexOf(r)).replace(/[,\-/]\s*$/, '').trim();
-      return { location: loc || s, region: r };
-    }
-  }
-  for (const r of REGIONS) {
-    if (upper.includes(r)) {
-      return {
-        location: s.replace(new RegExp(r, 'i'), '').replace(/[,\-/]\s*$/, '').trim() || s,
-        region: r,
-      };
-    }
-  }
-  return { location: s, region: '' };
-}
-
-function parseMonthYear(raw: string): { month: string; year: string } {
-  const s = raw.trim();
-  if (!s) return { month: '', year: '' };
-  const yearMatch = s.match(/\b(20\d{2})\b/);
-  const year = yearMatch ? yearMatch[1] : '';
-  let month = s;
-  if (yearMatch) {
-    month = s.replace(yearMatch[0], '').replace(/^[\s,\-/]+|[\s,\-/]+$/g, '').trim();
-  }
-  return { month: month || s, year };
-}
-
 function displayPanelMeta(value: string | null | undefined, fallback?: string): string {
   const v = typeof value === 'string' ? value.trim() : '';
   if (v) return v;
@@ -150,9 +101,10 @@ function displayPanelMeta(value: string | null | undefined, fallback?: string): 
 }
 
 function panelVoltageDisplay(panel: FramePanel, projectCode: string): string {
+  const legacyVoltage = projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1];
   return displayPanelMeta(
     panel.voltage_level as string | null | undefined,
-    projectCode.split('_')[0] || undefined,
+    legacyVoltage,
   );
 }
 
@@ -176,6 +128,8 @@ function panelDraftToApiPayload(p: PanelDraft) {
   };
 }
 
+
+
 export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabProps = {}) {
   const dialog = useAppDialog();
   const perms = usePermissions();
@@ -184,6 +138,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const { user } = useAuthStore();
   const sessionCode = useProjectSelectionStore(s => s.selectedProject?.code ?? null);
   const setSessionProject = useProjectSelectionStore(s => s.setProjectForUser);
+  const clearSessionProject = useProjectSelectionStore(s => s.clearProjectForUser);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -195,17 +150,18 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [selectedPanelId, setSelectedPanelId] = useState('');
   const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
   const [loadingPanels, setLoadingPanels] = useState(false);
+  const [panelActivity, setPanelActivity] = useState<PanelActivityData | null>(null);
+  const [panelActivityLoading, setPanelActivityLoading] = useState(false);
+  const [panelActivityError, setPanelActivityError] = useState('');
   const [showWiringUpload, setShowWiringUpload] = useState(false);
-  const [showDrawingPicker, setShowDrawingPicker] = useState(false);
-  const [drawingUploadType, setDrawingUploadType] = useState<'pdf' | 'dwg' | null>(null);
-  const [showDrawingView, setShowDrawingView] = useState(false);
+  const [wiringUploadReplacing, setWiringUploadReplacing] = useState(false);
   const [showWiringView, setShowWiringView] = useState(false);
-  const [reportMenuOpen, setReportMenuOpen] = useState(false);
-  const reportMenuRef = useRef<HTMLDivElement>(null);
+  const [showGaDrawingView, setShowGaDrawingView] = useState(false);
+  const [gaUploadHintOpen, setGaUploadHintOpen] = useState(false);
   const gaUploadBtnRef = useRef<HTMLButtonElement>(null);
-  const [gaUploadHint, setGaUploadHint] = useState<string | null>(null);
+  const [confirmReupload, setConfirmReupload] = useState(false);
+  const [showManagement, setShowManagement] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
-  const [generatingReport, setGeneratingReport] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState<FramePanel | null>(null);
@@ -216,98 +172,174 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const [deleteProjectConfirmed, setDeleteProjectConfirmed] = useState(false);
   const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
   const createModalScrollRef = useRef<HTMLFormElement>(null);
-  const emptyForm: CreateForm = { displayName: '', client: '', locationRegion: '', monthYear: 'July 2026', seq: '001' };
   const [form, setForm] = useState<CreateForm>(emptyForm);
-  const [panels, setPanels] = useState<PanelDraft[]>([newPanelDraft()]);
+  // Panels are added deliberately through the Add Panel overlay — never pre-seeded.
+  const [panels, setPanels] = useState<PanelDraft[]>([]);
+  const [panelDraft, setPanelDraft] = useState<PanelDraft | null>(null);
+  const [numberingCheck, setNumberingCheck] = useState<{ code: string; available: boolean; reason?: string } | null>(null);
+  const projectRequests = useLatestRequest();
+  const panelRequests = useLatestRequest();
+  const activityRequests = useLatestRequest();
+  const numberingRequests = useLatestRequest();
 
-  const resetCreateForm = () => {
+  const resetCreateForm = useCallback(() => {
     setForm(emptyForm);
-    setPanels([newPanelDraft()]);
+    setPanels([]);
+    setPanelDraft(null);
+    setNumberingCheck(null);
     setSubmitted(false);
     setError('');
-  };
+  }, []);
 
   const closeCreateModal = useCallback(() => {
     if (saving) return;
     setShowCreate(false);
     resetCreateForm();
-  }, [saving]);
+  }, [saving, resetCreateForm]);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    projectsApi.list().then(data => {
+  /**
+   * A silent refresh (server event, fallback poll, tab focus) swaps the project list in
+   * place: no spinner, no blanked list, and the selected project/panel is kept. Only an
+   * explicit load shows the loading state and resets the selection.
+   */
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    const request = projectRequests.begin();
+    if (!silent) {
+      panelRequests.cancel();
+      setLoading(true);
+      setSelectedProject(null);
+      setProjectPanels([]);
+      setSelectedPanelId('');
+      setLoadingPanels(false);
+    }
+    try {
+      const data = await projectsApi.list(request.signal) as Project[];
+      if (!projectRequests.isLatest(request.id)) return;
       setProjects(data);
-      setLoading(false);
-      setSelectedProject(prev => {
-        if (!prev) return prev;
-        return data.find((p: Project) => p.code === prev.code) ?? null;
-      });
-    }).catch(() => setLoading(false));
-  }, []);
-
-  const pollProjects = useCallback(() => {
-    projectsApi.list().then(data => {
-      setProjects(data);
-    }).catch(() => {});
-  }, []);
+    } catch (requestError: any) {
+      // A failed silent refresh keeps the last good data on screen.
+      if (!silent && requestError?.code !== 'ERR_CANCELED' && projectRequests.isLatest(request.id)) {
+        setProjects([]);
+      }
+      return;
+    } finally {
+      if (!silent && projectRequests.isLatest(request.id)) setLoading(false);
+    }
+  }, [panelRequests, projectRequests]);
 
   const reloadProjectPanels = useCallback((projectCode: string, options?: { silent?: boolean }) => {
+    const request = panelRequests.begin();
     if (!options?.silent) setLoadingPanels(true);
-    return projectsApi.frames(projectCode)
+    return projectsApi.frames(projectCode, request.signal)
       .then(data => {
+        if (!panelRequests.isLatest(request.id)) return;
         const list = data as FramePanel[];
         setProjectPanels(list);
         setSelectedPanelId(prev => {
           if (prev && list.some(p => p.id === prev)) return prev;
-          if (list.length === 1) return list[0].id;
-          return '';
+          return list[0]?.id ?? '';
         });
       })
-      .catch(() => {
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
         setProjectPanels([]);
         setSelectedPanelId('');
       })
       .finally(() => {
-        if (!options?.silent) setLoadingPanels(false);
+        if (!options?.silent && panelRequests.isLatest(request.id)) setLoadingPanels(false);
       });
-  }, []);
+  }, [panelRequests]);
 
-  useEffect(() => { load(); }, [load]);
-  useDwesRefresh(() => {
-    pollProjects();
-    if (selectedProject?.code) reloadProjectPanels(selectedProject.code, { silent: true });
-  });
+  const reloadPanelActivity = useCallback((projectCode: string, frameId: string, options?: { silent?: boolean }) => {
+    const request = activityRequests.begin();
+    if (!options?.silent) setPanelActivityLoading(true);
+    setPanelActivityError('');
+    return supervisorApi.panelActivity(projectCode, frameId, request.signal)
+      .then(data => {
+        if (!activityRequests.isLatest(request.id)) return;
+        setPanelActivity(data as PanelActivityData);
+      })
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !activityRequests.isLatest(request.id)) return;
+        setPanelActivity(null);
+        setPanelActivityError('Technician activity could not be loaded.');
+      })
+      .finally(() => {
+        if (activityRequests.isLatest(request.id)) setPanelActivityLoading(false);
+      });
+  }, [activityRequests]);
+
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
 
   useEffect(() => {
-    if (!reportMenuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (reportMenuRef.current && !reportMenuRef.current.contains(e.target as Node)) {
-        setReportMenuOpen(false);
-      }
+    if (!selectedProject?.code || !selectedPanelId) {
+      activityRequests.cancel();
+      setPanelActivity(null);
+      setPanelActivityLoading(false);
+      setPanelActivityError('');
+      return;
+    }
+    const projectCode = selectedProject.code;
+    const frameId = selectedPanelId;
+    void reloadPanelActivity(projectCode, frameId);
+    const refreshTimer = window.setInterval(() => {
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    }, 12_000);
+    const unsubscribe = onWorkflowChanged(detail => {
+      if (detail.projectCode && detail.projectCode !== projectCode) return;
+      if (detail.frameId && detail.frameId !== frameId) return;
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    });
+    return () => {
+      window.clearInterval(refreshTimer);
+      unsubscribe();
+      activityRequests.cancel();
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [reportMenuOpen]);
+  }, [activityRequests, reloadPanelActivity, selectedPanelId, selectedProject?.code]);
+
 
   useEffect(() => {
     setDuplicateBannerDismissed(false);
+    setShowManagement(false);
   }, [selectedProject?.code, selectedPanelId]);
 
-  useEffect(() => {
-    if (!selectedProject?.code) return;
-    return onFramesChanged((detail) => {
-      if (detail.projectCode === selectedProject.code) {
-        setDuplicateBannerDismissed(false);
+  useEffect(() => onFramesChanged((detail) => {
+    if (detail.action === 'deleted') {
+      projectRequests.cancel();
+      panelRequests.cancel();
+    }
+    if (detail.action === 'deleted' && (detail.entity ?? (detail.frameId ? 'panel' : 'project')) === 'project') {
+      setProjects(current => current.filter(project => project.code !== detail.projectCode));
+      if (selectedProject?.code === detail.projectCode) {
+        setSelectedProject(null);
+        setProjectPanels([]);
+        setSelectedPanelId('');
+        if (user?.id) clearSessionProject(user.id);
       }
-    });
-  }, [selectedProject?.code]);
+    }
+    if (selectedProject?.code && detail.projectCode === selectedProject.code) {
+      setDuplicateBannerDismissed(false);
+      if (detail.action === 'deleted' && detail.frameId) {
+        setProjectPanels(current => current.filter(panel => panel.id !== detail.frameId));
+        setSelectedPanelId(current => current === detail.frameId ? '' : current);
+        setShowWiringView(false);
+        setShowGaDrawingView(false);
+      } else if (detail.action !== 'deleted') {
+        // A panel added or edited elsewhere (another supervisor, another device) must
+        // appear here without a reload — swap the panel list in place, keeping selection.
+        void reloadProjectPanels(selectedProject.code, { silent: true });
+      }
+    }
+  }), [clearSessionProject, panelRequests, projectRequests, reloadProjectPanels, selectedProject?.code, user?.id]);
 
   useEffect(() => {
     if (!selectedProject?.code) return;
     return onDocumentsChanged((detail) => {
       if (detail.projectCode !== selectedProject.code) return;
       if (detail.kind === 'drawing' && detail.action === 'deleted') {
-        setShowDrawingView(false);
+        setShowGaDrawingView(false);
       }
       if (detail.kind === 'wiring' || detail.kind === 'both') {
         void reloadProjectPanels(selectedProject.code, { silent: true });
@@ -323,14 +355,39 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   }, [selectedProject?.code, reloadProjectPanels]);
 
   useEffect(() => {
-    if (!projects.length || !sessionCode || selectedProject) return;
-    const match = projects.find((p: Project) => p.code === sessionCode);
-    if (!match) return;
+    if (loading) return;
+    const current = selectedProject
+      ? projects.find((project: Project) => project.code === selectedProject.code)
+      : null;
+    const sessionMatch = sessionCode
+      ? projects.find((project: Project) => project.code === sessionCode)
+      : null;
+    const match = current ?? sessionMatch ?? projects[0] ?? null;
+    if (!match) {
+      if (selectedProject) setSelectedProject(null);
+      if (user?.id) clearSessionProject(user.id);
+      return;
+    }
+    // Same project, fresh object from a silent refetch: adopt the new metadata in place.
+    // Resetting the panel list here would blank the dropdown and drop the user's panel.
+    if (selectedProject?.code === match.code) {
+      if (selectedProject !== match) setSelectedProject(match);
+      return;
+    }
     setLoadingPanels(true);
     setProjectPanels([]);
     setSelectedPanelId('');
     setSelectedProject(match);
-  }, [projects, sessionCode, selectedProject]);
+    if (user?.id) {
+      setSessionProject({
+        code: match.code,
+        name: match.name,
+        client: match.client,
+        project_state: match.project_state,
+        is_active: match.is_active,
+      }, user.id);
+    }
+  }, [clearSessionProject, loading, projects, selectedProject, sessionCode, setSessionProject, user?.id]);
 
   useEffect(() => {
     if (!selectedProject?.code) {
@@ -339,27 +396,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       setLoadingPanels(false);
       return;
     }
-    let cancelled = false;
-    setLoadingPanels(true);
-    projectsApi.frames(selectedProject.code)
-      .then(data => {
-        if (cancelled) return;
-        const list = data as FramePanel[];
-        setProjectPanels(list);
-        setSelectedPanelId(prev => {
-          if (prev && list.some(p => p.id === prev)) return prev;
-          if (list.length === 1) return list[0].id;
-          return '';
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setProjectPanels([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingPanels(false);
-      });
-    return () => { cancelled = true; };
-  }, [selectedProject?.code]);
+    void reloadProjectPanels(selectedProject.code);
+  }, [selectedProject?.code, reloadProjectPanels]);
 
   const activePanelOptions = useMemo(
     () => buildProjectPanelSelectList(projectPanels),
@@ -372,83 +410,110 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setSelectedPanelId('');
   }, [selectedPanelId, projectPanels]);
 
-  // Normalize a code segment: uppercase, strip everything but A-Z0-9 (no spaces / separators).
-  // "Al Quoz" -> "ALQUOZ", "132 kV" -> "132KV". Keeps the "_" segment structure intact.
+  // Panel voltage is normalized only for required-field validation.
   const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  const { location, region } = parseLocationRegion(form.locationRegion);
-  const { year: parsedYear } = parseMonthYear(form.monthYear);
-
-  const primaryPanel = panels[0];
-  const codeVoltage = norm(primaryPanel?.voltageLevel ?? '');
-
-  // Project code = VOLTAGE_REGION_LOCATION_YEAR_SEQ (seq zero-padded to 3)
-  const seqDigits = (form.seq || '').replace(/\D/g, '');
-  const seq3 = seqDigits ? seqDigits.padStart(3, '0').slice(-3) : '';
-  const codeSegs = [codeVoltage, norm(region), norm(location), norm(parsedYear), seq3];
-  const computedCode = codeSegs.join('_');
-  const codeComplete = codeSegs.every(Boolean);
+  // The supervisor-entered Project Numbering is the stable project identifier. DWES
+  // no longer synthesizes a second voltage/location/year code behind the user's input.
+  const projectNumbering = form.projectNumbering.trim().toUpperCase();
+  const projectNumberingFormatValid = /^[A-Z0-9][A-Z0-9._-]*$/.test(projectNumbering);
   const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim() && !!norm(p.voltageLevel));
-  const canCreate = codeComplete && !!form.displayName.trim() && panelsValid;
+  // Project details must be valid before any panel can be added (project-first workflow).
+  const projectDetailsReady = !!form.displayName.trim() && !!form.client.trim();
+  const numberingTaken = numberingCheck?.code === projectNumbering && !numberingCheck.available;
+  const projectFieldsComplete = projectDetailsReady
+    && !!form.location.trim()
+    && !!form.region.trim()
+    && projectNumberingFormatValid;
+  const canCreate = projectFieldsComplete && panelsValid && !numberingTaken;
 
-  const generatedName = primaryPanel
-    ? buildProjectReferenceTitle(
+  const generatedName = projectFieldsComplete
+    ? buildProjectFullName(
         form.displayName,
         form.client,
-        panelNameTypeLabel(primaryPanel),
-        primaryPanel.voltageLevel,
-        form.locationRegion,
-        form.monthYear,
+        form.location,
+        form.region,
+        projectNumbering,
       )
     : '';
 
   // Per-field validation errors — only shown after first submit attempt
   const fe = submitted ? {
     displayName: !form.displayName.trim() ? 'Required' : '',
-    locationRegion: !norm(location) || !norm(region) ? 'Use format: Location / Region' : '',
-    monthYear: !norm(parsedYear) ? 'Include a year (e.g. July 2026)' : '',
-    seq: !seq3 ? 'Required (digits only)' : '',
-    panels: panels.length === 0
-      ? 'Add at least one panel'
-      : panels.some(p => !p.name.trim() || !norm(p.voltageLevel))
-        ? 'Each panel needs a name and voltage level'
+    client: !form.client.trim() ? 'Required' : '',
+    location: !form.location.trim() ? 'Required' : '',
+    region: !form.region.trim() ? 'Required' : '',
+    projectNumbering: !projectNumbering
+      ? 'Required'
+      : !projectNumberingFormatValid
+        ? 'Use letters, numbers, periods, hyphens, or underscores only'
+      : numberingTaken
+        ? numberingCheck?.reason ?? 'This project numbering is already used'
         : '',
-  } : { displayName: '', locationRegion: '', monthYear: '', seq: '', panels: '' };
-
-  const panelFieldErrors = submitted
-    ? panels.map(p => ({
-        name: !p.name.trim() ? 'Required' : '',
-        voltageLevel: !norm(p.voltageLevel) ? 'Required' : '',
-      }))
-    : panels.map(() => ({ name: '', voltageLevel: '' }));
+    panels: panels.length === 0 ? 'Add at least one panel' : '',
+  } : {
+    displayName: '', client: '', location: '', region: '',
+    projectNumbering: numberingTaken ? numberingCheck?.reason ?? 'This project numbering is already used' : '',
+    panels: '',
+  };
 
   const validationHint = submitted && !canCreate
     ? (() => {
         const missing: string[] = [];
         if (!form.displayName.trim()) missing.push('project / substation name');
-        if (!panelsValid) missing.push('panel name and voltage for each panel');
-        if (!codeVoltage) missing.push('voltage level (panel 1 — used in project code)');
-        if (!norm(location) || !norm(region)) missing.push('location / region');
-        if (!norm(parsedYear)) missing.push('month / year');
-        if (!seq3) missing.push('project numbering');
+        if (!form.client.trim()) missing.push('client');
+        if (panels.length === 0) missing.push('at least one panel');
+        if (!form.location.trim()) missing.push('location');
+        if (!form.region.trim()) missing.push('region');
+        if (!projectNumbering) missing.push('project numbering');
+        else if (!projectNumberingFormatValid) missing.push('a valid project numbering');
+        if (numberingTaken) missing.push('a unique project numbering');
         return missing.length
           ? `Complete required fields: ${missing.join(', ')}.`
           : 'Complete all required fields before creating.';
       })()
     : '';
 
+  // Project numbering must be unique across existing projects (deleted numbering
+  // becomes available again after permanent deletion).
+  // The backend stays authoritative on create; this only surfaces the clash early.
+  useEffect(() => {
+    if (!showCreate || !projectNumberingFormatValid) {
+      setNumberingCheck(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const request = numberingRequests.begin();
+      try {
+        const result = await projectsApi.codeAvailable(projectNumbering, request.signal);
+        if (numberingRequests.isLatest(request.id)) setNumberingCheck(result);
+      } catch {
+        if (numberingRequests.isLatest(request.id)) setNumberingCheck(null);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [showCreate, projectNumbering, projectNumberingFormatValid, numberingRequests]);
+
   const openCreateModal = () => {
     resetCreateForm();
     setShowCreate(true);
   };
 
-  const addPanel = () => setPanels(prev => [...prev, newPanelDraft({ voltageLevel: prev[0]?.voltageLevel ?? '' })]);
-  const removePanel = (key: string) => {
-    setPanels(prev => (prev.length <= 1 ? prev : prev.filter(p => p.key !== key)));
+  /** Open the Add Panel overlay — new draft, or an existing pending panel for editing. */
+  const openPanelOverlay = (existing?: PanelDraft) => {
+    setPanelDraft(existing ?? newPanelDraft({ voltageLevel: panels[0]?.voltageLevel ?? '' }));
   };
-  const updatePanel = (key: string, patch: Partial<Omit<PanelDraft, 'key'>>) => {
-    setPanels(prev => prev.map(p => (p.key === key ? { ...p, ...patch } : p)));
+
+  /** Confirm the overlay: replaces the pending panel when editing, appends when new. */
+  const commitPanelDraft = (draft: PanelDraft) => {
+    setPanels(prev => prev.some(p => p.key === draft.key)
+      ? prev.map(p => (p.key === draft.key ? draft : p))
+      : [...prev, draft]);
+    setPanelDraft(null);
   };
+
+  // Removing a pending panel only affects this unsaved form — never a saved project.
+  const removePendingPanel = (key: string) => setPanels(prev => prev.filter(p => p.key !== key));
 
   const handleProjectDropdownChange = (code: string) => {
     if (!code) {
@@ -476,39 +541,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }
   };
 
-  const downloadReport = async (format: 'pdf' | 'excel') => {
-    if (!selectedProject || !selectedPanelId || generatingReport) return;
-    setGeneratingReport(true);
-    setReportMenuOpen(false);
-    const panelName = projectPanels.find(p => p.id === selectedPanelId)?.panel_name ?? 'Panel';
-    try {
-      const isPdf = format === 'pdf';
-      const blob: Blob = isPdf
-        ? await projectsApi.reportPdf(selectedProject.code, selectedPanelId)
-        : await supervisorApi.panelReportXlsx(selectedProject.code, selectedPanelId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = buildPanelReportFilename({
-        projectCode: selectedProject.code,
-        panelName,
-        ext: isPdf ? 'pdf' : 'xlsx',
-      });
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setToast({ message: `${isPdf ? 'PDF' : 'Excel'} report downloaded.`, tone: 'success' });
-    } catch (e: any) {
-      await dialog.alert({
-        title: 'Report Error',
-        message: e?.response?.data?.message || 'Could not generate the report. Please try again.',
-        tone: 'error',
-      });
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
 
   const handleCreate = async (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -521,16 +553,17 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     }
     setSaving(true);
     try {
-      const projectName = form.displayName.trim();
       const created = await projectsApi.create({
-        code: computedCode,
+        code: projectNumbering,
         client: form.client.trim(),
-        name: projectName,
+        name: generatedName,
         description: encodeProjectMeta({
-          locationRegion: form.locationRegion.trim(),
-          monthYear: form.monthYear.trim(),
+          substationName: form.displayName.trim(),
+          location: form.location.trim(),
+          region: form.region.trim(),
+          locationRegion: `${form.location.trim()} / ${form.region.trim()}`,
+          projectNumbering,
         }),
-        sequence: parseInt(seq3, 10) || 1,
         panels: panels.map(panelDraftToApiPayload),
       });
       setProjects(prev => [...prev, created]);
@@ -550,25 +583,12 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       }
       setShowCreate(false);
       resetCreateForm();
-      setToast({ message: `Project "${created.name}" created (${created.code}).`, tone: 'success' });
+      setToast({ message: `Project "${created.name}" created.`, tone: 'success' });
     } catch (apiError: unknown) {
       if ((apiError as { response?: { status?: number } })?.response?.status === 409) {
-        // Duplicate code: find the next free sequence from the loaded projects list
-        // so we can auto-bump the Sequence field and let the user retry immediately.
-        // The server's duplicate check remains authoritative; this is convenience only.
-        const prefix4 = codeSegs.slice(0, 4).join('_');  // VOLTAGE_REGION_LOCATION_YEAR
-        const usedSeqs = projects
-          .map(p => {
-            const parts = p.code.split('_');
-            if (parts.length < 5) return null;
-            const pPrefix = parts.slice(0, 4).join('_');
-            return pPrefix === prefix4 ? parseInt(parts[4] || '0', 10) : null;
-          })
-          .filter((n): n is number => n !== null && !Number.isNaN(n));
-        const maxSeq = usedSeqs.length > 0 ? Math.max(...usedSeqs) : parseInt(seq3, 10) || 1;
-        const nextSeq = String(maxSeq + 1).padStart(3, '0');
-        setError(`Code ${computedCode} already exists — project numbering auto-updated to ${nextSeq}. Review the preview and click Create again.`);
-        setForm(s => ({ ...s, seq: nextSeq }));
+        const reason = apiErrorMessage(apiError, 'This project numbering is already in use. Enter a unique project numbering.');
+        setNumberingCheck({ code: projectNumbering, available: false, reason });
+        setError(reason);
       } else {
         setError(apiErrorMessage(apiError, 'Failed to create project. Check your connection and try again.'));
       }
@@ -593,10 +613,29 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     setDeleting(true);
     try {
       await projectsApi.remove(project.code);
-      setProjects(prev => prev.filter(p => p.code !== project.code));
-      emitFramesChanged({ projectCode: project.code, action: 'deleted' });
-      setSelectedProject(prev => (prev?.code === project.code ? null : prev));
-      if (selectedProject?.code === project.code) setSelectedPanelId('');
+      const remaining = projects.filter(item => item.code !== project.code);
+      const nextProject = remaining[0] ?? null;
+      setProjects(remaining);
+      emitFramesChanged({ projectCode: project.code, entity: 'project', action: 'deleted' });
+      if (selectedProject?.code === project.code) {
+        setSelectedProject(nextProject);
+        setSelectedPanelId('');
+        setProjectPanels([]);
+        if (user?.id) {
+          if (nextProject) {
+            setSessionProject({
+              code: nextProject.code,
+              name: nextProject.name,
+              client: nextProject.client,
+              project_state: nextProject.project_state,
+              is_active: nextProject.is_active,
+            }, user.id);
+          } else {
+            clearSessionProject(user.id);
+          }
+        }
+      }
+      await load();
       setDeleteProjectTarget(null);
       setDeleteProjectConfirmed(false);
       setToast({ message: 'Project permanently deleted.', tone: 'success' });
@@ -620,9 +659,12 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
   const handlePanelDeleted = async (panelId: string) => {
     if (!selectedProject) return;
     const panel = projectPanels.find(p => p.id === panelId);
-    setProjectPanels(prev => prev.filter(p => p.id !== panelId));
-    setSelectedPanelId(prev => (prev === panelId ? '' : prev));
-    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, action: 'deleted' });
+    const remainingPanels = projectPanels.filter(item => item.id !== panelId);
+    setProjectPanels(remainingPanels);
+    setSelectedPanelId(prev => (prev === panelId ? (remainingPanels[0]?.id ?? '') : prev));
+    setShowWiringView(false);
+    setShowGaDrawingView(false);
+    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, entity: 'panel', action: 'deleted' });
     await reloadProjectPanels(selectedProject.code);
     closeDeletePanelModal();
     setToast({
@@ -652,18 +694,15 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
     duplicateKeys,
     blocked: duplicateBlocked,
     actionGated,
-    reportGated,
   } = usePanelDuplicateGuard(
     projectPanels,
     selectedPanelId,
     selectedPanel?.panel_name,
     duplicateBannerDismissed,
   );
-  const gaUploadSelectionReady = Boolean(
-    selectedProject && selectedPanelId && !loadingPanels && projectPanels.length > 0,
-  );
-  const gaUploadDisabled = gaUploadSelectionReady && !actionGated;
-  const gateHint = !selectedProject
+  const gateHint = loading
+    ? 'Loading projects from the database…'
+    : !selectedProject
     ? 'Select a project and panel to enable wiring upload, GA upload, and reports.'
     : loadingPanels
       ? 'Loading panels for this project…'
@@ -674,6 +713,10 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           : duplicateBlocked && !duplicateBannerDismissed
             ? 'Resolve duplicate panel names before wiring upload, GA upload, reports, or workflow.'
             : '';
+
+  useEffect(() => {
+    if (actionGated && gaUploadHintOpen) setGaUploadHintOpen(false);
+  }, [actionGated, gaUploadHintOpen]);
 
   return (
     <div className="flex flex-col gap-4 min-w-0">
@@ -689,7 +732,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             onChange={e => handleProjectDropdownChange(e.target.value)}
             disabled={loading}
           >
-            <option value="">Select a project…</option>
+            <option value="">{loading ? 'Loading projects…' : projects.length === 0 ? 'No Project Available' : 'Select a project…'}</option>
             {projects.map(p => (
               <option key={p.code} value={p.code}>
                 {projectSelectLabel(p)}
@@ -738,6 +781,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               type="button"
               onClick={() => {
                 setDuplicateBannerDismissed(false);
+                setWiringUploadReplacing(false);
                 setShowWiringUpload(true);
               }}
               disabled={!actionGated}
@@ -774,68 +818,25 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               ref={gaUploadBtnRef}
               type="button"
               onClick={() => {
-                if (!gaUploadSelectionReady) {
-                  setGaUploadHint(
-                    gateHint
-                      || (!selectedProject
-                        ? 'Select a project first.'
-                        : !selectedPanelId
-                          ? 'Select a panel first.'
-                          : 'Select a project and panel first.'),
-                  );
+                if (!selectedProject || !selectedPanelId || !selectedPanel || !actionGated) {
+                  setGaUploadHintOpen(true);
                   return;
                 }
+                setGaUploadHintOpen(false);
                 setDuplicateBannerDismissed(false);
-                setShowDrawingPicker(true);
+                setShowGaDrawingView(true);
               }}
-              disabled={gaUploadDisabled}
-              className="pj-btn-primary pj-action-btn"
-              title={actionGated ? `Upload GA drawing for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+              aria-disabled={!actionGated}
+              className={`pj-btn-primary pj-action-btn${!actionGated ? ' is-gated' : ''}`}
+              title={actionGated ? `Upload GA for ${selectedPanel!.panel_name}` : undefined}
             >
               <FileText size={16} strokeWidth={1.5} />
               <span>GA Upload</span>
             </button>
           )}
 
-          {perms.canManageProjects && (
-            <div className="pj-action-block pj-action-block--menu" ref={reportMenuRef}>
-              <button
-                type="button"
-                onClick={() => reportGated && setReportMenuOpen(o => !o)}
-                disabled={!reportGated || generatingReport}
-                className="pj-btn-primary pj-action-btn w-full"
-                aria-expanded={reportMenuOpen}
-                aria-haspopup="menu"
-                title={reportGated ? 'Export panel reports' : gateHint || 'Select a project and panel first'}
-              >
-                <FileDown size={16} strokeWidth={1.5} />
-                <span>{generatingReport ? 'Generating…' : 'Reports'}</span>
-                <ChevronDown size={14} strokeWidth={1.5} className={`ml-auto shrink-0 transition-transform ${reportMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {reportMenuOpen && reportGated && (
-                <div className="pj-toolbar-dropdown" role="menu" aria-label="Report format">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="pj-toolbar-dropdown-item"
-                    onClick={() => downloadReport('pdf')}
-                  >
-                    <FileText size={16} strokeWidth={1.5} className="text-red-500 shrink-0" />
-                    <span>Non-editable PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="pj-toolbar-dropdown-item"
-                    onClick={() => downloadReport('excel')}
-                  >
-                    <FileSpreadsheet size={16} strokeWidth={1.5} className="text-green-600 shrink-0" />
-                    <span>Excel</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Reports deliberately live in the Status section: which report a panel
+              warrants depends on its production state, which Status is the view for. */}
 
           {perms.canManageTeamTechnicians && (
             <button type="button" onClick={() => setShowTeam(true)} className="pj-btn-primary pj-action-btn">
@@ -877,93 +878,81 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                   <DocumentAvailabilityBadge label="Wiring Schedule" status={wiringDoc} />
                 </div>
                 <div className="pj-project-info-card-actions" role="group" aria-label="Project actions">
-                <button
-                  type="button"
-                  className="pj-info-action pj-info-action--secondary"
-                  onClick={() => setShowAddPanel(true)}
-                  title="Add a new panel to this project"
-                >
-                  <Plus size={16} strokeWidth={1.75} aria-hidden />
-                  <span>Add Panel</span>
-                </button>
-                <button
-                  type="button"
-                  className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}${!drawingReady && !drawingLoading ? ' pj-info-action--unavailable' : ''}`}
-                  onClick={() => {
-                    if (drawingDoc.availability === 'error') {
-                      setToast({ message: drawingDoc.message ?? 'Failed to open GA drawing.', tone: 'warn' });
-                      return;
+                  <button
+                    type="button"
+                    className="pj-info-action pj-info-action--secondary"
+                    onClick={() => setShowAddPanel(true)}
+                    title="Add a new panel to this project"
+                  >
+                    <Plus size={16} strokeWidth={1.75} aria-hidden />
+                    <span>Add Panel</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`pj-info-action pj-info-action--wiring${wiringLoading ? ' btn--loading' : ''}${!wiringReady && !wiringLoading ? ' pj-info-action--unavailable' : ''}`}
+                    onClick={() => {
+                      if (wiringDoc.availability === 'error') {
+                        setToast({ message: wiringDoc.message ?? 'Failed to open wiring schedule.', tone: 'warn' });
+                        return;
+                      }
+                      if (wiringReady) setShowWiringView(true);
+                    }}
+                    disabled={!wiringReady || wiringLoading}
+                    aria-busy={wiringLoading || undefined}
+                    title={
+                      wiringLoading
+                        ? 'Checking wiring schedule…'
+                        : wiringDoc.availability === 'error'
+                          ? wiringDoc.message ?? 'Wiring schedule check failed'
+                          : wiringDoc.availability === 'missing' && wiringDoc.message === 'Select a panel first'
+                            ? 'Select a panel first'
+                            : !wiringReady
+                              ? 'No Wiring Schedule Uploaded'
+                              : `Open Digital Wiring View for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
                     }
-                    if (drawingReady) setShowDrawingView(true);
-                  }}
-                  disabled={!drawingReady || drawingLoading}
-                  aria-busy={drawingLoading || undefined}
-                  title={
-                    drawingLoading
-                      ? 'Checking GA drawings…'
-                      : drawingDoc.availability === 'error'
-                        ? drawingDoc.message ?? 'GA drawing check failed'
-                        : drawingReady
-                          ? `View GA drawing: ${drawingDoc.drawing!.original_name}`
-                          : 'No GA Drawing Uploaded'
-                  }
-                >
-                  {drawingLoading ? <span className="btn-spinner" aria-hidden /> : <FileText size={16} strokeWidth={1.75} aria-hidden />}
-                  <span>GA View</span>
-                </button>
-                <button
-                  type="button"
-                  className={`pj-info-action pj-info-action--wiring${wiringLoading ? ' btn--loading' : ''}${!wiringReady && !wiringLoading ? ' pj-info-action--unavailable' : ''}`}
-                  onClick={() => {
-                    if (wiringDoc.availability === 'error') {
-                      setToast({ message: wiringDoc.message ?? 'Failed to open wiring schedule.', tone: 'warn' });
-                      return;
-                    }
-                    if (wiringReady) setShowWiringView(true);
-                  }}
-                  disabled={!wiringReady || wiringLoading}
-                  aria-busy={wiringLoading || undefined}
-                  title={
-                    wiringLoading
-                      ? 'Checking wiring schedule…'
-                      : wiringDoc.availability === 'error'
-                        ? wiringDoc.message ?? 'Wiring schedule check failed'
-                        : wiringDoc.availability === 'missing' && wiringDoc.message === 'Select a panel first'
+                  >
+                    {wiringLoading ? <span className="btn-spinner" aria-hidden /> : <LayoutGrid size={16} strokeWidth={1.75} aria-hidden />}
+                    <span>Digital Wiring View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}`}
+                    onClick={() => {
+                      if (drawingDoc.availability === 'error') {
+                        setToast({ message: drawingDoc.message ?? 'Failed to open GA drawing.', tone: 'warn' });
+                        return;
+                      }
+                      setShowGaDrawingView(true);
+                    }}
+                    disabled={!selectedPanel || drawingLoading}
+                    aria-busy={drawingLoading || undefined}
+                    title={
+                      drawingLoading
+                        ? 'Checking GA drawings…'
+                        : !selectedPanel
                           ? 'Select a panel first'
-                          : !wiringReady
-                            ? 'No Wiring Schedule Uploaded'
-                            : `Open Digital Wiring Monitor for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
-                  }
-                >
-                  {wiringLoading ? <span className="btn-spinner" aria-hidden /> : <LayoutGrid size={16} strokeWidth={1.75} aria-hidden />}
-                  <span>Digital Wiring Monitor</span>
-                </button>
-                <button
-                  type="button"
-                  className="pj-info-action pj-info-action--secondary"
-                  onClick={() => {
-                    if (selectedPanel) setShowEditPanel(selectedPanel);
-                    else setShowEdit(selectedProject);
-                  }}
-                  disabled={!selectedPanel && loadingPanels}
-                  title={selectedPanel ? 'Edit panel details' : 'Edit project'}
-                >
-                  <Pencil size={16} strokeWidth={1.75} aria-hidden />
-                  <span>{selectedPanel ? 'Edit' : 'Edit Project'}</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={deleting || deletingPanelId !== null || (!selectedPanel && loadingPanels)}
-                  className={`pj-info-action pj-info-action--danger${(deleting || deletingPanelId !== null) ? ' btn--loading' : ''}`}
-                  onClick={() => {
-                    if (selectedPanel) handleDeletePanel(selectedPanel);
-                    else handleDelete(selectedProject);
-                  }}
-                  title={selectedPanel ? 'Delete selected panel' : 'Remove project'}
-                >
-                  {(deleting || deletingPanelId !== null) ? <span className="btn-spinner" aria-hidden /> : <Trash2 size={16} strokeWidth={1.75} aria-hidden />}
-                  <span>{selectedPanel ? 'Delete' : 'Remove'}</span>
-                </button>
+                          : drawingReady
+                            ? `View GA Drawing for ${selectedPanel.panel_name}`
+                            : `Upload or view GA drawing for ${selectedPanel.panel_name}`
+                    }
+                  >
+                    {drawingLoading ? <span className="btn-spinner" aria-hidden /> : <FileText size={16} strokeWidth={1.75} aria-hidden />}
+                    <span>GA View</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pj-info-action pj-info-action--edit"
+                    onClick={() => setShowManagement(true)}
+                    disabled={deleting || deletingPanelId !== null}
+                    aria-haspopup="dialog"
+                    title="Manage project and panel information"
+                  >
+                    {(deleting || deletingPanelId !== null)
+                      ? <span className="btn-spinner" aria-hidden />
+                      : <Pencil size={16} strokeWidth={1.75} aria-hidden />}
+                    <span>Edit</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -983,16 +972,6 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
             <div className="pj-project-info-field">
               <p className="pj-project-info-label">Location / Region</p>
               <p className="pj-project-info-value">{projectDetails.locationRegion}</p>
-            </div>
-            <div className="pj-project-info-field">
-              <p className="pj-project-info-label">Month / Year</p>
-              <p className="pj-project-info-value">{projectDetails.monthYear}</p>
-            </div>
-            <div className="pj-project-info-field">
-              <p className="pj-project-info-label">Project code</p>
-              <p className="pj-project-info-value pj-project-info-code" title={projectDetails.projectCode}>
-                {projectDetails.projectCode}
-              </p>
             </div>
             <div className="pj-project-info-field">
               <p className="pj-project-info-label">Project numbering</p>
@@ -1069,46 +1048,32 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
               </div>
             </div>
           )}
+
+          {selectedPanel && (
+            <PanelTechnicianActivity
+              activity={panelActivity}
+              loading={panelActivityLoading}
+              error={panelActivityError}
+            />
+          )}
+
+          {selectedPanel && perms.canManageProjects && (
+            <WiringScheduleStatus
+              status={wiringDoc}
+              onUpload={() => {
+                setDuplicateBannerDismissed(false);
+                setWiringUploadReplacing(false);
+                setShowWiringUpload(true);
+              }}
+              onReupload={() => setConfirmReupload(true)}
+              disabled={!actionGated}
+              disabledHint={gateHint}
+            />
+          )}
         </section>
       )}
 
       {showTeam && <TeamManagementModal onClose={() => setShowTeam(false)} />}
-
-      {showDrawingPicker && selectedProject && (
-        <Modal
-          title="GA Upload"
-          onClose={() => setShowDrawingPicker(false)}
-          size="sm"
-          footer={(
-            <button type="button" className="btn-secondary" onClick={() => setShowDrawingPicker(false)}>
-              Cancel
-            </button>
-          )}
-        >
-          <p className="text-[13px] text-slate-600 mb-4">
-            Choose the GA drawing file type for <strong>{selectedPanel?.panel_name ?? selectedProject.name}</strong>
-            {selectedPanel ? ` (${selectedProject.name})` : ''}.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
-              onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('pdf'); }}
-            >
-              <FileText size={24} className="text-red-500" />
-              <span className="text-[13px] font-semibold">PDF</span>
-            </button>
-            <button
-              type="button"
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-12"
-              onClick={() => { setShowDrawingPicker(false); setDrawingUploadType('dwg'); }}
-            >
-              <FileText size={24} className="text-blue-600" />
-              <span className="text-[13px] font-semibold">DWG</span>
-            </button>
-          </div>
-        </Modal>
-      )}
 
       {showWiringUpload && selectedProject && selectedPanelId && (
         <UploadFrameModal
@@ -1117,16 +1082,21 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           targetFrameId={selectedPanelId}
           targetPanelName={selectedPanel?.panel_name}
           existingCableCount={selectedPanel?.cable_count ?? 0}
+          startInReplaceMode={wiringUploadReplacing}
           siblingPanels={projectPanels}
           onEditPanel={panelId => {
             const panel = projectPanels.find(p => p.id === panelId);
             if (panel) {
               setShowWiringUpload(false);
+              setWiringUploadReplacing(false);
               setShowEditPanel(panel);
             }
           }}
           onSelectPanel={setSelectedPanelId}
-          onClose={() => setShowWiringUpload(false)}
+          onClose={() => {
+            setShowWiringUpload(false);
+            setWiringUploadReplacing(false);
+          }}
           onUploaded={() => {
             setToast({ message: `Wiring schedule uploaded for ${selectedPanel?.panel_name ?? 'panel'}.`, tone: 'success' });
             emitFramesChanged({ projectCode: selectedProject.code, frameId: selectedPanelId, action: 'updated' });
@@ -1142,62 +1112,70 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         />
       )}
 
-      {drawingUploadType && selectedProject && selectedPanelId && (
-        <PdfDrawingUploadModal
-          projectCode={selectedProject.code}
-          projectName={selectedProject.name}
-          panelName={selectedPanel?.panel_name}
-          panelId={selectedPanelId}
-          siblingPanels={projectPanels}
-          onEditPanel={panelId => {
-            const panel = projectPanels.find(p => p.id === panelId);
-            if (panel) {
-              setDrawingUploadType(null);
-              setShowEditPanel(panel);
-            }
-          }}
-          onSelectPanel={setSelectedPanelId}
-          fileType={drawingUploadType}
-          onClose={() => setDrawingUploadType(null)}
-          onUploaded={() => {
-            setToast({ message: `${drawingUploadType.toUpperCase()} GA drawing uploaded.`, tone: 'success' });
-            if (selectedProject) {
-              emitDocumentsChanged({
-                projectCode: selectedProject.code,
-                frameId: selectedPanelId,
-                kind: 'drawing',
-                action: 'uploaded',
-              });
-              refresh({ drawing: true, wiring: false, showLoading: false });
-            }
-          }}
-        />
-      )}
-
-      {showDrawingView && selectedProject && drawingDoc.drawing && (
-        <PanelDrawingViewModal
-          projectCode={selectedProject.code}
-          drawing={drawingDoc.drawing}
-          panelLabel={selectedPanel?.panel_name ?? selectedProject.name}
-          canDownload={perms.canManageProjects}
-          onClose={() => setShowDrawingView(false)}
-        />
+      {confirmReupload && selectedProject && selectedPanel && (
+        <Modal
+          title="Replace Wiring Schedule"
+          icon={<RefreshCw />}
+          size="default"
+          onClose={() => setConfirmReupload(false)}
+          footer={(
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button type="button" className="btn-secondary" onClick={() => setConfirmReupload(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setConfirmReupload(false);
+                  setDuplicateBannerDismissed(false);
+                  setWiringUploadReplacing(true);
+                  setShowWiringUpload(true);
+                }}
+              >
+                <FileSpreadsheet size={16} strokeWidth={1.5} />
+                Continue to Upload
+              </button>
+            </div>
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-[13px] text-slate-700">
+              The wiring schedule for <strong>{selectedProject.name}</strong> ·{' '}
+              <strong>{compactPanelDisplayName(selectedPanel.panel_name)}</strong> will be replaced.
+            </p>
+            {wiringDoc.fileName && (
+              <p className="text-[13px] text-slate-500">
+                Current file: <span className="font-medium text-slate-700">{wiringDoc.fileName}</span>
+              </p>
+            )}
+            <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[12px] text-blue-800">
+              The existing schedule stays in place until the new file passes validation and you confirm
+              the upload. If validation or upload fails, nothing is changed.
+            </p>
+          </div>
+        </Modal>
       )}
 
       {showWiringView && selectedProject && selectedPanelId && selectedPanel && (
         <PanelWiringViewModal
           projectCode={selectedProject.code}
+          projectName={projectDetails?.substationName ?? selectedProject.name}
           frameId={selectedPanelId}
           panelLabel={selectedPanel.panel_name}
+          panelType={selectedPanel.panel_type as string | undefined}
+          voltageLevel={panelVoltageDisplay(selectedPanel, selectedProject.code)}
           onClose={() => setShowWiringView(false)}
         />
       )}
 
-      {gaUploadHint && (
-        <ButtonHintPopover
-          anchorEl={gaUploadBtnRef.current}
-          message={gaUploadHint}
-          onDismiss={() => setGaUploadHint(null)}
+      {showGaDrawingView && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelGaDrawingModal
+          projectCode={selectedProject.code}
+          frameId={selectedPanelId}
+          panelName={selectedPanel.panel_name}
+          projectName={selectedProject.name}
+          onClose={() => setShowGaDrawingView(false)}
         />
       )}
 
@@ -1209,10 +1187,24 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
         />
       )}
 
+      {gaUploadHintOpen && (
+        <ButtonHintPopover
+          anchorEl={gaUploadBtnRef.current}
+          message={
+            !selectedProject || !selectedPanelId || !selectedPanel
+              ? 'Select a project and an active panel before opening GA Upload'
+              : (gateHint || 'Select a project and an active panel before opening GA Upload')
+          }
+          onDismiss={() => setGaUploadHintOpen(false)}
+        />
+      )}
+
       {showCreate && (
         <Modal
           title="New Project"
+          icon={<FolderKanban />}
           size="wide"
+          bodyClassName="pj-create-project-modal-body"
           onClose={closeCreateModal}
           closeOnBackdrop={false}
           closeOnEscape={!saving}
@@ -1272,12 +1264,13 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                   error={fe.displayName}
                 />
                 <ComboField
-                  label="Client"
+                  label="Client *"
                   icon={<Building2 size={18} strokeWidth={1.5} />}
                   value={form.client}
                   onChange={value => setForm(s => ({ ...s, client: value }))}
                   options={CLIENTS}
                   placeholder="Pick or type a client"
+                  error={fe.client}
                 />
               </div>
 
@@ -1291,111 +1284,225 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                       </span>
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      Each panel has its own name, type, voltage, and system type. Panel 1 voltage is used in the project code.
+                      {projectDetailsReady
+                        ? 'Add each panel of this project. Panels remain separately linked to this project numbering.'
+                        : 'Enter the Project / Substation Name and Client to start adding panels.'}
                     </p>
                   </div>
-                  <button type="button" onClick={addPanel} className="pj-btn-secondary shrink-0">
-                    <Plus size={14} strokeWidth={1.5} />
-                    Add Panel
-                  </button>
+                  {projectDetailsReady && (
+                    <button
+                      type="button"
+                      onClick={() => openPanelOverlay()}
+                      className="pj-btn-secondary shrink-0"
+                      title="Add a panel to this project"
+                    >
+                      <Plus size={14} strokeWidth={1.5} />
+                      Add Panel
+                    </button>
+                  )}
                 </div>
 
                 {fe.panels && (
                   <p className="text-[12px] font-medium text-amber-700">{fe.panels}</p>
                 )}
 
-                <div className="flex flex-col gap-3">
-                  {panels.map((panel, idx) => (
-                    <PanelDraftFields
-                      key={panel.key}
-                      index={idx}
-                      panel={panel}
-                      errors={panelFieldErrors[idx]}
-                      onChange={patch => updatePanel(panel.key, patch)}
-                      onRemove={panels.length > 1 ? () => removePanel(panel.key) : undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="pj-create-grid-2">
-                <ComboField
-                  label="Location / Region"
-                  icon={<MapPin size={18} strokeWidth={1.5} />}
-                  value={form.locationRegion}
-                  onChange={value => setForm(s => ({ ...s, locationRegion: value }))}
-                  options={LOCATION_REGION_PRESETS}
-                  placeholder="DUBAI / UAE"
-                  error={fe.locationRegion}
-                />
-                <ComboField
-                  label="Month / Year"
-                  icon={<Calendar size={18} strokeWidth={1.5} />}
-                  value={form.monthYear}
-                  onChange={value => setForm(s => ({ ...s, monthYear: value }))}
-                  options={MONTH_YEAR_PRESETS}
-                  placeholder="July 2026"
-                  error={fe.monthYear}
-                />
+                {panels.length === 0 ? (
+                  <p className="pj-panel-list-empty">
+                    No panels added yet. At least one panel is required to create the project.
+                  </p>
+                ) : (
+                  <ul className="pj-panel-list">
+                    {panels.map((panel, idx) => (
+                      <li key={panel.key} className="pj-panel-list-row">
+                        <span className="pj-panel-list-index">{idx + 1}</span>
+                        <span className="pj-panel-list-copy">
+                          <strong title={panel.name}>{panel.name}</strong>
+                          <span>
+                            {[panel.panelType.trim() || 'No type', panel.voltageLevel.trim()]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </span>
+                        <span className="pj-panel-list-actions">
+                          <button
+                            type="button"
+                            onClick={() => openPanelOverlay(panel)}
+                            title={`Edit ${panel.name}`}
+                            aria-label={`Edit panel ${panel.name}`}
+                          >
+                            <Pencil size={14} strokeWidth={1.75} />
+                          </button>
+                          <button
+                            type="button"
+                            className="is-danger"
+                            onClick={() => removePendingPanel(panel.key)}
+                            title={`Remove ${panel.name}`}
+                            aria-label={`Remove panel ${panel.name}`}
+                          >
+                            <Trash2 size={14} strokeWidth={1.75} />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="pj-create-grid-2">
                 <InputField
+                  label="Location *"
+                  icon={<MapPin size={18} strokeWidth={1.5} />}
+                  value={form.location}
+                  onChange={value => setForm(s => ({ ...s, location: value }))}
+                  placeholder="e.g. Riyadh"
+                  error={fe.location}
+                />
+                <ComboField
+                  label="Region *"
+                  icon={<MapPin size={18} strokeWidth={1.5} />}
+                  value={form.region}
+                  onChange={value => setForm(s => ({ ...s, region: value }))}
+                  options={REGIONS}
+                  placeholder="e.g. KSA"
+                  error={fe.region}
+                />
+              </div>
+
+              <div className="pj-create-grid-2 pj-create-grid-2--single">
+                <InputField
                   label="Project Numbering *"
                   icon={<Hash size={18} strokeWidth={1.5} />}
-                  value={form.seq}
-                  onChange={value => setForm(s => ({ ...s, seq: value }))}
-                  placeholder="001"
-                  error={fe.seq}
+                  value={form.projectNumbering}
+                  onChange={value => setForm(s => ({ ...s, projectNumbering: value }))}
+                  placeholder="e.g. 001 or ENOWA-001"
+                  error={fe.projectNumbering}
                 />
+                {projectNumbering && numberingCheck?.code === projectNumbering && numberingCheck.available && (
+                  <p className="pj-numbering-ok" role="status">
+                    Project numbering {projectNumbering} is available.
+                  </p>
+                )}
               </div>
             </section>
 
             <section className="pj-create-section pj-create-previews">
               <div className="pj-create-preview-block">
-                <span className="pj-create-preview-label">Reference title (for reports &amp; exports)</span>
+                <span className="pj-create-preview-label">Final project name</span>
                 <div
                   className={`pj-create-preview-value ${generatedName ? 'pj-create-preview-value--ready' : ''}`}
-                  title={generatedName || 'Fill fields to preview'}
+                  title={generatedName || 'Complete the fields above to preview the final project name'}
                 >
                   {generatedName || (
                     <span className="text-slate-400 italic font-normal text-[12px]">
-                      Stored on the card as separate labeled fields — not one long dashed line.
+                      Complete the project details to preview the final project name.
                     </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="pj-create-preview-block">
-                <span className="pj-create-preview-label">Project code</span>
-                <div
-                  className={`pj-create-preview-value font-mono text-[13px] ${
-                    codeComplete ? 'pj-create-preview-value--code' : ''
-                  }`}
-                >
-                  {codeComplete ? (
-                    <span className="font-semibold">{computedCode}</span>
-                  ) : (
-                    [
-                      { seg: codeVoltage, label: 'VOLT' },
-                      { seg: norm(region), label: 'REG' },
-                      { seg: norm(location), label: 'LOC' },
-                      { seg: norm(parsedYear), label: 'YEAR' },
-                      { seg: seq3, label: 'NUM' },
-                    ].map((item, i) => (
-                      <span key={i} className="inline-flex items-center">
-                        {i > 0 && <span className="text-slate-300 select-none mx-0.5">_</span>}
-                        {item.seg
-                          ? <span className="font-semibold text-slate-700">{item.seg}</span>
-                          : <span className="text-slate-400 italic font-normal text-[12px]">{item.label}</span>
-                        }
-                      </span>
-                    ))
                   )}
                 </div>
               </div>
             </section>
           </form>
+        </Modal>
+      )}
+
+      {panelDraft && (
+        <PanelDraftOverlay
+          draft={panelDraft}
+          isEditing={panels.some(p => p.key === panelDraft.key)}
+          siblingNames={panels.filter(p => p.key !== panelDraft.key).map(p => p.name)}
+          onCancel={() => setPanelDraft(null)}
+          onConfirm={commitPanelDraft}
+        />
+      )}
+
+      {showManagement && selectedProject && (
+        <Modal
+          title="Project & Panel Management"
+          subtitle={`${projectDetails?.substationName ?? selectedProject.name} · ${selectedPanel?.panel_name ?? 'No panel selected'}`}
+          icon={<Pencil />}
+          size="sm"
+          bodyClassName="pj-management-modal-body"
+          onClose={() => setShowManagement(false)}
+        >
+          <div className="pj-management-actions" aria-label="Project and panel management actions">
+            <section className="pj-management-section" aria-labelledby="pj-management-project-heading">
+              <h3 id="pj-management-project-heading" className="pj-management-section-title">Project</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                onClick={() => {
+                  setShowManagement(false);
+                  setShowEdit(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><FolderKanban size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Project Information</strong>
+                  <small>Update the project name, state, or description.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section" aria-labelledby="pj-management-panel-heading">
+              <h3 id="pj-management-panel-heading" className="pj-management-section-title">Panel</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                disabled={!selectedPanel}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  setShowEditPanel(selectedPanel);
+                }}
+                title={selectedPanel ? undefined : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Panel Information</strong>
+                  <small>{selectedPanel ? `Update ${selectedPanel.panel_name} details.` : 'Select a panel to enable this action.'}</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={!selectedPanel || deletingPanelId !== null}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  handleDeletePanel(selectedPanel);
+                }}
+                title={selectedPanel ? 'Remove this panel' : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Remove Panel</strong>
+                  <small>Remove the selected panel after safety confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section pj-management-section--danger" aria-labelledby="pj-management-danger-heading">
+              <h3 id="pj-management-danger-heading" className="pj-management-section-title">Danger zone</h3>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={deleting}
+                onClick={() => {
+                  setShowManagement(false);
+                  handleDelete(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Delete Project Permanently</strong>
+                  <small>Delete this project and its associated data after confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+          </div>
         </Modal>
       )}
 
@@ -1439,6 +1546,8 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
       {deleteProjectTarget && (
         <Modal
           title={PROJECT_DELETE_MODAL_TITLE}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={() => {
             if (deleting) return;
             setDeleteProjectTarget(null);
@@ -1467,6 +1576,7 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
                 onClick={() => void handlePermanentDeleteConfirm()}
                 disabled={deleting || !deleteProjectConfirmed}
               >
+                <Trash2 size={16} />
                 {deleting ? 'Deleting…' : PROJECT_DELETE_CONFIRM_BUTTON}
               </button>
             </div>
@@ -1489,6 +1599,163 @@ export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabPro
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+
+
+/**
+ * Small Add / Edit Panel overlay for the New Project flow. Deliberately limited to
+ * Panel Name, Panel Type, and Voltage Level — System Type is set later, on the panel.
+ */
+function PanelDraftOverlay({
+  draft,
+  isEditing,
+  siblingNames,
+  onCancel,
+  onConfirm,
+}: {
+  draft: PanelDraft;
+  isEditing: boolean;
+  siblingNames: string[];
+  onCancel: () => void;
+  onConfirm: (draft: PanelDraft) => void;
+}) {
+  const [panel, setPanel] = useState<PanelDraft>(draft);
+  const [submitted, setSubmitted] = useState(false);
+
+  const normVoltage = panel.voltageLevel.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const duplicate = (() => {
+    const key = compactPanelKey(panel.name);
+    return !!key && siblingNames.some(name => compactPanelKey(name) === key);
+  })();
+  const valid = !!panel.name.trim() && !!normVoltage && !duplicate;
+
+  const errors = submitted
+    ? {
+        name: !panel.name.trim() ? 'Required' : duplicate ? 'This project already has a panel with this name' : '',
+        voltageLevel: !normVoltage ? 'Required' : '',
+      }
+    : { name: duplicate ? 'This project already has a panel with this name' : '', voltageLevel: '' };
+
+  const handleConfirm = () => {
+    setSubmitted(true);
+    if (!valid) return;
+    onConfirm({ ...panel, name: panel.name.trim() });
+  };
+
+  return (
+    <Modal
+      title={isEditing ? 'Edit Panel' : 'Add Panel'}
+      subtitle="Panel name, type, and voltage level"
+      icon={<PanelTop />}
+      size="sm"
+      onClose={onCancel}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={handleConfirm} disabled={submitted && !valid}>
+            {isEditing ? <Save size={16} /> : <Plus size={16} />}
+            {isEditing ? 'Save Panel' : 'Add Panel'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+          value={panel.name}
+          onChange={value => setPanel(prev => ({ ...prev, name: value }))}
+          placeholder="e.g. =H001, Bay 1 Protection"
+          error={errors.name}
+        />
+        <InputField
+          label="Panel type"
+          icon={<Tag size={18} strokeWidth={1.5} />}
+          value={panel.panelType}
+          onChange={value => setPanel(prev => ({ ...prev, panelType: value }))}
+          placeholder="e.g. PROTECTION, CONTROL"
+        />
+        <ComboField
+          label="Voltage level *"
+          icon={<Zap size={18} strokeWidth={1.5} />}
+          value={panel.voltageLevel}
+          onChange={value => setPanel(prev => ({ ...prev, voltageLevel: value }))}
+          options={VOLTAGES}
+          placeholder="132KV"
+          error={errors.voltageLevel}
+        />
+        <p className="text-[11px] text-slate-400">
+          Special characters (including =) are allowed in panel names.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+function formatUploadDate(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+/**
+ * Compact post-upload wiring-schedule status. The full Excel preview belongs to the
+ * upload-and-verify flow only — never to the Project Information card.
+ */
+function WiringScheduleStatus({
+  status,
+  onUpload,
+  onReupload,
+  disabled,
+  disabledHint,
+}: {
+  status: DocumentStatus;
+  onUpload: () => void;
+  onReupload: () => void;
+  disabled: boolean;
+  disabledHint?: string;
+}) {
+  const uploaded = status.availability === 'available';
+  const loading = status.availability === 'loading';
+  const uploadedAt = formatUploadDate(status.uploadedAt);
+
+  return (
+    <div className="pj-wiring-status" aria-label="Wiring schedule status">
+      <span className={`pj-wiring-status-dot pj-wiring-status-dot--${status.availability}`} aria-hidden />
+      <div className="pj-wiring-status-copy">
+        <p className="pj-wiring-status-title">
+          {loading
+            ? 'Checking wiring schedule…'
+            : uploaded
+              ? 'Wiring schedule uploaded'
+              : status.availability === 'error'
+                ? status.message ?? 'Wiring schedule check failed'
+                : 'No wiring schedule uploaded'}
+        </p>
+        {uploaded && (
+          <p className="pj-wiring-status-meta">
+            {status.fileName && <span title={status.fileName}>{status.fileName}</span>}
+            {typeof status.cableCount === 'number' && <span>{status.cableCount} cables</span>}
+            {uploadedAt && <span>Uploaded {uploadedAt}</span>}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        className="pj-wiring-status-action"
+        onClick={uploaded ? onReupload : onUpload}
+        disabled={disabled || loading}
+        title={disabled ? disabledHint || 'Select a project and panel first' : undefined}
+      >
+        <FileSpreadsheet size={14} strokeWidth={1.75} aria-hidden />
+        <span>{uploaded ? 'Re-upload Wiring Schedule' : 'Upload Wiring Schedule'}</span>
+      </button>
     </div>
   );
 }
@@ -1576,7 +1843,7 @@ function AddPanelModal({
   onSaved: (panelId: string) => void;
 }) {
   const [panel, setPanel] = useState<PanelDraft>(() => newPanelDraft({
-    voltageLevel: projectCode.split('_')[0] || '',
+    voltageLevel: projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] || '',
   }));
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1614,6 +1881,7 @@ function AddPanelModal({
   return (
     <Modal
       title="Add Panel"
+      icon={<PanelTop />}
       size="wide"
       onClose={onClose}
       closeOnEscape={!saving}
@@ -1623,6 +1891,7 @@ function AddPanelModal({
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
+            <Plus size={16} />
             {saving ? 'Adding…' : 'Add Panel'}
           </button>
         </div>
@@ -1661,7 +1930,7 @@ function EditPanelModal({
   const [name, setName] = useState(panel.panel_name);
   const [panelType, setPanelType] = useState(String(panel.panel_type ?? ''));
   const [voltageLevel, setVoltageLevel] = useState(
-    String(panel.voltage_level ?? projectCode.split('_')[0] ?? ''),
+    String(panel.voltage_level ?? projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] ?? ''),
   );
   const [systemType, setSystemType] = useState(String(panel.system_type ?? ''));
   const [saving, setSaving] = useState(false);
@@ -1709,6 +1978,7 @@ function EditPanelModal({
   return (
     <Modal
       title="Edit Panel"
+      icon={<PanelTop />}
       onClose={onClose}
       footer={(
         <div className="flex items-center justify-end gap-3 w-full">
@@ -1716,6 +1986,7 @@ function EditPanelModal({
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || wouldDuplicate} type="button">
+            <Save size={16} />
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -1771,14 +2042,38 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
   const [state, setState] = useState<ProjectState>(project.project_state);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleSave = async () => {
+  const trimmedName = name.trim();
+  const nameError = submitted && !trimmedName ? 'Project / Substation Name is required.' : '';
+
+  const closeModal = () => {
+    if (!saving) onClose();
+  };
+
+  const handleSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    setSubmitted(true);
+    if (!trimmedName) return;
     setSaving(true);
     setError('');
     try {
+      const [legacyLocation = '', legacyRegion = ''] = (meta?.locationRegion || '')
+        .split(/\s*\/\s*/)
+        .map(part => part.trim());
+      const nextMeta = meta ? { ...meta, substationName: trimmedName } : null;
+      const savedName = nextMeta?.substationName
+        ? buildProjectFullName(
+            nextMeta.substationName,
+            project.client,
+            nextMeta.location || legacyLocation,
+            nextMeta.region || legacyRegion,
+            nextMeta.projectNumbering || project.code,
+          )
+        : trimmedName;
       let updated: Project = await projectsApi.update(project.code, {
-        name: name.trim(),
-        description: mergeProjectDescription(meta, description),
+        name: savedName,
+        description: mergeProjectDescription(nextMeta, description),
       });
       if (state !== project.project_state) {
         updated = await projectsApi.setState(project.code, state);
@@ -1794,50 +2089,102 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
 
   return (
     <Modal
-      title="Edit Project"
-      onClose={onClose}
+      title="Edit Project Information"
+      subtitle={`${project.name} · ${project.code}`}
+      icon={<Pencil />}
+      size="form"
+      bodyClassName="pj-edit-project-modal-body"
+      onClose={closeModal}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
       footer={(
-        <div className="flex items-center justify-end gap-3 w-full">
-          <button className="btn-secondary" onClick={onClose} type="button">
-            Cancel
+        <>
+          <button className="btn-secondary" onClick={closeModal} disabled={saving} type="button">Cancel</button>
+          <button className="btn-primary" disabled={saving} type="submit" form="edit-project-form">
+            <Save size={16} strokeWidth={1.75} />
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+        </>
       )}
     >
-      <div className="flex flex-col gap-4">
-        <div className="form-group">
-          <label className="form-label">Project Code</label>
-          <input value={project.code} title="Project Code" readOnly className="form-input font-mono bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
-        </div>
-
-        <InputField label="Project / Substation Name" icon={<FolderKanban size={18} strokeWidth={1.5} />} value={name} onChange={setName} />
-
-        <div className="form-group">
-          <label className="form-label">Client</label>
-          <input value={project.client} title="Client" readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" disabled />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">State</label>
-          <select title="Project state" value={state} onChange={event => setState(event.target.value as ProjectState)} className="form-select">
-            {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Description</label>
-          <textarea value={description} onChange={event => setDescription(event.target.value)} rows={3} title="Description" placeholder="Optional project description" className="form-textarea" />
-        </div>
-
-        {error && (
-          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
-            {error}
+      <form id="edit-project-form" className="pj-edit-project-form" onSubmit={handleSave} noValidate>
+        {(nameError || error) && (
+          <div className={`pj-edit-validation ${error ? 'pj-edit-validation--error' : ''}`} role="alert">
+            <TriangleAlert size={17} strokeWidth={1.75} />
+            <span>{error || 'Complete the required project information before saving.'}</span>
           </div>
         )}
-      </div>
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Project identity</h3>
+          <div className="pj-edit-grid">
+            <div className="form-group min-w-0">
+              <label className="form-label">Project Numbering</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Hash size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value font-mono" role="textbox" aria-readonly="true" title={project.code}>
+                  {project.code}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Client</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Building2 size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value" role="textbox" aria-readonly="true" title={project.client}>
+                  {project.client}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Editable details</h3>
+          <div className="pj-edit-grid">
+            <InputField
+              label="Project / Substation Name *"
+              icon={<FolderKanban size={17} strokeWidth={1.5} />}
+              value={name}
+              onChange={value => { setName(value); setError(''); }}
+              placeholder="Enter project or substation name"
+              error={nameError}
+            />
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Project State</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Flag size={17} strokeWidth={1.5} /></span>
+                <select
+                  title="Project state"
+                  value={state}
+                  onChange={event => { setState(event.target.value as ProjectState); setError(''); }}
+                  className="form-select"
+                >
+                  {STATES.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group min-w-0">
+            <label className="form-label">Description</label>
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><FileText size={17} strokeWidth={1.5} /></span>
+              <textarea
+                value={description}
+                onChange={event => { setDescription(event.target.value); setError(''); }}
+                rows={3}
+                title="Description"
+                placeholder="Optional project description"
+                className="form-textarea"
+              />
+            </div>
+            <p className="pj-edit-field-hint">Internal project notes only. Existing project metadata and panel data remain unchanged.</p>
+          </div>
+        </section>
+      </form>
     </Modal>
   );
 }

@@ -6,6 +6,17 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-25 — Local Phase B — modern UI port from `0605265` onto Phase A branch
+
+- **Scope:** Controlled UI-only restore on `change/remove-3d-and-ga-ui-local-2026-07-25` after verified safety backup. Donor: `0605265` (`change/remove-3d-and-rename-ga-2026-07-24`). Not a full-branch merge. Demo Lab `4468cd1` used as visual reference only (no Demo Lab / 3D directories copied).
+- **Restored:** Richer `design-system.css` / themes, modern `AppShell` / Topbar / Sidebar, role dashboards (Supervisor, Technician, QA/QC, Director, Admin), Login polish, shared modals/cards, PWA `public/sw.js`.
+- **Preserved Phase A:** GA Upload / GA View / GA Drawing terminology; GA Upload `ButtonHintPopover` beside button; no Three.js packages; no 3D Model / Demo Lab / EngineeringModelViewer / GLB generation.
+- **Safety backup (local only):** `C:\Users\sathe\OneDrive\Desktop\DWES-SAFETY-BACKUPS\pre-modern-ui-20260725-104757` — branch `backup/pre-modern-ui-d0cba70-20260725`, tag `backup-pre-modern-ui-d0cba70-20260725-104757`, bundle + source/uploads/data zips + `database-pre-modern-ui.dump`. See `BACKUP-MANIFEST.md` in that folder.
+- **Files:** `src/**`, `public/**` (from donor tree); docs this entry.
+- **Not pushed / not deployed.**
+
+---
+
 ## 2026-07-25 — Local Phase A — orphaned 3D deps removed + GA View wording aligned
 
 - **Scope:** Branch `change/remove-3d-and-ga-ui-local-2026-07-25` based on verified GA UI commit `e50d1d1`. No production deploy in this entry.

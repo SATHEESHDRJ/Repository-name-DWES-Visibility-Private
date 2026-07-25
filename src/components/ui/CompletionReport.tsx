@@ -71,7 +71,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
   const isCompleted = a.status === 'completed' || a.status === 'approved';
 
   return (
-    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-[var(--t-surface-white)] overflow-hidden shadow-sm">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-700 flex items-center gap-3">
@@ -80,7 +80,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
           ? <CheckCircle size={20} className="text-emerald-400 shrink-0" />
           : <AlertCircle size={20} className="text-amber-400 shrink-0" />}
         <div className="flex-1 min-w-0">
-          <div className="text-[15px] font-bold text-white truncate select-none">{a.panel_name}</div>
+          <div className="text-[15px] font-bold text-white break-words [overflow-wrap:anywhere] select-none">{a.panel_name}</div>
           <div className="text-[11px] font-mono text-slate-400 mt-0.5 select-none">{project.code}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -93,7 +93,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <button
               type="button"
               onClick={onDownloadXlsx}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-[var(--t-surface-white-10)] hover:bg-[var(--t-surface-white-20)] text-white text-[11px] font-semibold transition-colors"
             >
               <FileSpreadsheet size={12} />
               <span>XLSX</span>
@@ -110,7 +110,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <User size={16} className="text-blue-700" />
           </div>
           <div className="min-w-0">
-            <div className="text-[13px] font-bold text-slate-800 truncate">{technician.full_name}</div>
+            <div className="text-[13px] font-bold text-slate-800 break-words [overflow-wrap:anywhere]">{technician.full_name}</div>
             <div className="text-[11px] text-slate-400 mt-0.5 select-none">
               @{technician.username}
               {technician.employee_id && <> · <span className="font-mono">{technician.employee_id}</span></>}
@@ -123,7 +123,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <Building2 size={16} className="text-slate-600" />
           </div>
           <div className="min-w-0">
-            <div className="text-[13px] font-bold text-slate-800 truncate">{project.name}</div>
+            <div className="text-[13px] font-bold text-slate-800 break-words [overflow-wrap:anywhere]">{project.name}</div>
             <div className="text-[11px] text-slate-400 mt-0.5 select-none">
               {project.client && <>{project.client} · </>}
               <span className="font-mono">{project.code}</span>

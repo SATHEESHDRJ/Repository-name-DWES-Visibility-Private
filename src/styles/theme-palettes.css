@@ -4,11 +4,30 @@
 */
 
 [data-theme="arctic"] {
+  /* Semantic white surface channel. Light mode warms it below; dark mode keeps
+     the historical white value so this change does not alter dark rendering. */
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  /* Workspace canvas — soft light grey, calm behind white cards. */
   --t-bg:            #EEF2F6;
-  --t-bg-grad:       linear-gradient(180deg, #EAEFF4 0%, #F1F5F9 100%);
+  --t-bg-grad:       linear-gradient(180deg, #EDF1F6 0%, #F4F7FA 100%);
+
+  /* Sidebar rail — white surface on the grey canvas, separated by a hairline
+     border and a subtle shadow. Text tuned for AA contrast on white. */
+  --t-sidebar-bg:     #FFFFFF;
+  --t-sidebar-border: #E2E8F0;
+  --t-sidebar-text:   #475569;
+  --t-sidebar-muted:  #64748B;
+  --t-sidebar-strong: #0F172A;
+  --t-sidebar-hover:  #F1F5F9;
   --t-header:        linear-gradient(180deg, #101B2E 0%, #0B1220 45%, #070D16 100%);
   --t-header-border: rgba(56, 189, 248, 0.14);
-  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(2, 6, 23, 0.42);
+  /* Flat band: a subtle drop shadow to separate the header from the light
+     workspace, not the deep elevation of a floating card. */
+  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 10px rgba(2, 6, 23, 0.24);
   --t-on-header:     #F8FAFC;
   --t-on-header-muted: rgba(226, 232, 240, 0.62);
   --t-header-icon:           rgba(226, 232, 240, 0.72);
@@ -19,12 +38,13 @@
   --t-header-action-hover:  rgba(255, 255, 255, 0.12);
   --t-header-float-bg:      rgba(255, 255, 255, 0.07);
   --t-header-float-border:  rgba(255, 255, 255, 0.14);
-  --t-header-float-shadow:  0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  --t-header-float-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.14), 0 12px 32px rgba(2, 6, 23, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  /* Controls sit in the header band. Only a hairline highlight — no lift. */
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --t-header-user-bg:            rgba(255, 255, 255, 0.92);
   --t-header-user-border:        rgba(15, 23, 42, 0.10);
-  --t-header-user-shadow:        0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --t-header-user-hover-shadow:  0 4px 12px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --t-header-user-shadow:        0 1px 3px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --t-header-user-text:          #0F172A;
   --t-header-user-muted:         #64748B;
   --t-header-pill-text:          var(--t-header-user-text);
@@ -109,4 +129,32 @@
   --t-bento-columns:   12;
   --t-bento-min-cell:  180px;
   --t-bento-row-min:   5.5rem;
+}
+
+/* Warm light surfaces only. ThemeProvider keeps the selected mode in
+   data-mode; scoping here guarantees dark mode remains byte-for-byte visual. */
+[data-theme="arctic"][data-mode="light"] {
+  --t-surface-white:     #F7F6F2;
+  --t-surface-white-rgb: 247, 246, 242;
+  --t-surface-white-10:  rgba(247, 246, 242, 0.10);
+  --t-surface-white-20:  rgba(247, 246, 242, 0.20);
+  --t-surface-white-90:  rgba(247, 246, 242, 0.90);
+
+  --t-card:              #F7F6F2;
+  --t-elev:              #F7F6F2;
+  --t-table:             #F7F6F2;
+  --t-btn-secondary-bg:  #F7F6F2;
+  --t-header-user-bg:    rgba(247, 246, 242, 0.92);
+  --t-header-action-bg:  rgba(247, 246, 242, 0.06);
+  --t-header-action-hover: rgba(247, 246, 242, 0.12);
+  --t-header-float-bg:   rgba(247, 246, 242, 0.07);
+
+  --t-glass-bg:          rgba(247, 246, 242, 0.72);
+  --t-glass-bg-solid:    rgba(247, 246, 242, 0.94);
+  --t-glass-bg-subtle:   rgba(247, 246, 242, 0.56);
+
+  /* Legacy surface roles still consumed by a few older modules. */
+  --color-surface-elevated: #F7F6F2;
+  --color-surface-overlay:  rgba(247, 246, 242, 0.95);
+  --color-md-surface:       #F7F6F2;
 }

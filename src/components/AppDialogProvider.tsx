@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Info, LogOut, Save, Trash2, TriangleAlert } from './ui/icons';
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, LogOut, Save, Trash2, TriangleAlert, Pencil } from './ui/icons';
 import Modal from './Modal';
 
 type DialogTone = 'info' | 'success' | 'warning' | 'error' | 'delete' | 'logout' | 'save' | 'unsaved';
@@ -57,12 +57,11 @@ function toneConfirm(tone: DialogTone) {
   return 'Confirm';
 }
 
-function toneIconWrap(tone: DialogTone) {
-  if (tone === 'delete' || tone === 'error' || tone === 'logout') return 'dlg-icon-wrap dlg-icon-wrap--danger';
-  if (tone === 'warning' || tone === 'unsaved') return 'dlg-icon-wrap dlg-icon-wrap--warning';
-  if (tone === 'success') return 'dlg-icon-wrap dlg-icon-wrap--success';
-  if (tone === 'save') return 'dlg-icon-wrap dlg-icon-wrap--info';
-  return 'dlg-icon-wrap dlg-icon-wrap--info';
+function toneChip(tone: DialogTone): 'primary' | 'danger' | 'warning' | 'success' {
+  if (tone === 'delete' || tone === 'error' || tone === 'logout') return 'danger';
+  if (tone === 'warning' || tone === 'unsaved') return 'warning';
+  if (tone === 'success') return 'success';
+  return 'primary';
 }
 
 function ToneIcon({ tone }: { tone: DialogTone }) {
@@ -127,6 +126,8 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
       {active && (
         <Modal
           title={active.title}
+          icon={<ToneIcon tone={active.tone} />}
+          iconTone={toneChip(active.tone)}
           size="sm"
           onClose={() => closeDialog(active.kind === 'prompt' ? null : false)}
           footer={(
@@ -157,20 +158,18 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <div className={toneIconWrap(active.tone)}>
-                <ToneIcon tone={active.tone} />
-              </div>
-              <p className="dlg-message mt-1">{active.message}</p>
-            </div>
+            <p className="dlg-message">{active.message}</p>
             {active.kind === 'prompt' && (
-              <input
-                value={promptValue}
-                onChange={event => setPromptValue(event.target.value)}
-                className="form-input mt-1"
-                placeholder={active.placeholder || 'Enter value'}
-                autoFocus
-              />
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Pencil size={18} /></span>
+                <input
+                  value={promptValue}
+                  onChange={event => setPromptValue(event.target.value)}
+                  className="form-input"
+                  placeholder={active.placeholder || 'Enter value'}
+                  autoFocus
+                />
+              </div>
             )}
           </div>
         </Modal>

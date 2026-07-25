@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import { projectsApi, supervisorApi, usersApi } from '../../services/api';
 import type { Project } from '../../types';
 import ProjectPanelSelect, { type FramePanel } from './ProjectPanelSelect';
-import { ArrowRight, CheckCircle, TriangleAlert } from '../ui/icons';
+import { ArrowRight, CheckCircle, TriangleAlert, UserPlus, User, Check } from '../ui/icons';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 
 export interface AssignTechnicianModalProps {
@@ -64,8 +64,13 @@ export default function AssignTechnicianModal({
   }, [lockSelection, initialProjectCode, initialPanelId, panelsRefreshKey]);
 
   const selectedPanel = panels.find(f => f.id === panelId);
+  const selectedProject = projects.find(project => project.code === projectCode);
+  const selectedTechnician = techs.find(tech => String(tech.id) === selTech);
   const scheduleReady = panelReady(selectedPanel);
-  const canAssign = Boolean(projectCode && panelId && scheduleReady && selTech);
+  const canAssign = Boolean(
+    projectCode && panelId && scheduleReady && selectedTechnician
+    && selectedTechnician.availability_status !== 'ASSIGNED',
+  );
 
   const handleAssign = async () => {
     if (!projectCode || !panelId) {
@@ -105,6 +110,8 @@ export default function AssignTechnicianModal({
   return (
     <Modal
       title="Assign Technician to Panel"
+      subtitle={`${selectedProject?.name || projectCode || 'Select project'} · ${selectedPanel?.panel_name || initialPanelId || 'Select panel'}`}
+      icon={<UserPlus />}
       onClose={onClose}
       footer={!result ? (
         <>
@@ -115,11 +122,15 @@ export default function AssignTechnicianModal({
             className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             type="button"
           >
-            {saving ? 'Assigning…' : 'Assign'}
+            <UserPlus size={16} />
+            {saving ? 'Assigning…' : 'Assign Technician'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button">
+          <Check size={16} />
+          Done
+        </button>
       )}
     >
       {!result ? (
@@ -130,7 +141,10 @@ export default function AssignTechnicianModal({
               <div className="text-[13px] font-semibold text-emerald-800 break-words" title={lockedPanelName ?? undefined}>
                 {lockedPanelName}
               </div>
-              <div className="text-[11px] text-emerald-600 mt-0.5">Project: {projectCode}</div>
+              <div className="text-[11px] text-emerald-600 mt-0.5 whitespace-normal break-words" title={selectedProject?.name || projectCode}>
+                Project: {selectedProject?.name || projectCode}
+              </div>
+              <div className="text-[10px] text-emerald-600/80 break-all" title={projectCode}>{projectCode}</div>
             </div>
           ) : (
             <>
@@ -168,20 +182,23 @@ export default function AssignTechnicianModal({
 
           <div className={`mb-4 transition-opacity duration-200 ${scheduleReady && panelId ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
             <label className="form-label mb-1">Technician</label>
-            <select
-              value={selTech}
-              onChange={e => { setSelTech(e.target.value); setError(''); }}
-              disabled={!scheduleReady || !panelId}
-              className="form-select disabled:cursor-not-allowed"
-              aria-label="Select technician"
-            >
-              <option value="">Select technician…</option>
-              {techs.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.full_name} · @{t.username}
-                </option>
-              ))}
-            </select>
+            <div className="field-with-icon">
+              <span className="field-lead-icon"><User size={18} /></span>
+              <select
+                value={selTech}
+                onChange={e => { setSelTech(e.target.value); setError(''); }}
+                disabled={!scheduleReady || !panelId}
+                className="form-select disabled:cursor-not-allowed"
+                aria-label="Select technician"
+              >
+                <option value="">Select technician…</option>
+                {techs.map(t => (
+                  <option key={t.id} value={t.id} disabled={t.availability_status === 'ASSIGNED'}>
+                    {t.username || t.full_name || `Tech #${t.id}`} — {t.availability_status === 'ASSIGNED' ? 'ASSIGNED' : 'AVAILABLE'}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {error && <div className="form-error">{error}</div>}

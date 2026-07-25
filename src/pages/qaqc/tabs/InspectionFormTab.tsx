@@ -1,11 +1,15 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { qaqcApi } from '../../../services/api';
+import { useCallback } from 'react';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
 import { AlertTriangle, Check, X, Search, Plus } from '../../../components/ui/icons';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
 
 interface InspectionFormTabProps {
   panel: any | null;
   onInspectionDone: () => void;
+  onUnavailable: () => void;
 }
 
 type CheckVal = 'pass' | 'fail';
@@ -34,7 +38,7 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-5 bg-white border border-[#E2E8F0] rounded-[12px] shadow-sm mb-4">
+    <div className="flex flex-col gap-3 p-5 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] shadow-sm mb-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="text-[14px] font-bold text-slate-800">{label}</div>
         <div className="flex items-center gap-2 shrink-0">
@@ -46,7 +50,7 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
               className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                 value === v 
                   ? v === 'pass' ? 'bg-green-600 border-green-600 text-white' : 'bg-red-600 border-red-600 text-white'
-                  : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                  : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="button"
             >
@@ -66,7 +70,7 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
   );
 }
 
-export default function InspectionFormTab({ panel, onInspectionDone }: InspectionFormTabProps) {
+export default function InspectionFormTab({ panel, onInspectionDone, onUnavailable }: InspectionFormTabProps) {
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -91,17 +95,28 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
   const [issueSev, setIssueSev] = useState<Issue['severity']>('minor');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueLoc, setIssueLoc] = useState('');
+  const requests = useLatestRequest();
 
-  useEffect(() => {
+  const loadDetail = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     if (!panel) {
-      setDetail(null);
+      if (!silent) setDetail(null);
       return;
     }
-    setLoading(true);
-    setSaved(false);
-    setError('');
-    qaqcApi.panelDetail(panel.id).then(d => {
+    const request = requests.begin();
+    if (!silent) {
+      setLoading(true);
+      setDetail(null);
+      setSaved(false);
+      setError('');
+    }
+    try {
+      const d = await qaqcApi.panelDetail(panel.id, request.signal);
+      if (!requests.isLatest(request.id)) return;
       setDetail(d);
+      // A background refresh updates the read-only panel detail only. Re-seeding the
+      // check/note/issue fields here would discard an inspection the engineer is typing.
+      if (silent) return;
       if (d.existing_inspection) {
         const i = d.existing_inspection;
         setVisual(i.visual_check || 'pass');
@@ -130,11 +145,19 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
         setComplianceNote('');
         setInspNotes('');
         setResult('PASS');
-        setIssues([]);
+        if (!silent) setIssues([]);
       }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [panel, panel?.id]);
+    } catch (requestError: any) {
+      if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
+      if (!silent) setDetail(null);
+      if (requestError?.response?.status === 404) onUnavailable();
+    } finally {
+      if (requests.isLatest(request.id)) setLoading(false);
+    }
+  }, [onUnavailable, panel, requests]);
+
+  useEffect(() => { void loadDetail(); }, [loadDetail]);
+  useDwesRefresh(loadDetail);
 
   const addIssue = () => {
     if (!issueDesc.trim()) return;
@@ -255,7 +278,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
 
       <div className="mb-8">
         <div className="text-[14px] font-bold text-slate-800 uppercase tracking-wider mb-4">Red Markup / Corrections Required</div>
-        <div className="bg-white border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm">
+        <div className="bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm">
           <div className="flex flex-wrap gap-3 mb-4">
             {(['none', 'minor', 'major'] as MarkupVal[]).map(v => (
               <button
@@ -264,7 +287,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                 className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                   markup === v
                     ? v === 'none' ? 'bg-green-600 border-green-600 text-white' : v === 'minor' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-red-600 border-red-600 text-white'
-                    : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                    : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
                 }`}
                 type="button"
               >
@@ -286,7 +309,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
         </div>
 
         {showIssueForm && (
-          <div className="bg-white border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm mb-4">
+          <div className="bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm mb-4">
             <div className="flex flex-wrap gap-3 mb-4">
               {(['critical', 'major', 'minor'] as const).map(s => (
                 <button
@@ -295,7 +318,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                   className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                     issueSev === s
                       ? s === 'critical' ? 'bg-red-600 border-red-600 text-white' : s === 'major' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-slate-600 border-slate-600 text-white'
-                      : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                      : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
                   }`}
                   type="button"
                 >
@@ -316,7 +339,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
 
         <div className="flex flex-col gap-3">
           {issues.map(iss => (
-            <div key={iss.id} className="flex items-start gap-4 p-4 bg-white border border-[#E2E8F0] rounded-[10px] shadow-sm">
+            <div key={iss.id} className="flex items-start gap-4 p-4 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px] shadow-sm">
               <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-[6px] text-[11px] font-bold uppercase tracking-wider border shrink-0 ${
                 iss.severity === 'critical' ? 'bg-red-50 text-red-600 border-red-200' :
                 iss.severity === 'major' ? 'bg-amber-50 text-amber-600 border-amber-200' :
@@ -341,7 +364,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
           onChange={e => setInspNotes(e.target.value)}
           rows={3}
           placeholder="Overall observations, recommendations, or additional comments..."
-          className="w-full text-[14px] border border-[#E2E8F0] rounded-[12px] bg-slate-50 focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-4"
+          className="w-full text-[14px] border border-[#E2E8F0] rounded-[12px] bg-slate-50 focus:bg-[var(--t-surface-white)] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-4"
         />
       </div>
 
@@ -357,7 +380,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                   ? r.tone === 'completed' ? 'bg-green-50 border-green-500 shadow-[0_4px_12px_rgba(34,197,94,0.15)]' :
                     r.tone === 'warning' ? 'bg-amber-50 border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.15)]' :
                     'bg-red-50 border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.15)]'
-                  : 'bg-white border-[#E2E8F0] hover:border-slate-300'
+                  : 'bg-[var(--t-surface-white)] border-[#E2E8F0] hover:border-slate-300'
               }`}
               type="button"
             >

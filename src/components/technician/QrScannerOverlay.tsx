@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Upload } from '../ui/icons';
+import { X, Upload, QrCode, Hash, Search } from '../ui/icons';
 import { decodeQrFromImage, loadJsQR } from '../../utils/jsqrLoader';
 
 interface Props {
@@ -116,9 +116,12 @@ export default function QrScannerOverlay({
   };
 
   return (
-    <div className="qr-scan-overlay show">
-      <div className="qr-scan-box">
-        <div className="text-[15px] font-bold text-slate-900 mb-0.5">{title}</div>
+    <div className="qr-scan-overlay show" role="presentation">
+      <div className="qr-scan-box" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="flex items-center justify-center gap-2 mb-0.5">
+          <span className="modal-title-icon" aria-hidden="true"><QrCode /></span>
+          <span className="text-[15px] font-bold text-slate-900">{title}</span>
+        </div>
         <div className="text-[12px] text-slate-500 mb-2">{subtitle}</div>
         <video ref={videoRef} autoPlay playsInline muted className="mx-auto block max-w-[320px] w-full rounded-[10px] border-[3px] border-teal-500 bg-black" />
         <canvas ref={canvasRef} className="hidden" />
@@ -126,15 +129,18 @@ export default function QrScannerOverlay({
         {error && <div className="form-error mt-2 text-center">{error}</div>}
 
         <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={manual}
-            onChange={e => setManual(e.target.value)}
-            placeholder="Type panel code…"
-            className="form-input flex-1 text-[13px]"
-            onKeyDown={e => { if (e.key === 'Enter') handleManual(); }}
-          />
-          <button type="button" className="btn-primary" onClick={handleManual}>Find Panel</button>
+          <div className="field-with-icon flex-1">
+            <span className="field-lead-icon"><Hash size={18} /></span>
+            <input
+              type="text"
+              value={manual}
+              onChange={e => setManual(e.target.value)}
+              placeholder="Type panel code…"
+              className="form-input w-full text-[13px]"
+              onKeyDown={e => { if (e.key === 'Enter') handleManual(); }}
+            />
+          </div>
+          <button type="button" className="btn-primary" onClick={handleManual}><Search size={16} />Find Panel</button>
         </div>
 
         <div
@@ -151,7 +157,7 @@ export default function QrScannerOverlay({
           </div>
         </div>
 
-        <button type="button" className="btn-secondary mt-4 w-full" onClick={() => { stopCamera(); onClose(); }}>
+        <button type="button" className="btn-secondary mt-3 w-full" onClick={() => { stopCamera(); onClose(); }}>
           <X size={14} />
           Cancel
         </button>

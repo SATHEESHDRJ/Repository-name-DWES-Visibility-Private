@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Modal from '../Modal';
 import FileViewer, { type FileViewerType } from '../ui/FileViewer';
+import { FileImage } from '../ui/icons';
 import { projectsApi } from '../../services/api';
 
 export interface PanelDrawingSummary {
@@ -56,11 +57,11 @@ export default function PanelDrawingViewModal({
         const apiMsg = (err as { response?: { data?: { message?: string }; status?: number }; message?: string })?.response?.data?.message;
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 404) {
-          setError(apiMsg || 'GA drawing file not found on disk — it may have been removed.');
+          setError(apiMsg || 'Drawing file not found on disk — it may have been removed.');
         } else if (status === 403) {
-          setError(apiMsg || 'You do not have permission to view this GA drawing.');
+          setError(apiMsg || 'You do not have permission to view this drawing.');
         } else {
-          setError(apiMsg || 'Failed to load GA drawing — the file may have been removed, or you may not have access.');
+          setError(apiMsg || 'Failed to load drawing — the file may have been removed, or you may not have access.');
         }
       }
     } finally {
@@ -86,8 +87,9 @@ export default function PanelDrawingViewModal({
 
   return (
     <Modal
-      title="GA View"
+      title="View Drawing"
       subtitle={`${panelLabel} · ${drawing.original_name}`}
+      icon={<FileImage />}
       onClose={onClose}
       size="fullscreen"
       bodyClassName="modal-body-flush"

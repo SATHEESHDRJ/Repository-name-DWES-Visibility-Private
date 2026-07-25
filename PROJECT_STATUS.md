@@ -1,6 +1,6 @@
 # DWES Project Status
 
-**Last updated:** 2026-07-25 (Phase A local: GA UI `e50d1d1` + orphaned 3D dep removal; OCI release gated — see CHANGELOG)  
+**Last updated:** 2026-07-25 (Phase B: modern UI port from `0605265` onto Phase A; safety backup verified — see CHANGELOG)  
 **Repo:** `C:\Users\sathe\OneDrive\Desktop\DWES`  
 **Detailed history:** `PROGRESS.md` (feature log) · **Change log:** `CHANGELOG.md`
 
@@ -10,8 +10,10 @@
 
 | Item | State |
 |------|--------|
-| Active local branch | `change/remove-3d-and-ga-ui-local-2026-07-25` (from verified GA UI `e50d1d1`) |
-| WIP Demo Lab checkpoint | `change/3d-model-demo-lab-2026-07-22` @ `4468cd1` (preserved; not merged) |
+| Active local branch | `change/remove-3d-and-ga-ui-local-2026-07-25` (Phase A GA + Phase B modern UI) |
+| Pre-UI-port safety | Local tag `backup-pre-modern-ui-d0cba70-20260725-104757` @ `d0cba70`; folder `DWES-SAFETY-BACKUPS\pre-modern-ui-20260725-104757` |
+| UI donor | `0605265` (`change/remove-3d-and-rename-ga-2026-07-24`) — controlled `src/` + `public/` checkout |
+| WIP Demo Lab checkpoint | `change/3d-model-demo-lab-2026-07-22` @ `4468cd1` (reference only; not merged) |
 | Repository | `origin` → `https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private.git` |
 | OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
 | Human queue | [docs/HUMAN-ACTIONS.md](docs/HUMAN-ACTIONS.md) (production path) · [docs/CLOUD-ONBOARDING.md](docs/CLOUD-ONBOARDING.md) (dev/demo path — start here for a fresh cloud setup) |

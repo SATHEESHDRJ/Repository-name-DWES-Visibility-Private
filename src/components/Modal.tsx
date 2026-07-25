@@ -6,6 +6,10 @@ interface ModalProps {
   title: string;
   /** Optional muted context line under the title. */
   subtitle?: string;
+  /** Optional leading icon shown in a tinted chip beside the title. */
+  icon?: ReactNode;
+  /** Semantic colour of the title-icon chip. Defaults to primary (blue). */
+  iconTone?: 'primary' | 'danger' | 'warning' | 'success';
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
@@ -39,6 +43,8 @@ function getModalRoot(): HTMLElement | null {
 export default function Modal({
   title,
   subtitle,
+  icon,
+  iconTone = 'primary',
   onClose,
   children,
   footer,
@@ -112,9 +118,16 @@ export default function Modal({
     >
       <div className={`${boxClass} glass-modal-shell modal-typography${typography === 'user-management' ? ' modal-typography--user-management' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-header-text">
-            <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>
-            {subtitle ? <p className="modal-subtitle" title={subtitle}>{subtitle}</p> : null}
+          <div className="modal-header-lead">
+            {icon ? (
+              <span className={`modal-title-icon modal-title-icon--${iconTone}`} aria-hidden="true">
+                {icon}
+              </span>
+            ) : null}
+            <div className="modal-header-text">
+              <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>
+              {subtitle ? <p className="modal-subtitle" title={subtitle}>{subtitle}</p> : null}
+            </div>
           </div>
           <div className="modal-header-actions">
             {headerAction}

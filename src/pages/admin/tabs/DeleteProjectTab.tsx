@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../../../components/Modal';
-import { Trash2 } from '../../../components/ui/icons';
+import { Trash2, FolderKanban } from '../../../components/ui/icons';
 import { adminApi, projectsApi } from '../../../services/api';
 import {
   PROJECT_DELETE_CONFIRM_BUTTON,
@@ -8,6 +8,9 @@ import {
   PROJECT_DELETE_MODAL_TITLE,
   PROJECT_DELETE_WARNING,
 } from '../../../constants/projectDeletion';
+import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
 
 export default function DeleteProjectTab() {
   const [projects, setProjects] = useState<Array<{ code: string; name: string }>>([]);
@@ -17,15 +20,21 @@ export default function DeleteProjectTab() {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const requests = useLatestRequest();
 
   const selectedProject = useMemo(
     () => projects.find(p => p.code === selCode) ?? null,
     [projects, selCode],
   );
 
-  const refreshProjects = (deletedCode?: string) => {
-    projectsApi.list()
+  const refreshProjects = useCallback((deletedCode?: string, options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    const request = requests.begin();
+    if (!silent) setLoading(true);
+    return projectsApi.list(request.signal)
       .then((rows) => {
+        if (!requests.isLatest(request.id)) return;
         const normalized: Array<{ code: string; name: string }> = rows.map((r: { code: string; name: string }) => ({
           code: r.code,
           name: r.name,
@@ -46,14 +55,27 @@ export default function DeleteProjectTab() {
           setSelCode(normalized[0].code);
         }
       })
-      .catch(() => {
+      .catch((requestError: any) => {
+        if (silent || requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
         setProjects([]);
+      })
+      .finally(() => {
+        if (!silent && requests.isLatest(request.id)) setLoading(false);
       });
-  };
+  }, [requests, selCode]);
 
   useEffect(() => {
-    refreshProjects();
-  }, []);
+    void refreshProjects();
+  }, [refreshProjects]);
+
+  useDwesRefresh(options => refreshProjects(undefined, options));
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted' || detail.frameId) return;
+    requests.cancel();
+    setProjects(current => current.filter(project => project.code !== detail.projectCode));
+    setSelCode(current => current === detail.projectCode ? '' : current);
+  }), [requests]);
 
   const openModal = () => {
     if (!selectedProject) return;
@@ -83,7 +105,9 @@ export default function DeleteProjectTab() {
       setStatus(r.message || `Project "${selectedProject.name}" permanently deleted.`);
       setShowModal(false);
       setConfirmed(false);
-      refreshProjects(selCode);
+      setProjects(current => current.filter(project => project.code !== selCode));
+      emitFramesChanged({ projectCode: selCode, entity: 'project', action: 'deleted' });
+      await refreshProjects(selCode);
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || 'Delete failed');
     } finally {
@@ -92,7 +116,7 @@ export default function DeleteProjectTab() {
   };
 
   return (
-    <div className="rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-red-200 bg-red-50 flex items-center gap-3">
         <Trash2 size={20} className="text-red-700 shrink-0" />
         <div>
@@ -110,7 +134,11 @@ export default function DeleteProjectTab() {
           </div>
         ) : null}
 
-        {projects.length === 0 ? (
+        {loading ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-[13px] text-slate-500 text-center">
+            Loading projects…
+          </div>
+        ) : projects.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-[13px] text-slate-500 text-center">
             No active projects to delete.
           </div>
@@ -118,16 +146,19 @@ export default function DeleteProjectTab() {
           <>
             <div className="mb-5">
               <label className="form-label mb-1">Select project</label>
-              <select
-                value={selCode}
-                onChange={e => setSelCode(e.target.value)}
-                className="form-select"
-                aria-label="Select project to delete"
-              >
-                {projects.map(p => (
-                  <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                ))}
-              </select>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                <select
+                  value={selCode}
+                  onChange={e => setSelCode(e.target.value)}
+                  className="form-select"
+                  aria-label="Select project to delete"
+                >
+                  {projects.map(p => (
+                    <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <button
@@ -146,6 +177,8 @@ export default function DeleteProjectTab() {
       {showModal && selectedProject && (
         <Modal
           title={PROJECT_DELETE_MODAL_TITLE}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={closeModal}
           size="default"
           closeOnBackdrop={!deleting}

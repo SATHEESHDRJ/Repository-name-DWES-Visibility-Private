@@ -3,7 +3,13 @@ import type { Project } from '../types';
 /** Machine-readable creation metadata stored in projects.description */
 export interface ProjectCreationMeta {
   locationRegion: string;
-  monthYear: string;
+  /** Optional on legacy projects created by the earlier month/year flow. */
+  monthYear?: string;
+  /** Creation-form values retained separately from the final display name. */
+  substationName?: string;
+  location?: string;
+  region?: string;
+  projectNumbering?: string;
 }
 
 const META_PREFIX = '@dwes-meta:';
@@ -22,7 +28,7 @@ export function decodeProjectMeta(description: string | null | undefined): {
   }
   try {
     const meta = JSON.parse(raw.slice(META_PREFIX.length)) as ProjectCreationMeta;
-    if (meta && typeof meta.locationRegion === 'string' && typeof meta.monthYear === 'string') {
+    if (meta && typeof meta.locationRegion === 'string') {
       return { meta, userNotes: '' };
     }
   } catch { /* fall through */ }
@@ -105,10 +111,15 @@ export function resolveProjectCardDetails(project: Project): ProjectCardDetails 
   const { meta } = decodeProjectMeta(project.description);
   const legacy = parseLegacyProjectName(project.name, project.client);
 
-  const substationName = legacy.substationName || project.name.trim() || project.code;
+  const substationName =
+    meta?.substationName?.trim()
+    || legacy.substationName
+    || project.name.trim()
+    || project.code;
   const client = project.client?.trim() || 'Not set';
   const locationRegion =
     meta?.locationRegion?.trim()
+    || [meta?.location?.trim(), meta?.region?.trim()].filter(Boolean).join(' / ')
     || legacy.locationRegion?.trim()
     || codeParts?.locationRegionLabel
     || 'Not set';
@@ -124,7 +135,12 @@ export function resolveProjectCardDetails(project: Project): ProjectCardDetails 
     locationRegion,
     monthYear,
     projectCode: project.code,
-    projectNumbering: codeParts?.numbering || project.sequence?.toString().padStart(3, '0') || '—',
+    projectNumbering:
+      meta?.projectNumbering?.trim()
+      || codeParts?.numbering
+      || project.code?.trim()
+      || project.sequence?.toString().padStart(3, '0')
+      || '—',
     statusLabel: (project.project_state || 'not_started').replace(/_/g, ' '),
   };
 }
@@ -178,5 +194,25 @@ export function buildProjectReferenceTitle(
     voltage.trim(),
     locationRegion.trim(),
     monthYear.trim(),
+  ].filter(Boolean).join(' – ');
+}
+
+/**
+ * Canonical project name for the current creation flow. Panels stay as their own
+ * project-scoped records, so adding another panel never changes the project name.
+ */
+export function buildProjectFullName(
+  substationName: string,
+  client: string,
+  location: string,
+  region: string,
+  projectNumbering: string,
+): string {
+  const locationRegion = [location.trim(), region.trim()].filter(Boolean).join(' / ');
+  return [
+    substationName.trim(),
+    client.trim(),
+    locationRegion,
+    projectNumbering.trim(),
   ].filter(Boolean).join(' – ');
 }

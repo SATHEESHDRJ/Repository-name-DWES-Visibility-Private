@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import * as pdfjs from 'pdfjs-dist';
@@ -14,6 +15,8 @@ import {
   ChevronRight,
   Download,
   Maximize,
+  RefreshCw,
+  RotateCcw,
   Search,
   ZoomIn,
   ZoomOut,
@@ -31,6 +34,8 @@ export interface PdfDocumentViewerProps {
   error?: string;
   onRetry?: () => void;
   downloadFilename?: string;
+  /** Authorized download callback. Prefer this over saving the preview blob. */
+  onDownload?: () => void;
   className?: string;
 }
 
@@ -58,6 +63,7 @@ export default function PdfDocumentViewer({
   error = '',
   onRetry,
   downloadFilename,
+  onDownload,
   className = '',
 }: PdfDocumentViewerProps) {
   const shellRef = useRef<HTMLDivElement>(null);
@@ -83,8 +89,10 @@ export default function PdfDocumentViewer({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
+  const [rotation, setRotation] = useState(0);
+  const panRef = useRef<{ active: boolean; x: number; y: number; left: number; top: number }>({ active: false, x: 0, y: 0, left: 0, top: 0 });
 
-  const ready = Boolean(blob) && !loading && !error && numPages > 0 && !rendering;
+  const ready = Boolean(blob) && !loading && !error && numPages > 0 && firstPagePainted;
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -167,7 +175,7 @@ export default function PdfDocumentViewer({
   const computeScale = useCallback(
     async (doc: PDFDocumentProxy, pageNum: number): Promise<number> => {
       const pg = await doc.getPage(pageNum);
-      const base = pg.getViewport({ scale: 1 });
+      const base = pg.getViewport({ scale: 1, rotation });
       const pad = 24;
       const availW = Math.max(containerWidth - pad, 320);
       const availH = Math.max(containerHeight - pad, 400);
@@ -176,7 +184,7 @@ export default function PdfDocumentViewer({
       if (fitMode === 'page') return Math.min(availW / base.width, availH / base.height);
       return (availW / base.width) * zoom;
     },
-    [containerWidth, containerHeight, fitMode, zoom],
+    [containerWidth, containerHeight, fitMode, zoom, rotation],
   );
 
   useEffect(() => {
@@ -200,11 +208,14 @@ export default function PdfDocumentViewer({
 
           const scale = await computeScale(doc, pageNum);
           const pg = await doc.getPage(pageNum);
-          const viewport = pg.getViewport({ scale });
+          const viewport = pg.getViewport({ scale, rotation });
+          const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
 
           const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          canvas.width = Math.floor(viewport.width * pixelRatio);
+          canvas.height = Math.floor(viewport.height * pixelRatio);
+          canvas.style.width = `${viewport.width}px`;
+          canvas.style.height = `${viewport.height}px`;
           canvas.className = 'pdf-viewer-canvas';
           canvas.setAttribute('role', 'img');
           canvas.setAttribute('aria-label', `${title} — page ${pageNum}`);
@@ -218,7 +229,11 @@ export default function PdfDocumentViewer({
           host.appendChild(wrapper);
           pageRefs.current.set(pageNum, wrapper);
 
-          await pg.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+          await pg.render({
+            canvasContext: canvas.getContext('2d')!,
+            viewport,
+            transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
+          }).promise;
 
           // Reveal the document as soon as the first page paints — remaining
           // pages of a multi-page drawing keep rendering behind the scenes.
@@ -244,7 +259,7 @@ export default function PdfDocumentViewer({
     return () => {
       cancelled = true;
     };
-  }, [numPages, containerWidth, containerHeight, fitMode, zoom, computeScale, title]);
+  }, [numPages, containerWidth, containerHeight, fitMode, zoom, rotation, computeScale, title]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -324,7 +339,37 @@ export default function PdfDocumentViewer({
     setZoom(1);
   };
 
+  const resetView = () => {
+    setFitMode('width');
+    setZoom(1);
+    setRotation(0);
+    setPage(1);
+    if (viewportRef.current) {
+      viewportRef.current.scrollLeft = 0;
+      viewportRef.current.scrollTop = 0;
+    }
+  };
+
+  const onPanStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || !viewportRef.current) return;
+    const viewport = viewportRef.current;
+    panRef.current = { active: true, x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+    viewport.setPointerCapture?.(e.pointerId);
+  };
+
+  const onPanMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!panRef.current.active || !viewportRef.current) return;
+    viewportRef.current.scrollLeft = panRef.current.left - (e.clientX - panRef.current.x);
+    viewportRef.current.scrollTop = panRef.current.top - (e.clientY - panRef.current.y);
+  };
+
+  const onPanEnd = () => { panRef.current.active = false; };
+
   const download = () => {
+    if (onDownload) {
+      onDownload();
+      return;
+    }
     if (!blob) return;
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -400,6 +445,12 @@ export default function PdfDocumentViewer({
           >
             Fit page
           </button>
+          <button type="button" className="pdf-viewer-btn pdf-viewer-btn--text" onClick={() => setRotation(value => (value + 90) % 360)} disabled={!ready} title="Rotate 90 degrees">
+            <RotateCcw size={16} /><span>Rotate</span>
+          </button>
+          <button type="button" className="pdf-viewer-btn" onClick={resetView} disabled={!ready} aria-label="Reset view" title="Reset view">
+            <RefreshCw size={17} />
+          </button>
         </div>
 
         <div className="pdf-viewer-toolbar-group">
@@ -448,7 +499,7 @@ export default function PdfDocumentViewer({
           <button type="button" className="pdf-viewer-btn" onClick={() => void toggleFullscreen()} disabled={!ready} aria-label="Toggle fullscreen">
             <Maximize size={18} strokeWidth={1.75} />
           </button>
-          {blob && downloadFilename && (
+          {blob && (downloadFilename || onDownload) && (
             <button type="button" className="pdf-viewer-btn pdf-viewer-btn--text" onClick={download}>
               <Download size={16} strokeWidth={1.75} />
               <span>Download</span>
@@ -484,7 +535,16 @@ export default function PdfDocumentViewer({
           load detaches the observer, leaves containerWidth at 0, and the page
           render bails (blank viewer).
         */}
-        <div ref={viewportRef} className="pdf-viewer-viewport" onWheel={onViewportWheel}>
+        <div
+          ref={viewportRef}
+          className="pdf-viewer-viewport"
+          onWheel={onViewportWheel}
+          onPointerDown={onPanStart}
+          onPointerMove={onPanMove}
+          onPointerUp={onPanEnd}
+          onPointerCancel={onPanEnd}
+          title="Drag to pan"
+        >
           <div ref={pagesHostRef} className="pdf-viewer-pages" style={pagesStyle} />
         </div>
         {displayError && (

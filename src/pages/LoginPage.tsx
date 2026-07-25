@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle, ArrowRight, Check, ClipboardCheck, ClipboardList,
-  ChevronDown, Eye, EyeOff, Fingerprint, Lock, ShieldCheck, Star, User, UserCog, Wrench, Zap,
+  AlertCircle, ArrowRight, ClipboardList, Eye, EyeOff, Fingerprint, Lock, ShieldCheck, User, Zap,
 } from '../components/ui/icons';
-import type { ComponentType } from 'react';
-import type { IconProps } from '../components/ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { ROLE_ROUTES } from '../types';
 import type { UserRole } from '../types';
-import {
-  DEMO_CREDENTIALS, SHOW_DEMO_CREDENTIALS,
-  fetchDemoUsers, seedPasswordFor,
-  type DemoUser, type DemoCredential,
-} from '../data/demoCredentials';
 import EnrollBiometricModal from '../components/biometric/EnrollBiometricModal';
 import InstallAppButton from '../components/InstallAppButton';
 import {
@@ -76,33 +68,8 @@ export default function LoginPage() {
   const { loginWithBiometric, loading: bioLoading, error: bioError, clearError: clearBioError } = useBiometricLogin();
   const { enroll, enrolling, error: enrollError } = useEnrollBiometric();
   const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [, setDemoIdx] = useState(0);
-  const [demoUsers, setDemoUsers] = useState<DemoUser[] | null>(null);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [serverOk, setServerOk] = useState<boolean | null>(null);
-  const demoPopoverRef = useRef<HTMLDivElement>(null);
   const pendingUserIdRef = useRef<number | null>(null);
-
-  // DEV/testing only: fill username + password from the 5-slot legacy list
-  const fillDemo = (idx: number) => {
-    const c = DEMO_CREDENTIALS[idx];
-    if (!c) return;
-    setDemoIdx(idx);
-    setUsername(c.username);
-    setPassword(c.password);
-    clearError();
-    clearBioError();
-  };
-
-  // DEV/testing only: fill from the full API-fetched user list
-  const fillDemoUser = (username: string) => {
-    if (!username) return;
-    const pw = seedPasswordFor(username) ?? username; // seed pattern: password === username
-    setUsername(username);
-    setPassword(pw);
-    clearError();
-    clearBioError();
-  };
 
   /* Redirect if already authenticated */
   useEffect(() => {
@@ -120,24 +87,6 @@ export default function LoginPage() {
     const id = setInterval(ping, 5000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    if (SHOW_DEMO_CREDENTIALS) {
-      // Try to fetch full demo user list from backend (DEMO_MODE=true required)
-      fetchDemoUsers().then(users => {
-        if (users && users.length > 0) {
-          setDemoUsers(users);
-          // Pre-fill with the first account (system_admin)
-          fillDemoUser(users[0].username);
-        } else if (DEMO_CREDENTIALS.length > 0) {
-          // Fallback: use the 5-slot legacy list
-          const c = DEMO_CREDENTIALS[0];
-          setUsername(c.username);
-          setPassword(c.password);
-        }
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigateToDashboard = useCallback(() => {
     const next = useAuthStore.getState().user;
@@ -185,27 +134,6 @@ export default function LoginPage() {
     setShowEnrollModal(false);
     navigateToDashboard();
   };
-
-  useEffect(() => {
-    if (!demoOpen) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      const node = demoPopoverRef.current;
-      if (!node) return;
-      if (!node.contains(event.target as Node)) setDemoOpen(false);
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setDemoOpen(false);
-    };
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [demoOpen]);
 
   return (
     <>
@@ -343,8 +271,8 @@ export default function LoginPage() {
                     <div className="login-error login-error--offline" role="status" aria-live="polite">
                       <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
                       <span>
-                        <strong>Server is still starting.</strong>{' '}
-                        Automatic startup is in progress after system restart — this page will connect when the backend is ready.
+                        <strong>DWES backend is not available.</strong>{' '}
+                        Start DWES manually when required. This page will reconnect automatically when the backend is ready.
                       </span>
                     </div>
                   )}
@@ -373,58 +301,14 @@ export default function LoginPage() {
                   </button>
                 </form>
 
-                {/* ── DEV/testing only: choosable demo account (prefills the fields above) ── */}
-                {SHOW_DEMO_CREDENTIALS && (demoUsers !== null || DEMO_CREDENTIALS.length > 0) && (
-                  <div className="login-section">
-                    <div className="login-section-head">
-                      <span className="login-section-label">Demo account</span>
-                      <span className="login-dev-badge">DEV</span>
-                    </div>
-
-                    <div className="login-demo-popover-wrap" ref={demoPopoverRef}>
-                      <button
-                        type="button"
-                        className="login-demo-trigger"
-                        aria-haspopup="dialog"
-                        aria-controls="login-demo-popover"
-                        onClick={() => setDemoOpen(v => !v)}
-                      >
-                        <span className="login-demo-trigger-text">Demo Accounts</span>
-                        <span className="login-demo-trigger-current">@{username}</span>
-                        <ChevronDown
-                          size={16}
-                          strokeWidth={2.2}
-                          className={`login-demo-trigger-caret ${demoOpen ? 'is-open' : ''}`}
-                          aria-hidden="true"
-                        />
-                      </button>
-
-                      {demoOpen && (
-                        <div id="login-demo-popover" className="login-demo-popover" role="dialog" aria-label="Select demo account">
-                          {demoUsers !== null ? (
-                            <DemoUserSelect
-                              users={demoUsers}
-                              onSelect={(value) => {
-                                fillDemoUser(value);
-                                setDemoOpen(false);
-                              }}
-                              currentUsername={username}
-                            />
-                          ) : (
-                            <DemoCredentialCards
-                              creds={DEMO_CREDENTIALS}
-                              currentUsername={username}
-                              onSelect={(idx) => {
-                                fillDemo(idx);
-                                setDemoOpen(false);
-                              }}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Required support information — accounts are issued, never self-registered. */}
+                <p className="login-support-note">
+                  <ShieldCheck size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    Accounts are issued by the <strong>System Administrator</strong>. Contact your
+                    administrator for access or a password reset.
+                  </span>
+                </p>
 
                 {/* ── Fingerprint login — visible only when device has enrolled credential ── */}
                 {bioAvailable && bioEnrolled && (
@@ -467,7 +351,7 @@ export default function LoginPage() {
           </div>
 
           <footer className="login-panel-footer">
-            <span className="login-panel-footer-text">v1.0 · Local Development</span>
+            <span className="login-panel-footer-text">v1.0 · Ingenious Network FZC</span>
           </footer>
         </main>
       </div>
@@ -481,169 +365,5 @@ export default function LoginPage() {
         />
       )}
     </>
-  );
-}
-
-// ── Demo account cards ─────────────────────────────────────────────────────────
-
-interface RoleMeta { label: string; short: string; Icon: ComponentType<Omit<IconProps, 'name'>>; }
-
-const ROLE_META: Record<string, RoleMeta> = {
-  system_admin:      { label: 'System Admin',           short: 'Admin',      Icon: UserCog },
-  ops_director:      { label: 'Operations Director',     short: 'Director',   Icon: Star },
-  prod_supervisor:   { label: 'Production Supervisor',   short: 'Supervisor', Icon: ClipboardCheck },
-  qaqc_engineer:     { label: 'QA / QC Engineer',        short: 'QA / QC',    Icon: ShieldCheck },
-  wiring_technician: { label: 'Wiring Technician',       short: 'Technician', Icon: Wrench },
-};
-
-const ROLE_ORDER = ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
-
-// Map the legacy 5-slot fallback labels onto the same role visual system.
-const LABEL_ROLE: Record<string, string> = {
-  Admin: 'system_admin', Director: 'ops_director', Supervisor: 'prod_supervisor',
-  QA: 'qaqc_engineer', Technician: 'wiring_technician',
-};
-
-// Seed full names spell numbers out ("Director Two"); the UI shows digits ("Director 2").
-const NUMBER_WORDS: Record<string, string> = {
-  one: '1', two: '2', three: '3', four: '4', five: '5',
-  six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
-};
-
-const displayName = (name: string) =>
-  name.replace(
-    /\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
-    w => NUMBER_WORDS[w.toLowerCase()],
-  );
-
-/** Two-character avatar text: initials for real names, letter+number for seed usernames. */
-function avatarText(fullName: string, username: string): string {
-  if (fullName && fullName !== '[TBD]') {
-    const parts = fullName.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? '';
-    const second = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0]?.[1] ?? '');
-    return (first + second).toUpperCase();
-  }
-  const m = username.match(/^([a-zA-Z]+)(\d+)$/);
-  if (m) return (m[1][0] + m[2]).toUpperCase();
-  return username.slice(0, 2).toUpperCase();
-}
-
-function DemoAccountCard({
-  role, name, username, selected, chip, onSelect,
-}: {
-  role: string;
-  name: string;
-  username: string;
-  selected: boolean;
-  chip?: boolean;
-  onSelect: () => void;
-}) {
-  const meta = ROLE_META[role] ?? { label: role, short: role, Icon: User };
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="login-demo-card"
-      data-role={role}
-      data-selected={selected || undefined}
-    >
-      <span className="login-demo-avatar" data-role={role} aria-hidden="true">
-        {avatarText(name === username ? '' : name, username)}
-      </span>
-      <span className="login-demo-info">
-        <span className="login-demo-name">{name}</span>
-        <span className="login-demo-username">@{username}</span>
-      </span>
-      {chip && (
-        <span className="login-demo-role-chip" data-role={role}>
-          <meta.Icon size={11} strokeWidth={2} aria-hidden="true" />
-          {meta.short}
-        </span>
-      )}
-      <span className="login-demo-check" aria-hidden="true">
-        <Check size={14} strokeWidth={3} />
-      </span>
-    </button>
-  );
-}
-
-function DemoUserSelect({
-  users,
-  onSelect,
-  currentUsername,
-}: {
-  users: DemoUser[];
-  onSelect: (username: string) => void;
-  currentUsername: string;
-}) {
-  const grouped = ROLE_ORDER.reduce<Record<string, DemoUser[]>>((acc, role) => {
-    const group = users.filter(u => u.role === role);
-    if (group.length) acc[role] = group;
-    return acc;
-  }, {});
-
-  return (
-    <div className="login-demo-panel">
-      <div className="login-demo-scroll">
-        {Object.entries(grouped).map(([role, group]) => {
-          const meta = ROLE_META[role] ?? { label: role, short: role, Icon: User };
-          return (
-            <div key={role} className="login-demo-group">
-              <div className="login-demo-group-head">
-                <span className="login-demo-group-icon" data-role={role} aria-hidden="true">
-                  <meta.Icon size={12} strokeWidth={2} />
-                </span>
-                <span className="login-demo-group-label">{meta.label}</span>
-                <span className="login-demo-group-count">{group.length}</span>
-              </div>
-              {group.map(u => {
-                const name = u.full_name && u.full_name !== '[TBD]'
-                  ? displayName(u.full_name)
-                  : u.username;
-                return (
-                  <DemoAccountCard
-                    key={u.username}
-                    role={role}
-                    name={name}
-                    username={u.username}
-                    selected={u.username === currentUsername}
-                    onSelect={() => onSelect(u.username)}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function DemoCredentialCards({
-  creds,
-  currentUsername,
-  onSelect,
-}: {
-  creds: DemoCredential[];
-  currentUsername: string;
-  onSelect: (idx: number) => void;
-}) {
-  return (
-    <div className="login-demo-panel">
-      <div className="login-demo-scroll login-demo-scroll--compact">
-        {creds.map((c, i) => (
-          <DemoAccountCard
-            key={c.label}
-            role={LABEL_ROLE[c.label] ?? 'system_admin'}
-            name={c.label}
-            username={c.username}
-            selected={c.username === currentUsername}
-            chip
-            onSelect={() => onSelect(i)}
-          />
-        ))}
-      </div>
-    </div>
   );
 }

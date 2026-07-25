@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Fingerprint, FolderKanban, LogOut, Menu, X } from '../ui/icons';
+import { Fingerprint, LogOut, Menu, X } from '../ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import Avatar from './Avatar';
@@ -9,7 +9,6 @@ import { useBiometricAvailable } from '../../hooks/useBiometric';
 import { adminApi } from '../../services/api';
 import MyProfileModal from '../profile/MyProfileModal';
 import type { ActiveProjectContext } from '../../store/useProjectSelectionStore';
-import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 
 const ROLE_LABELS: Record<string, string> = {
   system_admin:      'System Admin',
@@ -35,6 +34,8 @@ interface TopbarProps {
   showMenuButton?: boolean;
   activeProject?: ActiveProjectContext | null;
   projectSelectionRequired?: boolean;
+  projectContextLoading?: boolean;
+  noProjectAvailable?: boolean;
 }
 
 export default function Topbar({
@@ -43,13 +44,9 @@ export default function Topbar({
   onTabChange,
   onMenuClick,
   showMenuButton = false,
-  activeProject = null,
-  projectSelectionRequired = false,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const liveWiring = useLiveWiringStore();
-  const isTechLive = user?.role === 'wiring_technician' && liveWiring.live;
   const [clock, setClock] = useState(new Date());
   const [showBioPanel, setShowBioPanel] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -135,33 +132,6 @@ export default function Topbar({
         )}
 
         <div className="topbar-controls">
-          <div
-            className={`topbar-project-pill topbar-float topbar-float--light${projectSelectionRequired ? ' topbar-project-pill--required' : ''}${isTechLive ? ' topbar-project-pill--live' : ''}`}
-            aria-live="polite"
-            title={isTechLive
-              ? `Wiring in progress — ${liveWiring.projectName || liveWiring.projectCode || ''}`
-              : projectSelectionRequired
-                ? 'Project selection required before using the application'
-                : `Active Project: ${activeProject?.code ?? ''}`}
-          >
-            <div className="topbar-project-icon" aria-hidden="true">
-              <FolderKanban size={16} strokeWidth={1.75} />
-            </div>
-            <div className="topbar-project-meta min-w-0">
-              <span className="topbar-project-label">Project</span>
-              <span className="topbar-project-value">
-                {isTechLive
-                  ? (liveWiring.projectName || liveWiring.projectCode || 'In progress')
-                  : projectSelectionRequired
-                    ? 'Selection Required'
-                    : (activeProject?.code ?? 'Unassigned')}
-              </span>
-            </div>
-            {isTechLive && (
-              <span className="topbar-live-dot" aria-label="Wiring in progress" />
-            )}
-          </div>
-
           {user?.role === 'system_admin' && deployMode && (
             <span className={`topbar-env topbar-float-pill${deployMode === 'cloud' ? ' topbar-env--cloud' : ''}`}>
               {deployMode === 'cloud' ? 'Cloud Hosted' : 'Local Intranet'}
@@ -170,7 +140,7 @@ export default function Topbar({
 
           {user && (
             <div
-              className={`topbar-user-card topbar-float topbar-float--light${user.role === 'wiring_technician' ? ' cursor-pointer hover:bg-white/90' : ''}`}
+              className={`topbar-user-card topbar-float topbar-float--light${user.role === 'wiring_technician' ? ' cursor-pointer hover:bg-[var(--t-surface-white-90)]' : ''}`}
               title={`${user.full_name} · @${user.username} · ${ROLE_LABELS[user.role] ?? user.role}`}
               onClick={user.role === 'wiring_technician' ? () => setShowProfile(true) : undefined}
               onKeyDown={user.role === 'wiring_technician' ? (e) => { if (e.key === 'Enter' || e.key === ' ') setShowProfile(true); } : undefined}
@@ -205,7 +175,7 @@ export default function Topbar({
 
                 {showBioPanel && (
                   <div className="bio-panel-dropdown" role="dialog" aria-label="Fingerprint sign-in settings">
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                    <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
                       <div>
                         <p className="text-sm font-semibold">Fingerprint sign-in</p>
                         <p className="text-xs mt-0.5">Enrolled devices on this server</p>
@@ -214,17 +184,22 @@ export default function Topbar({
                         type="button"
                         title="Close fingerprint settings"
                         onClick={() => setShowBioPanel(false)}
-                        className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors"
+                        className="p-1.5 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg transition-colors"
                       >
                         <X size={16} />
                       </button>
                     </div>
-                    <div className="bio-panel-dropdown-body px-5 py-4">
+                    <div className="bio-panel-dropdown-body px-4 py-3">
                       <BiometricSettings />
                     </div>
                   </div>
                 )}
               </div>
+            )}
+            {!showBioSettings && (
+              /* The capability check resolves asynchronously. Reserve the button's
+                 footprint from the first paint so header controls never reflow. */
+              <span className="topbar-capsule-slot" aria-hidden="true" />
             )}
 
             <button

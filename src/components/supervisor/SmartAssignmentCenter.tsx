@@ -4,8 +4,9 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal
 import { projectsApi, supervisorApi, techApi, usersApi } from '../../services/api';
 import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import Toast from '../ui/Toast';
+import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
   CHANGEOVER_REASONS,
   type ChangeoverAssignment,
@@ -47,10 +48,13 @@ import {
   Columns3,
   LayoutGrid,
   ListChecks,
+  MessageCircle,
   RefreshCw,
   Search,
   Star,
+  Tag,
   TriangleAlert,
+  User,
   UserMinus,
   UserPlus,
   Users,
@@ -89,10 +93,9 @@ const STATUS_META: Record<WorkflowStatus, { label: string; chip: string }> = {
 const STATUS_FILTERS: Array<{ key: TechResourceStatus | 'all'; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'available', label: 'Free' },
+  { key: 'assigned', label: 'Assigned' },
   { key: 'working', label: 'Working' },
-  { key: 'on_break', label: 'Break' },
-  { key: 'material_delay', label: 'Material' },
-  { key: 'qa_qc', label: 'QA/QC' },
+  { key: 'busy', label: 'Busy' },
 ];
 
 const BOARD_LANES: Array<{ id: BoardLaneId; label: string; shortLabel: string; hint: string }> = [
@@ -205,8 +208,9 @@ export default function SmartAssignmentCenter({
     setToast(message);
   };
 
-  const loadContext = useCallback(async () => {
-    setLoading(true);
+  const loadContext = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const [frames, panels, changeovers, audit] = await Promise.all([
         projectsApi.frames(projectCode).catch(() => []),
@@ -254,7 +258,7 @@ export default function SmartAssignmentCenter({
           }),
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [projectCode, panelId]);
 
@@ -601,6 +605,7 @@ export default function SmartAssignmentCenter({
     <Modal
       title="Production Assignment"
       subtitle={`${projectCode} · ${panelName}${frameCableCount > 0 ? ` · ${frameCableCount} cables` : ''}`}
+      icon={<Users />}
       onClose={onClose}
       size="fullscreen"
       bodyClassName="modal-body-flush"
@@ -855,14 +860,12 @@ export default function SmartAssignmentCenter({
                         <div className="sac-selected-chip">
                           <span className="sac-avatar sac-avatar--sm">{selectedTechResource.initials}</span>
                           <span className="sac-selected-chip-name">{selectedTechResource.full_name}</span>
-                          <span className={`twf-status-badge ${selectedTechResource.statusChip}`}>
-                            {selectedTechResource.statusLabel}
-                          </span>
+                          <TechnicianStatusIndicator status={selectedTechResource.status} compact />
                           {selectedTechResource.parallelMode === 'parallel_ok' && (
                             <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
                           )}
-                          {selectedTechResource.parallelMode === 'reassign_required' && (
-                            <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+                          {selectedTechResource.parallelMode === 'handover_required' && (
+                            <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
                           )}
                         </div>
                       ) : (
@@ -945,42 +948,51 @@ export default function SmartAssignmentCenter({
                       </div>
                       <label className="tech-workflow-field" htmlFor="sac-new-tech">
                         <span className="tech-workflow-field-label">Replacement</span>
-                        <select
-                          id="sac-new-tech"
-                          className="form-select"
-                          value={changeoverTech}
-                          onChange={e => setChangeoverTech(e.target.value)}
-                        >
-                          <option value="">Select…</option>
-                          {techUsers.filter(t => t.id !== changeoverTarget.technician_id).map(t => (
-                            <option key={t.id} value={t.id}>{t.full_name}</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><User size={18} /></span>
+                          <select
+                            id="sac-new-tech"
+                            className="form-select"
+                            value={changeoverTech}
+                            onChange={e => setChangeoverTech(e.target.value)}
+                          >
+                            <option value="">Select…</option>
+                            {techUsers.filter(t => t.id !== changeoverTarget.technician_id).map(t => (
+                              <option key={t.id} value={t.id}>{t.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </label>
                       <label className="tech-workflow-field" htmlFor="sac-reason">
                         <span className="tech-workflow-field-label">Reason</span>
-                        <select
-                          id="sac-reason"
-                          className="form-select"
-                          value={changeoverReason}
-                          onChange={e => setChangeoverReason(e.target.value as ChangeoverReason)}
-                        >
-                          <option value="">Select…</option>
-                          {CHANGEOVER_REASONS.map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><Tag size={18} /></span>
+                          <select
+                            id="sac-reason"
+                            className="form-select"
+                            value={changeoverReason}
+                            onChange={e => setChangeoverReason(e.target.value as ChangeoverReason)}
+                          >
+                            <option value="">Select…</option>
+                            {CHANGEOVER_REASONS.map(r => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        </div>
                       </label>
                       <label className="tech-workflow-field sac-changeover-notes" htmlFor="sac-notes">
                         <span className="tech-workflow-field-label">Notes</span>
-                        <textarea
-                          id="sac-notes"
-                          className="form-textarea"
-                          rows={1}
-                          value={changeoverNotes}
-                          onChange={e => setChangeoverNotes(e.target.value)}
-                          placeholder="Optional…"
-                        />
+                        <div className="field-with-icon field-with-icon--top">
+                          <span className="field-lead-icon"><MessageCircle size={18} /></span>
+                          <textarea
+                            id="sac-notes"
+                            className="form-textarea"
+                            rows={1}
+                            value={changeoverNotes}
+                            onChange={e => setChangeoverNotes(e.target.value)}
+                            placeholder="Optional…"
+                          />
+                        </div>
                       </label>
                       {changeoverError && <div className="form-error">{changeoverError}</div>}
                       <button
@@ -1300,7 +1312,7 @@ function TechnicianResourceCard({
             {tech.employee_id || `@${tech.username}`}
           </div>
         </div>
-        <span className={`twf-status-badge ${tech.statusChip}`}>{tech.statusLabel}</span>
+        <TechnicianStatusIndicator status={tech.status} compact />
       </div>
 
       <div className="sac-tech-context-row">
@@ -1340,8 +1352,8 @@ function TechnicianResourceCard({
         {tech.parallelMode === 'parallel_ok' && (
           <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
         )}
-        {tech.parallelMode === 'reassign_required' && (
-          <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+        {tech.parallelMode === 'handover_required' && (
+          <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
         )}
         {tech.skillTag === 'experienced' && (
           <span className="sac-skill-badge">Exp</span>

@@ -17,7 +17,7 @@ export default function UploadTargetHeader({
   panelId,
   kind = 'wiring',
 }: UploadTargetHeaderProps) {
-  const kindLabel = kind === 'drawing' ? 'GA Drawing upload target' : 'Wiring schedule target';
+  const kindLabel = kind === 'drawing' ? 'Drawing upload target' : 'Wiring schedule target';
 
   return (
     <header className="upload-target-header" aria-label={`${kindLabel}: ${projectName}, ${panelName}`}>

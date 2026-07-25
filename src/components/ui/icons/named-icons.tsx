@@ -99,6 +99,10 @@ export const Lock              = sym('lock');
 export const Unlock            = sym('lock_open');
 export const Key               = sym('key');
 export const KeyRound          = sym('key');
+export const Mail              = sym('mail');
+export const AtSign            = sym('alternate_email');
+export const IdCard            = sym('badge');
+export const Type              = sym('title');
 
 /* ── Files & documents ─────────────────────────────────────────────────────── */
 export const File              = sym('draft');

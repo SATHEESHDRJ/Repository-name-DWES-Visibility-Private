@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supervisorApi } from '../../../services/api';
 import Badge from '../../../components/Badge';
 import Modal from '../../../components/Modal';
-import { RefreshCw, Check, X, ArrowRight, CheckCircle, MessageCircle } from '../../../components/ui/icons';
+import { RefreshCw, Check, X, ArrowRight, CheckCircle, MessageCircle, Pencil, SendHorizonal } from '../../../components/ui/icons';
 
 function whatsAppReworkUrl(phone: string, panelName: string, projectCode: string, reason: string) {
   const digits = phone.replace(/\D/g, '');
@@ -90,7 +90,7 @@ export default function PendingApprovalsSection() {
       {!loading && items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
           {items.map(item => (
-            <div key={item.id} className="h-[120px] bg-white border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
+            <div key={item.id} className="h-[120px] bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col min-w-0 pr-2">
                   <span className="text-[14px] font-bold text-slate-900 truncate" title={item.panel_name}>{item.panel_name}</span>
@@ -111,7 +111,7 @@ export default function PendingApprovalsSection() {
                 <Badge label="pending" />
                 <div className="flex items-center gap-2">
                   <button onClick={() => { setShowRework(item); setReworkReason(''); setError(''); }}
-                    className="flex items-center justify-center h-[36px] px-3 bg-white border border-[#E2E8F0] text-slate-600 rounded-[8px] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors text-[13px] font-bold" type="button">
+                    className="flex items-center justify-center h-[36px] px-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] text-slate-600 rounded-[8px] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors text-[13px] font-bold" type="button">
                     <X size={16} strokeWidth={2} className="mr-1" />
                     Request Changes
                   </button>
@@ -128,10 +128,11 @@ export default function PendingApprovalsSection() {
       )}
 
       {showRework && (
-        <Modal title="Request Changes" onClose={() => setShowRework(null)}
+        <Modal title="Request Changes" icon={<Pencil />} iconTone="warning" onClose={() => setShowRework(null)}
           footer={<>
             <button onClick={() => setShowRework(null)} className="btn-secondary" type="button">Cancel</button>
             <button onClick={handleRework} disabled={saving} className="btn-danger" type="button">
+              <SendHorizonal size={16} />
               {saving ? 'Sending…' : 'Send Request'}
             </button>
           </>}>
@@ -142,9 +143,12 @@ export default function PendingApprovalsSection() {
             <label className="form-label mb-1">
               Reason (min 5 chars)
             </label>
-            <textarea value={reworkReason} onChange={e => setReworkReason(e.target.value)} rows={3}
-              placeholder="Describe what needs to change before wiring can start…"
-              className="form-textarea" />
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><MessageCircle size={18} /></span>
+              <textarea value={reworkReason} onChange={e => setReworkReason(e.target.value)} rows={3}
+                placeholder="Describe what needs to change before wiring can start…"
+                className="form-textarea" />
+            </div>
             {showRework.technician_whatsapp && (
               <p className="text-[12px] text-slate-500 mt-2 flex items-center gap-1">
                 <MessageCircle size={14} className="text-green-600" />

@@ -77,17 +77,17 @@ export default function DrawingsTab() {
           <button onClick={() => setShowUpload(true)} disabled={!selProject}
             className="btn-primary" type="button">
             <Upload size={18} />
-            <span>Upload Drawing</span>
+            <span>Upload GA Drawing</span>
           </button>
         )}
       </div>
 
-      {loading && <div className="empty-state"><p className="empty-text">Loading drawings...</p></div>}
+      {loading && <div className="empty-state"><p className="empty-text">Loading GA drawings...</p></div>}
 
       {!loading && drawings.length === 0 && (
         <div className="empty-state history-empty-state">
           <div className="history-empty-icon"><Map size={32} /></div>
-          No drawings uploaded for this project. GA drawings and schematics can be uploaded here.
+          No GA drawing is available for this panel. GA drawings and schematics can be uploaded here.
         </div>
       )}
 
@@ -108,7 +108,7 @@ export default function DrawingsTab() {
                 title="View / Download"
                 onClick={() => handleView(d)}
                 disabled={viewing === d.id}
-                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
                 type="button"
               >
                 <ExternalLink size={16} strokeWidth={1.5} />
@@ -117,7 +117,7 @@ export default function DrawingsTab() {
                 <button
                   title="Delete Drawing"
                   onClick={() => handleDelete(d)}
-                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
                   type="button"
                 >
                   <Trash2 size={16} strokeWidth={1.5} />
@@ -213,16 +213,17 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
   const canUpload = !!file && !uploading && (dupInfo?.kind !== 'same' || dupChoice === 'replace');
 
   return (
-    <Modal title="Upload Drawing" onClose={onClose}
+    <Modal title="Upload GA Drawing" icon={<Upload />} onClose={onClose}
       footer={!done ? (
         <>
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
           <button onClick={handleUpload} disabled={!canUpload} className="btn-primary" type="button">
+            <Upload size={16} />
             {uploading ? 'Uploading…' : dupChoice === 'replace' ? 'Replace & Upload' : 'Upload'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button"><CheckCircle size={16} />Done</button>
       )}>
       {!done ? (
         <>
@@ -264,7 +265,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
                 <button
                   type="button"
                   onClick={() => setDupChoice('keep')}
-                  className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 h-10 rounded-lg bg-[var(--t-surface-white)] border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
                 >
                   Keep existing
                 </button>
