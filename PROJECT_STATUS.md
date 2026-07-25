@@ -10,9 +10,9 @@
 
 | Item | State |
 |------|--------|
-| Active local branch | `change/remove-3d-and-ga-ui-local-2026-07-25` (Phase A GA + Phase B modern UI) |
+| Active local branch | `change/remove-3d-and-ga-ui-local-2026-07-25` @ `865f717` (Phase A GA + Phase B modern UI + Express API contract) |
 | Pre-UI-port safety | Local tag `backup-pre-modern-ui-d0cba70-20260725-104757` @ `d0cba70`; folder `DWES-SAFETY-BACKUPS\pre-modern-ui-20260725-104757` |
-| UI donor | `0605265` (`change/remove-3d-and-rename-ga-2026-07-24`) — controlled `src/` + `public/` checkout |
+| UI donor | `0605265` (`change/remove-3d-and-rename-ga-2026-07-24`) — controlled `src/` + `public/` checkout; minimal Express backend contract follow-up |
 | WIP Demo Lab checkpoint | `change/3d-model-demo-lab-2026-07-22` @ `4468cd1` (reference only; not merged) |
 | Repository | `origin` → `https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private.git` |
 | OCI deploy | **Readiness confirmed** — deploy pending credentials; [GO-LIVE-REPORT.md](docs/GO-LIVE-REPORT.md) |
