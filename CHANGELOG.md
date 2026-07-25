@@ -6,6 +6,17 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
 
+## 2026-07-25 — Local Phase A — orphaned 3D deps removed + GA View wording aligned
+
+- **Scope:** Branch `change/remove-3d-and-ga-ui-local-2026-07-25` based on verified GA UI commit `e50d1d1`. No production deploy in this entry.
+- **3D removal (this lineage):** Panel-model / EngineeringModelViewer / Demo Lab sources were already absent on `e50d1d1`. Removed orphaned npm deps `@react-three/drei`, `@react-three/fiber`, `three`; deleted tracked demo asset `screenshots/after-technician-3d.png`.
+- **GA wording:** Technician stub + button **GA 3D/2D Drawing View** → **GA View**; supervisor `UploadViewChooser` **View Drawing** → **GA View** / **GA Drawing** copy. Supervisor GA Upload popover from `e50d1d1` preserved.
+- **Preserved:** GA Upload/View APIs, storage paths, permissions, wiring workflows, auth, reports.
+- **Files:** `package.json`, `package-lock.json`, `src/components/technician/GaDrawingViewModal.tsx`, `src/pages/technician/tabs/PanelsTab.tsx`, `src/components/supervisor/UploadViewChooser.tsx`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `docs/SECOND-REVIEW.md`
+- **Restore:** branch `change/remove-3d-and-ga-ui-local-2026-07-25` (WIP Demo Lab checkpoint remains on `change/3d-model-demo-lab-2026-07-22` @ `4468cd1`)
+
+---
+
 ## 2026-07-24 — Supervisor — GA Upload / GA View UI labels (Projects tab)
 
 - **Scope:** Supervisor Projects tab toolbar + Project Information card only. Drawing upload/view APIs, storage paths, permissions unchanged.

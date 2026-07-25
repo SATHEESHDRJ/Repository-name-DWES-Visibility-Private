@@ -46,7 +46,7 @@ export default function UploadViewChooser({
   blockReason,
 }: UploadViewChooserProps) {
   const isWiring = kind === 'wiring';
-  const viewTitle = isWiring ? 'View Wiring' : 'View Drawing';
+  const viewTitle = isWiring ? 'View Wiring' : 'GA View';
   const replaceTitle = 'Replace Upload';
   const Icon = isWiring ? FileSpreadsheet : FileText;
   const resolvedName = metadata?.fileName || fileLabel;
@@ -56,7 +56,7 @@ export default function UploadViewChooser({
       <p className="text-[13px] text-slate-600 leading-relaxed">
         {isWiring
           ? 'A wiring schedule is already uploaded for this panel.'
-          : 'A drawing is already uploaded for this panel.'}
+          : 'A GA Drawing is already uploaded for this panel.'}
         {resolvedName && (
           <>
             {' '}

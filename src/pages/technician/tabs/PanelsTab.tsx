@@ -137,12 +137,12 @@ export default function PanelsTab({
           type="button"
           className="btn-secondary tech-dash-action-btn"
           disabled={!hasAssignment || !gaTarget}
-          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Not available for completed panels' : 'Open GA drawing viewer'}
-          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA 3D/2D Drawing View'}
+          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Not available for completed panels' : 'Open GA View'}
+          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA View'}
           onClick={() => gaTarget && setGaOpen(true)}
         >
           <FileText size={16} />
-          GA 3D/2D Drawing View
+          GA View
         </button>
       </div>
 
