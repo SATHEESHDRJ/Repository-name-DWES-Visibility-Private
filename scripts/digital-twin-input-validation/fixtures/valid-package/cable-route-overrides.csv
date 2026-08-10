@@ -1,0 +1,1 @@
+project_code,panel_id,model_revision,drawing_revision,schedule_revision,route_classification,cable_number,wiring_row_reference,ordered_duct_node_ids,approved_by,approval_date\nDEMO,DEMO-001,M01,R01,S01,approved-exact-route,C1,W1,N1|N2,user,2026-07-16\nDEMO,DEMO-001,M01,R01,S01,calculated-guidance-route,C2,W2,N1,user,2026-07-16\n

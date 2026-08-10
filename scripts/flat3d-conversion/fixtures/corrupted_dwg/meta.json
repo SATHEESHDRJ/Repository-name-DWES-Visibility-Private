@@ -1,0 +1,5 @@
+{
+  "description": "Corrupted DWG: fake binary stub; expect DWG_TO_DXF failure",
+  "expected_status": "FAILED",
+  "expected_stage": "DWG_TO_DXF"
+}

@@ -1,0 +1,18 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "scanned_pdf",
+  "drawing_revision": null,
+  "started_at": "2026-07-20T02:16:34.660122+00:00",
+  "stages": [
+    {
+      "stage": "INGEST",
+      "ok": true,
+      "detail": "source copied",
+      "checksum": "f3c5830dab7ad7307a4c26e260314d57a1d03e559ecde65d668cfe2556e2322c",
+      "source_name": "drawing.pdf"
+    }
+  ],
+  "status": "FAILED",
+  "fallback": "APPROVED_2D_ONLY",
+  "detail": "PDF inputs remain Approved 2D reference in this phase (no fabricated Flat 3D from PDF)."
+}

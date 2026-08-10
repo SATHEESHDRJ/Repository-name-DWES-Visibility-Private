@@ -1,0 +1,2728 @@
+{
+  "coordinate_system": "panel-local-mm",
+  "origin_from_drawing_mm": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "panel_extents_mm": {
+    "width": 2000.0,
+    "height": 1500.0,
+    "min": [
+      0.0,
+      0.0
+    ],
+    "max": [
+      2000.0,
+      1500.0
+    ]
+  },
+  "units_detected": "mm",
+  "to_mm_scale": 1.0,
+  "layers": [
+    {
+      "name": "0",
+      "on": false,
+      "frozen": true
+    },
+    {
+      "name": "Defpoints",
+      "on": false,
+      "frozen": true
+    }
+  ],
+  "blocks": [
+    {
+      "name": "MCB",
+      "entity_count": 2
+    }
+  ],
+  "entities": [
+    {
+      "type": "LWPOLYLINE",
+      "handle": "2F",
+      "layer": "PANEL",
+      "source_space": "model",
+      "points": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          2000.0,
+          0.0,
+          0.0
+        ],
+        [
+          2000.0,
+          1500.0,
+          0.0
+        ],
+        [
+          0.0,
+          1500.0,
+          0.0
+        ]
+      ],
+      "closed": true,
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "35",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q001+F1"
+      },
+      "nested": true,
+      "source_handle": "35",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "38",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q002+F1"
+      },
+      "nested": true,
+      "source_handle": "38",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "3B",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q003+F1"
+      },
+      "nested": true,
+      "source_handle": "3B",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "3E",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q004+F1"
+      },
+      "nested": true,
+      "source_handle": "3E",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "41",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q005+F1"
+      },
+      "nested": true,
+      "source_handle": "41",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "44",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q006+F1"
+      },
+      "nested": true,
+      "source_handle": "44",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "47",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q007+F1"
+      },
+      "nested": true,
+      "source_handle": "47",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "4A",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q008+F1"
+      },
+      "nested": true,
+      "source_handle": "4A",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "4D",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q009+F1"
+      },
+      "nested": true,
+      "source_handle": "4D",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "50",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q010+F1"
+      },
+      "nested": true,
+      "source_handle": "50",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "53",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q011+F1"
+      },
+      "nested": true,
+      "source_handle": "53",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "56",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q012+F1"
+      },
+      "nested": true,
+      "source_handle": "56",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "59",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q013+F1"
+      },
+      "nested": true,
+      "source_handle": "59",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "5C",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q014+F1"
+      },
+      "nested": true,
+      "source_handle": "5C",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "5F",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q015+F1"
+      },
+      "nested": true,
+      "source_handle": "5F",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "62",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        240.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q016+F1"
+      },
+      "nested": true,
+      "source_handle": "62",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "65",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q017+F1"
+      },
+      "nested": true,
+      "source_handle": "65",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "68",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q018+F1"
+      },
+      "nested": true,
+      "source_handle": "68",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "6B",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q019+F1"
+      },
+      "nested": true,
+      "source_handle": "6B",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "6E",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q020+F1"
+      },
+      "nested": true,
+      "source_handle": "6E",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "71",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q021+F1"
+      },
+      "nested": true,
+      "source_handle": "71",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "74",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q022+F1"
+      },
+      "nested": true,
+      "source_handle": "74",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "77",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q023+F1"
+      },
+      "nested": true,
+      "source_handle": "77",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "7A",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        380.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q024+F1"
+      },
+      "nested": true,
+      "source_handle": "7A",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "7D",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q025+F1"
+      },
+      "nested": true,
+      "source_handle": "7D",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "80",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q026+F1"
+      },
+      "nested": true,
+      "source_handle": "80",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "83",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q027+F1"
+      },
+      "nested": true,
+      "source_handle": "83",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "86",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q028+F1"
+      },
+      "nested": true,
+      "source_handle": "86",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "89",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q029+F1"
+      },
+      "nested": true,
+      "source_handle": "89",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "8C",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q030+F1"
+      },
+      "nested": true,
+      "source_handle": "8C",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "8F",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q031+F1"
+      },
+      "nested": true,
+      "source_handle": "8F",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "92",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        520.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q032+F1"
+      },
+      "nested": true,
+      "source_handle": "92",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "95",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q033+F1"
+      },
+      "nested": true,
+      "source_handle": "95",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "98",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q034+F1"
+      },
+      "nested": true,
+      "source_handle": "98",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "9B",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q035+F1"
+      },
+      "nested": true,
+      "source_handle": "9B",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "9E",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q036+F1"
+      },
+      "nested": true,
+      "source_handle": "9E",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "A1",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q037+F1"
+      },
+      "nested": true,
+      "source_handle": "A1",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "A4",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q038+F1"
+      },
+      "nested": true,
+      "source_handle": "A4",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "A7",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q039+F1"
+      },
+      "nested": true,
+      "source_handle": "A7",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "AA",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        660.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q040+F1"
+      },
+      "nested": true,
+      "source_handle": "AA",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "AD",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q041+F1"
+      },
+      "nested": true,
+      "source_handle": "AD",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "B0",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q042+F1"
+      },
+      "nested": true,
+      "source_handle": "B0",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "B3",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q043+F1"
+      },
+      "nested": true,
+      "source_handle": "B3",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "B6",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q044+F1"
+      },
+      "nested": true,
+      "source_handle": "B6",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "B9",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q045+F1"
+      },
+      "nested": true,
+      "source_handle": "B9",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "BC",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q046+F1"
+      },
+      "nested": true,
+      "source_handle": "BC",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "BF",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q047+F1"
+      },
+      "nested": true,
+      "source_handle": "BF",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "C2",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        800.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q048+F1"
+      },
+      "nested": true,
+      "source_handle": "C2",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "C5",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q049+F1"
+      },
+      "nested": true,
+      "source_handle": "C5",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "C8",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q050+F1"
+      },
+      "nested": true,
+      "source_handle": "C8",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "CB",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q051+F1"
+      },
+      "nested": true,
+      "source_handle": "CB",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "CE",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q052+F1"
+      },
+      "nested": true,
+      "source_handle": "CE",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "D1",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q053+F1"
+      },
+      "nested": true,
+      "source_handle": "D1",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "D4",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q054+F1"
+      },
+      "nested": true,
+      "source_handle": "D4",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "D7",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q055+F1"
+      },
+      "nested": true,
+      "source_handle": "D7",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "DA",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        940.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q056+F1"
+      },
+      "nested": true,
+      "source_handle": "DA",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "DD",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q057+F1"
+      },
+      "nested": true,
+      "source_handle": "DD",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "E0",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q058+F1"
+      },
+      "nested": true,
+      "source_handle": "E0",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "E3",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q059+F1"
+      },
+      "nested": true,
+      "source_handle": "E3",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "E6",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q060+F1"
+      },
+      "nested": true,
+      "source_handle": "E6",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "E9",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q061+F1"
+      },
+      "nested": true,
+      "source_handle": "E9",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "EC",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q062+F1"
+      },
+      "nested": true,
+      "source_handle": "EC",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "EF",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q063+F1"
+      },
+      "nested": true,
+      "source_handle": "EF",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "F2",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        1080.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q064+F1"
+      },
+      "nested": true,
+      "source_handle": "F2",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "F5",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q065+F1"
+      },
+      "nested": true,
+      "source_handle": "F5",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "F8",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q066+F1"
+      },
+      "nested": true,
+      "source_handle": "F8",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "FB",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q067+F1"
+      },
+      "nested": true,
+      "source_handle": "FB",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "FE",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q068+F1"
+      },
+      "nested": true,
+      "source_handle": "FE",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "101",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q069+F1"
+      },
+      "nested": true,
+      "source_handle": "101",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "104",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q070+F1"
+      },
+      "nested": true,
+      "source_handle": "104",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "107",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q071+F1"
+      },
+      "nested": true,
+      "source_handle": "107",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "10A",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        1220.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q072+F1"
+      },
+      "nested": true,
+      "source_handle": "10A",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "10D",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q073+F1"
+      },
+      "nested": true,
+      "source_handle": "10D",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "110",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        320.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q074+F1"
+      },
+      "nested": true,
+      "source_handle": "110",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "113",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        540.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q075+F1"
+      },
+      "nested": true,
+      "source_handle": "113",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "116",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        760.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q076+F1"
+      },
+      "nested": true,
+      "source_handle": "116",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "119",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        980.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q077+F1"
+      },
+      "nested": true,
+      "source_handle": "119",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "11C",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1200.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q078+F1"
+      },
+      "nested": true,
+      "source_handle": "11C",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "11F",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1420.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q079+F1"
+      },
+      "nested": true,
+      "source_handle": "11F",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "122",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        1640.0,
+        1360.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q080+F1"
+      },
+      "nested": true,
+      "source_handle": "122",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    }
+  ],
+  "texts": [],
+  "counts": {
+    "entities": 81,
+    "texts": 0,
+    "layers": 2,
+    "blocks": 1
+  }
+}

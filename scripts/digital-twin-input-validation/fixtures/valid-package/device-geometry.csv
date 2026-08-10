@@ -1,0 +1,1 @@
+project_code,panel_id,model_revision,drawing_revision,schedule_revision,device_tag,x_mm,y_mm,width_mm,height_mm,depth_mm\nDEMO,DEMO-001,M01,R01,S01,DEV1,10,10,100,100,50\nDEMO,DEMO-001,M01,R01,S01,DEV2,20,20,50,50,20\n

@@ -1,0 +1,8 @@
+compartment_id           = "ocid1.compartment.oc1..CHANGE_ME"
+object_storage_namespace = "CHANGE_ME_NAMESPACE"
+region                   = "me-dubai-1"
+ssh_public_key           = "ssh-ed25519 AAAA... user@host"
+project_name             = "dwes-prod"
+app_ocpus                = 2
+app_memory_gb            = 12
+data_volume_gb           = 100

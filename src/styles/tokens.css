@@ -1,0 +1,115 @@
+@layer base {
+  :root {
+    /* Typography Sizes — workspace shell (nav, titles, content) */
+    --font-page-title: 26px;
+    --font-section-title: 18px;
+    --font-body: 15px;
+    --font-caption: 13px;
+    --font-nav-item: 15px;
+    --font-mono: 16px;
+
+    /* Spacing Scale */
+    --spacing-4: 4px;
+    --spacing-8: 8px;
+    --spacing-12: 12px;
+    --spacing-16: 16px;
+    --spacing-20: 20px;
+    --spacing-24: 24px;
+    --spacing-32: 32px;
+    --spacing-48: 48px;
+
+    /* Border Radius — cards & workspace surfaces */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
+    /* Button Heights — Android 44 dp minimum */
+    --btn-h-primary: 44px;
+    --btn-h-secondary: 44px;
+    --btn-h-table: 44px;
+    --btn-h-icon: 44px;
+
+    /* Status Colors */
+    --status-completed-text: #16A34A;
+    --status-completed-bg: #DCFCE7;
+    --status-completed-border: #86EFAC;
+
+    --status-one-open-text: #EA580C;
+    --status-one-open-bg: #FFEDD5;
+    --status-one-open-border: #FED7AA;
+
+    --status-pending-text: #64748B;
+    --status-pending-bg: #F1F5F9;
+    --status-pending-border: #CBD5E1;
+
+    --status-progress-text: #2563EB;
+    --status-progress-bg: #DBEAFE;
+    --status-progress-border: #BFDBFE;
+
+    --status-source-text: #1D4ED8;
+    --status-dest-text: #C2410C;
+    
+    --color-primary-brand: #1B4FD8;
+
+    /* Shared dashboard / workspace header titles — medium-large bold dark blue */
+    --dwes-header-title-blue: #1B2958;
+    --dwes-header-title-size-section: clamp(1.0625rem, 1.5vw, 1.1875rem);
+    --dwes-header-title-size-page: clamp(1.5rem, 2.35vw, 1.75rem);
+
+    /* Role Badges */
+    --role-admin-bg: #FEE2E2;
+    --role-admin-text: #DC2626;
+
+    --role-director-bg: #DBEAFE;
+    --role-director-text: #1D4ED8;
+
+    --role-supervisor-bg: #DBEAFE;
+    --role-supervisor-text: #1D4ED8;
+
+    --role-qaqc-bg: #FEF3C7;
+    --role-qaqc-text: #D97706;
+
+    --role-tech-bg: #DCFCE7;
+    --role-tech-text: #16A34A;
+
+    /* Liquid Glass — base fallbacks (theme overrides in theme-palettes.css) */
+    --glass-bg: rgba(255, 255, 255, 0.68);
+    --glass-bg-solid: rgba(255, 255, 255, 0.92);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.52);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --glass-border-strong: rgba(15, 23, 42, 0.10);
+    --glass-blur: 14px;
+    --glass-blur-subtle: 10px;
+    --glass-blur-overlay: 6px;
+    --glass-saturate: 165%;
+    --glass-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 8px 28px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    --glass-shadow-hover:
+      0 4px 12px rgba(15, 23, 42, 0.08),
+      0 16px 40px rgba(15, 23, 42, 0.11),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    --glass-radius: var(--radius-md, 12px);
+    --glass-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --glass-text: #0F172A;
+    --glass-text-muted: #334155;
+
+    /* Bento Grid — dashboard card layouts */
+    --bento-gap: clamp(0.75rem, 2vw, 1.25rem);
+    --bento-radius: var(--radius-lg, 16px);
+    --bento-columns: 12;
+    --bento-min-cell: 180px;
+    --bento-row-min: 5.5rem;
+  }
+
+  button, [role="button"] { 
+    min-height: 44px; 
+    font-family: inherit; 
+  }
+  
+  input, select, textarea { 
+    font-family: inherit; 
+  }
+}

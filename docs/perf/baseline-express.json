@@ -1,0 +1,555 @@
+{
+  "label": "express-baseline",
+  "timestamp": "2026-07-14T13:05:15.127Z",
+  "base": "http://127.0.0.1:3111",
+  "node": "v24.18.0",
+  "git": {
+    "branch": "migration/fastify-perf-ios",
+    "commit": "222d92c"
+  },
+  "throttle": {
+    "global": 100000,
+    "loginPerMin": 10
+  },
+  "fingerprint": {
+    "project": "132KV33KV_KSA_RIYADH_2026_001",
+    "frames": 1,
+    "cables": 400,
+    "drawings": 1,
+    "drawingBytes": 14946980
+  },
+  "resources": {
+    "cpuSeconds": 24.6,
+    "workingSetPeakMB": 366,
+    "workingSetMeanMB": 260,
+    "samples": 16
+  },
+  "endpoints": {
+    "auth-login": {
+      "latencyMs": {
+        "n": 5,
+        "min": 247.8,
+        "mean": 260.6,
+        "p50": 259.3,
+        "p90": 279,
+        "p95": 279,
+        "p99": 279,
+        "max": 279
+      },
+      "ttfbMs": {
+        "n": 5,
+        "min": 247.8,
+        "mean": 260.6,
+        "p50": 259.3,
+        "p90": 279,
+        "p95": 279,
+        "p99": 279,
+        "max": 279
+      },
+      "statuses": {
+        "200": 5
+      },
+      "expect": 200,
+      "ok": true
+    },
+    "health": {
+      "latencyMs": {
+        "n": 100,
+        "min": 1.1,
+        "mean": 14,
+        "p50": 15.5,
+        "p90": 17,
+        "p95": 17.3,
+        "p99": 17.9,
+        "max": 17.9
+      },
+      "ttfbMs": {
+        "n": 100,
+        "min": 1.1,
+        "mean": 13.9,
+        "p50": 15.5,
+        "p90": 17,
+        "p95": 17.3,
+        "p99": 17.8,
+        "max": 17.8
+      },
+      "statuses": {
+        "200": 100
+      },
+      "lastBytes": 117,
+      "expect": 200,
+      "ok": true
+    },
+    "projects-list": {
+      "latencyMs": {
+        "n": 100,
+        "min": 1.8,
+        "mean": 13.7,
+        "p50": 15.6,
+        "p90": 16.9,
+        "p95": 17.9,
+        "p99": 22.6,
+        "max": 22.6
+      },
+      "ttfbMs": {
+        "n": 100,
+        "min": 1.8,
+        "mean": 13.7,
+        "p50": 15.6,
+        "p90": 16.9,
+        "p95": 17.9,
+        "p99": 22.6,
+        "max": 22.6
+      },
+      "statuses": {
+        "200": 100
+      },
+      "lastBytes": 635,
+      "expect": 200,
+      "ok": true
+    },
+    "frames-list": {
+      "latencyMs": {
+        "n": 100,
+        "min": 5.3,
+        "mean": 15,
+        "p50": 15.2,
+        "p90": 22.6,
+        "p95": 25.4,
+        "p99": 33.4,
+        "max": 33.4
+      },
+      "ttfbMs": {
+        "n": 100,
+        "min": 5.3,
+        "mean": 15,
+        "p50": 15.2,
+        "p90": 22.5,
+        "p95": 25.3,
+        "p99": 33.3,
+        "max": 33.3
+      },
+      "statuses": {
+        "200": 100
+      },
+      "lastBytes": 337,
+      "expect": 200,
+      "ok": true
+    },
+    "schedule-preview": {
+      "latencyMs": {
+        "n": 60,
+        "min": 62.8,
+        "mean": 108.3,
+        "p50": 101.6,
+        "p90": 144.8,
+        "p95": 199.9,
+        "p99": 235.6,
+        "max": 235.6
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 62.1,
+        "mean": 107,
+        "p50": 99.7,
+        "p90": 142.5,
+        "p95": 196.8,
+        "p99": 234.2,
+        "max": 234.2
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 251131,
+      "expect": 200,
+      "ok": true
+    },
+    "drawing-meta": {
+      "latencyMs": {
+        "n": 60,
+        "min": 7.1,
+        "mean": 15.8,
+        "p50": 16.2,
+        "p90": 21.2,
+        "p95": 24.4,
+        "p99": 26.3,
+        "max": 26.3
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 7,
+        "mean": 15.7,
+        "p50": 16.2,
+        "p90": 21.1,
+        "p95": 24.3,
+        "p99": 26.2,
+        "max": 26.2
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 1010,
+      "expect": 200,
+      "ok": true
+    },
+    "drawing-file-pdf": {
+      "latencyMs": {
+        "n": 25,
+        "min": 85,
+        "mean": 118.2,
+        "p50": 115.5,
+        "p90": 166.2,
+        "p95": 177.5,
+        "p99": 191.6,
+        "max": 191.6
+      },
+      "ttfbMs": {
+        "n": 25,
+        "min": 21.5,
+        "mean": 33.8,
+        "p50": 31.4,
+        "p90": 44.4,
+        "p95": 56.5,
+        "p99": 75.9,
+        "max": 75.9
+      },
+      "statuses": {
+        "200": 25
+      },
+      "lastBytes": 14946980,
+      "expect": 200,
+      "ok": true
+    },
+    "report-pdf": {
+      "latencyMs": {
+        "n": 12,
+        "min": 55.8,
+        "mean": 79.1,
+        "p50": 76.7,
+        "p90": 97.5,
+        "p95": 112.7,
+        "p99": 112.7,
+        "max": 112.7
+      },
+      "ttfbMs": {
+        "n": 12,
+        "min": 55.6,
+        "mean": 78.9,
+        "p50": 76.5,
+        "p90": 97.2,
+        "p95": 112.5,
+        "p99": 112.5,
+        "max": 112.5
+      },
+      "statuses": {
+        "200": 12
+      },
+      "lastBytes": 66960,
+      "expect": 200,
+      "ok": true
+    },
+    "panel-report-xlsx": {
+      "latencyMs": {
+        "n": 12,
+        "min": 142.4,
+        "mean": 188.1,
+        "p50": 192.8,
+        "p90": 205.9,
+        "p95": 235,
+        "p99": 235,
+        "max": 235
+      },
+      "ttfbMs": {
+        "n": 12,
+        "min": 142.3,
+        "mean": 187.9,
+        "p50": 192.7,
+        "p90": 205.6,
+        "p95": 234.8,
+        "p99": 234.8,
+        "max": 234.8
+      },
+      "statuses": {
+        "200": 12
+      },
+      "lastBytes": 82027,
+      "expect": 200,
+      "ok": true
+    },
+    "supervisor-all-panels": {
+      "latencyMs": {
+        "n": 60,
+        "min": 7.3,
+        "mean": 18,
+        "p50": 16.2,
+        "p90": 25.9,
+        "p95": 33.3,
+        "p99": 47,
+        "max": 47
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 7.3,
+        "mean": 17.9,
+        "p50": 16.1,
+        "p90": 25.8,
+        "p95": 33.2,
+        "p99": 46.9,
+        "max": 46.9
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 3540,
+      "expect": 200,
+      "ok": true
+    },
+    "tech-my-panels": {
+      "latencyMs": {
+        "n": 60,
+        "min": 5.1,
+        "mean": 14.8,
+        "p50": 14.2,
+        "p90": 23.1,
+        "p95": 28.2,
+        "p99": 37.1,
+        "max": 37.1
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 5,
+        "mean": 14.8,
+        "p50": 14.1,
+        "p90": 22.9,
+        "p95": 28.1,
+        "p99": 36.9,
+        "max": 36.9
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 2,
+      "expect": 200,
+      "ok": true
+    },
+    "director-stats": {
+      "latencyMs": {
+        "n": 60,
+        "min": 5.6,
+        "mean": 15.5,
+        "p50": 15.4,
+        "p90": 24.5,
+        "p95": 26.6,
+        "p99": 39.2,
+        "max": 39.2
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 5.6,
+        "mean": 15.5,
+        "p50": 15.4,
+        "p90": 24.4,
+        "p95": 26.5,
+        "p99": 39.1,
+        "max": 39.1
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 443,
+      "expect": 200,
+      "ok": true
+    },
+    "director-projects": {
+      "latencyMs": {
+        "n": 60,
+        "min": 7.3,
+        "mean": 15.1,
+        "p50": 15.3,
+        "p90": 22.1,
+        "p95": 23.6,
+        "p99": 26.5,
+        "max": 26.5
+      },
+      "ttfbMs": {
+        "n": 60,
+        "min": 7.3,
+        "mean": 15.1,
+        "p50": 15.3,
+        "p90": 22,
+        "p95": 23.4,
+        "p99": 26.3,
+        "max": 26.3
+      },
+      "statuses": {
+        "200": 60
+      },
+      "lastBytes": 1180,
+      "expect": 200,
+      "ok": true
+    },
+    "sse-first-frame": {
+      "latencyMs": {
+        "n": 15,
+        "min": 3.5,
+        "mean": 5.4,
+        "p50": 4.9,
+        "p90": 7.5,
+        "p95": 10.3,
+        "p99": 10.3,
+        "max": 10.3
+      },
+      "ttfbMs": {
+        "n": 15,
+        "min": 3.5,
+        "mean": 5.4,
+        "p50": 4.9,
+        "p90": 7.5,
+        "p95": 10.3,
+        "p99": 10.3,
+        "max": 10.3
+      },
+      "statuses": {
+        "200": 15
+      },
+      "lastBytes": 0,
+      "expect": 200,
+      "ok": true
+    },
+    "upload-extract-meta-small": {
+      "latencyMs": {
+        "n": 20,
+        "min": 9.6,
+        "mean": 16.2,
+        "p50": 16.5,
+        "p90": 21.5,
+        "p95": 25.3,
+        "p99": 25.3,
+        "max": 25.3
+      },
+      "ttfbMs": {
+        "n": 20,
+        "min": 9.5,
+        "mean": 16.2,
+        "p50": 16.5,
+        "p90": 21.5,
+        "p95": 25.3,
+        "p99": 25.3,
+        "max": 25.3
+      },
+      "statuses": {
+        "201": 20
+      },
+      "lastBytes": 56,
+      "expect": 201,
+      "ok": true
+    },
+    "upload-extract-meta-large": {
+      "latencyMs": {
+        "n": 8,
+        "min": 112.7,
+        "mean": 129.9,
+        "p50": 132.7,
+        "p90": 142.1,
+        "p95": 142.1,
+        "p99": 142.1,
+        "max": 142.1
+      },
+      "ttfbMs": {
+        "n": 8,
+        "min": 112.7,
+        "mean": 129.8,
+        "p50": 132.7,
+        "p90": 142,
+        "p95": 142,
+        "p99": 142,
+        "max": 142
+      },
+      "statuses": {
+        "201": 8
+      },
+      "lastBytes": 56,
+      "expect": 201,
+      "ok": true
+    },
+    "upload-drawing-5mb": {
+      "latencyMs": {
+        "n": 5,
+        "min": 30.8,
+        "mean": 39.9,
+        "p50": 34.2,
+        "p90": 67.3,
+        "p95": 67.3,
+        "p99": 67.3,
+        "max": 67.3
+      },
+      "ttfbMs": {
+        "n": 5,
+        "min": 30.8,
+        "mean": 39.9,
+        "p50": 34.1,
+        "p90": 67.2,
+        "p95": 67.2,
+        "p99": 67.2,
+        "max": 67.2
+      },
+      "statuses": {
+        "201": 5
+      },
+      "lastBytes": 391,
+      "expect": 201,
+      "ok": true
+    },
+    "burst-projects": {
+      "latencyMs": {
+        "n": 50,
+        "min": 6.3,
+        "mean": 21.5,
+        "p50": 14.4,
+        "p90": 62,
+        "p95": 85.9,
+        "p99": 97.4,
+        "max": 97.4
+      },
+      "statuses": {
+        "200": 50
+      },
+      "concurrency": 10,
+      "rounds": 5
+    },
+    "burst-schedule": {
+      "latencyMs": {
+        "n": 50,
+        "min": 29.7,
+        "mean": 126.7,
+        "p50": 130.1,
+        "p90": 208.6,
+        "p95": 214.6,
+        "p99": 252.4,
+        "max": 252.4
+      },
+      "statuses": {
+        "200": 50
+      },
+      "concurrency": 10,
+      "rounds": 5
+    },
+    "burst-drawing-pdf": {
+      "latencyMs": {
+        "n": 15,
+        "min": 34.2,
+        "mean": 101.2,
+        "p50": 112.3,
+        "p90": 151.9,
+        "p95": 153,
+        "p99": 153,
+        "max": 153
+      },
+      "statuses": {
+        "200": 15
+      },
+      "concurrency": 5,
+      "rounds": 3
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "parts": [
+    {
+      "name": "panel_backplate:2F",
+      "kind": "panel_backplate",
+      "cx": 400.0,
+      "cy": 300.0,
+      "cz": 100.0,
+      "sx": 800.0,
+      "sy": 600.0,
+      "sz": 200.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "device_tag": null,
+      "authoritative": true,
+      "evidence": [
+        "largest_closed_polyline"
+      ]
+    },
+    {
+      "name": "mcb:=Q1+F1",
+      "kind": "mcb",
+      "cx": 100.0,
+      "cy": 150.0,
+      "cz": 37.5,
+      "sx": 80.0,
+      "sy": 80.0,
+      "sz": 75.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "CONFIRMED",
+      "source_handle": "3A",
+      "source_layer": "DEVICE",
+      "device_tag": "=Q1+F1",
+      "authoritative": true,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "name": "contactor:=Q2+K1",
+      "kind": "contactor",
+      "cx": 300.0,
+      "cy": 300.0,
+      "cz": 47.5,
+      "sx": 120.0,
+      "sy": 100.0,
+      "sz": 95.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "CONFIRMED",
+      "source_handle": "3D",
+      "source_layer": "DEVICE",
+      "device_tag": "=Q2+K1",
+      "authoritative": true,
+      "evidence": [
+        "block:CONTACTOR",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    }
+  ],
+  "rejected": [],
+  "warnings": [],
+  "authoritative_part_count": 3,
+  "suggested_part_count": 0,
+  "panel": {
+    "width": 800.0,
+    "height": 600.0,
+    "depth": 200.0,
+    "units": "mm"
+  }
+}

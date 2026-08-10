@@ -1,0 +1,42 @@
+{
+  "package_type": "dwes-operational-twin-fixture",
+  "mode": "GEOMETRY",
+  "project_code": "DEMO_GEOMETRY",
+  "frame_id": "PANEL-GEOMETRY-01",
+  "drawing": {
+    "kind": "dxf-structured",
+    "filename": "panel-tagged.dxf",
+    "revision": "B",
+    "note": "Conceptual fixture — Mode A parser disabled until licence approval; geometry arrives via published engineering package / panel_models."
+  },
+  "devices": [
+    { "tag": "K1", "x": 100, "y": 200, "terminals": ["A1", "A2"] },
+    { "tag": "XT1", "x": 400, "y": 200, "terminals": ["1", "2"] },
+    { "tag": "UNMATCHED_TAG", "x": 250, "y": 50, "terminals": ["1"], "expectUnplacedWhenNoScheduleMatch": true }
+  ],
+  "duct_polyline": [
+    { "x": 160, "y": 200 },
+    { "x": 340, "y": 200 }
+  ],
+  "cables": [
+    {
+      "sno": 1,
+      "source_device": "K1",
+      "source_terminal": "A1",
+      "dest_device": "XT1",
+      "dest_terminal": "1"
+    }
+  ],
+  "expect": {
+    "drawingMode": "GEOMETRY",
+    "confidentTagsPlaced": ["K1", "XT1"],
+    "unmatchedStayUnplaced": ["UNMATCHED_TAG"],
+    "noFabricatedPositions": true,
+    "classificationReflectsData": true
+  },
+  "cad_capability": {
+    "DWES_CAD_GEOMETRY_ENABLED": false,
+    "adapter": "DisabledCadGeometryAdapter",
+    "fallback": "SCHEMATIC Mode B until licensed parser approved"
+  }
+}

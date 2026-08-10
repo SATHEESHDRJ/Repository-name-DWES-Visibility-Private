@@ -1,0 +1,4 @@
+{
+  "description": "Duplicate tags: two INSERTs have TAG =Q1+F1",
+  "expected_duplicate_tag": "=Q1+F1"
+}

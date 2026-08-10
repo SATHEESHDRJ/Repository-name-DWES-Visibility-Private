@@ -1,0 +1,16 @@
+{
+  "projectCode": "DEMO",
+  "panelId": "DEMO-001",
+  "drawingNumber": "DEMO-DWG-01",
+  "drawingRevision": "R01",
+  "modelRevision": "M01",
+  "scheduleRevision": "S01",
+  "units": "inch",
+  "panelMetadataFile": "../panel-metadata.csv",
+  "deviceGeometryFile": "C:/device-geometry.csv",
+  "terminalGeometryFile": "terminal-geometry.exe",
+  "ductNodesFile": "duct-nodes.csv",
+  "ductSegmentsFile": "duct-segments.csv",
+  "cableRouteOverridesFile": "cable-route-overrides.csv",
+  "gltfFile": "model.gltf"
+}

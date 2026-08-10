@@ -1,0 +1,26 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "corrupted_dxf",
+  "drawing_revision": null,
+  "started_at": "2026-07-20T02:16:34.663122+00:00",
+  "stages": [
+    {
+      "stage": "INGEST",
+      "ok": true,
+      "detail": "source copied",
+      "checksum": "1e8596bbc8c9fefad8f8edc3105cb58691c789acd5406e09c0b7773e6d06944a",
+      "source_name": "drawing.dxf"
+    },
+    {
+      "stage": "DWG_TO_DXF",
+      "ok": true,
+      "detail": "skipped — input already DXF"
+    },
+    {
+      "stage": "DXF_PARSE",
+      "ok": false,
+      "detail": "File 'C:\\Users\\sathe\\OneDrive\\Desktop\\DWES\\scripts\\flat3d-conversion\\reports\\corrupted_dxf\\source.dxf' is not a DXF file."
+    }
+  ],
+  "status": "FAILED"
+}

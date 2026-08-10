@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "preserve_engineering_chars": ["=", "+", "-", ":", "/", "."],
+  "layer_hints": {
+    "DEVICE": "device",
+    "DEVICES": "device",
+    "EQUIPMENT": "device",
+    "TERMINAL": "terminal_block",
+    "TB": "terminal_block",
+    "DIN": "din_rail",
+    "RAIL": "din_rail",
+    "DUCT": "duct",
+    "TRUNKING": "duct",
+    "PANEL": "panel_envelope",
+    "ENCLOSURE": "panel_envelope"
+  },
+  "block_name_hints": {
+    "MCB": "mcb",
+    "MCCB": "mccb",
+    "CONTACTOR": "contactor",
+    "RELAY": "relay",
+    "TB": "terminal_block",
+    "TERMINAL": "terminal_block"
+  },
+  "confidence": {
+    "block_plus_schedule_tag": "CONFIRMED",
+    "block_plus_layer_hint": "HIGH_CONFIDENCE",
+    "closed_contour_plus_nearby_text": "REVIEW_REQUIRED",
+    "geometry_only": "UNRESOLVED"
+  }
+}

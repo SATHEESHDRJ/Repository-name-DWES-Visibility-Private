@@ -1,0 +1,22 @@
+{
+  "rules": [
+    { "id": "SEC-01", "name": "Path Traversal Rejection", "type": "security" },
+    { "id": "SEC-02", "name": "Absolute Path Rejection", "type": "security" },
+    { "id": "SEC-03", "name": "Symbolic Link Detection", "type": "security" },
+    { "id": "SEC-04", "name": "Control Character Detection", "type": "security" },
+    { "id": "SEC-05", "name": "Double Extension Detection", "type": "security" },
+    { "id": "SEC-06", "name": "Executable File Rejection", "type": "security" },
+    { "id": "SEC-07", "name": "Excessive Filename Length", "type": "security" },
+    { "id": "SEC-08", "name": "External Resource Detection (gltf)", "type": "security" },
+    { "id": "DATA-01", "name": "Project Consistency", "type": "integrity" },
+    { "id": "DATA-02", "name": "Panel Consistency", "type": "integrity" },
+    { "id": "DATA-03", "name": "Revision Consistency", "type": "integrity" },
+    { "id": "DATA-04", "name": "Unit Consistency", "type": "integrity" },
+    { "id": "DATA-05", "name": "Checksum Verification", "type": "integrity" },
+    { "id": "GEO-01", "name": "Disconnected Graph Detection", "type": "geometry" },
+    { "id": "GEO-02", "name": "Orphan Node Detection", "type": "geometry" },
+    { "id": "GEO-03", "name": "Duplicate Route Override Detection", "type": "geometry" },
+    { "id": "GEO-04", "name": "Invalid Ordered Duct Nodes", "type": "geometry" },
+    { "id": "APP-01", "name": "Approved Exact Route Approval Check", "type": "business" }
+  ]
+}

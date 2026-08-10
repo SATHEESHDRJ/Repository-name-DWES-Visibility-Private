@@ -1,0 +1,159 @@
+# DWES production stack — OCI Compute (me-dubai-1) / Docker Compose
+# Usage:
+#   cp infra/docker/.env.production.example infra/docker/.env
+#   docker compose -f infra/docker/docker-compose.yml --env-file infra/docker/.env up -d
+#
+# Persistent data on OCI block volume (cloud-init): /mnt/dwes-data
+
+name: dwes-production
+
+x-data-root: &data_root ${DATA_ROOT:-/mnt/dwes-data}
+
+# Bounded container logs so a crash-loop or verbose service can't fill the VM disk.
+# Overridable via LOG_MAX_SIZE / LOG_MAX_FILE. Ref: docs.docker.com/config/containers/logging/json-file/
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-5}
+
+services:
+  postgres:
+    # PostgreSQL 18 to match the source WiringSchemeDB dumps (v18.3) — a v18 dump cannot be
+    # restored into a v16 server. Verified end-to-end (restore + /api/health=db:connected).
+    # Per the official postgres image, 18+ stores data in a major-version subdirectory and the
+    # data volume must mount at /var/lib/postgresql (NOT /var/lib/postgresql/data); the old
+    # path makes 18+ refuse to start. Refs: docker-library/postgres PR #1259, issue #37.
+    image: postgres:18-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-WiringSchemeDB}
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/postgres:/var/lib/postgresql
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-WiringSchemeDB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    image: ${DWES_API_IMAGE:-dwes-api:local}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-WiringSchemeDB}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      UPLOAD_DIR: /app/uploads
+      TRUST_PROXY: "true"
+      RP_ID: ${RP_ID:?set RP_ID}
+      RP_ORIGIN: ${RP_ORIGIN:?set RP_ORIGIN}
+      RP_NAME: ${RP_NAME:-DWES}
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/uploads:/app/uploads
+      - ${DATA_ROOT:-/mnt/dwes-data}/auth:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nginx
+    image: ${DWES_NGINX_IMAGE:-dwes-nginx:local}
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/ssl/nginx:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
+      # Live nginx config from repo — reload without rebuilding the frontend image.
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../nginx/snippets:/etc/nginx/snippets:ro
+      - ../nginx/proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+      - public
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["certbot"]
+    restart: unless-stopped   # revive the 12h renew loop after reboot/crash (when the profile is run)
+    logging: *default-logging
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/ssl/letsencrypt:/etc/letsencrypt
+      - ${DATA_ROOT:-/mnt/dwes-data}/ssl/nginx:/nginx-out
+      - certbot_www:/var/www/certbot
+      - ./scripts/certbot-deploy-hook.sh:/etc/letsencrypt/renewal-hooks/deploy/copy-nginx.sh:ro
+    entrypoint: /bin/sh -c
+    command: >
+      "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h;
+      done"
+    environment:
+      DWES_DOMAIN: ${DWES_DOMAIN:-localhost}
+
+  backup:
+    # Must be >= the server version (18) so pg_dump can dump the postgres:18 server.
+    image: postgres:18-alpine
+    profiles: ["backup"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGDATABASE: ${POSTGRES_DB:-WiringSchemeDB}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_ROOT: /backups
+      OCI_BUCKET: ${OCI_BUCKET:-}
+      OCI_REGION: ${OCI_REGION:-me-dubai-1}
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/uploads:/uploads:ro
+      - ${DATA_ROOT:-/mnt/dwes-data}/backups:/backups
+      - ../oci/scripts/backup-oci.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    internal: true
+  public:
+
+volumes:
+  certbot_www:

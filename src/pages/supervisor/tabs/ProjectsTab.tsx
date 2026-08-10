@@ -1,0 +1,2249 @@
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
+import { projectsApi, supervisorApi } from '../../../services/api';
+import type { FramePanel } from '../../../components/assignment/ProjectPanelSelect';
+import type { Project, PanelActivityData } from '../../../types';
+import Modal from '../../../components/Modal';
+import { InputField, ComboField } from '../../../components/ui/TabletFields';
+import { useAppDialog } from '../../../components/AppDialogProvider';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { UploadFrameModal } from './FramesTab';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
+import { Pencil, Trash2, Plus, Building2, Tag, Zap, MapPin, Hash, FolderKanban, FileText, ChevronRight, LayoutGrid, Save, PanelTop, Flag, TriangleAlert } from '../../../components/ui/icons';
+import { DashboardIcon } from '../../../components/ui/DashboardIcon';
+import WorkspaceSectionHeading from '../../../components/ui/WorkspaceSectionHeading';
+import {
+  WorkspaceInfoMatrix,
+  WorkspaceInfoCell,
+  WorkspaceInfoMatrixSpan,
+} from '../../../components/ui/WorkspaceInfoMatrix';
+import ActionRow from '../../../components/ui/ActionRow';
+import { TeamManagementModal } from './UsersTab';
+import PanelWiringViewModal from '../../../components/supervisor/PanelWiringViewModal';
+import PanelGaDrawingModal from '../../../components/ui/PanelGaDrawingModal';
+import PanelDrawingUploadModal from '../../../components/supervisor/PanelDrawingUploadModal';
+import DuplicatePanelWarning from '../../../components/supervisor/DuplicatePanelWarning';
+import DeletePanelConfirmModal from '../../../components/supervisor/DeletePanelConfirmModal';
+import DocumentAvailabilityBadge from '../../../components/supervisor/DocumentAvailabilityBadge';
+import { useProjectPanelDocumentStatus } from '../../../hooks/useProjectPanelDocumentStatus';
+import Toast, { type ToastTone } from '../../../components/ui/Toast';
+import ButtonHintPopover from '../../../components/ui/ButtonHintPopover';
+import { buildProjectPanelSelectList, compactPanelKey } from '../../../utils/panelDuplicates';
+import { usePanelDuplicateGuard } from '../../../hooks/usePanelDuplicateGuard';
+import { emitFramesChanged, onFramesChanged } from '../../../utils/projectFramesEvents';
+import { emitDocumentsChanged, onDocumentsChanged } from '../../../utils/projectDocumentsEvents';
+import {
+  PROJECT_DELETE_CONFIRM_BUTTON,
+  PROJECT_DELETE_CONFIRM_LABEL,
+  PROJECT_DELETE_MODAL_TITLE,
+  PROJECT_DELETE_WARNING,
+} from '../../../constants/projectDeletion';
+import {
+  buildProjectFullName,
+  encodeProjectMeta,
+  decodeProjectMeta,
+  mergeProjectDescription,
+  projectSelectLabel,
+  resolveProjectCardDetails,
+  compactPanelDisplayName,
+} from '../../../utils/projectDisplay';
+import type { ProjectCardDetails } from '../../../utils/projectDisplay';
+import { useProjectSelectionStore } from '../../../store/useProjectSelectionStore';
+import { useAuthStore } from '../../../store/useAuthStore';
+import type { TechnicianWorkflowSection } from '../../../components/supervisor/TechnicianWorkflowModal';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { DwesLoadingCenter } from '../../../components/ui/DwesLoadingIndicator';
+import { onWorkflowChanged } from '../../../utils/dwesRefreshEvents';
+
+export interface ProjectsTabProps {
+  onOpenTechnicianWorkflow?: (opts: {
+    section?: TechnicianWorkflowSection;
+    projectCode: string;
+    panelId: string;
+    projectName: string;
+    panelName: string;
+    cableCount?: number;
+  }) => void;
+}
+
+const CLIENTS = ['DEWA', 'SEWA', 'ADDC', 'TRANSCO', 'ENOWA', 'HITACHI', 'ABB', 'SIEMENS', 'GE', 'SCHNEIDER', 'ALSTOM'];
+const VOLTAGES = ['400KV', '220KV', '132KV', '115KV', '69KV', '33KV', '13.8KV', '11KV', '6.6KV'];
+const REGIONS = ['UAE', 'KSA', 'QAT', 'KWT', 'OMN', 'BHR'];
+
+interface CreateForm {
+  displayName: string;
+  client: string;
+  location: string;
+  region: string;
+  projectNumbering: string;
+}
+
+const emptyForm: CreateForm = { displayName: '', client: '', location: '', region: '', projectNumbering: '' };
+
+interface PanelDraft {
+  key: string;
+  name: string;
+  panelType: string;
+  voltageLevel: string;
+  systemType: string;
+}
+
+
+
+function newPanelDraft(seed?: Partial<Omit<PanelDraft, 'key'>>): PanelDraft {
+  return {
+    key: `panel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: '',
+    panelType: '',
+    voltageLevel: '',
+    systemType: '',
+    ...seed,
+  };
+}
+
+function displayPanelMeta(value: string | null | undefined, fallback?: string): string {
+  const v = typeof value === 'string' ? value.trim() : '';
+  if (v) return v;
+  const fb = fallback?.trim();
+  if (fb) return fb;
+  return 'Not set';
+}
+
+function panelVoltageDisplay(panel: FramePanel, projectCode: string): string {
+  const legacyVoltage = projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1];
+  return displayPanelMeta(
+    panel.voltage_level as string | null | undefined,
+    legacyVoltage,
+  );
+}
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+  const raw = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+  if (Array.isArray(raw)) return raw.map(String).join('. ');
+  if (typeof raw === 'string' && raw.trim()) return raw;
+  return fallback;
+}
+
+function panelDraftToApiPayload(p: PanelDraft) {
+  return {
+    name: p.name.trim(),
+    ...(p.panelType.trim() ? { type: p.panelType.trim() } : {}),
+    voltage_level: p.voltageLevel.trim(),
+    ...(p.systemType.trim() ? { system_type: p.systemType.trim() } : {}),
+  };
+}
+
+
+
+export default function ProjectsTab({ onOpenTechnicianWorkflow }: ProjectsTabProps = {}) {
+  const dialog = useAppDialog();
+  const perms = usePermissions();
+  // Currently active project for this session (shown in the header pill) — used to
+  // visually emphasize its row in the list. Selecting a row makes it the active project.
+  const { user } = useAuthStore();
+  const sessionCode = useProjectSelectionStore(s => s.selectedProject?.code ?? null);
+  const setSessionProject = useProjectSelectionStore(s => s.setProjectForUser);
+  const clearSessionProject = useProjectSelectionStore(s => s.clearProjectForUser);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState<Project | null>(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedPanelId, setSelectedPanelId] = useState('');
+  const [projectPanels, setProjectPanels] = useState<FramePanel[]>([]);
+  const [loadingPanels, setLoadingPanels] = useState(false);
+  const [panelActivity, setPanelActivity] = useState<PanelActivityData | null>(null);
+  const [panelActivityLoading, setPanelActivityLoading] = useState(false);
+  const [panelActivityError, setPanelActivityError] = useState('');
+  const [showWiringUpload, setShowWiringUpload] = useState(false);
+  const [wiringUploadReplacing, setWiringUploadReplacing] = useState(false);
+  const [packageExcelFile, setPackageExcelFile] = useState<File | null>(null);
+  const [showWiringView, setShowWiringView] = useState(false);
+  const [showDrawingUpload, setShowDrawingUpload] = useState(false);
+  const [showGaDrawingView, setShowGaDrawingView] = useState(false);
+  const [showManagement, setShowManagement] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const [gaUploadHint, setGaUploadHint] = useState<string | null>(null);
+  const gaUploadBtnRef = useRef<HTMLButtonElement>(null);
+  const [showTeam, setShowTeam] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState<FramePanel | null>(null);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [deletingPanelId, setDeletingPanelId] = useState<string | null>(null);
+  const [deletePanelTarget, setDeletePanelTarget] = useState<FramePanel | null>(null);
+  const [deleteProjectTarget, setDeleteProjectTarget] = useState<Project | null>(null);
+  const [deleteProjectConfirmed, setDeleteProjectConfirmed] = useState(false);
+  const [duplicateBannerDismissed, setDuplicateBannerDismissed] = useState(false);
+  const createModalScrollRef = useRef<HTMLFormElement>(null);
+  const [form, setForm] = useState<CreateForm>(emptyForm);
+  // Panels are added deliberately through the Add Panel overlay — never pre-seeded.
+  const [panels, setPanels] = useState<PanelDraft[]>([]);
+  const [panelDraft, setPanelDraft] = useState<PanelDraft | null>(null);
+  const [numberingCheck, setNumberingCheck] = useState<{ code: string; available: boolean; reason?: string } | null>(null);
+  const projectRequests = useLatestRequest();
+  const panelRequests = useLatestRequest();
+  const activityRequests = useLatestRequest();
+  const numberingRequests = useLatestRequest();
+
+  const resetCreateForm = useCallback(() => {
+    setForm(emptyForm);
+    setPanels([]);
+    setPanelDraft(null);
+    setNumberingCheck(null);
+    setSubmitted(false);
+    setError('');
+  }, []);
+
+  const closeCreateModal = useCallback(() => {
+    if (saving) return;
+    setShowCreate(false);
+    resetCreateForm();
+  }, [saving, resetCreateForm]);
+
+  /**
+   * A silent refresh (server event, fallback poll, tab focus) swaps the project list in
+   * place: no spinner, no blanked list, and the selected project/panel is kept. Only an
+   * explicit load shows the loading state and resets the selection.
+   */
+  const load = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    const request = projectRequests.begin();
+    if (!silent && projects.length === 0) {
+      panelRequests.cancel();
+      setLoading(true);
+    }
+    try {
+      const data = await projectsApi.list(request.signal) as Project[];
+      if (!projectRequests.isLatest(request.id)) return;
+      setProjects(data);
+    } catch (requestError: any) {
+      // A failed refresh keeps the last good data on screen.
+      if (!silent && projects.length === 0 && requestError?.code !== 'ERR_CANCELED' && projectRequests.isLatest(request.id)) {
+        setProjects([]);
+      }
+      return;
+    } finally {
+      if (projectRequests.isLatest(request.id)) setLoading(false);
+    }
+  }, [panelRequests, projectRequests, projects.length]);
+
+  const reloadProjectPanels = useCallback((projectCode: string, options?: { silent?: boolean }) => {
+    const request = panelRequests.begin();
+    if (!options?.silent) setLoadingPanels(true);
+    return projectsApi.frames(projectCode, request.signal)
+      .then(data => {
+        if (!panelRequests.isLatest(request.id)) return;
+        const list = data as FramePanel[];
+        setProjectPanels(list);
+        setSelectedPanelId(prev => {
+          if (prev && list.some(p => p.id === prev)) return prev;
+          return list[0]?.id ?? '';
+        });
+      })
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !panelRequests.isLatest(request.id)) return;
+        setProjectPanels([]);
+        setSelectedPanelId('');
+      })
+      .finally(() => {
+        if (!options?.silent && panelRequests.isLatest(request.id)) setLoadingPanels(false);
+      });
+  }, [panelRequests]);
+
+  const reloadPanelActivity = useCallback((projectCode: string, frameId: string, options?: { silent?: boolean }) => {
+    const request = activityRequests.begin();
+    if (!options?.silent) setPanelActivityLoading(true);
+    setPanelActivityError('');
+    return supervisorApi.panelActivity(projectCode, frameId, request.signal)
+      .then(data => {
+        if (!activityRequests.isLatest(request.id)) return;
+        setPanelActivity(data as PanelActivityData);
+      })
+      .catch((requestError: any) => {
+        if (requestError?.code === 'ERR_CANCELED' || !activityRequests.isLatest(request.id)) return;
+        setPanelActivity(null);
+        setPanelActivityError('Technician activity could not be loaded.');
+      })
+      .finally(() => {
+        if (!options?.silent && activityRequests.isLatest(request.id)) setPanelActivityLoading(false);
+      });
+  }, [activityRequests]);
+
+  useEffect(() => { void load(); }, [load]);
+  useDwesRefresh(load);
+
+  useEffect(() => {
+    if (!selectedProject?.code || !selectedPanelId) {
+      activityRequests.cancel();
+      setPanelActivity(null);
+      setPanelActivityLoading(false);
+      setPanelActivityError('');
+      return;
+    }
+    const projectCode = selectedProject.code;
+    const frameId = selectedPanelId;
+    void reloadPanelActivity(projectCode, frameId);
+    const refreshTimer = window.setInterval(() => {
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    }, 12_000);
+    const unsubscribe = onWorkflowChanged(detail => {
+      if (detail.projectCode && detail.projectCode !== projectCode) return;
+      if (detail.frameId && detail.frameId !== frameId) return;
+      void reloadPanelActivity(projectCode, frameId, { silent: true });
+    });
+    return () => {
+      window.clearInterval(refreshTimer);
+      unsubscribe();
+      activityRequests.cancel();
+    };
+  }, [activityRequests, reloadPanelActivity, selectedPanelId, selectedProject?.code]);
+
+
+  useEffect(() => {
+    setDuplicateBannerDismissed(false);
+    setShowManagement(false);
+  }, [selectedProject?.code, selectedPanelId]);
+
+  useEffect(() => onFramesChanged((detail) => {
+    if (detail.action === 'deleted') {
+      projectRequests.cancel();
+      panelRequests.cancel();
+    }
+    if (detail.action === 'deleted' && (detail.entity ?? (detail.frameId ? 'panel' : 'project')) === 'project') {
+      setProjects(current => current.filter(project => project.code !== detail.projectCode));
+      if (selectedProject?.code === detail.projectCode) {
+        setSelectedProject(null);
+        setProjectPanels([]);
+        setSelectedPanelId('');
+        if (user?.id) clearSessionProject(user.id);
+      }
+    }
+    if (selectedProject?.code && detail.projectCode === selectedProject.code) {
+      setDuplicateBannerDismissed(false);
+      if (detail.action === 'deleted' && detail.frameId) {
+        setProjectPanels(current => current.filter(panel => panel.id !== detail.frameId));
+        setSelectedPanelId(current => current === detail.frameId ? '' : current);
+        setShowWiringView(false);
+        setShowDrawingUpload(false);
+        setShowGaDrawingView(false);
+      } else if (detail.action !== 'deleted') {
+        // A panel added or edited elsewhere (another supervisor, another device) must
+        // appear here without a reload — swap the panel list in place, keeping selection.
+        void reloadProjectPanels(selectedProject.code, { silent: true });
+      }
+    }
+  }), [clearSessionProject, panelRequests, projectRequests, reloadProjectPanels, selectedProject?.code, user?.id]);
+
+  useEffect(() => {
+    if (!selectedProject?.code) return;
+    return onDocumentsChanged((detail) => {
+      if (detail.projectCode !== selectedProject.code) return;
+      if (detail.kind === 'drawing' && detail.action === 'deleted') {
+        setShowDrawingUpload(false);
+        setShowGaDrawingView(false);
+      }
+      if (detail.kind === 'wiring' || detail.kind === 'both') {
+        void reloadProjectPanels(selectedProject.code, { silent: true });
+      }
+    });
+  }, [selectedProject?.code, reloadProjectPanels]);
+
+  const handleDismissDuplicateWarning = useCallback(() => {
+    setDuplicateBannerDismissed(true);
+    if (selectedProject?.code) {
+      void reloadProjectPanels(selectedProject.code, { silent: true });
+    }
+  }, [selectedProject?.code, reloadProjectPanels]);
+
+  useEffect(() => {
+    if (loading) return;
+    const current = selectedProject
+      ? projects.find((project: Project) => project.code === selectedProject.code)
+      : null;
+    const sessionMatch = sessionCode
+      ? projects.find((project: Project) => project.code === sessionCode)
+      : null;
+    const match = current ?? sessionMatch ?? projects[0] ?? null;
+    if (!match) {
+      if (selectedProject) setSelectedProject(null);
+      if (user?.id) clearSessionProject(user.id);
+      return;
+    }
+    // Same project, fresh object from a silent refetch: adopt the new metadata in place.
+    // Resetting the panel list here would blank the dropdown and drop the user's panel.
+    if (selectedProject?.code === match.code) {
+      if (selectedProject !== match) setSelectedProject(match);
+      return;
+    }
+    setLoadingPanels(true);
+    setProjectPanels([]);
+    setSelectedPanelId('');
+    setSelectedProject(match);
+    if (user?.id) {
+      setSessionProject({
+        code: match.code,
+        name: match.name,
+        client: match.client,
+        project_state: match.project_state,
+        is_active: match.is_active,
+      }, user.id);
+    }
+  }, [clearSessionProject, loading, projects, selectedProject, sessionCode, setSessionProject, user?.id]);
+
+  useEffect(() => {
+    if (!selectedProject?.code) {
+      setProjectPanels([]);
+      setSelectedPanelId('');
+      setLoadingPanels(false);
+      return;
+    }
+    void reloadProjectPanels(selectedProject.code);
+  }, [selectedProject?.code, reloadProjectPanels]);
+
+  const activePanelOptions = useMemo(
+    () => buildProjectPanelSelectList(projectPanels),
+    [projectPanels],
+  );
+
+  useEffect(() => {
+    if (!selectedPanelId || projectPanels.length === 0) return;
+    if (projectPanels.some(p => p.id === selectedPanelId)) return;
+    setSelectedPanelId('');
+  }, [selectedPanelId, projectPanels]);
+
+  // Panel voltage is normalized only for required-field validation.
+  const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  // The supervisor-entered Project Numbering is the stable project identifier. DWES
+  // no longer synthesizes a second voltage/location/year code behind the user's input.
+  const projectNumbering = form.projectNumbering.trim().toUpperCase();
+  const projectNumberingFormatValid = /^[A-Z0-9][A-Z0-9._-]*$/.test(projectNumbering);
+  const panelsValid = panels.length > 0 && panels.every(p => !!p.name.trim() && !!norm(p.voltageLevel));
+  // Project details must be valid before any panel can be added (project-first workflow).
+  const projectDetailsReady = !!form.displayName.trim() && !!form.client.trim();
+  const numberingTaken = numberingCheck?.code === projectNumbering && !numberingCheck.available;
+  const projectFieldsComplete = projectDetailsReady
+    && !!form.location.trim()
+    && !!form.region.trim()
+    && projectNumberingFormatValid;
+  const canCreate = projectFieldsComplete && panelsValid && !numberingTaken;
+
+  const generatedName = projectFieldsComplete
+    ? buildProjectFullName(
+        form.displayName,
+        form.client,
+        form.location,
+        form.region,
+        projectNumbering,
+      )
+    : '';
+
+  // Per-field validation errors — only shown after first submit attempt
+  const fe = submitted ? {
+    displayName: !form.displayName.trim() ? 'Required' : '',
+    client: !form.client.trim() ? 'Required' : '',
+    location: !form.location.trim() ? 'Required' : '',
+    region: !form.region.trim() ? 'Required' : '',
+    projectNumbering: !projectNumbering
+      ? 'Required'
+      : !projectNumberingFormatValid
+        ? 'Use letters, numbers, periods, hyphens, or underscores only'
+      : numberingTaken
+        ? numberingCheck?.reason ?? 'This project numbering is already used'
+        : '',
+    panels: panels.length === 0 ? 'Add at least one panel' : '',
+  } : {
+    displayName: '', client: '', location: '', region: '',
+    projectNumbering: numberingTaken ? numberingCheck?.reason ?? 'This project numbering is already used' : '',
+    panels: '',
+  };
+
+  const validationHint = submitted && !canCreate
+    ? (() => {
+        const missing: string[] = [];
+        if (!form.displayName.trim()) missing.push('project / substation name');
+        if (!form.client.trim()) missing.push('client');
+        if (panels.length === 0) missing.push('at least one panel');
+        if (!form.location.trim()) missing.push('location');
+        if (!form.region.trim()) missing.push('region');
+        if (!projectNumbering) missing.push('project numbering');
+        else if (!projectNumberingFormatValid) missing.push('a valid project numbering');
+        if (numberingTaken) missing.push('a unique project numbering');
+        return missing.length
+          ? `Complete required fields: ${missing.join(', ')}.`
+          : 'Complete all required fields before creating.';
+      })()
+    : '';
+
+  // Project numbering must be unique across existing projects (deleted numbering
+  // becomes available again after permanent deletion).
+  // The backend stays authoritative on create; this only surfaces the clash early.
+  useEffect(() => {
+    if (!showCreate || !projectNumberingFormatValid) {
+      setNumberingCheck(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const request = numberingRequests.begin();
+      try {
+        const result = await projectsApi.codeAvailable(projectNumbering, request.signal);
+        if (numberingRequests.isLatest(request.id)) setNumberingCheck(result);
+      } catch {
+        if (numberingRequests.isLatest(request.id)) setNumberingCheck(null);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [showCreate, projectNumbering, projectNumberingFormatValid, numberingRequests]);
+
+  const openCreateModal = () => {
+    resetCreateForm();
+    setShowCreate(true);
+  };
+
+  /** Open the Add Panel overlay — new draft, or an existing pending panel for editing. */
+  const openPanelOverlay = (existing?: PanelDraft) => {
+    setPanelDraft(existing ?? newPanelDraft({ voltageLevel: panels[0]?.voltageLevel ?? '' }));
+  };
+
+  /** Confirm the overlay: replaces the pending panel when editing, appends when new. */
+  const commitPanelDraft = (draft: PanelDraft) => {
+    setPanels(prev => prev.some(p => p.key === draft.key)
+      ? prev.map(p => (p.key === draft.key ? draft : p))
+      : [...prev, draft]);
+    setPanelDraft(null);
+  };
+
+  // Removing a pending panel only affects this unsaved form — never a saved project.
+  const removePendingPanel = (key: string) => setPanels(prev => prev.filter(p => p.key !== key));
+
+  const handleProjectDropdownChange = (code: string) => {
+    if (!code) {
+      setSelectedProject(null);
+      setSelectedPanelId('');
+      setProjectPanels([]);
+      setLoadingPanels(false);
+      return;
+    }
+    if (selectedProject?.code === code) return;
+    const project = projects.find(p => p.code === code);
+    if (!project) return;
+    setLoadingPanels(true);
+    setProjectPanels([]);
+    setSelectedProject(project);
+    setSelectedPanelId('');
+    if (user?.id) {
+      setSessionProject({
+        code: project.code,
+        name: project.name,
+        client: project.client,
+        project_state: project.project_state,
+        is_active: project.is_active,
+      }, user.id);
+    }
+  };
+
+
+  const handleCreate = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    setSubmitted(true);
+    setError('');
+    if (!canCreate) {
+      const body = createModalScrollRef.current?.closest('.modal-body');
+      (body ?? createModalScrollRef.current)?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await projectsApi.create({
+        code: projectNumbering,
+        client: form.client.trim(),
+        name: generatedName,
+        description: encodeProjectMeta({
+          substationName: form.displayName.trim(),
+          location: form.location.trim(),
+          region: form.region.trim(),
+          locationRegion: `${form.location.trim()} / ${form.region.trim()}`,
+          projectNumbering,
+        }),
+        panels: panels.map(panelDraftToApiPayload),
+      });
+      setProjects(prev => [...prev, created]);
+      emitFramesChanged({ projectCode: created.code, action: 'created' });
+      setSelectedProject(created);
+      setSelectedPanelId('');
+      setLoadingPanels(true);
+      setProjectPanels([]);
+      if (user?.id) {
+        setSessionProject({
+          code: created.code,
+          name: created.name,
+          client: created.client,
+          project_state: created.project_state,
+          is_active: created.is_active,
+        }, user.id);
+      }
+      setShowCreate(false);
+      resetCreateForm();
+      setToast({ message: `Project "${created.name}" created.`, tone: 'success' });
+    } catch (apiError: unknown) {
+      if ((apiError as { response?: { status?: number } })?.response?.status === 409) {
+        const reason = apiErrorMessage(apiError, 'This project numbering is already in use. Enter a unique project numbering.');
+        setNumberingCheck({ code: projectNumbering, available: false, reason });
+        setError(reason);
+      } else {
+        setError(apiErrorMessage(apiError, 'Failed to create project. Check your connection and try again.'));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Edit saved: update the row in place (no refetch / no spinner flicker)
+  const handleEditSaved = (updated: Project) => {
+    setProjects(prev => prev.map(p => (p.code === updated.code ? updated : p)));
+  };
+
+  const handleDelete = (project: Project) => {
+    setDeleteProjectTarget(project);
+    setDeleteProjectConfirmed(false);
+  };
+
+  const handlePermanentDeleteConfirm = async () => {
+    if (!deleteProjectTarget || !deleteProjectConfirmed) return;
+    const project = deleteProjectTarget;
+    setDeleting(true);
+    try {
+      await projectsApi.remove(project.code);
+      const remaining = projects.filter(item => item.code !== project.code);
+      const nextProject = remaining[0] ?? null;
+      setProjects(remaining);
+      emitFramesChanged({ projectCode: project.code, entity: 'project', action: 'deleted' });
+      if (selectedProject?.code === project.code) {
+        setSelectedProject(nextProject);
+        setSelectedPanelId('');
+        setProjectPanels([]);
+        if (user?.id) {
+          if (nextProject) {
+            setSessionProject({
+              code: nextProject.code,
+              name: nextProject.name,
+              client: nextProject.client,
+              project_state: nextProject.project_state,
+              is_active: nextProject.is_active,
+            }, user.id);
+          } else {
+            clearSessionProject(user.id);
+          }
+        }
+      }
+      await load({ silent: true });
+      setDeleteProjectTarget(null);
+      setDeleteProjectConfirmed(false);
+      setToast({ message: 'Project permanently deleted.', tone: 'success' });
+    } catch (e: any) {
+      await dialog.alert({
+        title: 'Delete Failed',
+        message: e?.response?.data?.message || 'Could not permanently delete project. Please try again.',
+        tone: 'error',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeletePanel = (panel: FramePanel) => {
+    if (!selectedProject) return;
+    setDeletingPanelId(panel.id);
+    setDeletePanelTarget(panel);
+  };
+
+  const handlePanelDeleted = async (panelId: string) => {
+    if (!selectedProject) return;
+    const panel = projectPanels.find(p => p.id === panelId);
+    const remainingPanels = projectPanels.filter(item => item.id !== panelId);
+    setProjectPanels(remainingPanels);
+    setSelectedPanelId(prev => (prev === panelId ? (remainingPanels[0]?.id ?? '') : prev));
+    setShowWiringView(false);
+    setShowDrawingUpload(false);
+    setShowGaDrawingView(false);
+    emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, entity: 'panel', action: 'deleted' });
+    await reloadProjectPanels(selectedProject.code, { silent: true });
+    closeDeletePanelModal();
+    setToast({
+      message: panel ? `Panel "${panel.panel_name}" deleted.` : 'Panel deleted.',
+      tone: 'success',
+    });
+  };
+
+  const closeDeletePanelModal = () => {
+    setDeletePanelTarget(null);
+    setDeletingPanelId(null);
+  };
+
+  const selectedPanel = projectPanels.find(p => p.id === selectedPanelId)
+    ?? activePanelOptions.find(p => p.id === selectedPanelId);
+  const {
+    drawing: drawingDoc,
+    wiring: wiringDoc,
+    refresh,
+  } = useProjectPanelDocumentStatus(selectedProject?.code, selectedPanelId || undefined);
+  const drawingReady = drawingDoc.availability === 'available' && !!drawingDoc.drawing;
+  const drawingLoading = drawingDoc.availability === 'loading';
+  const wiringReady = wiringDoc.availability === 'available';
+  const wiringLoading = wiringDoc.availability === 'loading';
+  const projectDetails = selectedProject ? resolveProjectCardDetails(selectedProject) : null;
+  const {
+    duplicateKeys,
+    blocked: duplicateBlocked,
+    actionGated,
+  } = usePanelDuplicateGuard(
+    projectPanels,
+    selectedPanelId,
+    selectedPanel?.panel_name,
+    duplicateBannerDismissed,
+  );
+  const gateHint = loading
+    ? 'Loading projects from the database…'
+    : !selectedProject
+    ? 'Select a project and panel to enable wiring upload, GA upload, and reports.'
+    : loadingPanels
+      ? 'Loading panels for this project…'
+      : projectPanels.length === 0
+        ? 'No Panels Available — add a panel when creating or editing the project.'
+        : !selectedPanelId
+          ? 'Select a panel to enable wiring upload, GA upload, and reports.'
+          : duplicateBlocked && !duplicateBannerDismissed
+            ? 'Resolve duplicate panel names before wiring upload, GA upload, reports, or workflow.'
+            : '';
+
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+      <div className="pj-scope-band">
+      <div className="pj-project-select-row">
+        <div className="pj-project-select-field">
+          <label htmlFor="pj-active-project" className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Active project
+          </label>
+          <select
+            id="pj-active-project"
+            className="pj-project-select"
+            value={selectedProject?.code ?? ''}
+            onChange={e => handleProjectDropdownChange(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">{loading ? 'Loading projects…' : projects.length === 0 ? 'No Project Available' : 'Select a project…'}</option>
+            {projects.map(p => (
+              <option key={p.code} value={p.code}>
+                {projectSelectLabel(p)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="pj-project-select-field">
+          <label htmlFor="pj-active-panel" className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Active panel
+          </label>
+          <select
+            id="pj-active-panel"
+            className="pj-panel-select"
+            value={selectedPanelId}
+            onChange={e => setSelectedPanelId(e.target.value)}
+            disabled={!selectedProject || loadingPanels || activePanelOptions.length === 0}
+            aria-busy={loadingPanels}
+          >
+            <option value="">
+              {loadingPanels ? 'Loading panels…' : activePanelOptions.length === 0 ? 'No Panels Available' : 'Select a panel…'}
+            </option>
+            {activePanelOptions.map(panel => (
+              <option key={panel.id} value={panel.id}>
+                {compactPanelDisplayName(panel.panel_name)}
+              </option>
+            ))}
+          </select>
+        </div>
+        {gateHint && (
+          <p className="pj-action-hint">{gateHint}</p>
+        )}
+      </div>
+
+      <section className="pj-actions-toolbar" aria-label="Project actions">
+        <ActionRow aria-label="Project action buttons" className="pj-actions-grid">
+          {perms.canManageProjects && (
+            <button type="button" className="pj-btn-primary pj-action-btn" onClick={openCreateModal}>
+              <span className="pj-action-btn__icon" aria-hidden="true">
+                <DashboardIcon name="add" size={18} />
+              </span>
+              <span className="pj-action-btn__label">New Project</span>
+            </button>
+          )}
+
+          {perms.canManageProjects && (
+            <button
+              type="button"
+              className="pj-btn-primary pj-action-btn"
+              onClick={() => {
+                setDuplicateBannerDismissed(false);
+                setWiringUploadReplacing(false);
+                setShowWiringUpload(true);
+              }}
+              disabled={!actionGated}
+              title={actionGated ? `Wiring schedule for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+            >
+              <span className="pj-action-btn__icon" aria-hidden="true">
+                <DashboardIcon name="notes" size={18} />
+              </span>
+              <span className="pj-action-btn__label">Wiring Upload</span>
+            </button>
+          )}
+
+          {perms.canManageProjects && onOpenTechnicianWorkflow && (
+            <button
+              type="button"
+              className="pj-btn-primary pj-action-btn"
+              onClick={() => onOpenTechnicianWorkflow({
+                section: 'assign',
+                projectCode: selectedProject!.code,
+                panelId: selectedPanelId,
+                projectName: selectedProject!.name,
+                panelName: selectedPanel!.panel_name,
+                cableCount: selectedPanel!.cable_count,
+              })}
+              disabled={!actionGated}
+              title={actionGated ? `Workflow for ${selectedPanel!.panel_name}` : gateHint || 'Select a project and panel first'}
+            >
+              <span className="pj-action-btn__icon" aria-hidden="true">
+                <DashboardIcon name="target" size={18} />
+              </span>
+              <span className="pj-action-btn__label">Workflow</span>
+            </button>
+          )}
+
+          {perms.canManageProjects && (
+            <button
+              ref={gaUploadBtnRef}
+              type="button"
+              className="pj-btn-primary pj-action-btn"
+              onClick={() => {
+                if (!selectedProject || !selectedPanelId || !selectedPanel) {
+                  setGaUploadHint('Select a project and an active panel before opening GA Upload.');
+                  return;
+                }
+                if (!actionGated) {
+                  setGaUploadHint(gateHint || 'Resolve duplicate panel names before uploading a GA Drawing.');
+                  return;
+                }
+                setGaUploadHint(null);
+                setDuplicateBannerDismissed(false);
+                setShowDrawingUpload(true);
+              }}
+              title={
+                actionGated
+                  ? `Upload GA Drawing for ${selectedPanel!.panel_name}`
+                  : gateHint || 'Select a project and panel first'
+              }
+            >
+              <span className="pj-action-btn__icon" aria-hidden="true">
+                <DashboardIcon name="drawing" size={18} />
+              </span>
+              <span className="pj-action-btn__label">GA Upload</span>
+            </button>
+          )}
+
+          {/* Reports deliberately live in the Status section: which report a panel
+              warrants depends on its production state, which Status is the view for. */}
+
+          {perms.canManageTeamTechnicians && (
+            <button type="button" className="pj-btn-primary pj-action-btn" onClick={() => setShowTeam(true)}>
+              <span className="pj-action-btn__icon" aria-hidden="true">
+                <DashboardIcon name="users" size={18} />
+              </span>
+              <span className="pj-action-btn__label">Users</span>
+            </button>
+          )}
+        </ActionRow>
+      </section>
+      </div>
+
+      {selectedProject && duplicateKeys.size > 0 && !duplicateBannerDismissed && (
+        <DuplicatePanelWarning
+          panels={projectPanels}
+          selectedPanelId={selectedPanelId}
+          onDismiss={handleDismissDuplicateWarning}
+          onEditPanel={panelId => {
+            const panel = projectPanels.find(p => p.id === panelId);
+            if (panel) setShowEditPanel(panel);
+          }}
+          onSelectPanel={setSelectedPanelId}
+        />
+      )}
+
+      {selectedProject && projectDetails && (
+        <section className="pj-project-info-card" aria-label="Project and panel information">
+          <WorkspaceSectionHeading
+            title="Project Information"
+            icon={<DashboardIcon name="projects" size={16} />}
+            actions={sessionCode === selectedProject.code ? (
+              <span className="pj-selected-badge">Active</span>
+            ) : undefined}
+          />
+
+          {perms.canManageProjects && (
+            <div className="pj-project-info-card-header">
+              <div className="pj-project-info-card-actions-wrap">
+                <div className="pj-doc-status-row" aria-label="Document availability">
+                  <DocumentAvailabilityBadge label="GA Drawing" status={drawingDoc} />
+                  <DocumentAvailabilityBadge label="Wiring Schedule" status={wiringDoc} />
+                </div>
+                <ActionRow className="pj-project-info-card-actions" aria-label="Project information actions">
+                  <button
+                    type="button"
+                    className="pj-info-action pj-info-action--secondary"
+                    onClick={() => setShowAddPanel(true)}
+                    title="Add a new panel to this project"
+                  >
+                    <span className="pj-action-btn__icon" aria-hidden="true">
+                      <DashboardIcon name="add" size={18} />
+                    </span>
+                    <span className="pj-action-btn__label">Add Panel</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`pj-info-action pj-info-action--wiring${wiringLoading ? ' btn--loading' : ''}${!wiringReady && !wiringLoading ? ' pj-info-action--unavailable' : ''}`}
+                    onClick={() => {
+                      if (wiringDoc.availability === 'error') {
+                        setToast({ message: wiringDoc.message ?? 'Failed to open wiring schedule.', tone: 'warn' });
+                        return;
+                      }
+                      if (wiringReady) setShowWiringView(true);
+                    }}
+                    disabled={!wiringReady || wiringLoading}
+                    aria-busy={wiringLoading || undefined}
+                    title={
+                      wiringLoading
+                        ? 'Checking wiring schedule…'
+                        : wiringDoc.availability === 'error'
+                          ? wiringDoc.message ?? 'Wiring schedule check failed'
+                          : wiringDoc.availability === 'missing' && wiringDoc.message === 'Select a panel first'
+                            ? 'Select a panel first'
+                            : !wiringReady
+                              ? 'No Wiring Schedule Uploaded'
+                              : `Open Digital Wiring View for ${selectedPanel?.panel_name ?? 'panel'} (read-only)`
+                    }
+                  >
+                    <span className="pj-action-btn__icon" aria-hidden="true">
+                      {wiringLoading ? <span className="btn-spinner" /> : <DashboardIcon name="digital_wiring" size={18} />}
+                    </span>
+                    <span className="pj-action-btn__label">Digital Wiring View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`pj-info-action pj-info-action--drawing${drawingLoading ? ' btn--loading' : ''}`}
+                    onClick={() => {
+                      if (drawingDoc.availability === 'error') {
+                        setToast({ message: drawingDoc.message ?? 'Failed to open GA Drawing.', tone: 'warn' });
+                        return;
+                      }
+                      setShowGaDrawingView(true);
+                    }}
+                    disabled={!selectedPanel || drawingLoading}
+                    aria-busy={drawingLoading || undefined}
+                    title={
+                      drawingLoading
+                        ? 'Checking GA drawings…'
+                        : !selectedPanel
+                          ? 'Select a panel first'
+                          : drawingReady
+                            ? `GA Drawing for ${selectedPanel.panel_name}`
+                            : `Upload or view GA Drawing for ${selectedPanel.panel_name}`
+                    }
+                  >
+                    <span className="pj-action-btn__icon" aria-hidden="true">
+                      {drawingLoading ? <span className="btn-spinner" /> : <DashboardIcon name="drawing" size={18} />}
+                    </span>
+                    <span className="pj-action-btn__label">GA View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="pj-info-action pj-info-action--edit"
+                    onClick={() => setShowManagement(true)}
+                    disabled={deleting || deletingPanelId !== null}
+                    aria-haspopup="dialog"
+                    title="Manage project and panel information"
+                  >
+                    <span className="pj-action-btn__icon" aria-hidden="true">
+                      {(deleting || deletingPanelId !== null)
+                        ? <span className="btn-spinner" />
+                        : <DashboardIcon name="edit" size={18} />}
+                    </span>
+                    <span className="pj-action-btn__label">Edit</span>
+                  </button>
+                </ActionRow>
+              </div>
+            </div>
+          )}
+
+          <ProjectPanelOverview
+            project={selectedProject}
+            projectDetails={projectDetails}
+            projectPanels={projectPanels}
+            loadingPanels={loadingPanels}
+            selectedPanel={selectedPanel ?? null}
+            panelActivity={panelActivity}
+            panelActivityLoading={panelActivityLoading}
+            panelActivityError={panelActivityError}
+          />
+        </section>
+      )}
+
+      {showTeam && <TeamManagementModal onClose={() => setShowTeam(false)} />}
+
+      {showWiringUpload && selectedProject && selectedPanelId && (
+        <UploadFrameModal
+          projectCode={selectedProject.code}
+          projectName={selectedProject.name}
+          targetFrameId={selectedPanelId}
+          targetPanelName={selectedPanel?.panel_name}
+          existingCableCount={selectedPanel?.cable_count ?? 0}
+          startInReplaceMode={wiringUploadReplacing || Boolean(packageExcelFile)}
+          initialFile={packageExcelFile}
+          siblingPanels={projectPanels}
+          onEditPanel={panelId => {
+            const panel = projectPanels.find(p => p.id === panelId);
+            if (panel) {
+              setShowWiringUpload(false);
+              setWiringUploadReplacing(false);
+              setPackageExcelFile(null);
+              setShowEditPanel(panel);
+            }
+          }}
+          onSelectPanel={setSelectedPanelId}
+          onClose={() => {
+            setShowWiringUpload(false);
+            setWiringUploadReplacing(false);
+            setPackageExcelFile(null);
+          }}
+          onUploaded={() => {
+            setToast({ message: `Wiring schedule uploaded for ${selectedPanel?.panel_name ?? 'panel'}.`, tone: 'success' });
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: selectedPanelId, action: 'updated' });
+            emitDocumentsChanged({
+              projectCode: selectedProject.code,
+              frameId: selectedPanelId,
+              kind: 'wiring',
+              action: 'uploaded',
+            });
+            refresh({ drawing: false, wiring: true, showLoading: false });
+            reloadProjectPanels(selectedProject.code, { silent: true });
+            setPackageExcelFile(null);
+          }}
+        />
+      )}
+
+      {showWiringView && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelWiringViewModal
+          projectCode={selectedProject.code}
+          projectName={projectDetails?.substationName ?? selectedProject.name}
+          frameId={selectedPanelId}
+          panelLabel={selectedPanel.panel_name}
+          panelType={selectedPanel.panel_type as string | undefined}
+          voltageLevel={panelVoltageDisplay(selectedPanel, selectedProject.code)}
+          onClose={() => setShowWiringView(false)}
+        />
+      )}
+
+      {showDrawingUpload && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelDrawingUploadModal
+          projectCode={selectedProject.code}
+          projectName={selectedProject.name}
+          frameId={selectedPanelId}
+          panelName={selectedPanel.panel_name}
+          slot="2d"
+          existingAsset={
+            drawingReady && drawingDoc.drawing
+              ? {
+                  id: drawingDoc.drawing.id,
+                  kind: '2d',
+                  filename: drawingDoc.drawing.original_name,
+                  original_name: drawingDoc.drawing.original_name,
+                  source_format: (drawingDoc.drawing.original_name.split('.').pop() || 'pdf').toLowerCase(),
+                }
+              : undefined
+          }
+          onClose={() => setShowDrawingUpload(false)}
+          onUploaded={() => {
+            setToast({
+              message: `GA Drawing uploaded for ${selectedPanel.panel_name}.`,
+              tone: 'success',
+            });
+            emitDocumentsChanged({
+              projectCode: selectedProject.code,
+              frameId: selectedPanelId,
+              kind: 'drawing',
+              action: drawingReady ? 'replaced' : 'uploaded',
+            });
+            refresh({ drawing: true, wiring: false, showLoading: false });
+            setShowDrawingUpload(false);
+          }}
+        />
+      )}
+
+      {showGaDrawingView && selectedProject && selectedPanelId && selectedPanel && (
+        <PanelGaDrawingModal
+          projectCode={selectedProject.code}
+          frameId={selectedPanelId}
+          panelName={selectedPanel.panel_name}
+          projectName={selectedProject.name}
+          onClose={() => setShowGaDrawingView(false)}
+        />
+      )}
+
+      {gaUploadHint && (
+        <ButtonHintPopover
+          anchorEl={gaUploadBtnRef.current}
+          message={gaUploadHint}
+          tone="warn"
+          onDismiss={() => setGaUploadHint(null)}
+        />
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          tone={toast.tone}
+          onDismiss={() => setToast(null)}
+        />
+      )}
+
+      {showCreate && (
+        <Modal
+          title="New Project"
+          icon={<FolderKanban />}
+          size="wide"
+          bodyClassName="pj-create-project-modal-body"
+          onClose={closeCreateModal}
+          closeOnBackdrop={false}
+          closeOnEscape={!saving}
+          footer={(
+            <>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={closeCreateModal}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={saving}
+                form="create-project-form"
+              >
+                {saving ? 'Creating…' : 'Create Project'}
+              </button>
+            </>
+          )}
+        >
+          <form
+            id="create-project-form"
+            className="pj-create-project-form"
+            ref={createModalScrollRef}
+            onSubmit={handleCreate}
+            noValidate
+          >
+            {(validationHint || error) && (
+              <div className="flex flex-col gap-2">
+                {validationHint && (
+                  <p className="text-[13px] font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-[10px] px-3 py-2">
+                    {validationHint}
+                  </p>
+                )}
+                {error && (
+                  <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <section className="pj-create-section">
+              <h3 className="pj-create-section-title">Project details</h3>
+
+              <div className="pj-create-grid-2">
+                <InputField
+                  label="Project / Substation Name *"
+                  icon={<FolderKanban size={18} strokeWidth={1.5} />}
+                  value={form.displayName}
+                  onChange={value => setForm(s => ({ ...s, displayName: value }))}
+                  placeholder="e.g. CPR — 132/11kV Al Quoz Main"
+                  error={fe.displayName}
+                />
+                <ComboField
+                  label="Client *"
+                  icon={<Building2 size={18} strokeWidth={1.5} />}
+                  value={form.client}
+                  onChange={value => setForm(s => ({ ...s, client: value }))}
+                  options={CLIENTS}
+                  placeholder="Pick or type a client"
+                  error={fe.client}
+                />
+              </div>
+
+              <div className="pj-create-panels-block">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-[12px] font-bold uppercase tracking-[0.06em] text-slate-600 m-0">
+                      Panels
+                      <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+                        {panels.length} {panels.length === 1 ? 'panel' : 'panels'}
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {projectDetailsReady
+                        ? 'Add each panel of this project. Panels remain separately linked to this project numbering.'
+                        : 'Enter the Project / Substation Name and Client to start adding panels.'}
+                    </p>
+                  </div>
+                  {projectDetailsReady && (
+                    <button
+                      type="button"
+                      onClick={() => openPanelOverlay()}
+                      className="pj-btn-secondary shrink-0"
+                      title="Add a panel to this project"
+                    >
+                      <Plus size={14} strokeWidth={1.5} />
+                      Add Panel
+                    </button>
+                  )}
+                </div>
+
+                {fe.panels && (
+                  <p className="text-[12px] font-medium text-amber-700">{fe.panels}</p>
+                )}
+
+                {panels.length === 0 ? (
+                  <p className="pj-panel-list-empty">
+                    No panels added yet. At least one panel is required to create the project.
+                  </p>
+                ) : (
+                  <ul className="pj-panel-list">
+                    {panels.map((panel, idx) => (
+                      <li key={panel.key} className="pj-panel-list-row">
+                        <span className="pj-panel-list-index">{idx + 1}</span>
+                        <span className="pj-panel-list-copy">
+                          <strong title={panel.name}>{panel.name}</strong>
+                          <span>
+                            {[panel.panelType.trim() || 'No type', panel.voltageLevel.trim()]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </span>
+                        <span className="pj-panel-list-actions">
+                          <button
+                            type="button"
+                            onClick={() => openPanelOverlay(panel)}
+                            title={`Edit ${panel.name}`}
+                            aria-label={`Edit panel ${panel.name}`}
+                          >
+                            <Pencil size={14} strokeWidth={1.75} />
+                          </button>
+                          <button
+                            type="button"
+                            className="is-danger"
+                            onClick={() => removePendingPanel(panel.key)}
+                            title={`Remove ${panel.name}`}
+                            aria-label={`Remove panel ${panel.name}`}
+                          >
+                            <Trash2 size={14} strokeWidth={1.75} />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="pj-create-grid-2">
+                <InputField
+                  label="Location *"
+                  icon={<MapPin size={18} strokeWidth={1.5} />}
+                  value={form.location}
+                  onChange={value => setForm(s => ({ ...s, location: value }))}
+                  placeholder="e.g. Riyadh"
+                  error={fe.location}
+                />
+                <ComboField
+                  label="Region *"
+                  icon={<MapPin size={18} strokeWidth={1.5} />}
+                  value={form.region}
+                  onChange={value => setForm(s => ({ ...s, region: value }))}
+                  options={REGIONS}
+                  placeholder="e.g. KSA"
+                  error={fe.region}
+                />
+              </div>
+
+              <div className="pj-create-grid-2 pj-create-grid-2--single">
+                <InputField
+                  label="Project Numbering *"
+                  icon={<Hash size={18} strokeWidth={1.5} />}
+                  value={form.projectNumbering}
+                  onChange={value => setForm(s => ({ ...s, projectNumbering: value }))}
+                  placeholder="e.g. 001 or ENOWA-001"
+                  error={fe.projectNumbering}
+                />
+                {projectNumbering && numberingCheck?.code === projectNumbering && numberingCheck.available && (
+                  <p className="pj-numbering-ok" role="status">
+                    Project numbering {projectNumbering} is available.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="pj-create-section pj-create-previews">
+              <div className="pj-create-preview-block">
+                <span className="pj-create-preview-label">Final project name</span>
+                <div
+                  className={`pj-create-preview-value ${generatedName ? 'pj-create-preview-value--ready' : ''}`}
+                  title={generatedName || 'Complete the fields above to preview the final project name'}
+                >
+                  {generatedName || (
+                    <span className="text-slate-400 italic font-normal text-[12px]">
+                      Complete the project details to preview the final project name.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </section>
+          </form>
+        </Modal>
+      )}
+
+      {panelDraft && (
+        <PanelDraftOverlay
+          draft={panelDraft}
+          isEditing={panels.some(p => p.key === panelDraft.key)}
+          siblingNames={panels.filter(p => p.key !== panelDraft.key).map(p => p.name)}
+          onCancel={() => setPanelDraft(null)}
+          onConfirm={commitPanelDraft}
+        />
+      )}
+
+      {showManagement && selectedProject && (
+        <Modal
+          title="Project & Panel Management"
+          subtitle={`${projectDetails?.substationName ?? selectedProject.name} · ${selectedPanel?.panel_name ?? 'No panel selected'}`}
+          icon={<Pencil />}
+          size="sm"
+          bodyClassName="pj-management-modal-body"
+          onClose={() => setShowManagement(false)}
+        >
+          <div className="pj-management-actions" aria-label="Project and panel management actions">
+            <section className="pj-management-section" aria-labelledby="pj-management-project-heading">
+              <h3 id="pj-management-project-heading" className="pj-management-section-title">Project</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                onClick={() => {
+                  setShowManagement(false);
+                  setShowEdit(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><FolderKanban size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Project Information</strong>
+                  <small>Update the project name, state, or description.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section" aria-labelledby="pj-management-panel-heading">
+              <h3 id="pj-management-panel-heading" className="pj-management-section-title">Panel</h3>
+              <button
+                type="button"
+                className="pj-management-card"
+                disabled={!selectedPanel}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  setShowEditPanel(selectedPanel);
+                }}
+                title={selectedPanel ? undefined : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><LayoutGrid size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Edit Panel Information</strong>
+                  <small>{selectedPanel ? `Update ${selectedPanel.panel_name} details.` : 'Select a panel to enable this action.'}</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={!selectedPanel || deletingPanelId !== null}
+                onClick={() => {
+                  if (!selectedPanel) return;
+                  setShowManagement(false);
+                  handleDeletePanel(selectedPanel);
+                }}
+                title={selectedPanel ? 'Remove this panel' : 'Select a panel first'}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Remove Panel</strong>
+                  <small>Remove the selected panel after safety confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+
+            <section className="pj-management-section pj-management-section--danger" aria-labelledby="pj-management-danger-heading">
+              <h3 id="pj-management-danger-heading" className="pj-management-section-title">Danger zone</h3>
+              <button
+                type="button"
+                className="pj-management-card pj-management-card--danger"
+                disabled={deleting}
+                onClick={() => {
+                  setShowManagement(false);
+                  handleDelete(selectedProject);
+                }}
+              >
+                <span className="pj-management-card-icon"><Trash2 size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="pj-management-card-copy">
+                  <strong>Delete Project Permanently</strong>
+                  <small>Delete this project and its associated data after confirmation.</small>
+                </span>
+                <ChevronRight size={17} strokeWidth={2} aria-hidden className="pj-management-card-arrow" />
+              </button>
+            </section>
+          </div>
+        </Modal>
+      )}
+
+      {showEdit && <EditProjectModal project={showEdit} onClose={() => setShowEdit(null)} onSaved={handleEditSaved} />}
+      {showAddPanel && selectedProject && (
+        <AddPanelModal
+          projectCode={selectedProject.code}
+          siblingPanels={projectPanels}
+          onClose={() => setShowAddPanel(false)}
+          onSaved={(panelId) => {
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: panelId, action: 'created' });
+            reloadProjectPanels(selectedProject.code, { silent: true }).then(() => setSelectedPanelId(panelId));
+            setShowAddPanel(false);
+            setToast({ message: 'Panel added.', tone: 'success' });
+          }}
+        />
+      )}
+      {showEditPanel && selectedProject && (
+        <EditPanelModal
+          projectCode={selectedProject.code}
+          panel={showEditPanel}
+          siblingPanels={projectPanels}
+          onClose={() => setShowEditPanel(null)}
+          onSaved={() => {
+            const savedId = showEditPanel.id;
+            emitFramesChanged({ projectCode: selectedProject.code, frameId: savedId, action: 'updated' });
+            reloadProjectPanels(selectedProject.code, { silent: true }).then(() => setSelectedPanelId(savedId));
+            setShowEditPanel(null);
+            setToast({ message: 'Panel updated.', tone: 'success' });
+          }}
+        />
+      )}
+      {deletePanelTarget && selectedProject && (
+        <DeletePanelConfirmModal
+          panel={deletePanelTarget}
+          project={selectedProject}
+          onClose={closeDeletePanelModal}
+          onDeleted={handlePanelDeleted}
+        />
+      )}
+      {deleteProjectTarget && (
+        <Modal
+          title={PROJECT_DELETE_MODAL_TITLE}
+          icon={<Trash2 />}
+          iconTone="danger"
+          onClose={() => {
+            if (deleting) return;
+            setDeleteProjectTarget(null);
+            setDeleteProjectConfirmed(false);
+          }}
+          size="default"
+          closeOnBackdrop={!deleting}
+          closeOnEscape={!deleting}
+          footer={(
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                onClick={() => {
+                  if (deleting) return;
+                  setDeleteProjectTarget(null);
+                  setDeleteProjectConfirmed(false);
+                }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger flex-1"
+                onClick={() => void handlePermanentDeleteConfirm()}
+                disabled={deleting || !deleteProjectConfirmed}
+              >
+                <Trash2 size={16} />
+                {deleting ? 'Deleting…' : PROJECT_DELETE_CONFIRM_BUTTON}
+              </button>
+            </div>
+          )}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[13px] text-red-800">
+              {PROJECT_DELETE_WARNING}
+            </div>
+            <label className="flex items-start gap-2 text-[13px] text-slate-700">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={deleteProjectConfirmed}
+                disabled={deleting}
+                onChange={e => setDeleteProjectConfirmed(e.target.checked)}
+              />
+              <span>{PROJECT_DELETE_CONFIRM_LABEL}</span>
+            </label>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
+
+/**
+ * Small Add / Edit Panel overlay for the New Project flow. Deliberately limited to
+ * Panel Name, Panel Type, and Voltage Level — System Type is set later, on the panel.
+ */
+function PanelDraftOverlay({
+  draft,
+  isEditing,
+  siblingNames,
+  onCancel,
+  onConfirm,
+}: {
+  draft: PanelDraft;
+  isEditing: boolean;
+  siblingNames: string[];
+  onCancel: () => void;
+  onConfirm: (draft: PanelDraft) => void;
+}) {
+  const [panel, setPanel] = useState<PanelDraft>(draft);
+  const [submitted, setSubmitted] = useState(false);
+
+  const normVoltage = panel.voltageLevel.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const duplicate = (() => {
+    const key = compactPanelKey(panel.name);
+    return !!key && siblingNames.some(name => compactPanelKey(name) === key);
+  })();
+  const valid = !!panel.name.trim() && !!normVoltage && !duplicate;
+
+  const errors = submitted
+    ? {
+        name: !panel.name.trim() ? 'Required' : duplicate ? 'This project already has a panel with this name' : '',
+        voltageLevel: !normVoltage ? 'Required' : '',
+      }
+    : { name: duplicate ? 'This project already has a panel with this name' : '', voltageLevel: '' };
+
+  const handleConfirm = () => {
+    setSubmitted(true);
+    if (!valid) return;
+    onConfirm({ ...panel, name: panel.name.trim() });
+  };
+
+  return (
+    <Modal
+      title={isEditing ? 'Edit Panel' : 'Add Panel'}
+      subtitle="Panel name, type, and voltage level"
+      icon={<PanelTop />}
+      size="sm"
+      onClose={onCancel}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={handleConfirm} disabled={submitted && !valid}>
+            {isEditing ? <Save size={16} /> : <Plus size={16} />}
+            {isEditing ? 'Save Panel' : 'Add Panel'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+          value={panel.name}
+          onChange={value => setPanel(prev => ({ ...prev, name: value }))}
+          placeholder="e.g. =H001, Bay 1 Protection"
+          error={errors.name}
+        />
+        <InputField
+          label="Panel type"
+          icon={<Tag size={18} strokeWidth={1.5} />}
+          value={panel.panelType}
+          onChange={value => setPanel(prev => ({ ...prev, panelType: value }))}
+          placeholder="e.g. PROTECTION, CONTROL"
+        />
+        <ComboField
+          label="Voltage level *"
+          icon={<Zap size={18} strokeWidth={1.5} />}
+          value={panel.voltageLevel}
+          onChange={value => setPanel(prev => ({ ...prev, voltageLevel: value }))}
+          options={VOLTAGES}
+          placeholder="132KV"
+          error={errors.voltageLevel}
+        />
+        <p className="text-[11px] text-slate-400">
+          Special characters (including =) are allowed in panel names.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+function panelMetaValue(value?: string | null): string {
+  return displayPanelMeta(value);
+}
+
+/** Hide empty / placeholder metadata in secondary details. */
+function metaOrNull(raw?: string | null): string | null {
+  const v = (raw ?? '').trim();
+  if (!v || v === 'Not set' || v === '—') return null;
+  return v;
+}
+
+function formatOpDateTime(value?: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+
+function ProjectPanelOverview({
+  project,
+  projectDetails,
+  projectPanels,
+  loadingPanels,
+  selectedPanel,
+  panelActivity,
+  panelActivityLoading,
+  panelActivityError,
+}: {
+  project: Project;
+  projectDetails: ProjectCardDetails;
+  projectPanels: FramePanel[];
+  loadingPanels: boolean;
+  selectedPanel: FramePanel | null;
+  panelActivity: PanelActivityData | null;
+  panelActivityLoading: boolean;
+  panelActivityError: string;
+}) {
+  if (loadingPanels && projectPanels.length === 0) {
+    return <DwesLoadingCenter label="Loading panels…" className="pj-op-empty" />;
+  }
+
+  if (!selectedPanel) {
+    return (
+      <div className="pj-op-empty">
+        {projectPanels.length === 0 ? (
+          <>
+            No Panels Available
+            <span className="pj-op-empty-hint">
+              Project &ldquo;{projectDetails.substationName}&rdquo; remains active. Add a panel to continue.
+            </span>
+          </>
+        ) : (
+          <>
+            Select a panel
+            <span className="pj-op-empty-hint">Choose a panel from Active panel above to view panel details.</span>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  const statusLabel =
+    panelActivity?.work_state_label
+    || panelActivity?.status_label
+    || (panelActivity?.assigned ? 'Assigned' : 'Not started');
+
+  const technicianName = panelActivity?.technician?.name?.trim() || 'Not Assigned';
+  const total = panelActivity?.cables_total ?? selectedPanel.cable_count ?? 0;
+  const completed = panelActivity?.cables_completed ?? 0;
+  const remaining = panelActivity?.cables_remaining ?? Math.max(0, total - completed);
+  const pct = panelActivity?.completion_percentage ?? (total > 0 ? Math.round((completed / total) * 100) : 0);
+
+  const client = metaOrNull(projectDetails.client);
+  const location = metaOrNull(projectDetails.locationRegion);
+  const panelType = metaOrNull(panelMetaValue(selectedPanel.panel_type as string | null | undefined));
+  const voltage = metaOrNull(panelVoltageDisplay(selectedPanel, project.code));
+
+  const detailRows: { label: string; value: ReactNode }[] = [];
+  const numbering = metaOrNull(projectDetails.projectNumbering);
+  if (numbering) detailRows.push({ label: 'Project numbering', value: numbering });
+  if (!loadingPanels) {
+    detailRows.push({ label: 'Panel count', value: projectPanels.length });
+  }
+  const systemType = metaOrNull(panelMetaValue(selectedPanel.system_type as string | null | undefined));
+  if (systemType) detailRows.push({ label: 'System type', value: systemType });
+  const monthYear = metaOrNull(projectDetails.monthYear);
+  if (monthYear) detailRows.push({ label: 'Month / year', value: monthYear });
+
+  return (
+    <div className="pj-op-summary" aria-label="Project and panel operational summary">
+      <header className="pj-op-header">
+        <div className="pj-op-header-titles min-w-0">
+          <h4 className="pj-op-project-name" title={projectDetails.substationName}>
+            {projectDetails.substationName}
+          </h4>
+          <p className="pj-op-panel-name" title={selectedPanel.panel_name}>
+            {compactPanelDisplayName(selectedPanel.panel_name)}
+          </p>
+        </div>
+        <span className="pj-op-status-badge" title={statusLabel}>
+          {panelActivityLoading && !panelActivity ? '…' : statusLabel}
+        </span>
+      </header>
+
+      <WorkspaceInfoMatrix aria-label="Project and panel details">
+        <WorkspaceInfoCell label="Client" value={client} />
+        <WorkspaceInfoCell label="Panel type" value={panelType} />
+        <WorkspaceInfoCell label="Voltage level" value={voltage} />
+        <WorkspaceInfoCell label="Location / region" value={location} />
+      </WorkspaceInfoMatrix>
+
+      <WorkspaceInfoMatrix aria-label="Technician activity">
+        {panelActivityError && !panelActivity ? (
+          <WorkspaceInfoMatrixSpan>
+            <p className="pj-op-tech-error" role="alert">{panelActivityError}</p>
+          </WorkspaceInfoMatrixSpan>
+        ) : panelActivityLoading && !panelActivity ? (
+          <WorkspaceInfoMatrixSpan>
+            <div className="pj-op-tech-loading animate-pulse" aria-busy="true">
+              <div className="h-4 bg-slate-200/80 rounded w-full max-w-xs" />
+            </div>
+          </WorkspaceInfoMatrixSpan>
+        ) : (
+          <>
+            <WorkspaceInfoCell label="Assigned technician" emphasis="primary">{technicianName}</WorkspaceInfoCell>
+            <WorkspaceInfoCell label="Assigned time" emphasis="meta">
+              <span className="tabular-nums">{formatOpDateTime(panelActivity?.assigned_at)}</span>
+            </WorkspaceInfoCell>
+            <WorkspaceInfoCell
+              label="Wiring started"
+              emphasis="meta"
+              hideIfEmpty
+            >
+              {panelActivity?.has_started
+                ? <span className="tabular-nums">{formatOpDateTime(panelActivity?.wiring_started_at)}</span>
+                : null}
+            </WorkspaceInfoCell>
+            <WorkspaceInfoCell label="Last action" emphasis="meta">
+              <span className="tabular-nums">{formatOpDateTime(panelActivity?.last_activity_at)}</span>
+            </WorkspaceInfoCell>
+          </>
+        )}
+      </WorkspaceInfoMatrix>
+
+      {(panelActivity?.pause_reason && panelActivity?.status && ['paused', 'lunch_break', 'tea_break'].includes(panelActivity.status)) && (
+        <p className="pj-op-pause-note">Paused — {panelActivity.pause_reason}</p>
+      )}
+      {panelActivity?.mid_change?.occurred && (
+        <details className="pj-op-midchange">
+          <summary>Mid change history</summary>
+          <p className="pj-op-midchange-detail">
+            {panelActivity.mid_change.original_technician.name}
+            {' → '}
+            {panelActivity.mid_change.incoming_technician.name}
+            {' · '}
+            {formatOpDateTime(panelActivity.mid_change.changed_at)}
+          </p>
+        </details>
+      )}
+
+      <div className="pj-op-progress-block" aria-label="Wiring progress">
+        <WorkspaceInfoMatrix aria-label="Wiring progress totals">
+          <WorkspaceInfoCell label="Completed" emphasis="default">
+            <span className="tabular-nums">{completed}</span>
+          </WorkspaceInfoCell>
+          <WorkspaceInfoCell label="Total" emphasis="default">
+            <span className="tabular-nums">{total}</span>
+          </WorkspaceInfoCell>
+          <WorkspaceInfoCell label="Remaining" emphasis="default">
+            <span className="tabular-nums">{remaining}</span>
+          </WorkspaceInfoCell>
+          <WorkspaceInfoCell label="Progress percentage" emphasis="primary">
+            <span className="tabular-nums">{pct}%</span>
+          </WorkspaceInfoCell>
+        </WorkspaceInfoMatrix>
+        <div
+          className="pj-op-progress-bar"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Wiring ${pct}% complete`}
+        >
+          <div className="pj-op-progress-fill" style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+        </div>
+      </div>
+
+      {detailRows.length > 0 && (
+        <details className="pj-op-details">
+          <summary className="pj-op-details-summary">View Details</summary>
+          <WorkspaceInfoMatrix className="pj-op-details-grid" aria-label="Additional project details">
+            {detailRows.map(row => (
+              <WorkspaceInfoCell key={row.label} label={row.label} hideIfEmpty={false}>
+                {row.value}
+              </WorkspaceInfoCell>
+            ))}
+          </WorkspaceInfoMatrix>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function PanelDraftFields({
+  index,
+  panel,
+  errors,
+  onChange,
+  onRemove,
+}: {
+  index: number;
+  panel: PanelDraft;
+  errors: { name: string; voltageLevel: string };
+  onChange: (patch: Partial<Omit<PanelDraft, 'key'>>) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="pj-panel-draft-card">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-[12px] font-semibold text-slate-700">Panel {index + 1}</span>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="pj-btn-danger-ghost shrink-0"
+            title={`Remove panel ${index + 1}`}
+            aria-label={`Remove panel ${index + 1}`}
+          >
+            <Trash2 size={14} strokeWidth={1.5} />
+          </button>
+        )}
+      </div>
+      <div className="pj-create-grid-2">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={16} strokeWidth={1.5} />}
+          value={panel.name}
+          onChange={value => onChange({ name: value })}
+          placeholder="e.g. =H001, Bay 1 Protection"
+          error={errors.name}
+        />
+        <InputField
+          label="Panel type"
+          icon={<Tag size={16} strokeWidth={1.5} />}
+          value={panel.panelType}
+          onChange={value => onChange({ panelType: value })}
+          placeholder="e.g. PROTECTION, CONTROL"
+        />
+        <ComboField
+          label="Voltage level *"
+          icon={<Zap size={16} strokeWidth={1.5} />}
+          value={panel.voltageLevel}
+          onChange={value => onChange({ voltageLevel: value })}
+          options={VOLTAGES}
+          placeholder="132KV"
+          error={errors.voltageLevel}
+        />
+        <InputField
+          label="System type"
+          icon={<LayoutGrid size={16} strokeWidth={1.5} />}
+          value={panel.systemType}
+          onChange={value => onChange({ systemType: value })}
+          placeholder="e.g. SAS, SCADA, LCC"
+        />
+      </div>
+      {index === 0 && (
+        <p className="text-[11px] text-slate-400 mt-1">
+          Special characters (including =) are allowed in panel names.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AddPanelModal({
+  projectCode,
+  siblingPanels,
+  onClose,
+  onSaved,
+}: {
+  projectCode: string;
+  siblingPanels: FramePanel[];
+  onClose: () => void;
+  onSaved: (panelId: string) => void;
+}) {
+  const [panel, setPanel] = useState<PanelDraft>(() => newPanelDraft({
+    voltageLevel: projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] || '',
+  }));
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const wouldDuplicate = (() => {
+    const next = compactPanelKey(panel.name);
+    if (!next) return false;
+    return siblingPanels.some(p => compactPanelKey(p.panel_name) === next);
+  })();
+
+  const errors = submitted ? {
+    name: !panel.name.trim() ? 'Required' : wouldDuplicate ? 'Duplicate panel name' : '',
+    voltageLevel: !norm(panel.voltageLevel) ? 'Required' : '',
+  } : { name: '', voltageLevel: '' };
+
+  const canSave = !!panel.name.trim() && !!norm(panel.voltageLevel) && !wouldDuplicate;
+
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!canSave) return;
+    setSaving(true);
+    setError('');
+    try {
+      const created = await projectsApi.createPanel(projectCode, panelDraftToApiPayload(panel));
+      onSaved(String(created.id));
+    } catch (apiError: unknown) {
+      setError(apiErrorMessage(apiError, 'Failed to add panel.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Add Panel"
+      icon={<PanelTop />}
+      size="wide"
+      onClose={onClose}
+      closeOnEscape={!saving}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button className="btn-secondary" onClick={onClose} type="button" disabled={saving}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving} type="button">
+            <Plus size={16} />
+            {saving ? 'Adding…' : 'Add Panel'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <PanelDraftFields
+          index={0}
+          panel={panel}
+          errors={errors}
+          onChange={patch => setPanel(prev => ({ ...prev, ...patch }))}
+        />
+        {error && (
+          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
+            {error}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function EditPanelModal({
+  projectCode,
+  panel,
+  siblingPanels,
+  onClose,
+  onSaved,
+}: {
+  projectCode: string;
+  panel: FramePanel;
+  siblingPanels: FramePanel[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(panel.panel_name);
+  const [panelType, setPanelType] = useState(String(panel.panel_type ?? ''));
+  const [voltageLevel, setVoltageLevel] = useState(
+    String(panel.voltage_level ?? projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1] ?? ''),
+  );
+  const [systemType, setSystemType] = useState(String(panel.system_type ?? ''));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const wouldDuplicate = (() => {
+    const next = compactPanelKey(name);
+    if (!next) return false;
+    return siblingPanels.some(
+      p => p.id !== panel.id && compactPanelKey(p.panel_name) === next,
+    );
+  })();
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError('Panel name is required.');
+      return;
+    }
+    if (wouldDuplicate) {
+      setError('Duplicate Panel Name Detected — choose a unique name for this project.');
+      return;
+    }
+    if (!voltageLevel.trim()) {
+      setError('Voltage level is required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await projectsApi.patchPanel(projectCode, panel.id, {
+        panel_name: trimmed,
+        panel_type: panelType.trim(),
+        voltage_level: voltageLevel.trim(),
+        system_type: systemType.trim(),
+      });
+      onSaved();
+    } catch (apiError: unknown) {
+      setError(apiErrorMessage(apiError, 'Failed to save panel.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Edit Panel"
+      icon={<PanelTop />}
+      onClose={onClose}
+      footer={(
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button className="btn-secondary" onClick={onClose} type="button" disabled={saving}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving || wouldDuplicate} type="button">
+            <Save size={16} />
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        <InputField
+          label="Panel name *"
+          icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+          value={name}
+          onChange={setName}
+          error={wouldDuplicate ? 'Duplicate Panel Name Detected' : ''}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Panel type"
+            icon={<Tag size={18} strokeWidth={1.5} />}
+            value={panelType}
+            onChange={setPanelType}
+            placeholder="e.g. PROTECTION, CONTROL"
+          />
+          <ComboField
+            label="Voltage level *"
+            icon={<Zap size={18} strokeWidth={1.5} />}
+            value={voltageLevel}
+            onChange={setVoltageLevel}
+            options={VOLTAGES}
+            placeholder="132KV"
+          />
+          <InputField
+            label="System type"
+            icon={<LayoutGrid size={18} strokeWidth={1.5} />}
+            value={systemType}
+            onChange={setSystemType}
+            placeholder="e.g. SAS, SCADA, LCC"
+          />
+        </div>
+        {error && (
+          <div className="p-3 bg-red-50 text-red-600 text-[13px] font-medium rounded-[10px] border border-red-200">
+            {error}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function EditProjectModal({ project, onClose, onSaved }: { project: Project; onClose: () => void; onSaved: (updated: Project) => void }) {
+  const initialDetails = resolveProjectCardDetails(project);
+  const { meta, userNotes } = decodeProjectMeta(project.description);
+  const [name, setName] = useState(initialDetails.substationName);
+  const [description, setDescription] = useState(userNotes);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const trimmedName = name.trim();
+  const nameError = submitted && !trimmedName ? 'Project / Substation Name is required.' : '';
+
+  const closeModal = () => {
+    if (!saving) onClose();
+  };
+
+  const handleSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    setSubmitted(true);
+    if (!trimmedName) return;
+    setSaving(true);
+    setError('');
+    try {
+      const [legacyLocation = '', legacyRegion = ''] = (meta?.locationRegion || '')
+        .split(/\s*\/\s*/)
+        .map(part => part.trim());
+      const nextMeta = meta ? { ...meta, substationName: trimmedName } : null;
+      const savedName = nextMeta?.substationName
+        ? buildProjectFullName(
+            nextMeta.substationName,
+            project.client,
+            nextMeta.location || legacyLocation,
+            nextMeta.region || legacyRegion,
+            nextMeta.projectNumbering || project.code,
+          )
+        : trimmedName;
+      const updated = await projectsApi.update(project.code, {
+        name: savedName,
+        description: mergeProjectDescription(nextMeta, description),
+      });
+      onSaved(updated);   // update the row in the list live — no full reload
+      onClose();
+    } catch (apiError: any) {
+      setError(apiError?.response?.data?.message || 'Failed to save changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Edit Project Information"
+      subtitle={`${project.name} · ${project.code}`}
+      icon={<Pencil />}
+      size="form"
+      bodyClassName="pj-edit-project-modal-body"
+      onClose={closeModal}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      footer={(
+        <>
+          <button className="btn-secondary" onClick={closeModal} disabled={saving} type="button">Cancel</button>
+          <button className="btn-primary" disabled={saving} type="submit" form="edit-project-form">
+            <Save size={16} strokeWidth={1.75} />
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </>
+      )}
+    >
+      <form id="edit-project-form" className="pj-edit-project-form" onSubmit={handleSave} noValidate>
+        {(nameError || error) && (
+          <div className={`pj-edit-validation ${error ? 'pj-edit-validation--error' : ''}`} role="alert">
+            <TriangleAlert size={17} strokeWidth={1.75} />
+            <span>{error || 'Complete the required project information before saving.'}</span>
+          </div>
+        )}
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Project identity</h3>
+          <div className="pj-edit-grid">
+            <div className="form-group min-w-0">
+              <label className="form-label">Project Numbering</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Hash size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value font-mono" role="textbox" aria-readonly="true" title={project.code}>
+                  {project.code}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Client</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Building2 size={17} strokeWidth={1.5} /></span>
+                <div className="form-input pj-edit-readonly-value" role="textbox" aria-readonly="true" title={project.client}>
+                  {project.client}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group min-w-0">
+              <label className="form-label">Project State</label>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><Flag size={17} strokeWidth={1.5} /></span>
+                <div
+                  className="form-input pj-edit-readonly-value"
+                  role="textbox"
+                  aria-readonly="true"
+                  title="Project state is automatic and read-only"
+                >
+                  <span data-state={project.project_state} className="pj-state-badge">
+                    {initialDetails.stateLabel}
+                  </span>
+                </div>
+              </div>
+              <p className="pj-edit-field-hint">Derived automatically from assignment and workflow — not editable.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="pj-edit-section">
+          <h3 className="pj-edit-section-title">Editable details</h3>
+          <div className="pj-edit-grid">
+            <InputField
+              label="Project / Substation Name *"
+              icon={<FolderKanban size={17} strokeWidth={1.5} />}
+              value={name}
+              onChange={value => { setName(value); setError(''); }}
+              placeholder="Enter project or substation name"
+              error={nameError}
+            />
+          </div>
+
+          <div className="form-group min-w-0">
+            <label className="form-label">Description</label>
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><FileText size={17} strokeWidth={1.5} /></span>
+              <textarea
+                value={description}
+                onChange={event => { setDescription(event.target.value); setError(''); }}
+                rows={3}
+                title="Description"
+                placeholder="Optional project description"
+                className="form-textarea"
+              />
+            </div>
+            <p className="pj-edit-field-hint">Internal project notes only. Existing project metadata and panel data remain unchanged.</p>
+          </div>
+        </section>
+      </form>
+    </Modal>
+  );
+}

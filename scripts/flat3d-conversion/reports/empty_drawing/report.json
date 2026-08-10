@@ -1,0 +1,26 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "empty_drawing",
+  "drawing_revision": null,
+  "started_at": "2026-07-20T02:16:34.666124+00:00",
+  "stages": [
+    {
+      "stage": "INGEST",
+      "ok": true,
+      "detail": "source copied",
+      "checksum": "55a16181d8fbf3bdd5462fb20d0642bb42ef3e1c2655221c5e2a8af12664cce1",
+      "source_name": "drawing.dxf"
+    },
+    {
+      "stage": "DWG_TO_DXF",
+      "ok": true,
+      "detail": "skipped — input already DXF"
+    },
+    {
+      "stage": "DXF_PARSE",
+      "ok": false,
+      "detail": "DXF opened but entity/text counts are zero"
+    }
+  ],
+  "status": "FAILED"
+}

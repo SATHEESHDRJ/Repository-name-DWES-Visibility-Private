@@ -1,0 +1,2073 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "large_panel",
+  "drawing_revision": null,
+  "source": {
+    "name": "drawing.dxf",
+    "sha256": "980f69ab9340593ab8ff3ca66851abf6bae31e4b61fb1f1a4cfe9b22f339b2cd",
+    "format": ".dxf"
+  },
+  "normalized": {
+    "entities": 81,
+    "texts": 0,
+    "layers": 2,
+    "blocks": 1
+  },
+  "objects": [
+    {
+      "kind": "panel_envelope",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "footprint": {
+        "cx": 1000.0,
+        "cy": 750.0,
+        "width": 2000.0,
+        "height": 1500.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "largest_closed_polyline"
+      ],
+      "device_tag": null
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "35",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q001+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "38",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q002+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "3B",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q003+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "3E",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q004+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "41",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q005+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "44",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q006+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "47",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q007+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "4A",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q008+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 100.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "4D",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q009+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "50",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q010+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "53",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q011+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "56",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q012+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "59",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q013+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "5C",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q014+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "5F",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q015+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "62",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q016+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 240.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "65",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q017+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "68",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q018+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "6B",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q019+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "6E",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q020+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "71",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q021+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "74",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q022+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "77",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q023+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "7A",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q024+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 380.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "7D",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q025+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "80",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q026+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "83",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q027+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "86",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q028+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "89",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q029+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "8C",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q030+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "8F",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q031+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "92",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q032+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 520.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "95",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q033+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "98",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q034+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "9B",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q035+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "9E",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q036+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "A1",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q037+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "A4",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q038+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "A7",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q039+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "AA",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q040+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 660.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "AD",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q041+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "B0",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q042+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "B3",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q043+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "B6",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q044+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "B9",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q045+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "BC",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q046+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "BF",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q047+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "C2",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q048+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 800.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "C5",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q049+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "C8",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q050+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "CB",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q051+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "CE",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q052+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "D1",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q053+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "D4",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q054+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "D7",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q055+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "DA",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q056+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 940.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "DD",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q057+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "E0",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q058+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "E3",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q059+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "E6",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q060+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "E9",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q061+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "EC",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q062+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "EF",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q063+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "F2",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q064+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 1080.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "F5",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q065+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "F8",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q066+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "FB",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q067+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "FE",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q068+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "101",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q069+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "104",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q070+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "107",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q071+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "10A",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q072+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 1220.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "10D",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q073+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "110",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q074+F1",
+      "footprint": {
+        "cx": 320.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "113",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q075+F1",
+      "footprint": {
+        "cx": 540.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "116",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q076+F1",
+      "footprint": {
+        "cx": 760.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "119",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q077+F1",
+      "footprint": {
+        "cx": 980.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "11C",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q078+F1",
+      "footprint": {
+        "cx": 1200.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "11F",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q079+F1",
+      "footprint": {
+        "cx": 1420.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "122",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q080+F1",
+      "footprint": {
+        "cx": 1640.0,
+        "cy": 1360.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    }
+  ],
+  "schedule_match": {
+    "schedule_tag_count": 80,
+    "matched": [
+      {
+        "object_tag": "=Q001+F1",
+        "schedule_tag": "=Q001+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q002+F1",
+        "schedule_tag": "=Q002+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q003+F1",
+        "schedule_tag": "=Q003+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q004+F1",
+        "schedule_tag": "=Q004+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q005+F1",
+        "schedule_tag": "=Q005+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q006+F1",
+        "schedule_tag": "=Q006+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q007+F1",
+        "schedule_tag": "=Q007+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q008+F1",
+        "schedule_tag": "=Q008+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q009+F1",
+        "schedule_tag": "=Q009+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q010+F1",
+        "schedule_tag": "=Q010+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q011+F1",
+        "schedule_tag": "=Q011+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q012+F1",
+        "schedule_tag": "=Q012+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q013+F1",
+        "schedule_tag": "=Q013+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q014+F1",
+        "schedule_tag": "=Q014+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q015+F1",
+        "schedule_tag": "=Q015+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q016+F1",
+        "schedule_tag": "=Q016+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q017+F1",
+        "schedule_tag": "=Q017+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q018+F1",
+        "schedule_tag": "=Q018+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q019+F1",
+        "schedule_tag": "=Q019+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q020+F1",
+        "schedule_tag": "=Q020+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q021+F1",
+        "schedule_tag": "=Q021+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q022+F1",
+        "schedule_tag": "=Q022+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q023+F1",
+        "schedule_tag": "=Q023+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q024+F1",
+        "schedule_tag": "=Q024+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q025+F1",
+        "schedule_tag": "=Q025+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q026+F1",
+        "schedule_tag": "=Q026+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q027+F1",
+        "schedule_tag": "=Q027+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q028+F1",
+        "schedule_tag": "=Q028+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q029+F1",
+        "schedule_tag": "=Q029+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q030+F1",
+        "schedule_tag": "=Q030+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q031+F1",
+        "schedule_tag": "=Q031+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q032+F1",
+        "schedule_tag": "=Q032+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q033+F1",
+        "schedule_tag": "=Q033+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q034+F1",
+        "schedule_tag": "=Q034+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q035+F1",
+        "schedule_tag": "=Q035+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q036+F1",
+        "schedule_tag": "=Q036+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q037+F1",
+        "schedule_tag": "=Q037+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q038+F1",
+        "schedule_tag": "=Q038+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q039+F1",
+        "schedule_tag": "=Q039+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q040+F1",
+        "schedule_tag": "=Q040+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q041+F1",
+        "schedule_tag": "=Q041+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q042+F1",
+        "schedule_tag": "=Q042+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q043+F1",
+        "schedule_tag": "=Q043+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q044+F1",
+        "schedule_tag": "=Q044+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q045+F1",
+        "schedule_tag": "=Q045+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q046+F1",
+        "schedule_tag": "=Q046+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q047+F1",
+        "schedule_tag": "=Q047+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q048+F1",
+        "schedule_tag": "=Q048+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q049+F1",
+        "schedule_tag": "=Q049+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q050+F1",
+        "schedule_tag": "=Q050+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q051+F1",
+        "schedule_tag": "=Q051+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q052+F1",
+        "schedule_tag": "=Q052+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q053+F1",
+        "schedule_tag": "=Q053+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q054+F1",
+        "schedule_tag": "=Q054+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q055+F1",
+        "schedule_tag": "=Q055+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q056+F1",
+        "schedule_tag": "=Q056+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q057+F1",
+        "schedule_tag": "=Q057+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q058+F1",
+        "schedule_tag": "=Q058+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q059+F1",
+        "schedule_tag": "=Q059+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q060+F1",
+        "schedule_tag": "=Q060+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q061+F1",
+        "schedule_tag": "=Q061+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q062+F1",
+        "schedule_tag": "=Q062+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q063+F1",
+        "schedule_tag": "=Q063+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q064+F1",
+        "schedule_tag": "=Q064+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q065+F1",
+        "schedule_tag": "=Q065+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q066+F1",
+        "schedule_tag": "=Q066+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q067+F1",
+        "schedule_tag": "=Q067+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q068+F1",
+        "schedule_tag": "=Q068+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q069+F1",
+        "schedule_tag": "=Q069+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q070+F1",
+        "schedule_tag": "=Q070+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q071+F1",
+        "schedule_tag": "=Q071+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q072+F1",
+        "schedule_tag": "=Q072+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q073+F1",
+        "schedule_tag": "=Q073+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q074+F1",
+        "schedule_tag": "=Q074+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q075+F1",
+        "schedule_tag": "=Q075+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q076+F1",
+        "schedule_tag": "=Q076+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q077+F1",
+        "schedule_tag": "=Q077+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q078+F1",
+        "schedule_tag": "=Q078+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q079+F1",
+        "schedule_tag": "=Q079+F1",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "object_tag": "=Q080+F1",
+        "schedule_tag": "=Q080+F1",
+        "confidence": "CONFIRMED"
+      }
+    ],
+    "matched_count": 80,
+    "unmatched_schedule_tags": [],
+    "duplicate_tags": {}
+  },
+  "flat3d": {
+    "authoritative_part_count": 81,
+    "suggested_part_count": 0,
+    "warnings": [],
+    "rejected_count": 0
+  },
+  "overlay": {
+    "panel_bounds_mm": {
+      "width": 2000.0,
+      "height": 1500.0
+    },
+    "drawing_insert_count": 80,
+    "flat3d_part_count": 80,
+    "matched_device_pct": 100.0,
+    "missing_device_pct": 0.0,
+    "positional_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "size_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "unresolved_object_count": 0
+  },
+  "glb": {
+    "path": "model.glb",
+    "bytes": 124060
+  },
+  "publication": "READY_FOR_REVIEW — supervisor must approve; never auto-published"
+}

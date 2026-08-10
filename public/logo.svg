@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ingenious Network FZC — Logo (SVG recreation)
+  Replace this file with the official logo.png/logo.svg when available.
+  File also at: src/assets/logo.svg
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 235" fill="none">
+
+  <!-- ── White background (logo has white bg — preserve when shown on light surfaces) ── -->
+  <rect width="300" height="235" fill="white"/>
+
+  <!-- ═══════════════════════════════════
+       GLOBE / ORBITAL ICON  (cx=150, cy=72, r=56)
+       ═══════════════════════════════════ -->
+
+  <!-- Outer globe ring -->
+  <circle cx="150" cy="72" r="56"
+          stroke="#2A7A8A" stroke-width="2.5" opacity="0.45"/>
+
+  <!-- Primary orbital ellipse — tilted -38° (main teal ring) -->
+  <ellipse cx="150" cy="72" rx="56" ry="20"
+           stroke="#2E9DAA" stroke-width="4"
+           transform="rotate(-38 150 72)"/>
+
+  <!-- Secondary orbital ellipse — tilted -56° (lighter) -->
+  <ellipse cx="150" cy="72" rx="56" ry="20"
+           stroke="#6DCFD4" stroke-width="2.5" opacity="0.72"
+           transform="rotate(-56 150 72)"/>
+
+  <!-- Diagonal cable / speed lines (3 parallel, ~-22° slope) -->
+  <!-- Line 1 — thickest, midline -->
+  <line x1="76"  y1="90"  x2="224" y2="54"
+        stroke="#2E9DAA" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Line 2 — medium, lower -->
+  <line x1="80"  y1="100" x2="220" y2="64"
+        stroke="#5BBFCC" stroke-width="4.2" stroke-linecap="round" opacity="0.88"/>
+
+  <!-- Line 3 — thin, upper -->
+  <line x1="72"  y1="80"  x2="228" y2="44"
+        stroke="#1B7080" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
+
+  <!-- ═══════════════════════════════════
+       "INGENIOUS" — bold, condensed, dark navy
+       ═══════════════════════════════════ -->
+  <text x="150" y="162"
+        font-family="'Arial Black','Arial','Helvetica Neue',Helvetica,sans-serif"
+        font-weight="900"
+        font-size="54"
+        fill="#1B2958"
+        text-anchor="middle"
+        letter-spacing="-1">INGENIOUS</text>
+
+  <!-- ═══════════════════════════════════
+       "NETWORK" teal band
+       ═══════════════════════════════════ -->
+  <rect x="82" y="169" width="136" height="25"
+        fill="#2E9DAA" rx="1"/>
+  <text x="150" y="187"
+        font-family="'Arial','Helvetica Neue',Helvetica,sans-serif"
+        font-weight="600"
+        font-size="12"
+        fill="white"
+        text-anchor="middle"
+        letter-spacing="4.5">NETWORK</text>
+
+</svg>

@@ -1,0 +1,71 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM ============================================================
+REM  DWES auto-start (runs at Windows logon, from Startup folder)
+REM  Ensures PostgreSQL + backend (:3001) + frontend (:5175),
+REM  waits until the app is reachable, then opens the app window.
+REM
+REM  BACKEND is owned by the "DWES Backend" scheduled task
+REM  (scripts\register-backend-autostart.ps1) — production, windowless,
+REM  self-restarting. This script only TRIGGERS that task if the API
+REM  isn't already up (covers manual runs), so the backend is never
+REM  started twice on :3001.
+REM ============================================================
+
+set APP_DIR=C:\Users\sathe\OneDrive\Desktop\DWES
+set DB_NAME=WiringSchemeDB
+set PG_SERVICE=postgresql-x64-18
+set LOG_FILE=%APP_DIR%\startup.log
+set FE_PORT=5175
+set BE_PORT=3001
+set APP_URL=http://localhost:%FE_PORT%
+set CHROME_PROXY=C:\Program Files\Google\Chrome\Application\chrome_proxy.exe
+set DWES_APP_ID=mjhjcapkgpdflhanaogjcmhfnmcbpiac
+set BACKEND_TASK=DWES Backend
+
+echo [%date% %time%] DWES startup >> "%LOG_FILE%"
+
+REM --- Start PostgreSQL if the service is not already running ---
+sc query %PG_SERVICE% | find "RUNNING" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [%date% %time%] Starting PostgreSQL service >> "%LOG_FILE%"
+    net start %PG_SERVICE% >>"%LOG_FILE%" 2>&1
+    timeout /t 5 /nobreak >nul
+)
+
+REM --- Ensure BACKEND (:3001) via its scheduled task, only if not already up ---
+powershell -NoProfile -Command "if(Get-NetTCPConnection -State Listen -LocalPort %BE_PORT% -ErrorAction SilentlyContinue){exit 0}else{exit 1}"
+if %errorlevel% neq 0 (
+    echo [%date% %time%] Backend not up - triggering '%BACKEND_TASK%' scheduled task >> "%LOG_FILE%"
+    schtasks /run /tn "%BACKEND_TASK%" >>"%LOG_FILE%" 2>&1
+) else (
+    echo [%date% %time%] Backend already running on %BE_PORT% >> "%LOG_FILE%"
+)
+
+REM --- Ensure FRONTEND (:5175 Vite dev), only if not already up ---
+powershell -NoProfile -Command "if(Get-NetTCPConnection -State Listen -LocalPort %FE_PORT% -ErrorAction SilentlyContinue){exit 0}else{exit 1}"
+if %errorlevel% neq 0 (
+    echo [%date% %time%] Starting frontend (port %FE_PORT%) >> "%LOG_FILE%"
+    start "DWES Frontend (port %FE_PORT%)" cmd /k "cd /d %APP_DIR% && npm run dev"
+) else (
+    echo [%date% %time%] Frontend already running on %FE_PORT% >> "%LOG_FILE%"
+)
+
+REM --- Wait until BOTH backend and frontend are accepting connections (up to ~90s) ---
+echo [%date% %time%] Waiting for backend %BE_PORT% + frontend %FE_PORT% >> "%LOG_FILE%"
+powershell -NoProfile -Command "for($i=0;$i -lt 90;$i++){$be=Get-NetTCPConnection -State Listen -LocalPort %BE_PORT% -ErrorAction SilentlyContinue; $fe=Get-NetTCPConnection -State Listen -LocalPort %FE_PORT% -ErrorAction SilentlyContinue; if($be -and $fe){exit 0}; Start-Sleep -Milliseconds 900}; exit 1"
+if %errorlevel% equ 0 (
+    echo [%date% %time%] Backend + frontend ready - opening app window >> "%LOG_FILE%"
+) else (
+    echo [%date% %time%] WARNING: services not both ready after ~90s - opening app window anyway >> "%LOG_FILE%"
+)
+
+if exist "%CHROME_PROXY%" (
+    start "" "%CHROME_PROXY%" --profile-directory=Default --app-id=%DWES_APP_ID%
+) else (
+    start "" "%APP_URL%"
+)
+
+echo [%date% %time%] Startup complete >> "%LOG_FILE%"
+endlocal

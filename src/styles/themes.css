@@ -1,0 +1,2787 @@
+/*
+  DWES Theme System
+  Applied app-wide via <html data-theme="default|arctic|harbor|graphite|ingenious">.
+  default = modern high-contrast DWES baseline. Optional: arctic, harbor, graphite, ingenious.
+  Palettes: src/styles/theme-palettes.css
+  Component rules below use [data-theme] + var(--t-*).
+*/
+
+@import "./theme-palettes.css";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 2 — MD3 MAPPING: role vars + status/role tints ← --t-*
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-theme] {
+  /* Liquid Glass — theme-aware tokens */
+  --glass-bg:            var(--t-glass-bg, rgba(255, 255, 255, 0.72));
+  --glass-bg-solid:      var(--t-glass-bg-solid, rgba(255, 255, 255, 0.94));
+  --glass-bg-subtle:     var(--t-glass-bg-subtle, rgba(255, 255, 255, 0.56));
+  --glass-border:        var(--t-glass-border, rgba(255, 255, 255, 0.52));
+  --glass-border-strong: var(--t-glass-border-strong, rgba(15, 23, 42, 0.10));
+  --glass-blur:          var(--t-glass-blur, 14px);
+  --glass-blur-subtle:   var(--t-glass-blur-subtle, 10px);
+  --glass-blur-overlay:  var(--t-glass-blur-overlay, 6px);
+  --glass-saturate:      var(--t-glass-saturate, 165%);
+  --glass-shadow:        var(--t-glass-shadow);
+  --glass-shadow-hover:  var(--t-glass-shadow-hover);
+  --glass-text:          var(--t-glass-text, var(--t-text));
+  --glass-text-muted:    var(--t-glass-text-muted, var(--t-muted));
+
+  /* Bento Grid — theme-aware */
+  --bento-gap:       var(--t-bento-gap, clamp(0.75rem, 2vw, 1.25rem));
+  --bento-radius:    var(--t-bento-radius, 16px);
+  --bento-columns:   var(--t-bento-columns, 12);
+  --bento-min-cell:  var(--t-bento-min-cell, 180px);
+  --bento-row-min:   var(--t-bento-row-min, 5.5rem);
+
+  --color-background:            var(--t-bg);
+  --color-surface:               var(--t-card);
+  --color-surface-variant:       var(--t-surface-3);
+  --color-surface-container:     var(--t-table-head);
+  --color-on-surface:            var(--t-text-primary);
+  --color-on-surface-variant:    var(--t-text-muted);
+
+  /* Semantic Typography Hierarchy */
+  --color-text-primary:          var(--t-text-primary, #020617);
+  --color-text-secondary:        var(--t-text-secondary, #0F172A);
+  --color-text-muted:            var(--t-text-muted, #1E293B);
+  --color-text-tertiary:         var(--t-text-faint, #334155);
+  --color-text-heading:          var(--t-text-primary, #020617);
+  --color-text-label:            var(--t-text-secondary, #1E293B);
+  --color-text-value:            var(--t-text-primary, #020617);
+  /* Content-area density — cards inherit soft brand wash (shell unchanged) */
+  --color-card-accent-grad:      var(--t-card-accent-grad, none);
+  --color-text-disabled:         var(--t-text-faint);
+  --color-text-error:            var(--t-danger);
+  --color-text-warning:          var(--t-warning);
+  --color-text-success:          var(--t-success);
+  --color-text-link:             var(--t-accent-strong);
+  --color-text-table-head:       var(--t-text-secondary);
+  --color-text-sidebar-label:    var(--t-text-secondary);
+  --color-text-modal-title:      var(--t-text-primary);
+
+  --color-outline:               var(--t-border-strong);
+  --color-outline-variant:       var(--t-border);
+
+  --color-primary:               var(--t-accent);
+  --color-primary-hover:         var(--t-accent-strong);
+  --color-primary-container:     var(--t-accent-soft);
+  --color-on-primary:            var(--t-on-accent);
+  --color-on-primary-container:  var(--t-accent);
+  --color-on-primary-strong:     var(--t-accent-strong);
+
+  --color-secondary:             var(--t-muted);
+  --color-secondary-container:   var(--t-surface-2);
+  --color-on-secondary:          var(--t-text);
+
+  --color-md-surface:            var(--t-card);
+  --color-md-surface-variant:    var(--t-surface-3);
+  --color-md-surface-container:  var(--t-table-head);
+  --color-md-surface-dim:        var(--t-surface-2);
+  --color-md-app-bg:             var(--t-bg);
+  --color-md-on-surface:         var(--t-text);
+  --color-md-on-surface-variant: var(--t-muted);
+
+  --color-md-success:               var(--t-success);
+  --color-md-success-container:     var(--t-success-soft);
+  --color-md-warning:               var(--t-warning);
+  --color-md-warning-container:     var(--t-warning-soft);
+  --color-md-error-orange:          var(--t-dst);
+  --color-md-error-orange-container: rgba(251,146,60,0.16);
+  --color-md-error:                 var(--t-danger);
+  --color-md-error-container:       var(--t-danger-soft);
+  --color-md-info:                  var(--t-accent);
+  --color-md-info-container:        var(--t-accent-soft);
+
+  --shadow-elevation-1: var(--t-shadow-1);
+  --shadow-elevation-2: var(--t-shadow-2);
+  --shadow-elevation-3: var(--t-shadow-3);
+
+  /* tokens.css status tints */
+  --status-completed-text:   var(--t-success);
+  --status-completed-bg:     var(--t-success-soft);
+  --status-completed-border: rgba(52,211,153,0.30);
+  --status-one-open-text:    var(--t-dst);
+  --status-one-open-bg:      rgba(251,146,60,0.12);
+  --status-one-open-border:  rgba(251,146,60,0.30);
+  --status-pending-text:     var(--t-faint);
+  --status-pending-bg:       var(--t-surface-2);
+  --status-pending-border:   var(--t-border);
+  --status-progress-text:    var(--t-accent-strong);
+  --status-progress-bg:      var(--t-accent-soft);
+  --status-progress-border:  var(--t-accent-border);
+  --status-source-text:      var(--t-src);
+  --status-dest-text:        var(--t-dst);
+  --color-primary-brand:     var(--t-accent);
+
+  /* role badge tints */
+  --role-admin-bg:        var(--t-danger-soft);   --role-admin-text:      var(--t-danger);
+  --role-director-bg:     var(--t-accent-soft);  --role-director-text:   var(--t-accent-strong);
+  --role-supervisor-bg:   var(--t-accent-soft);    --role-supervisor-text: var(--t-accent-bright);
+  --role-qaqc-bg:         var(--t-warning-soft);   --role-qaqc-text:       var(--t-warning);
+  --role-tech-bg:         var(--t-success-soft);   --role-tech-text:       var(--t-success);
+
+  /* Topbar — uniform dark navy chrome matching DWES logo section */
+  --t-header-bar: #091A40;
+  --t-header-bar-border: color-mix(
+    in srgb,
+    var(--t-login-hero-glow, rgba(255, 255, 255, 0.12)) 32%,
+    var(--t-header-border)
+  );
+  --t-header-bar-shadow:
+    inset 0 1px 0 color-mix(
+      in srgb,
+      var(--t-login-hero-grid, rgba(255, 255, 255, 0.06)) 70%,
+      rgba(255, 255, 255, 0.10)
+    ),
+    var(--t-header-shadow);
+  --t-header-bar-accent: color-mix(
+    in srgb,
+    var(--t-login-hero-glow) 48%,
+    var(--t-header-icon-accent)
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 3 — STRUCTURAL COMPONENT OVERRIDES (shared; all colors via --t-*)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* App shell + page body */
+[data-theme] .app-shell {
+  background: var(--t-bg-grad);
+  background-attachment: fixed;
+}
+[data-theme] .page-body,
+[data-theme] .page-body-sm { background: transparent; }
+
+/* Topbar — login-hero-aligned darker chrome (structure unchanged) */
+[data-theme] .topbar {
+  background: var(--topbar-brand-bg, linear-gradient(90deg, #141E42 0%, #1B2958 46%, #248892 100%));
+  border-bottom: 1px solid var(--topbar-brand-border, rgba(109, 207, 212, 0.28));
+  box-shadow: 0 2px 12px rgba(27, 41, 88, 0.26);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  [data-theme] .topbar {
+    background: var(--topbar-brand-bg, linear-gradient(90deg, #141E42 0%, #1B2958 46%, #248892 100%));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+[data-theme] .topbar::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 30%, transparent) 18%,
+    var(--topbar-brand-accent, #6DCFD4) 50%,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 30%, transparent) 82%,
+    transparent 100%
+  );
+}
+[data-theme] .topbar::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 42%, transparent),
+    transparent
+  );
+}
+[data-theme] .topbar-logo-name { color: var(--topbar-brand-on, #FFFFFF); }
+[data-theme] .topbar-logo-sub  { color: color-mix(in srgb, var(--topbar-brand-muted, #CCE8EC) 88%, transparent); }
+[data-theme] .topbar-nav-btn {
+  color: var(--t-header-icon);
+  border-color: transparent;
+}
+[data-theme] .topbar-nav-btn svg { color: inherit; stroke: currentColor; }
+[data-theme] .topbar-nav-btn:hover {
+  color: var(--t-header-icon-hover);
+  background: var(--t-header-action-hover);
+  border-color: var(--t-header-action-border);
+}
+[data-theme] .topbar-nav-btn.active {
+  color: var(--t-header-icon-accent);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent) 40%, transparent);
+  background: var(--t-header-nav-active-bg);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--t-header-icon-accent) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+[data-theme] .topbar-nav-btn.active svg { color: var(--t-header-icon-accent); }
+[data-theme] .topbar-clock { color: var(--t-on-header-muted); }
+/* Deployment status pill — frosted light chip on dark chrome */
+[data-theme] .topbar-env.topbar-float-pill {
+  background: rgba(248, 250, 252, 0.94);
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #1D4ED8;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+[data-theme] .topbar-env--cloud.topbar-float-pill {
+  background: rgba(248, 250, 252, 0.94);
+  border-color: rgba(37, 99, 235, 0.28);
+  color: #1D4ED8;
+}
+
+/* ── Liquid glass chrome (sidebar + topbar family) ─────────────────────────
+   Deep slate/navy frost with cyan/brand-blue accents. Navigation structure
+   and routes unchanged — visual refresh only. No purple AI active pills. */
+[data-theme] .dash-sidebar {
+  isolation: isolate;
+  background: var(--t-sidebar-bg-solid, #0C224F);
+  border-color: var(--t-sidebar-border, rgba(255, 255, 255, 0.24));
+  box-shadow:
+    1px 0 0 color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 18%, transparent),
+    6px 0 24px rgba(2, 6, 23, 0.22);
+  color: var(--t-sidebar-text, #F8FAFC);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  [data-theme] .dash-sidebar {
+    background: var(--t-sidebar-bg);
+    backdrop-filter: blur(var(--t-sidebar-blur, 0px)) saturate(var(--t-sidebar-saturate, 100%));
+    -webkit-backdrop-filter: blur(var(--t-sidebar-blur, 0px)) saturate(var(--t-sidebar-saturate, 100%));
+  }
+}
+[data-theme] .dash-sidebar .dash-sidebar-head {
+  position: relative;
+  z-index: 1;
+  border-color: var(--t-sidebar-border, rgba(255, 255, 255, 0.24));
+  background: transparent;
+}
+[data-theme] .dash-sidebar .dash-sidebar-title {
+  color: var(--t-sidebar-muted, #BFDBFE);
+}
+[data-theme] .dash-sidebar .dash-sidebar-toggle {
+  color: var(--t-sidebar-muted, #64748B);
+  border-color: transparent;
+  background: transparent;
+}
+[data-theme] .dash-sidebar .dash-sidebar-toggle:hover {
+  color: var(--t-sidebar-strong, #0F172A);
+  border-color: color-mix(in srgb, var(--t-sidebar-border, #CBD5E1) 65%, transparent);
+  background: var(--t-sidebar-hover, rgba(37, 99, 235, 0.08));
+}
+[data-theme] .dash-sidebar .dash-sidebar-pin.is-pinned {
+  color: var(--t-accent-strong, var(--t-header-icon-accent, #1B7080));
+  border-color: color-mix(in srgb, var(--t-accent, #2E9DAA) 38%, transparent);
+  background: var(--t-accent-soft, rgba(46, 157, 170, 0.12));
+}
+[data-theme] .dash-sidebar .dash-sidebar-nav {
+  position: relative;
+  z-index: 1;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:not(.is-active) {
+  color: var(--t-sidebar-text, #F8FAFC);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:not(.is-active) .dash-sidebar-icon {
+  color: var(--t-sidebar-muted, #BFDBFE);
+  opacity: 1;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:hover:not(.is-active) {
+  color: var(--t-sidebar-strong, #F8FAFC);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 28%, transparent);
+  background: var(--t-sidebar-hover, rgba(255, 255, 255, 0.16));
+  box-shadow: none;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:hover:not(.is-active) .dash-sidebar-icon {
+  color: var(--t-header-icon-accent, #93C5FD);
+}
+[data-theme] .dash-sidebar-link.is-active {
+  background: var(--t-sidebar-active-bg);
+  color: var(--t-sidebar-active-text, #FFFFFF);
+  font-weight: 750;
+  border-color: var(--t-sidebar-active-border);
+  box-shadow: var(--t-sidebar-active-shadow);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active::after {
+  background: var(--t-header-icon-accent, #93C5FD);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 55%, transparent);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon svg,
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon .ui-icon,
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon .material-symbols-rounded {
+  color: var(--t-sidebar-active-text, #FFFFFF);
+  filter: none;
+}
+[data-theme] .dash-module,
+[data-theme] .dashboard-page-header,
+[data-theme] .dashboard-hero,
+[data-theme] .page-heading,
+[data-theme] .app-section-header,
+[data-theme] .kpi-card,
+[data-theme] .kpi-top-card,
+[data-theme] .chart-card,
+[data-theme] .export-card,
+[data-theme] .workforce-summary-card {
+  border-color: var(--glass-border-strong, var(--t-card-border, #CBD5E1));
+  box-shadow: var(--glass-shadow, var(--t-card-shadow));
+}
+[data-theme] .app-section-title { color: var(--dwes-header-title-blue, #1B2958); }
+[data-theme] .app-section-desc { color: var(--t-muted); }
+[data-theme] .dashboard-page-header__title,
+[data-theme] .dashboard-hero-title,
+[data-theme] .page-heading-title,
+[data-theme] .workspace-section-heading-title,
+[data-theme] .workspace-section-heading-icon,
+[data-theme] .card-title,
+[data-theme] .pj-project-info-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+}
+[data-theme] .dashboard-page-header__subtitle,
+[data-theme] .dashboard-hero-subtitle,
+[data-theme] .page-heading-subtitle {
+  color: #475569;
+}
+[data-theme] .topbar-actions-capsule.topbar-float--dark,
+[data-theme] .topbar-clock-card.topbar-float--dark,
+[data-theme] .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile),
+[data-theme] .topbar-nav-card.topbar-float--dark {
+  background: var(--t-header-float-bg);
+  border: 1px solid var(--t-header-float-border);
+  box-shadow: var(--t-header-float-shadow);
+}
+/* Hover changes only the surface — no translateY lift, so the controls stay
+   seated in the header band instead of reading as floating cards. */
+[data-theme] .topbar-actions-capsule.topbar-float--dark:hover,
+[data-theme] .topbar-clock-card.topbar-float--dark:hover,
+[data-theme] .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile):hover,
+[data-theme] .topbar-nav-card.topbar-float--dark:hover {
+  box-shadow: var(--t-header-float-hover-shadow);
+  border-color: color-mix(in srgb, var(--t-header-float-border) 70%, white);
+}
+[data-theme] .topbar-project-pill.topbar-float--light,
+[data-theme] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile) {
+  background: var(--t-header-user-bg);
+  border: 1px solid var(--t-header-user-border);
+  box-shadow: var(--t-header-user-shadow);
+}
+[data-theme] .topbar-project-pill.topbar-float--light:hover,
+[data-theme] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile):hover {
+  box-shadow: var(--t-header-user-hover-shadow);
+  border-color: color-mix(in srgb, var(--t-header-user-border) 70%, #0F172A);
+}
+[data-theme] .topbar-project-pill.topbar-float--light .topbar-project-value,
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-name {
+  color: var(--t-header-pill-text, var(--t-header-user-text, var(--color-on-surface, #0F172A)));
+}
+[data-theme] .topbar-project-pill.topbar-float--light .topbar-project-label,
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-role,
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-handle {
+  color: var(--t-header-pill-muted, var(--t-header-user-muted, var(--color-on-surface-variant, #64748B)));
+}
+[data-theme] .topbar-user-card.topbar-float--light .topbar-user-handle {
+  font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+[data-theme] .topbar-float-pill {
+  background: var(--t-accent-soft);
+  border-color: var(--t-accent-border);
+  color: var(--t-accent-strong);
+  box-shadow: var(--t-header-float-shadow);
+}
+[data-theme] .topbar-capsule-btn {
+  color: var(--t-header-icon);
+  border-color: transparent;
+  background: transparent;
+}
+[data-theme] .topbar-capsule-btn svg { color: inherit; stroke: currentColor; }
+[data-theme] .topbar-capsule-btn:hover:not(:disabled) {
+  background: var(--t-header-action-hover);
+  color: var(--t-header-icon-hover);
+  border-color: var(--t-header-action-border);
+}
+[data-theme] .topbar-capsule-btn.is-active,
+[data-theme] .topbar-capsule-btn[aria-expanded="true"] {
+  background: var(--t-header-action-hover);
+  color: var(--t-header-icon-accent);
+  border-color: var(--t-accent-border);
+}
+/* §1.4 Logout — clean red gradient, clearly the sign-out action */
+[data-theme] .topbar-capsule-btn--logout {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #F87171 0%, #DC2626 100%);
+  border-color: rgba(220, 38, 38, 0.55);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+[data-theme] .topbar-capsule-btn--logout:hover:not(:disabled) {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #EF4444 0%, #B91C1C 100%);
+  border-color: rgba(185, 28, 28, 0.72);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+/* §1.5 Fingerprint / biometric — theme accent glass (matches chrome) */
+[data-theme] .topbar-capsule-btn--bio {
+  color: #FFFFFF;
+  background: var(--t-primary-grad, linear-gradient(180deg, #3B82F6 0%, #2563EB 100%));
+  border-color: color-mix(in srgb, var(--t-accent-strong, #1D4ED8) 55%, transparent);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+[data-theme] .topbar-capsule-btn--bio:hover:not(:disabled) {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, var(--t-header-icon-accent, #93C5FD) 0%, var(--t-accent-strong, #1D4ED8) 100%);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 55%, transparent);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+[data-theme] .topbar-capsule-btn--bio.is-active,
+[data-theme] .topbar-capsule-btn--bio[aria-expanded="true"] {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, var(--t-accent-bright, #3B82F6) 0%, var(--t-accent-strong, #1D4ED8) 100%);
+  border-color: color-mix(in srgb, var(--t-accent-strong, #1D4ED8) 65%, transparent);
+}
+/* Capability-driven states: never present as an enabled fingerprint control
+   unless the platform authenticator is actually available. */
+[data-theme] .topbar-capsule-btn--bio { position: relative; }
+[data-theme] .topbar-capsule-btn--bio:disabled,
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="unsupported"],
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="loading"] {
+  color: #F1F5F9;
+  background: linear-gradient(180deg, #94A3B8 0%, #64748B 100%);
+  border-color: rgba(100, 116, 139, 0.5);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="error"] {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #FB7185 0%, #E11D48 100%);
+  border-color: rgba(225, 29, 72, 0.5);
+  box-shadow: none;
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+/* Small "enrolled on this device" indicator dot. */
+[data-theme] .topbar-capsule-btn--bio.is-enrolled::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22C55E;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+/* ── §1.6 Right-side header controls — premium 3D refresh ─────────────────
+   Scope: user card, actions capsule (theme / fingerprint / logout), clock only.
+   Everything is nested under .topbar-controls so the logo, brand card, nav
+   tabs, and left side of the bar keep their existing styling untouched.
+   Equal 44px control heights; compact buttons pin explicit min-height/width
+   to defeat the global button touch-target floor (which inflated the 30px
+   capsule buttons to 48px and made them bleed out of the 38px capsule). */
+[data-theme] .topbar-controls .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile),
+[data-theme] .topbar-controls .topbar-actions-capsule.topbar-float--dark,
+[data-theme] .topbar-controls .topbar-clock-card.topbar-float--dark {
+  height: 44px !important;
+  min-height: 44px;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(2, 6, 23, 0.12) 100%),
+    var(--t-header-float-bg);
+  border: 1px solid var(--t-header-float-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.2),
+    0 3px 8px rgba(2, 6, 23, 0.24);
+}
+[data-theme] .topbar-controls .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile):hover,
+[data-theme] .topbar-controls .topbar-actions-capsule.topbar-float--dark:hover,
+[data-theme] .topbar-controls .topbar-clock-card.topbar-float--dark:hover {
+  border-color: color-mix(in srgb, var(--t-header-float-border) 55%, white);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.2),
+    0 5px 14px rgba(2, 6, 23, 0.32);
+}
+[data-theme] .topbar-controls .topbar-user-card:not(.topbar-user-card--profile) .topbar-user-name {
+  text-shadow: 0 1px 1px rgba(2, 6, 23, 0.35);
+}
+[data-theme] .topbar-controls .topbar-user-card.topbar-user-card--profile {
+  height: 44px !important;
+  min-height: 44px;
+  border-radius: 12px !important;
+}
+[data-theme] .topbar-controls .topbar-actions-capsule {
+  padding: 3px 4px;
+  gap: 5px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+  width: 36px;
+  min-width: 36px !important;
+  border-radius: 10px;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform 0.15s ease;
+}
+[data-theme] .topbar-controls .topbar-capsule-slot {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.97);
+  box-shadow: inset 0 2px 4px rgba(2, 6, 23, 0.28);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 80%, white);
+  outline-offset: 1px;
+}
+/* Monochrome Material glyphs on the three action tiles — subtle depth. */
+[data-theme] .topbar-controls .topbar-capsule-btn .ui-icon {
+  text-shadow: 0 1px 1px rgba(2, 6, 23, 0.3);
+}
+/* Theme switch — raised glass tile so it reads as a control, not a bare icon */
+[data-theme] .topbar-controls .topbar-capsule-btn--theme {
+  color: #F1F5F9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.07) 48%, rgba(2, 6, 23, 0.18) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.24),
+    0 2px 5px rgba(2, 6, 23, 0.26);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--theme:hover:not(:disabled) {
+  color: #FFFFFF;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.12) 48%, rgba(2, 6, 23, 0.16) 100%);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.22),
+    0 4px 12px rgba(2, 6, 23, 0.34);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--theme.is-active,
+[data-theme] .topbar-controls .topbar-capsule-btn--theme[aria-expanded="true"] {
+  color: var(--t-header-icon-accent, #93C5FD);
+  background: var(--t-header-nav-active-bg, rgba(147, 197, 253, 0.22));
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 45%, transparent);
+  box-shadow: inset 0 2px 3px rgba(2, 6, 23, 0.22);
+}
+/* Fingerprint / passkey — saturated blue tile with crisp bevel. The §1.5
+   disabled / unsupported / error variants stay authoritative via :not(). */
+[data-theme] .topbar-controls .topbar-capsule-btn--bio {
+  border-radius: 10px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio:not(:disabled):not([data-bio-state]) {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #60A5FA 0%, #3B82F6 46%, #1D4ED8 100%);
+  border: 1px solid rgba(29, 78, 216, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.28),
+    0 2px 6px rgba(37, 99, 235, 0.35);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio:hover:not(:disabled):not([data-bio-state]) {
+  background: linear-gradient(180deg, #7CB4FC 0%, #4F8DF8 46%, #2563EB 100%);
+  border-color: rgba(59, 130, 246, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.26),
+    0 4px 12px rgba(59, 130, 246, 0.48);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio.is-active:not(:disabled),
+[data-theme] .topbar-controls .topbar-capsule-btn--bio[aria-expanded="true"]:not(:disabled) {
+  background: linear-gradient(180deg, #3B82F6 0%, #2563EB 50%, #1E40AF 100%);
+  border-color: rgba(30, 64, 175, 0.75);
+  box-shadow: inset 0 2px 4px rgba(2, 6, 23, 0.3);
+}
+/* Logout — unmistakable red gradient with the same bevel language */
+[data-theme] .topbar-controls .topbar-capsule-btn--logout {
+  width: auto;
+  min-width: 0 !important;
+  padding-inline: 12px;
+  gap: 7px;
+  border-radius: 10px;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 46%, #B91C1C 100%);
+  border: 1px solid rgba(153, 27, 27, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.28),
+    0 2px 6px rgba(220, 38, 38, 0.35);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--logout:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FCA5A5 0%, #F05252 46%, #C81E1E 100%);
+  border-color: rgba(220, 38, 38, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.26),
+    0 4px 12px rgba(220, 38, 38, 0.5);
+}
+[data-theme] .topbar-controls .topbar-logout-label {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+/* Clock — stronger digits, quiet date line */
+[data-theme] .topbar-controls .topbar-clock-digits {
+  font-size: 16px;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.35);
+}
+[data-theme] .topbar-controls .topbar-clock-digits span.topbar-clock-secs {
+  font-size: 14px;
+}
+[data-theme] .topbar-controls .topbar-clock-date {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Fingerprint panel dropdown (elevated) */
+[data-theme] .bio-panel-dropdown {
+  background: var(--t-elev); border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow-3); color: var(--t-text);
+}
+[data-theme] .bio-panel-dropdown p { color: var(--t-text); }
+[data-theme] .bio-panel-dropdown p + p,
+[data-theme] .bio-panel-dropdown .text-xs { color: var(--t-muted); }
+[data-theme] .bio-panel-dropdown [class*="border-b"] { border-color: var(--t-border); }
+[data-theme] .bio-panel-dropdown button { color: var(--t-muted); }
+[data-theme] .bio-panel-dropdown button:hover { color: var(--t-text); background: var(--t-surface-2); }
+
+/* Cards */
+[data-theme] .card { background: var(--t-card); border: 1px solid var(--t-card-border); box-shadow: var(--t-card-shadow); }
+[data-theme] .card-header { border-color: var(--t-border); }
+/* .card-title color set by shared header tokens — see dwes header block below */
+
+/* KPI / status cards — soft brand wash on white (dense industrial glass) */
+[data-theme] .kpi-card {
+  background:
+    var(--t-card-accent-grad, linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, transparent 70%)),
+    var(--t-card);
+  border: 1px solid var(--t-card-border, #E2E8F0);
+  box-shadow: var(--t-card-shadow, 0 1px 2px rgba(15, 23, 42, 0.05));
+  padding: 0.65rem 0.75rem;
+}
+[data-theme] .kpi-card:active {
+  box-shadow: var(--t-shadow-2, 0 4px 12px rgba(15, 23, 42, 0.08));
+}
+[data-theme] .kpi-card[data-variant="default"],
+[data-theme] .kpi-card[data-variant="blue"],
+[data-theme] .kpi-card[data-variant="green"],
+[data-theme] .kpi-card[data-variant="amber"],
+[data-theme] .kpi-card[data-variant="red"] {
+  background:
+    var(--t-card-accent-grad, linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, transparent 70%)),
+    var(--t-card);
+}
+[data-theme] .kpi-label { color: var(--t-muted); }
+[data-theme] .kpi-value       { color: var(--t-text); }
+[data-theme] .kpi-value-green { color: var(--t-success); }
+[data-theme] .kpi-value-blue  { color: var(--t-accent-bright); }
+[data-theme] .kpi-value-amber { color: var(--t-warning); }
+[data-theme] .kpi-value-red   { color: var(--t-danger); }
+
+/* Buttons — primary harmonizes with bg via the theme gradient; danger stays red */
+[data-theme] {
+  --btn-primary-bg: var(--t-primary-grad, var(--color-primary));
+  --btn-on-primary: var(--t-on-accent, var(--color-on-primary));
+}
+[data-theme] .btn-primary,
+[data-theme] .btn-primary-lg {
+  background: var(--t-primary-grad);
+  color: var(--t-on-accent);
+  border-color: transparent;
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .btn-primary:hover:not(:disabled),
+[data-theme] .btn-primary-lg:hover:not(:disabled) { filter: brightness(1.08); box-shadow: var(--t-shadow-2); }
+[data-theme] .btn-secondary {
+  background: var(--t-btn-secondary-bg);
+  color: var(--t-text);
+  border: 1px solid var(--t-btn-secondary-border);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .btn-secondary:hover:not(:disabled) { background: var(--t-surface-3); border-color: var(--t-border-strong); }
+[data-theme] .btn-ghost { color: var(--t-muted); }
+[data-theme] .btn-ghost:hover { background: var(--t-surface-2); color: var(--t-text); }
+[data-theme] .btn-sm { background: var(--t-surface-2); color: var(--t-text); border-color: var(--t-border); }
+[data-theme] .btn-sm:hover { background: var(--t-surface-3); }
+[data-theme] .btn-icon { color: var(--t-muted); }
+[data-theme] .btn-icon:hover { background: var(--t-surface-2); color: var(--t-text); }
+[data-theme] .btn-success { background: var(--t-success); color: var(--t-on-accent); }
+[data-theme] .btn-success:hover:not(:disabled) { filter: brightness(1.06); }
+[data-theme] .btn-warning { background: var(--t-warning); color: #0F172A; }
+[data-theme] .btn-warning:hover:not(:disabled) { filter: brightness(1.06); }
+[data-theme] .btn-danger { background: var(--t-danger); color: var(--t-on-danger); }
+[data-theme] .btn-danger:hover { filter: brightness(1.06); }
+
+/* Glove-safe wiring action buttons */
+[data-theme] .action-btn-prev { background: var(--t-surface-2); color: var(--t-muted); border-color: var(--t-border); }
+[data-theme] .action-btn-prev:hover:not(:disabled) { background: var(--t-surface-3); }
+[data-theme] .action-btn-view { background: var(--t-accent); color: var(--t-on-accent); border-color: var(--t-accent); }
+[data-theme] .action-btn-view:hover:not(:disabled) { background: var(--t-accent-strong); border-color: var(--t-accent-strong); }
+[data-theme] .action-btn-oneend { background: rgba(251,146,60,0.12); color: var(--t-dst); border-color: rgba(251,146,60,0.45); }
+[data-theme] .action-btn-oneend:hover:not(:disabled) { background: rgba(251,146,60,0.20); }
+[data-theme] .action-btn-complete { background: var(--t-success); color: var(--t-on-accent); }
+[data-theme] .action-btn-complete:hover:not(:disabled) { filter: brightness(1.06); }
+[data-theme] .action-btn-skip { background: var(--t-warning-soft); color: var(--t-warning); border-color: rgba(251,191,36,0.45); }
+[data-theme] .action-btn-skip:hover:not(:disabled) { background: rgba(251,191,36,0.20); }
+
+/* Badges */
+[data-theme] .badge-green  { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .badge-amber  { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .badge-orange { background: rgba(251,146,60,0.16); color: var(--t-dst); }
+[data-theme] .badge-blue   { background: var(--t-accent-soft); color: var(--t-accent-bright); }
+[data-theme] .badge-red    { background: var(--t-danger-soft); color: var(--t-danger); }
+[data-theme] .badge-gray   { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .badge-purple { background: rgba(129,140,248,0.16); color: #A5B4FC; }
+[data-theme] .badge-teal   { background: var(--t-accent-soft); color: var(--t-accent-bright); }
+
+/* Forms */
+[data-theme] .form-label { color: var(--t-muted); }
+[data-theme] .form-input,
+[data-theme] .form-input-lg,
+[data-theme] .form-textarea,
+[data-theme] .form-select { background: var(--t-surface-3); color: var(--t-text); border-color: var(--t-border-strong); }
+[data-theme] .form-input::placeholder,
+[data-theme] .form-input-lg::placeholder,
+[data-theme] .form-textarea::placeholder { color: var(--t-faint); }
+[data-theme] .form-input:focus,
+[data-theme] .form-input-lg:focus,
+[data-theme] .form-textarea:focus,
+[data-theme] .form-select:focus { border-color: var(--t-accent); box-shadow: 0 0 0 3px var(--t-accent-soft); background: var(--t-surface-2); }
+[data-theme] .form-error { color: var(--t-danger); }
+
+/* Tabs — base tokens; motion in tabs.css */
+[data-theme] {
+  --nav-tab-indicator: linear-gradient(90deg, var(--t-header-icon-accent, #93C5FD) 0%, var(--t-accent-bright, #3B82F6) 52%, var(--t-accent, #2563EB) 100%);
+  --nav-tab-indicator-soft: linear-gradient(
+    135deg,
+    var(--t-accent-soft, color-mix(in srgb, #1A56DB 14%, transparent)) 0%,
+    color-mix(in srgb, var(--t-accent, #6366F1) 8%, transparent) 100%
+  );
+  --nav-tab-pill-active: linear-gradient(135deg, var(--t-accent-bright, #2563EB) 0%, var(--t-accent, #4338CA) 100%);
+  --nav-tab-ripple: color-mix(in srgb, var(--t-accent-bright, #2563EB) 22%, transparent);
+  --nav-tab-pill-bg: color-mix(in srgb, var(--t-text, #1E293B) 5%, transparent);
+}
+[data-theme] .tab-strip { border-color: var(--t-border); }
+[data-theme] .tab-btn { color: var(--t-faint); }
+[data-theme] .tab-btn:hover { color: var(--t-text); }
+[data-theme] .tab-btn.active { color: var(--t-accent-bright); }
+[data-theme] .tab-strip > .tab-btn.active { color: var(--t-accent-bright); }
+[data-theme] .tab-strip > .tab-btn.active::after { background: var(--nav-tab-indicator); }
+[data-theme] .h-scroll-strip:has(> .tab-btn),
+[data-theme] .table-actions:has(> .tab-btn) {
+  background: var(--t-surface-2, var(--color-surface-variant));
+  border-color: var(--t-border);
+}
+[data-theme] .h-scroll-strip > .tab-btn.active,
+[data-theme] .toolbar > .tab-btn.active,
+[data-theme] .table-actions > .tab-btn.active {
+  color: var(--t-on-accent, #fff);
+  background: var(--nav-tab-pill-active);
+}
+
+/* Tables — white well inside cards, separated header + zebra */
+[data-theme] .table-wrapper {
+  border-color: var(--t-table-border);
+  background: var(--t-table);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+[data-theme] .data-table thead { background: var(--t-table-head); }
+[data-theme] .data-table th { border-color: var(--t-table-border); color: var(--t-muted); }
+[data-theme] .data-table tbody tr { border-color: var(--t-table-border); background: var(--t-table); }
+[data-theme] .data-table tbody tr:nth-child(even) { background: var(--t-table-row-alt); }
+[data-theme] .data-table tbody tr:hover { background: var(--t-accent-soft); }
+[data-theme] .data-table td { color: var(--t-text); }
+/* Glass wrappers — keep dense tables opaque (no stacked blur) */
+[data-theme] :is(.dash-module, .card, .modal-body, .dashboard-content) :is(
+  .data-table, .data-table thead, .data-table tbody tr, .data-table td, .data-table th,
+  .wu-grid-wrap, .wu-grid-table, .file-viewer-spreadsheet, .file-viewer-spreadsheet td, .file-viewer-spreadsheet th
+) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-theme] :is(.dash-module, .card, .modal-body) .data-table thead { background: var(--t-table-head); }
+[data-theme] :is(.dash-module, .card, .modal-body) .data-table tbody tr { background: var(--t-table); }
+
+/* Modals (design-system Modal component) */
+[data-theme] .modal-overlay { background: rgba(2,6,16,0.62); }
+[data-theme] .modal-box,
+[data-theme] .modal-box-sm,
+[data-theme] .modal-box-lg,
+[data-theme] .modal-box-wide,
+[data-theme] .modal-box-xl,
+[data-theme] .modal-box-full {
+  background: var(--t-elev);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-elev-shadow);
+}
+[data-theme] .modal-header { border-color: var(--t-border); }
+[data-theme] .modal-title { color: var(--t-text); }
+[data-theme] .modal-subtitle { color: var(--t-muted); }
+[data-theme] .modal-body { color: var(--t-text); }
+[data-theme] .modal-close-btn {
+  color: var(--t-muted);
+  border-color: var(--t-border);
+  background: var(--t-surface);
+}
+[data-theme] .modal-close-btn:hover {
+  color: var(--t-text);
+  background: var(--t-surface-2);
+  border-color: var(--t-border-strong);
+}
+[data-theme] .modal-footer { border-color: var(--t-border); }
+[data-theme] .modal-overlay .modal-filename { color: var(--t-text); }
+[data-theme] .modal-overlay .modal-meta,
+[data-theme] .modal-overlay .modal-kicker { color: var(--t-muted); }
+
+/* ── Shared popup typography ────────────────────────────────────────────────
+   The modal-box selectors are intentional: shared Modal dialogs inherit these
+   automatically, as do the few legacy dialogs that use a modal box directly.
+   This keeps future popup work centralized. User Management carries the opt-out
+   class because it already has an approved visual language. */
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) {
+  font-family: var(--font-family-sans, Inter, Roboto, system-ui, sans-serif);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  font-weight: 500;
+  letter-spacing: 0.002em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-title {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-subtitle {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(h3, h4, h5, h6) {
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.form-label, label:not(.btn-primary):not(.btn-secondary):not(.btn-danger):not(.btn-warning)) {
+  font-weight: 600;
+  line-height: 1.4;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.form-input, .form-input-lg, .form-select, .form-textarea, input, select, textarea) {
+  font-weight: 500;
+  line-height: 1.45;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management)
+  :is(.modal-footer button, .modal-body button, .btn, .btn-primary, .btn-primary-lg, .btn-secondary, .btn-danger, .btn-warning, .btn-success) {
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.005em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(.text-slate-400, .text-slate-500, .modal-meta, .modal-kicker) {
+  color: var(--t-muted);
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is([role="alert"], .form-error) {
+  font-weight: 600;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body
+  :is(label:has(input[type="checkbox"]), label:has(input[type="radio"])) {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body :is(th, [role="columnheader"]) {
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+}
+[data-theme] :is(
+  .modal-typography, .modal-box, .modal-box-sm, .modal-box-lg,
+  .modal-box-form, .modal-box-wide, .modal-box-xl, .modal-box-full,
+  .modal-box-fullscreen
+):not(.modal-typography--user-management) .modal-body :is(td, [role="cell"]) {
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* These project-level dialogs do not use the shared Modal component. */
+[data-theme] :is(.project-gate-dialog, .dwf-modal, .dwf-tablet-root, .dwf-workspace) {
+  font-family: var(--font-family-sans, Inter, Roboto, system-ui, sans-serif);
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] :is(.project-gate-title, .dwf-modal-title, .dwf-workspace-title) {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+[data-theme] :is(.project-gate-subtitle, .dwf-modal-sub, .dwf-modal-kicker, .dwf-workspace-sub) {
+  font-weight: 500;
+  line-height: 1.5;
+}
+[data-theme] .dwf-workspace :is(.dwf-table thead th, .dwf-table tbody td) {
+  line-height: 1.4;
+}
+[data-theme] .dwf-workspace .dwf-table thead th {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+[data-theme] .dwf-workspace .dwf-table tbody td {
+  font-weight: 500;
+}
+
+/* Upload menu + dropzone */
+[data-theme] .upload-menu { background: var(--t-elev); border-color: var(--t-border-strong); color: var(--t-text); }
+[data-theme] .upload-menu-item:hover { background: var(--t-surface-2); }
+[data-theme] .drawing-dropzone { border-color: var(--t-border-strong); }
+[data-theme] .drawing-dropzone:hover { border-color: var(--t-accent); }
+[data-theme] .drawing-dropzone-copy { color: var(--t-muted); }
+[data-theme] .drawing-dropzone-copy.has-file { color: var(--t-accent-bright); }
+
+/* Project mini cards */
+[data-theme] .proj-mini-card { background: var(--t-surface); border-color: var(--t-border); }
+[data-theme] .proj-mini-card:hover { background: var(--t-surface-2); box-shadow: var(--t-shadow-2); }
+[data-theme] .proj-mini-card[data-s="completed"]             { --pm-accent: var(--t-success); }
+[data-theme] .proj-mini-card[data-s="active"]                { --pm-accent: var(--t-accent-bright); }
+[data-theme] .proj-mini-card[data-s="in_review"]             { --pm-accent: #A5B4FC; }
+[data-theme] .proj-mini-card[data-s="pending"]               { --pm-accent: var(--t-dst); }
+[data-theme] .proj-mini-card[data-s="stopped"]               { --pm-accent: var(--t-danger); }
+[data-theme] .proj-mini-card[data-s="submitted_to_director"] { --pm-accent: var(--t-success); }
+[data-theme] .proj-mini-card[data-s="not_started"]           { --pm-accent: var(--t-faint); }
+[data-theme] .proj-mini-code   { color: var(--t-faint); }
+[data-theme] .proj-mini-name   { color: var(--t-text); }
+[data-theme] .proj-mini-client { color: var(--t-faint); }
+[data-theme] .proj-mini-stat   { color: var(--t-muted); }
+
+/* Frame table status pills */
+[data-theme] .frame-status-none       { background: var(--t-surface-2);    color: var(--t-faint); }
+[data-theme] .frame-status-verified   { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .frame-status-submitted  { background: rgba(52,211,153,0.12); color: #6EE7B7; }
+[data-theme] .frame-status-assigned   { background: var(--t-accent-soft);  color: var(--t-accent-bright); }
+[data-theme] .frame-status-inprogress { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .frame-status-paused     { background: rgba(251,191,36,0.10); color: #FCD34D; }
+[data-theme] .frame-status-completed  { background: var(--t-success-soft); color: var(--t-success); }
+
+/* Frame action pill buttons (Action dialog) — danger stays red */
+[data-theme] .frame-pill-verify  { background: var(--t-primary-grad); color: var(--t-on-accent); }
+[data-theme] .frame-pill-verify:hover:not(:disabled) { filter: brightness(1.10); }
+[data-theme] .frame-pill-drawing { background: var(--t-surface-2); color: var(--t-text); }
+[data-theme] .frame-pill-drawing:hover:not(:disabled) { background: var(--t-surface-3); }
+/* .frame-pill-report — shared report-action styling in design-system.css */
+[data-theme] .frame-pill-assign  { background: var(--t-primary-grad); color: var(--t-on-accent); }
+[data-theme] .frame-pill-assign:hover:not(:disabled) { filter: brightness(1.10); }
+[data-theme] .frame-pill-unassign { background: var(--t-warning-soft); color: var(--t-warning); border: 1px solid rgba(251,191,36,0.38); }
+[data-theme] .frame-pill-unassign:hover:not(:disabled) { background: rgba(251,191,36,0.26); }
+[data-theme] .frame-pill-signoff { background: var(--t-primary-grad); color: var(--t-on-accent); }
+[data-theme] .frame-pill-signoff:hover:not(:disabled) { filter: brightness(1.10); }
+[data-theme] .frame-pill-danger  { background: var(--t-danger-soft); color: var(--t-danger); border: 1px solid rgba(251,113,133,0.38); }
+[data-theme] .frame-pill-danger:hover:not(:disabled) { background: rgba(251,113,133,0.26); }
+
+/* Drawing cards */
+[data-theme] .drawing-card { background: var(--t-surface); border-color: var(--t-border); }
+[data-theme] .drawing-card:hover { background: var(--t-surface-2); border-color: var(--t-accent-border); }
+[data-theme] .drawing-name { color: var(--t-text); }
+[data-theme] .drawing-meta { color: var(--t-faint); }
+[data-theme] .drawing-type-pill { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .drawing-section-title { color: var(--t-muted); }
+
+/* Frame sheet items (upload wizard) */
+[data-theme] .frame-sheet-item { background: var(--t-surface); border-color: var(--t-border); color: var(--t-text); }
+[data-theme] .frame-sheet-item:hover { background: var(--t-surface-2); border-color: var(--t-accent-border); }
+[data-theme] .frame-sheet-item.is-best { background: var(--t-accent-soft); border-color: var(--t-accent-border); }
+[data-theme] .frame-title { color: var(--t-text); }
+[data-theme] .frame-best-mark { color: var(--t-accent-bright); }
+[data-theme] .frame-sub { color: var(--t-muted); }
+
+/* Wiring flow — bars */
+[data-theme] .wire-header-bar,
+[data-theme] .wire-kpi-bar,
+[data-theme] .wire-progress-header,
+[data-theme] .wire-grade-bar { background: var(--t-surface); border-color: var(--t-border); }
+[data-theme] .wire-header-panel  { color: var(--t-text); }
+[data-theme] .wire-header-frame  { color: var(--t-muted); }
+[data-theme] .wire-header-center { color: var(--t-text); }
+[data-theme] .wire-grade-label   { color: var(--t-muted); }
+[data-theme] .wire-elapsed-chip { background: var(--t-accent-soft); border-color: var(--t-accent-border); color: var(--t-accent-strong); }
+[data-theme] .wire-start-chip { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .wire-exit-btn { border-color: rgba(251,191,36,0.42); background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .wire-exit-btn:hover { background: rgba(251,191,36,0.18); }
+[data-theme] .wire-kpi-fill,
+[data-theme] .wire-progress-fill { background: var(--t-primary-grad); }
+
+/* Wire card */
+[data-theme] .wire-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .wire-card-done { border-color: var(--t-accent); box-shadow: 0 0 0 3px var(--t-accent-soft), var(--t-shadow-2); }
+[data-theme] .wire-num-badge { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .wire-ferrule-badge { background: var(--t-surface-3); border-color: var(--t-border); color: var(--t-text); }
+[data-theme] .wire-ferrule-badge::before { color: var(--t-faint); }
+[data-theme] .wire-meta-chip { background: var(--t-surface-3); border-color: var(--t-border); color: var(--t-muted); }
+[data-theme] .wire-schematic-wrap { background: var(--t-surface-3); border-color: var(--t-border); }
+[data-theme] .wire-schematic-issue { border-color: rgba(251,113,133,0.48); background: var(--t-danger-soft); }
+[data-theme] .wire-schematic-issue-banner { color: var(--t-danger); }
+
+/* Source end (cyan/sky) + Destination end (orange) */
+[data-theme] .wire-end-block.src      { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.30); }
+[data-theme] .wire-end-block.src.done { background: rgba(34,211,238,0.16); border-color: rgba(34,211,238,0.52); }
+[data-theme] .wire-end-label.src      { color: var(--t-src); }
+[data-theme] .wire-end-block.dst      { background: rgba(251,146,60,0.08); border-color: rgba(251,146,60,0.30); }
+[data-theme] .wire-end-block.dst.done { background: rgba(251,146,60,0.16); border-color: rgba(251,146,60,0.52); }
+[data-theme] .wire-end-label.dst      { color: var(--t-dst); }
+[data-theme] .wire-end-text { color: var(--t-text); }
+
+/* Wire action buttons — SRC (cyan) */
+[data-theme] .wire-action-btn.src { border-color: rgba(34,211,238,0.55); color: var(--t-src); background: rgba(34,211,238,0.07); }
+[data-theme] .wire-action-btn.src:hover:not(:disabled) { background: rgba(34,211,238,0.14); }
+[data-theme] .wire-action-btn.src.confirmed { background: var(--t-src); border-color: var(--t-src); color: var(--t-on-accent); }
+[data-theme] .wire-action-btn.src.confirmed:hover:not(:disabled) { filter: brightness(0.94); }
+/* Wire action buttons — DST (orange) */
+[data-theme] .wire-action-btn.dst { border-color: rgba(251,146,60,0.55); color: var(--t-dst); background: rgba(251,146,60,0.07); }
+[data-theme] .wire-action-btn.dst:hover:not(:disabled) { background: rgba(251,146,60,0.14); }
+[data-theme] .wire-action-btn.dst.confirmed { background: var(--t-dst); border-color: var(--t-dst); color: #06121A; }
+[data-theme] .wire-action-btn.dst.confirmed:hover:not(:disabled) { filter: brightness(0.94); }
+[data-theme] .wire-sep-line { background: var(--t-border); }
+[data-theme] .wire-advancing-overlay { background: var(--t-accent); color: var(--t-on-accent); }
+[data-theme] .wire-next-cta { background: var(--t-primary-grad); color: var(--t-on-accent); }
+[data-theme] .wire-next-cta:hover { filter: brightness(1.08); }
+
+/* Wire status chips/pills */
+[data-theme] .wf-status-chip.active { background: var(--t-accent-soft); color: var(--t-accent-bright); }
+[data-theme] .wf-status-chip.idle   { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .wf-status-pill.done    { background: var(--t-success-soft); color: var(--t-success); border-color: rgba(52,211,153,0.32); }
+[data-theme] .wf-status-pill.partial { background: var(--t-warning-soft); color: var(--t-warning); border-color: rgba(251,191,36,0.32); }
+[data-theme] .wf-status-pill.pending { background: var(--t-surface-2); color: var(--t-faint); border-color: var(--t-border); }
+
+/* Wire nav buttons */
+[data-theme] .wire-nav-btn { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .wire-nav-btn:hover { background: var(--t-surface-3); }
+[data-theme] .wire-nav-pill.secondary { background: var(--t-surface-2); color: var(--t-text); }
+[data-theme] .wire-nav-pill.secondary:hover { background: var(--t-surface-3); }
+[data-theme] .wire-nav-pill.ghost { background: var(--t-surface); border-color: var(--t-border); color: var(--t-muted); }
+[data-theme] .wire-nav-pill.ghost:hover { background: var(--t-surface-2); }
+
+/* Issue flag (danger red) */
+[data-theme] .wire-issue-pill { border-color: rgba(251,113,133,0.40); background: var(--t-danger-soft); color: var(--t-danger); }
+[data-theme] .wire-issue-pill:hover { background: rgba(251,113,133,0.18); }
+[data-theme] .wire-issue-active { background: var(--t-danger-soft); border-color: rgba(251,113,133,0.32); }
+
+/* Toasts (elevated) */
+[data-theme] .wire-toast { background: var(--t-elev); border-color: var(--t-border-strong); }
+[data-theme] .wire-toast.warn  { background: #3A2E08; border-color: rgba(251,191,36,0.30); }
+[data-theme] .wire-toast.issue { background: #3A0F18; border-color: rgba(251,113,133,0.30); }
+[data-theme] .wire-toast-icon { background: var(--t-accent); color: var(--t-on-accent); }
+
+/* Completion + wire-list sheet (elevated) */
+[data-theme] .wire-complete-card { background: var(--t-elev); border-color: var(--t-border-strong); color: var(--t-text); }
+[data-theme] .wire-list-sheet { background: var(--t-elev); border: 1px solid var(--t-border-strong); color: var(--t-text); }
+[data-theme] .wire-list-header { border-color: var(--t-border); }
+[data-theme] .wire-list-body > * { border-color: var(--t-border); }
+[data-theme] .wire-list-row:hover { background: var(--t-surface-2); }
+[data-theme] .wire-list-row.active { background: var(--t-accent-soft); }
+[data-theme] .wire-list-num { background: var(--t-surface-2); color: var(--t-muted); }
+
+/* GA drawing viewer (functional tool — elevated dark) */
+[data-theme] .drawing-viewer-overlay { background: rgba(2,6,16,0.70); }
+[data-theme] .drawing-viewer-box { background: var(--t-elev); border: 1px solid var(--t-border-strong); }
+[data-theme] .drawing-viewer-header { background: var(--t-surface-3); border-color: var(--t-border); }
+
+/* Progress bars */
+[data-theme] .progress-track { background: var(--t-surface-2); }
+[data-theme] .progress-fill { background: var(--t-primary-grad); }
+[data-theme] .progress-fill-green  { background: var(--t-success); }
+[data-theme] .progress-fill-orange { background: var(--t-dst); }
+
+/* Mapping table (upload wizard) */
+[data-theme] .mapping-table-wrap { border-color: var(--t-border); }
+[data-theme] .mapping-col-header-row th { background: var(--t-surface-3); color: var(--t-muted); border-color: var(--t-border); }
+[data-theme] .mapping-col-header-row th.col-mapped { background: var(--t-accent-soft); color: var(--t-accent-bright); border-bottom-color: var(--t-accent-bright); }
+[data-theme] .mapping-col-header-row th.col-required { background: var(--t-success-soft); color: var(--t-success); border-bottom-color: var(--t-success); }
+[data-theme] .mapping-field-header-row th { background: var(--t-surface-2); border-bottom-color: var(--t-border-strong); border-right-color: var(--t-border); }
+[data-theme] .mapping-table tbody tr:nth-child(even) { background: rgba(var(--t-surface-white-rgb, 255, 255, 255), 0.03); }
+[data-theme] .mapping-table tbody tr:hover { background: var(--t-accent-soft); }
+[data-theme] .mapping-select { background: var(--t-surface-3); color: var(--t-text); border-color: var(--t-border-strong); }
+[data-theme] .mapping-select:focus { border-color: var(--t-accent); box-shadow: 0 0 0 2px var(--t-accent-soft); }
+[data-theme] .mapping-select.sel-mapped { border-color: var(--t-accent); background: var(--t-accent-soft); color: var(--t-accent-bright); }
+[data-theme] .mapping-select.sel-required { border-color: var(--t-success); background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .mapping-td { color: var(--t-text); border-color: var(--t-border); }
+
+/* Misc — titles, empty states, callouts, banners, flash */
+[data-theme] .section-title:not(.dashboard-page-header__title):not(.dashboard-hero-title):not(.page-heading-title) {
+  color: var(--t-text);
+}
+[data-theme] .section-sub:not(.dashboard-page-header__subtitle):not(.dashboard-hero-subtitle):not(.page-heading-subtitle) {
+  color: var(--t-muted);
+}
+[data-theme] .dashboard-page-header__subtitle,
+[data-theme] .dashboard-hero-subtitle,
+[data-theme] .page-heading-subtitle {
+  color: #475569;
+}
+
+/* Reinforce shared header title colors after generic .section-title / .card-title rules */
+[data-theme] .dashboard-page-header__title,
+[data-theme] .dashboard-hero-title,
+[data-theme] .page-heading-title,
+[data-theme] .dashboard-page-header .section-title,
+[data-theme] .dashboard-hero .section-title,
+[data-theme] .page-heading .section-title,
+[data-theme] .workspace-section-heading-title,
+[data-theme] .workspace-section-heading-icon,
+[data-theme] .app-section-title,
+[data-theme] .card-title,
+[data-theme] .pj-project-info-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+  font-weight: 700;
+}
+[data-theme] [data-ui-polish="saas"] .dashboard-page-header__title,
+[data-theme] [data-ui-polish="saas"] .dashboard-page-header .section-title,
+[data-theme] [data-ui-polish="saas"] .workspace-section-heading-title,
+[data-theme] [data-ui-polish="saas"] .card-title,
+[data-theme] [data-ui-polish="saas"] .app-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+  font-weight: 700;
+}
+[data-theme] .empty-icon { color: var(--t-faint); }
+[data-theme] .empty-text { color: var(--t-muted); }
+[data-theme] .paused-banner { background: var(--t-warning-soft); border-left-color: var(--t-warning); color: var(--t-warning); }
+[data-theme] .source-text { color: var(--t-src); }
+[data-theme] .dest-text { color: var(--t-dst); }
+[data-theme] .flash-ok { background: var(--t-success-soft); border-color: rgba(52,211,153,0.32); color: var(--t-success); }
+[data-theme] .flash-err { background: var(--t-danger-soft); border-color: rgba(251,113,133,0.32); color: var(--t-danger); }
+[data-theme] .assignment-warning { background: var(--t-warning-soft); border-color: rgba(251,191,36,0.32); color: var(--t-warning); }
+[data-theme] .assignment-info-callout { background: var(--t-accent-soft); border-color: var(--t-accent-border); color: var(--t-accent-strong); }
+[data-theme] .assignment-success-title { color: var(--t-text); }
+[data-theme] .assignment-success-copy { color: var(--t-muted); }
+[data-theme] .assignment-success-note { color: var(--t-faint); }
+[data-theme] .review-sub { color: var(--t-muted); }
+[data-theme] .history-empty-state { color: var(--t-muted); }
+[data-theme] .history-empty-icon { color: var(--t-faint); }
+[data-theme] .field-required-missing { color: var(--t-danger); }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 5 — PROJECT / FRAME SURFACES (Supervisor)
+   Hook classes added in ProjectsTab/FramesTab; here they pick up the active theme.
+   Status carries the only per-card color (pj-state-badge[data-state]); the surface
+   is themed by the app. Light defaults remain via the components' inline utilities.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Surfaces / panels — Premium styling */
+[data-theme] .pj-surface {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-surface:hover {
+  box-shadow: var(--t-shadow-2);
+}
+
+/* Projects top bar — themed to the card surface so header + table read as ONE
+   white card. The `.pj-surface.pj-surface--under-topbar` double-class wins over
+   the higher-specificity themed `.pj-surface` radius/shadow rules (incl. the
+   [data-ui-polish="saas"] variants) so the top corners square off and connect. */
+[data-theme] .pj-topbar {
+  background: var(--t-card);
+  border-color: var(--t-card-border);
+}
+[data-theme] .pj-surface.pj-surface--under-topbar,
+[data-theme] [data-ui-polish="saas"] .pj-surface.pj-surface--under-topbar {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: none;
+}
+[data-theme] .pj-surface.pj-surface--under-topbar:hover {
+  box-shadow: none;
+}
+
+/* Upload dropdown menu (elevated) */
+[data-theme] .pj-menu { background: var(--t-elev); border-color: var(--t-border-strong); color: var(--t-text); }
+[data-theme] .pj-menu button:hover { background: var(--t-surface-2); }
+[data-theme] .pj-menu .text-slate-800 { color: var(--t-text); }
+[data-theme] .pj-menu .text-slate-500 { color: var(--t-muted); }
+
+/* Themed table — Premium styling */
+[data-theme] .pj-table thead { 
+  background: var(--t-table-head); 
+  border-bottom: 1px solid var(--t-border-strong);
+  transition: background var(--transition-base);
+}
+[data-theme] .pj-table thead th { 
+  color: var(--t-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+[data-theme] .pj-table tbody tr { 
+  background: var(--t-table); 
+  border-color: var(--t-table-border);
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-table tbody tr:nth-child(even) { background: var(--t-table-row-alt); }
+[data-theme] .pj-table tbody tr:hover { 
+  background: var(--t-accent-soft);
+  transform: scale(1.005);
+}
+[data-theme] .pj-table tbody td { color: var(--t-text); }
+[data-theme] .pj-table .text-slate-400 { color: var(--t-faint); }
+[data-theme] .pj-table .text-slate-500 { color: var(--t-muted); }
+[data-theme] .pj-table .text-blue-500 { color: var(--t-accent-bright); }
+[data-theme] .pj-table .empty-state,
+[data-theme] .pj-table td .text-slate-500 { color: var(--t-muted); }
+
+/* Frame detail panel header (was bg-blue-50) */
+[data-theme] .pj-panel-head { background: var(--t-accent-soft); border-color: var(--t-border); }
+[data-theme] .pj-panel-head .text-slate-800 { color: var(--t-text); }
+[data-theme] .pj-panel-head .text-slate-400 { color: var(--t-faint); }
+[data-theme] .pj-panel-head .text-blue-600 { color: var(--t-accent-bright); }
+[data-theme] .pj-panel-head button:hover { background: var(--t-surface-2); color: var(--t-text); }
+
+/* Project state badge — Premium styling */
+[data-theme] .pj-state-badge { 
+  background: var(--t-surface-2); 
+  color: var(--t-muted); 
+  border-color: var(--t-border);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-state-badge[data-state="completed"] { background: var(--t-success-soft); color: var(--t-success); border-color: rgba(52,211,153,0.30); }
+[data-theme] .pj-state-badge[data-state="active"],
+[data-theme] .pj-state-badge[data-state="in_review"] { background: var(--t-accent-soft); color: var(--t-accent-strong); border-color: rgba(79,70,229,0.28); }
+[data-theme] .pj-state-badge[data-state="pending"] { background: rgba(251,146,60,0.16); color: var(--t-dst); border-color: rgba(251,146,60,0.30); }
+[data-theme] .pj-state-badge[data-state="stopped"] { background: var(--t-danger-soft); color: var(--t-danger); border-color: rgba(251,113,133,0.30); }
+[data-theme] .pj-state-badge[data-state="submitted_to_director"] { background: var(--t-success-soft); color: var(--t-success); border-color: rgba(52,211,153,0.30); }
+
+/* Card buttons — Premium styling */
+[data-theme] .pj-btn-primary { 
+  background: var(--t-primary-grad); 
+  color: var(--t-on-accent); 
+  border-color: transparent;
+  box-shadow: var(--t-shadow-1);
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-btn-primary:hover:not(:disabled) { 
+  filter: brightness(1.08);
+  box-shadow: var(--t-shadow-2);
+  transform: translateY(-1px);
+}
+[data-theme] .pj-btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+[data-theme] .pj-btn-secondary {
+  background: var(--t-btn-secondary-bg);
+  color: var(--t-text);
+  border: 1px solid var(--t-btn-secondary-border);
+  box-shadow: var(--t-shadow-1);
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-btn-secondary:hover:not(:disabled) { 
+  background: var(--t-surface-3); 
+  color: var(--t-text);
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .pj-btn-danger-ghost { 
+  background: var(--t-surface-2); 
+  color: var(--t-text); 
+  border-color: var(--t-border-strong);
+  transition: all var(--transition-base);
+}
+[data-theme] .pj-btn-danger-ghost:hover { 
+  background: var(--t-danger-soft); 
+  color: var(--t-danger); 
+  border-color: rgba(251,113,133,0.38);
+  box-shadow: var(--t-shadow-1);
+}
+
+/* ── Project information action group ────────────────────────────────────
+   Add Panel / Digital Wiring View / Drawing View / Edit ▾ are one action
+   bar: identical height, radius, padding, type, icon and shadow, in a
+   single muted slate. Only state (enabled / unavailable / busy) differs.
+   Card-scoped and unlayered so it owns these buttons outright — no theme
+   or polish rule can drift their size or colour apart again. */
+[data-theme] .pj-project-info-card-actions {
+  --pj-action-h: 36px;
+  --pj-action-px: 12px;
+  --pj-action-radius: 10px;
+  --pj-action-fs: 12px;
+  --pj-action-gap: 6px;
+  --pj-action-icon: 18px;
+  --pj-action-bg: #1E293B;
+  --pj-action-bg-hover: #334155;
+  --pj-action-bg-active: #0F172A;
+  --pj-action-border: #1E293B;
+  --pj-action-border-hover: #475569;
+  --pj-action-shadow: 0 1px 2px rgba(15, 23, 42, 0.16);
+  --pj-action-shadow-hover: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action {
+  flex: 0 0 auto;
+  width: auto;
+  height: var(--pj-action-h);
+  min-height: var(--pj-action-h);
+  max-height: var(--pj-action-h);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--pj-action-px);
+  gap: var(--pj-action-gap);
+  border: 1px solid transparent;
+  border-radius: var(--pj-action-radius);
+  font-size: var(--pj-action-fs);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  filter: none;
+  transition:
+    background-color 0.18s var(--btn-ease, ease),
+    border-color 0.18s var(--btn-ease, ease),
+    box-shadow 0.18s var(--btn-ease, ease),
+    transform 0.12s var(--btn-ease, ease);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action svg {
+  width: var(--pj-action-icon);
+  height: var(--pj-action-icon);
+  flex-shrink: 0;
+}
+
+/* Edit sits in a menu wrapper — keep it the same width as its siblings */
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu .pj-info-action {
+  width: 100%;
+  min-width: 0;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  margin-right: -2px;
+  opacity: 0.75;
+  transition: transform 0.18s ease;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* Enabled — one muted slate for all four */
+[data-theme] .pj-project-info-card-actions .pj-info-action:not(:disabled) {
+  background: var(--pj-action-bg);
+  background-image: none;
+  color: #FFFFFF;
+  border-color: var(--pj-action-border);
+  box-shadow: var(--pj-action-shadow);
+  opacity: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action:hover:not(:disabled) {
+  background: var(--pj-action-bg-hover);
+  border-color: var(--pj-action-border-hover);
+  box-shadow: var(--pj-action-shadow-hover);
+  filter: none;
+  transform: none;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action:active:not(:disabled) {
+  background: var(--pj-action-bg-active);
+  box-shadow: var(--pj-action-shadow);
+  transform: scale(0.98);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action:focus-visible {
+  outline: 2px solid var(--t-primary, #2563EB);
+  outline-offset: 2px;
+}
+
+/* Unavailable (no drawing / no wiring schedule / no panel selected) — flat muted */
+[data-theme] .pj-project-info-card-actions .pj-info-action:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+  background: var(--t-surface-2, #E2E8F0);
+  background-image: none;
+  color: var(--t-muted, #64748B);
+  border-color: var(--t-outline, #CBD5E1);
+  opacity: 0.72;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+
+/* Busy — keep the slate fill, just dim it (spinner inherits currentColor) */
+[data-theme] .pj-project-info-card-actions .pj-info-action.btn--loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+  filter: none;
+}
+
+/* Tablet portrait / narrow — wrap naturally; no flex-grow stretch */
+@media (max-width: 1023px) {
+  [data-theme] .pj-project-info-card-actions {
+    --pj-action-h: 44px;
+  }
+}
+
+/* ── Edit ▾ popover (Project information) ────────────────────────────────
+   Opaque light surface — .pj-toolbar-dropdown is in the app-wide "liquid
+   glass" list, which made this menu 72%-transparent so the card text read
+   through it. This block is unlayered and compound-scoped, so it wins over
+   that glass rule without disturbing any other dropdown.
+   Only destructive actions (Remove panel, Delete project) carry red. */
+[data-theme] .pj-toolbar-dropdown.pj-edit-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  z-index: 60;
+  margin-top: 8px;
+  width: max-content;
+  min-width: 268px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 6px;
+  background: var(--t-elev, var(--t-surface-white, #FFFFFF));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--t-border, #E2E8F0);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 32px rgba(15, 23, 42, 0.14);
+  animation: pj-edit-menu-in 0.14s var(--btn-ease, ease-out);
+}
+@keyframes pj-edit-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Section headings — "Project" / "Panel". Every heading after the first
+   carries the group divider, so sections separate without extra markup. */
+[data-theme] .pj-edit-menu .pj-edit-menu-label {
+  display: block;
+  padding: 8px 10px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--t-faint, #94A3B8);
+}
+[data-theme] .pj-edit-menu .pj-edit-menu-label:not(:first-child) {
+  margin: 6px -6px 0;
+  padding: 12px 16px 6px;
+  border-top: 1px solid var(--t-border, #EEF2F7);
+}
+
+/* Items — one row height, one icon size, one hover shape */
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  /* Honour the app-wide touch floor (index.css: 44px, 48px ≥600px) rather
+     than fight it — rows stay uniform and tablet-tappable. */
+  min-height: 44px;
+  height: auto;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--t-text-secondary, #1E293B);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--t-muted, #64748B);
+  transition: color 0.15s ease;
+}
+  .pj-edit-menu-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--t-surface-2, #F1F5F9);
+    color: var(--t-text-muted, #475569);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .pj-edit-menu-ico svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pj-edit-menu-ico--danger {
+    background: var(--t-danger-soft, #FEF2F2);
+    color: var(--t-danger, #DC2626);
+  }
+  [data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico {
+    background: var(--t-surface-2, #E2E8F0);
+    color: var(--t-text-secondary, #334155);
+  }
+  [data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico--danger {
+    background: var(--t-danger-soft, #FEE2E2);
+    color: #B91C1C;
+  }
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) {
+  background: var(--t-surface-3, #F1F5F9);
+  color: var(--t-text-primary, #0F172A);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) svg {
+  color: var(--t-text-secondary, #334155);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:focus-visible {
+  outline: 2px solid var(--t-primary, #2563EB);
+  outline-offset: -2px;
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* Destructive only */
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger,
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger svg {
+  color: var(--t-danger, #DC2626);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger:hover:not(:disabled),
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger:hover:not(:disabled) svg {
+  background: var(--t-danger-soft, #FEF2F2);
+  color: #B91C1C;
+}
+
+/* Divider before the permanent-delete action */
+[data-theme] .pj-edit-menu .pj-edit-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  border: 0;
+  background: var(--t-border, #EEF2F7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme] .pj-toolbar-dropdown.pj-edit-menu { animation: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 6 — KPI ICON BUBBLES + ACTION DIALOG HEADER + TECHNICIAN PANEL CARDS
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* KPI icon containers — MD3 tonal blocks */
+[data-theme] .kpi-card[data-variant="default"] .kpi-icon-wrap { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .kpi-card[data-variant="green"]   .kpi-icon-wrap { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .kpi-card[data-variant="blue"]    .kpi-icon-wrap { background: var(--t-accent-soft); color: var(--t-accent-bright); }
+[data-theme] .kpi-card[data-variant="amber"]   .kpi-icon-wrap { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .kpi-card[data-variant="red"]    .kpi-icon-wrap { background: var(--t-danger-soft); color: var(--t-danger); }
+/* Legacy .kpi-icon class (inline cards) */
+[data-theme] .kpi-card .kpi-icon                   { background: var(--t-surface-2); color: var(--t-muted); }
+[data-theme] .kpi-card[data-variant="green"] .kpi-icon { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .kpi-card[data-variant="blue"]  .kpi-icon { background: var(--t-accent-soft);  color: var(--t-accent-bright); }
+[data-theme] .kpi-card[data-variant="amber"] .kpi-icon { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .kpi-card[data-variant="red"]   .kpi-icon { background: var(--t-danger-soft);  color: var(--t-danger); }
+
+/* Action dialog header (FramesTab) — was hardcoded from-blue-600 to-blue-800 gradient */
+[data-theme] .frame-action-head { background: var(--t-primary-grad); }
+
+/* Report bar fills (director dashboard — hardcoded #3b82f6 in design-system.css) */
+[data-theme] .report-bar-fill  { background: var(--t-accent); }
+[data-theme] .report-proj-fill { background: var(--t-accent); }
+
+/* Technician panel cards — Premium styling */
+[data-theme] .tc-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-card:hover { 
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow-2);
+  transform: translateY(-2px);
+}
+[data-theme] .tc-card.tc-card-active { 
+  border-color: var(--t-accent); 
+  box-shadow: 0 0 0 1px var(--t-accent), var(--t-shadow-2);
+}
+/* Card text */
+[data-theme] .tc-card .text-slate-800 { color: var(--t-text); }
+[data-theme] .tc-card .text-slate-600 { color: var(--t-muted); }
+[data-theme] .tc-card .text-slate-400 { color: var(--t-faint); }
+/* Card divider (right column border-l) */
+[data-theme] .tc-card .tc-divider { border-color: var(--t-border); }
+/* Primary CTA buttons — Premium styling */
+[data-theme] .tc-cta-btn { 
+  background: var(--t-primary-grad); 
+  color: var(--t-on-accent); 
+  border-color: transparent;
+  box-shadow: var(--t-shadow-1);
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-cta-btn:hover:not(:disabled) { 
+  filter: brightness(1.08);
+  box-shadow: var(--t-shadow-2);
+  transform: translateY(-1px);
+}
+[data-theme] .tc-cta-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+/* Neutral CTA button — Premium styling */
+[data-theme] .tc-cta-neutral { 
+  background: var(--t-surface-2); 
+  color: var(--t-text);
+  border: 1px solid var(--t-border);
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-cta-neutral:hover { 
+  background: var(--t-surface-3);
+  border-color: var(--t-border-strong);
+  box-shadow: var(--t-shadow-1);
+}
+/* Drawing link pill — Premium styling */
+[data-theme] .tc-btn-drawing { 
+  background: var(--t-accent-soft); 
+  color: var(--t-accent-strong); 
+  border-color: var(--t-accent-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-btn-drawing:hover { 
+  background: var(--t-accent-soft);
+  filter: brightness(0.97); 
+  color: var(--t-accent-strong);
+  box-shadow: var(--t-shadow-1);
+  transform: translateY(-1px);
+}
+/* Source / Destination count pills — Premium styling */
+[data-theme] .tc-src-pill { 
+  background: rgba(34,211,238,0.10); 
+  color: var(--t-src); 
+  border-color: rgba(34,211,238,0.28);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-src-pill:hover {
+  background: rgba(34,211,238,0.16);
+}
+[data-theme] .tc-dst-pill { 
+  background: rgba(251,146,60,0.10); 
+  color: var(--t-dst); 
+  border-color: rgba(251,146,60,0.28);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-base);
+}
+[data-theme] .tc-dst-pill:hover {
+  background: rgba(251,146,60,0.16);
+}
+/* Schedule filename pill */
+[data-theme] .tc-schedule-pill { background: var(--t-surface-2); color: var(--t-muted); border-color: var(--t-border); }
+/* Awaiting-approval warning pill */
+[data-theme] .tc-warn-pill { background: var(--t-warning-soft); color: var(--t-warning); border-color: rgba(251,191,36,0.28); }
+
+/* info-pill (ElapsedPill) + tech-strip — Premium styling */
+.info-pill {
+  display: inline-flex; align-items: center;
+  padding: 4px 10px; border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 700;
+  font-family: var(--font-family-mono, monospace);
+  background: var(--color-surface-variant); color: var(--color-text-secondary); border: 1px solid var(--color-border-light);
+  transition: all var(--transition-base);
+}
+.info-pill[data-tone="source"]  { background: var(--color-primary-100); color: var(--color-primary-700); border-color: var(--color-primary-200); }
+.info-pill[data-tone="pending"] { background: var(--color-warning-bg); color: var(--color-warning); border-color: var(--color-warning-border); }
+.tech-strip {
+  padding: 12px 16px; border-radius: var(--radius-lg); font-size: 13px;
+  background: var(--color-warning-bg); border-left: 3px solid var(--color-warning); color: var(--color-warning);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+}
+.tech-strip:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.tech-strip[data-tone="info"] {
+  background: var(--color-primary-100);
+  border-left-color: var(--color-primary-600);
+  color: var(--color-primary-700);
+}
+[data-theme] .info-pill                  { background: var(--t-surface-2); color: var(--t-muted); border-color: var(--t-border); }
+[data-theme] .info-pill[data-tone="source"]  { background: rgba(34,211,238,0.10); color: var(--t-src); border-color: rgba(34,211,238,0.28); }
+[data-theme] .info-pill[data-tone="pending"] { background: var(--t-warning-soft); color: var(--t-warning); border-color: rgba(251,191,36,0.28); }
+[data-theme] .tech-strip { 
+  background: var(--t-warning-soft); 
+  border-left-color: var(--t-warning); 
+  color: var(--t-warning);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .tech-strip:hover {
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .tech-strip[data-tone="info"] {
+  background: var(--t-accent-soft);
+  border-left-color: var(--t-accent-bright);
+  color: var(--t-accent-strong);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 7 — DIRECTOR SUMMARY REPORT (ops_director is now in THEMED_ROLES)
+   Hook classes added in SummaryReportTab; themed here via centralized tokens.
+   Status / QC carries the only per-row color; surface is themed by the app.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Scoped text overrides — Tailwind utilities inside dr-report pick up theme colors */
+[data-theme] .dr-report .text-slate-800 { color: var(--t-text); }
+[data-theme] .dr-report .text-slate-700 { color: var(--t-text); }
+[data-theme] .dr-report .text-slate-600 { color: var(--t-muted); }
+[data-theme] .dr-report .text-slate-500 { color: var(--t-muted); }
+[data-theme] .dr-report .text-slate-400 { color: var(--t-faint); }
+[data-theme] .dr-report .text-slate-300 { color: var(--t-border-strong); }
+[data-theme] .dr-report .text-blue-600  { color: var(--t-accent-bright); }
+[data-theme] .dr-report .text-green-600 { color: var(--t-success); }
+
+/* Project cards — Premium styling */
+[data-theme] .dr-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-card:hover {
+  box-shadow: var(--t-shadow-2);
+  border-color: var(--t-accent-border);
+}
+[data-theme] .dr-toggle:hover { background: var(--t-table-row-alt); }
+
+/* Progress bar tracks — Premium styling */
+[data-theme] .dr-proj-track { 
+  background: var(--t-surface-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+[data-theme] .dr-mini-track  { 
+  background: var(--t-table-head);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+/* Panel expansion area and table — Premium styling */
+[data-theme] .dr-table-wrap {
+  border-color: var(--t-table-border);
+  background: var(--t-table);
+  border-top: 1px solid var(--t-table-border);
+}
+[data-theme] .dr-thead tr   { 
+  background: var(--t-table-head); 
+  border-color: var(--t-table-border);
+  transition: background var(--transition-base);
+}
+[data-theme] .dr-thead th   { 
+  color: var(--t-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+[data-theme] .dr-row { 
+  border-color: var(--t-table-border); 
+  background: var(--t-table);
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-row:hover { 
+  background: var(--t-accent-soft);
+  transform: scale(1.005);
+}
+[data-theme] .dr-row-alt   { background: var(--t-table-row-alt); }
+/* Panel row data text */
+[data-theme] .dr-row .text-slate-800 { color: var(--t-text); }
+[data-theme] .dr-row .text-slate-700 { color: var(--t-text); }
+[data-theme] .dr-row .text-slate-500 { color: var(--t-muted); }
+[data-theme] .dr-row .text-slate-400 { color: var(--t-faint); }
+[data-theme] .dr-row .text-slate-300 { color: var(--t-border-strong); }
+[data-theme] .dr-row .text-blue-600  { color: var(--t-src); }
+[data-theme] .dr-row .text-amber-600 { color: var(--t-dst); }
+
+/* Status badge — data-status attribute drives color — Premium styling */
+[data-theme] .dr-status-badge                           { 
+  background: var(--t-surface-2); 
+  color: var(--t-muted);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-status-badge[data-status="assigned"]    { background: var(--t-accent-soft);  color: var(--t-accent-bright); }
+[data-theme] .dr-status-badge[data-status="in_progress"] { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .dr-status-badge[data-status="paused"]      { background: rgba(251,146,60,0.16); color: var(--t-dst); }
+[data-theme] .dr-status-badge[data-status="completed"]   { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .dr-status-badge[data-status="verified"]    { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .dr-status-badge[data-status="draft"],
+[data-theme] .dr-status-badge[data-status="not_started"] { background: var(--t-surface-2); color: var(--t-faint); }
+
+/* QC badge — data-qc attribute drives color — Premium styling */
+[data-theme] .dr-qc-badge                          { 
+  background: var(--t-surface-2);    
+  color: var(--t-muted);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-qc-badge[data-qc="approved"]      { background: var(--t-success-soft); color: var(--t-success); }
+[data-theme] .dr-qc-badge[data-qc="rejected"]      { background: var(--t-danger-soft);  color: var(--t-danger); }
+[data-theme] .dr-qc-badge[data-qc="ready_for_qc"]  { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .dr-qc-badge[data-qc="pending"]       { background: var(--t-warning-soft); color: var(--t-warning); }
+[data-theme] .dr-qc-badge[data-qc="not_ready"]     { background: var(--t-surface-2);    color: var(--t-faint); }
+
+/* Expand/collapse links — Premium styling */
+[data-theme] .dr-link { 
+  color: var(--t-accent-bright);
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-link:hover { 
+  color: var(--t-accent);
+  text-decoration: underline;
+}
+
+/* Refresh button — Premium styling */
+[data-theme] .dr-btn-refresh { 
+  background: var(--t-primary-grad); 
+  color: var(--t-on-accent);
+  box-shadow: var(--t-shadow-1);
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-btn-refresh:hover { 
+  filter: brightness(1.08);
+  box-shadow: var(--t-shadow-2);
+  transform: translateY(-1px);
+}
+[data-theme] .dr-btn-refresh:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Export strip + buttons — Premium styling */
+[data-theme] .dr-export-strip {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-export-strip:hover {
+  border-color: var(--t-accent-border);
+}
+[data-theme] .dr-export-btn   { 
+  background: var(--t-surface);   
+  border-color: var(--t-border-strong); 
+  color: var(--t-text);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+[data-theme] .dr-export-btn:hover:not(:disabled) { 
+  border-color: var(--t-accent); 
+  color: var(--t-accent-bright);
+  background: var(--t-surface-2);
+  transform: translateY(-1px);
+  box-shadow: var(--t-shadow-1);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 8 — SAASABLE-INSPIRED POLISH  (spacing · elevation · radius · type)
+   ---------------------------------------------------------------------------
+   Emulates the SaasAble / Material 3 dashboard *feel* (generous whitespace,
+   soft layered shadows, rounded surfaces, calm type) — NOT the MUI template.
+   Colors stay Ocean Cyan / Midnight Steel. Geometry only.
+
+   Scoped to [data-ui-polish="saas"] (set on AppShell for themed roles).
+   Light admin / QA-QC untouched. Wiring flow (wire-*) excluded in PART 9.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Structured radius scale (enterprise SaaS — defined, not playful) */
+  --rx-sm: 8px;
+  --rx-md: 10px;
+  --rx-lg: 12px;
+  --rx-xl: 16px;
+
+  /* Light defined elevation (SaasAble / Untitled-UI style — soft but visible) */
+  --sx-1: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10);
+  --sx-2: 0 2px 4px -1px rgba(16,24,40,0.06), 0 4px 10px -2px rgba(16,24,40,0.10);
+  --sx-3: 0 4px 6px -2px rgba(16,24,40,0.05), 0 12px 20px -4px rgba(16,24,40,0.12);
+
+  /* Spacing rhythm (8px base) — balanced, data-first density */
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --pad-card:   16px;
+  --pad-head-x: 18px;
+  --pad-head-y: 14px;
+  --pad-cell-x: 14px;
+  --pad-cell-y: 9px;
+  --row-h:      46px;
+
+  /* Type hierarchy */
+  --fs-page-title:  22px;
+  --fs-panel-title: 16px;
+  --fs-section:     15px;
+  --fs-body:        14px;
+  --fs-caption:     12px;
+  --fs-table-label: 11px;
+  --lh-tight:  1.25;
+  --lh-body:   1.5;
+  --ls-tight:  -0.015em;
+  --fw-title:  600;
+  --fw-body:   500;
+
+  /* Dashboard buttons — Android 44 dp touch target (page + modals) */
+  --dash-btn-h:     44px;
+  --dash-btn-h-lg:  48px;
+  --dash-btn-px:    16px;
+  --dash-btn-px-lg: 20px;
+  --dash-btn-fs:    clamp(0.8125rem, 2.5vw, 0.875rem);
+  --dash-btn-fw:    600;
+  --dash-btn-icon:  44px;
+  --dash-btn-gap:   8px;
+}
+
+/* ── PART 9 — POLISH ROLLOUT (Arctic Paper + data-ui-polish="saas") ─── */
+
+/* Page shell — more breathing room (SaasAble dashboard density) */
+[data-theme] [data-ui-polish="saas"] .page-body {
+  padding: var(--space-6) var(--pad-card);
+}
+[data-theme] [data-ui-polish="saas"] .section-title {
+  font-size: var(--fs-page-title);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-tight);
+  line-height: var(--lh-tight);
+}
+
+/* Shared cards + KPI */
+[data-theme] [data-ui-polish="saas"] .card {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--sx-2);
+  border: 1px solid var(--t-border);
+}
+[data-theme] [data-ui-polish="saas"] .card-header {
+  padding: var(--pad-head-y) var(--pad-head-x);
+}
+[data-theme] [data-ui-polish="saas"] .card-body,
+[data-theme] [data-ui-polish="saas"] .card-body-sm {
+  padding: var(--pad-card);
+}
+[data-theme] [data-ui-polish="saas"] .card-title {
+  font-size: var(--fs-section);
+  font-weight: var(--fw-title);
+}
+[data-theme] [data-ui-polish="saas"] .kpi-card {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--t-card-shadow);
+  border: 1px solid var(--t-card-border);
+  background: var(--t-card);
+}
+[data-theme] [data-ui-polish="saas"] .kpi-card:hover {
+  box-shadow: var(--t-shadow-2);
+}
+
+/* Compact dashboard buttons — page body + modals (topbar / tab nav excluded).
+   .pj-info-action is deliberately absent: the Project information action bar
+   sizes itself (see PART 5) so all four actions stay identical. */
+[data-theme] [data-ui-polish="saas"] .page-body :is(
+  .btn-primary, .btn-primary-lg, .btn-secondary, .btn-ghost, .btn-sm,
+  .btn-success, .btn-warning, .btn-danger,
+  .pj-btn-primary, .pj-btn-secondary, .pj-btn-danger-ghost,
+  .frame-pill-btn,
+  .tc-cta-btn, .tc-cta-neutral,
+  .dr-btn-refresh, .dr-export-btn
+),
+[data-theme] .modal-overlay :is(
+  .btn-primary, .btn-primary-lg, .btn-secondary, .btn-ghost, .btn-sm,
+  .btn-success, .btn-warning, .btn-danger
+) {
+  /* Modal CTAs: 48px touch target (spec); page-body stays 44px via --dash-btn-h */
+  min-height: var(--dash-btn-h-lg);
+  height: auto;
+  padding-left: var(--dash-btn-px);
+  padding-right: var(--dash-btn-px);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: var(--dash-btn-fs);
+  font-weight: var(--dash-btn-fw);
+  gap: var(--dash-btn-gap);
+  border-radius: var(--rx-md);
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+[data-theme] [data-ui-polish="saas"] .page-body :is(.btn-primary-lg, .frame-pill-btn, .tc-cta-btn),
+[data-theme] .modal-overlay .btn-primary-lg {
+  min-height: var(--dash-btn-h-lg);
+  height: auto;
+  padding-left: var(--dash-btn-px-lg);
+  padding-right: var(--dash-btn-px-lg);
+}
+[data-theme] [data-ui-polish="saas"] .page-body :is(.btn-ghost, .btn-sm) {
+  min-height: var(--dash-btn-h);
+  height: auto;
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: var(--btn-fs-sm, 0.8125rem);
+  font-weight: 500;
+}
+[data-theme] [data-ui-polish="saas"] .page-body .btn-icon,
+[data-theme] .modal-overlay .btn-icon {
+  width: var(--dash-btn-icon);
+  height: var(--dash-btn-icon);
+  min-height: var(--dash-btn-icon);
+  padding: 0;
+}
+[data-theme] [data-ui-polish="saas"] .page-body .pj-btn-secondary.w-9 {
+  width: var(--dash-btn-icon);
+  min-width: var(--dash-btn-icon);
+  min-height: var(--dash-btn-icon);
+  height: var(--dash-btn-icon);
+  padding: 0;
+}
+[data-theme] [data-ui-polish="saas"] .page-body :is(
+  .btn-primary, .btn-primary-lg, .pj-btn-primary, .tc-cta-btn, .dr-btn-refresh, .frame-pill-btn
+),
+[data-theme] .modal-overlay :is(.btn-primary, .btn-primary-lg) {
+  box-shadow: var(--sx-1);
+}
+[data-theme] [data-ui-polish="saas"] .page-body :is(
+  .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning,
+  .pj-btn-primary, .pj-btn-secondary, .pj-btn-danger-ghost,
+  .frame-pill-btn, .tc-cta-btn, .tc-cta-neutral,
+  .dr-btn-refresh, .dr-export-btn
+) svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+/* Ad-hoc confirm CTAs (admin reset flows) */
+[data-theme] [data-ui-polish="saas"] .page-body button.bg-slate-800,
+[data-theme] [data-ui-polish="saas"] .page-body button.bg-red-600.w-full {
+  min-height: var(--dash-btn-h);
+  height: auto;
+  font-size: var(--dash-btn-fs);
+  font-weight: var(--dash-btn-fw);
+  border-radius: var(--rx-md);
+}
+[data-theme] [data-ui-polish="saas"] .page-body button.bg-red-600.w-full {
+  min-height: var(--dash-btn-h-lg);
+  height: auto;
+}
+
+/* Inputs + menus */
+[data-theme] [data-ui-polish="saas"] .form-input,
+[data-theme] [data-ui-polish="saas"] .form-input-lg,
+[data-theme] [data-ui-polish="saas"] .form-textarea,
+[data-theme] [data-ui-polish="saas"] .form-select {
+  border-radius: var(--rx-md);
+  min-height: 44px;
+}
+[data-theme] [data-ui-polish="saas"] .upload-menu {
+  border-radius: var(--rx-md);
+  box-shadow: var(--sx-3);
+  padding: var(--space-3);
+}
+
+/* Tables */
+[data-theme] [data-ui-polish="saas"] .table-wrapper {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--sx-1);
+  border-color: var(--t-border);
+}
+[data-theme] [data-ui-polish="saas"] .data-table th {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-table-label);
+}
+[data-theme] [data-ui-polish="saas"] .data-table td {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+/* Modals */
+[data-theme] [data-ui-polish="saas"] .modal-box,
+[data-theme] [data-ui-polish="saas"] .modal-box-sm,
+[data-theme] [data-ui-polish="saas"] .modal-box-lg,
+[data-theme] [data-ui-polish="saas"] .modal-box-wide,
+[data-theme] [data-ui-polish="saas"] .modal-box-xl {
+  border-radius: var(--rx-xl);
+  box-shadow: var(--sx-3);
+  border: 1px solid var(--t-border);
+}
+[data-theme] [data-ui-polish="saas"] .modal-header {
+  padding: var(--modal-header-y, 14px) var(--modal-pad-x, 20px);
+}
+[data-theme] [data-ui-polish="saas"] .modal-body {
+  padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px);
+  gap: var(--modal-content-gap, 12px);
+}
+[data-theme] [data-ui-polish="saas"] .modal-footer {
+  padding: var(--modal-footer-y, 14px) var(--modal-pad-x, 20px);
+}
+[data-theme] [data-ui-polish="saas"] .modal-title {
+  font-size: var(--fs-section);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-tight);
+}
+
+/* Supervisor project / frame surfaces */
+[data-theme] [data-ui-polish="saas"] .pj-surface {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--t-card-shadow);
+  border: 1px solid var(--t-card-border);
+  background: var(--t-card);
+}
+[data-theme] [data-ui-polish="saas"] .pj-menu {
+  border-radius: var(--rx-md);
+  box-shadow: var(--sx-3);
+  padding: var(--space-3);
+}
+[data-theme] [data-ui-polish="saas"] .pj-panel-head {
+  padding: var(--pad-head-y) var(--pad-head-x);
+}
+[data-theme] [data-ui-polish="saas"] .pj-panel-head .text-slate-800 {
+  font-size: var(--fs-panel-title);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+}
+[data-theme] [data-ui-polish="saas"] .pj-table thead th {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-table-label);
+  letter-spacing: 0.07em;
+}
+[data-theme] [data-ui-polish="saas"] .pj-table tbody td {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+[data-theme] [data-ui-polish="saas"] .pj-table tbody tr {
+  height: var(--row-h);
+}
+[data-theme] [data-ui-polish="saas"] .pj-btn-primary {
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] [data-ui-polish="saas"] .frame-status-pill {
+  border-radius: var(--rx-sm);
+}
+[data-theme] [data-ui-polish="saas"] .toolbar {
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+/* Drawing cards */
+[data-theme] [data-ui-polish="saas"] .drawing-card {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--sx-1);
+  border-color: var(--t-border);
+}
+[data-theme] [data-ui-polish="saas"] .drawings-grid {
+  gap: var(--space-4);
+}
+
+/* Technician panel cards */
+[data-theme] [data-ui-polish="saas"] .tc-card {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--sx-2);
+  padding: var(--space-4);
+}
+[data-theme] [data-ui-polish="saas"] .tc-cta-btn,
+[data-theme] [data-ui-polish="saas"] .tc-cta-neutral {
+  border: 1px solid transparent;
+}
+
+/* Director report */
+[data-theme] [data-ui-polish="saas"] .dr-card {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--t-card-shadow);
+  border: 1px solid var(--t-card-border);
+  background: var(--t-card);
+}
+[data-theme] [data-ui-polish="saas"] .dr-export-strip {
+  border-radius: var(--rx-md);
+  padding: var(--space-4);
+}
+[data-theme] [data-ui-polish="saas"] .dr-export-btn {
+  border: 1px solid var(--t-btn-secondary-border);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 10 — LIGHT SAAS CRM POLISH  (Arctic Paper default + legacy no-theme fallback)
+   ---------------------------------------------------------------------------
+   Goal: structured, data-first enterprise SaaS feel (à la SaasAble light) —
+   defined hairline borders, soft-but-visible elevation, dense consistent
+   spacing, strong table/metric readability. NOT airy landing-page styling.
+
+   Gated to LIGHT only (html WITHOUT [data-theme]) so the dark Ocean/Steel
+   roles (PART 9) are untouched. Colors restrained (slate + existing brand /
+   status). Token-driven; no component-system changes, no logic/data/nav.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Page rhythm + heading hierarchy (compact, data-first) */
+[data-theme] [data-ui-polish="saas"] .page-body    { padding: var(--space-5); }
+[data-theme] [data-ui-polish="saas"] .page-body-sm { padding: var(--space-4); }
+[data-theme] [data-ui-polish="saas"] .section-title { letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
+
+/* Cards — hairline border + soft defined elevation */
+[data-theme] [data-ui-polish="saas"] .card {
+  border-radius: var(--rx-lg);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--sx-1);
+}
+[data-theme] [data-ui-polish="saas"] .card-header  { padding: var(--pad-head-y) var(--pad-head-x); }
+[data-theme] [data-ui-polish="saas"] .card-body    { padding: var(--pad-card); }
+[data-theme] [data-ui-polish="saas"] .card-body-sm { padding: var(--space-4); }
+[data-theme] [data-ui-polish="saas"] .card-title   { font-size: var(--fs-section); font-weight: var(--fw-title); }
+
+/* KPI / metric cards — consistent with card elevation */
+[data-theme] [data-ui-polish="saas"] .kpi-card {
+  border-radius: var(--rx-lg);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--sx-1);
+}
+[data-theme] [data-ui-polish="saas"] .kpi-card:hover { box-shadow: var(--sx-2); }
+
+/* Tables — strong data-first readability (defined header, dense rows) */
+[data-theme] [data-ui-polish="saas"] .table-wrapper {
+  border-radius: var(--rx-lg);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--sx-1);
+}
+[data-theme] [data-ui-polish="saas"] .data-table thead { background: var(--color-surface-container); }
+[data-theme] [data-ui-polish="saas"] .data-table th {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-table-label);
+  letter-spacing: 0.06em;
+  color: var(--color-on-surface-variant);
+}
+[data-theme] [data-ui-polish="saas"] .data-table td {
+  padding: var(--pad-cell-y) var(--pad-cell-x);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+/* Buttons — structured radius (light keeps its brand fills) */
+[data-theme] [data-ui-polish="saas"] .btn-primary,
+[data-theme] [data-ui-polish="saas"] .btn-primary-lg,
+[data-theme] [data-ui-polish="saas"] .btn-secondary,
+[data-theme] [data-ui-polish="saas"] .btn-ghost,
+[data-theme] [data-ui-polish="saas"] .btn-sm,
+[data-theme] [data-ui-polish="saas"] .btn-icon,
+[data-theme] [data-ui-polish="saas"] .btn-success,
+[data-theme] [data-ui-polish="saas"] .btn-warning,
+[data-theme] [data-ui-polish="saas"] .btn-danger { border-radius: var(--rx-md); }
+[data-theme] [data-ui-polish="saas"] .btn-primary,
+[data-theme] [data-ui-polish="saas"] .btn-primary-lg { box-shadow: var(--sx-1); }
+
+/* Inputs + dropdown menus */
+[data-theme] [data-ui-polish="saas"] .form-input,
+[data-theme] [data-ui-polish="saas"] .form-input-lg,
+[data-theme] [data-ui-polish="saas"] .form-textarea,
+[data-theme] [data-ui-polish="saas"] .form-select { border-radius: var(--rx-md); }
+[data-theme] [data-ui-polish="saas"] .upload-menu { border-radius: var(--rx-md); box-shadow: var(--sx-3); }
+
+/* Modals — rounded + soft deep shadow */
+[data-theme] [data-ui-polish="saas"] .modal-box,
+[data-theme] [data-ui-polish="saas"] .modal-box-sm,
+[data-theme] [data-ui-polish="saas"] .modal-box-lg,
+[data-theme] [data-ui-polish="saas"] .modal-box-wide,
+[data-theme] [data-ui-polish="saas"] .modal-box-xl {
+  border-radius: var(--rx-xl);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--sx-3);
+}
+[data-theme] [data-ui-polish="saas"] .modal-header { padding: var(--modal-header-y, 14px) var(--modal-pad-x, 20px); }
+[data-theme] [data-ui-polish="saas"] .modal-body   { padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px); }
+[data-theme] [data-ui-polish="saas"] .modal-footer { padding: var(--modal-footer-y, 14px) var(--modal-pad-x, 20px); }
+[data-theme] [data-ui-polish="saas"] .modal-title  { font-size: var(--fs-section); font-weight: var(--fw-title); letter-spacing: var(--ls-tight); }
+
+/* Supervisor project/frame surfaces when on light (admin preview parity) */
+[data-theme] [data-ui-polish="saas"] .pj-surface {
+  border-radius: var(--rx-lg);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+  background: var(--t-card);
+}
+[data-theme] [data-ui-polish="saas"] .pj-table thead th { padding: var(--pad-cell-y) var(--pad-cell-x); }
+[data-theme] [data-ui-polish="saas"] .pj-table tbody td { padding: var(--pad-cell-y) var(--pad-cell-x); }
+[data-theme] [data-ui-polish="saas"] .pj-table tbody tr { height: var(--row-h); }
+
+/* Drawing cards */
+[data-theme] [data-ui-polish="saas"] .drawing-card {
+  border-radius: var(--rx-lg);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--sx-1);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PART 11 — ARCTIC PAPER LIGHT LEGIBILITY  (overrides dark-tuned shared rules)
+   ---------------------------------------------------------------------------
+   Fixes surfaces that assumed a dark canvas: zebra rows, wiring schematic tints,
+   status/role badge contrast on white, modal dimmer, cable schematic background.
+   Semantic danger (red) and status colors stay meaningful — NOT recolored to indigo.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="ingenious"] {
+  --t-faint: #475569;
+  --status-pending-text: #334155;
+  --status-pending-bg: #E2E8F0;
+  /* Logo-aligned primary scale for buttons, badges, dashboard titles */
+  --color-primary-50:  #E8F6F8;
+  --color-primary-100: #CCE8EC;
+  --color-primary-200: #99D1D9;
+  --color-primary-300: #6DCFD4;
+  --color-primary-400: #5BBFCC;
+  --color-primary-500: #2E9DAA;
+  --color-primary-600: #248892;
+  --color-primary-700: #1B2958;
+  --color-primary-800: #141E42;
+  --color-primary-900: #0D1224;
+}
+
+/* Ingenious — retain the shared light workspace card-header treatment. */
+[data-theme="ingenious"] .workspace-section-heading {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+[data-theme="ingenious"] .workspace-section-heading--secondary {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+/* Light-theme legibility tweaks */
+[data-theme="steel"],
+[data-theme="dusty"],
+[data-theme="default"],
+[data-theme="arctic"],
+[data-theme="harbor"],
+[data-theme="graphite"] {
+  --t-faint: #475569;
+  --status-pending-text: #334155;
+  --status-pending-bg: #E2E8F0;
+}
+
+[data-theme] {
+  --color-on-primary-container:  var(--t-accent-strong);
+  --role-admin-bg: #FEE2E2;       --role-admin-text: #B91C1C;
+  --role-director-bg: var(--t-accent-soft);    --role-director-text: var(--t-accent-strong);
+  --role-supervisor-bg: var(--t-accent-soft);  --role-supervisor-text: var(--t-accent-strong);
+  --role-qaqc-bg: var(--t-warning-soft);        --role-qaqc-text: var(--t-warning);
+  --role-tech-bg: var(--t-success-soft);       --role-tech-text: var(--t-success);
+  --status-completed-border: rgba(21,128,61,0.35);
+  --status-progress-text: var(--t-accent-strong);
+  --status-progress-bg: var(--t-accent-soft);
+  --status-progress-border: var(--t-accent-border);
+}
+
+/* Modal dimmer — lighter on white app (still readable overlay) */
+[data-theme] .modal-overlay { background: rgba(15,23,42,0.45); }
+
+/* Table zebra / alt rows — dark rules used white @ 3% opacity (invisible on white) */
+[data-theme] .mapping-table tbody tr:nth-child(even) { background: var(--t-surface-2); }
+[data-theme] .dr-row-alt { background: var(--t-surface-2); }
+
+/* Supervisor panel header — indigo tint tertiary (not cyan dark-soft) */
+[data-theme] .pj-panel-head { background: var(--t-accent-soft); border-color: var(--t-border); }
+
+/* Frame status pills — legible on white */
+[data-theme] .frame-status-submitted  { background: #DCFCE7; color: #15803D; }
+[data-theme] .frame-status-paused     { background: #FEF3C7; color: #B45309; }
+[data-theme] .frame-status-inprogress { background: #FEF3C7; color: #B45309; }
+
+/* Wiring flow — SRC/DST blocks & actions (green/orange on light, not dark cyan rgba) */
+[data-theme] .wire-end-block.src         { background: #ECFDF5; border-color: #A7F3D0; }
+[data-theme] .wire-end-block.dst         { background: #FFF7ED; border-color: #FED7AA; }
+[data-theme] .wire-end-block.src.done    { background: #D1FAE5; border-color: #34D399; }
+[data-theme] .wire-end-block.dst.done    { background: #FFEDD5; border-color: #FB923C; }
+[data-theme] .wire-end-label.src         { color: #047857; }
+[data-theme] .wire-end-label.dst         { color: #C2410C; }
+[data-theme] .wire-action-btn.src        { border-color: #6EE7B7; color: #047857; background: #ECFDF5; }
+[data-theme] .wire-action-btn.src:hover:not(:disabled) { background: #D1FAE5; }
+[data-theme] .wire-action-btn.src.confirmed { background: #059669; border-color: #059669; color: #FFFFFF; }
+[data-theme] .wire-action-btn.dst        { border-color: #FDBA74; color: #C2410C; background: #FFF7ED; }
+[data-theme] .wire-action-btn.dst:hover:not(:disabled) { background: #FFEDD5; }
+[data-theme] .wire-action-btn.dst.confirmed { background: #EA580C; border-color: #EA580C; color: #FFFFFF; }
+
+/* Wiring chrome — light bars with visible borders */
+[data-theme] .wire-header-bar,
+[data-theme] .wire-kpi-bar,
+[data-theme] .wire-progress-header,
+[data-theme] .wire-grade-bar,
+[data-theme] .wire-card { box-shadow: var(--t-shadow-1); }
+
+/* Technician SRC/DST count pills on light */
+[data-theme] .tc-src-pill { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+[data-theme] .tc-dst-pill { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
+
+/* Secondary / tertiary buttons on light card surfaces */
+[data-theme] .btn-secondary,
+[data-theme] .pj-btn-secondary {
+  background: var(--t-btn-secondary-bg);
+  color: var(--t-text);
+  border: 1px solid var(--t-btn-secondary-border);
+  box-shadow: var(--t-shadow-1);
+}
+[data-theme] .btn-ghost:hover { background: var(--t-accent-soft); color: var(--t-accent-strong); }
+
+/* Topbar active nav — accent underline on header band (see PART 3 topbar block) */
+
+/* Supervisor dashboard KPI strip — lifted cards */
+[data-theme] .page-body .kpi-grid .kpi-card {
+  box-shadow: var(--t-card-shadow);
+  border: 1px solid var(--t-card-border);
+  min-height: 72px;
+}
+[data-theme] .page-body .kpi-grid .kpi-card:hover { box-shadow: var(--t-shadow-2); }
+
+/* Supervisor Projects — card shell + table hierarchy */
+[data-theme] .pj-surface {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .pj-table thead {
+  background: var(--t-table-head);
+  box-shadow: none;
+  border-bottom: 1px solid var(--t-border-strong);
+}
+[data-theme] .pj-table thead th {
+  color: var(--t-muted);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+[data-theme] .pj-table tbody tr {
+  border-bottom: 1px solid var(--t-table-border);
+  background: var(--t-table);
+}
+[data-theme] .pj-table tbody tr:nth-child(even) { background: var(--t-table-row-alt); }
+[data-theme] .pj-table tbody tr:hover { background: var(--t-accent-soft); }
+[data-theme] .pj-menu button:hover { background: var(--t-accent-soft); }
+
+/* ── Spot-check: Technician panel cards ── */
+[data-theme] .tc-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .tc-card.tc-card-active {
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 1px var(--t-accent), var(--t-shadow-2);
+}
+[data-theme] .tc-btn-drawing {
+  background: var(--t-accent-soft);
+  color: var(--t-accent-strong);
+  border-color: rgba(79,70,229,0.25);
+}
+[data-theme] .tc-btn-drawing:hover {
+  background: #E0E7FF;
+  color: var(--t-accent-strong);
+}
+[data-theme] .tc-schedule-pill {
+  background: var(--t-surface-2);
+  color: var(--t-muted);
+  border-color: var(--t-border-strong);
+}
+
+/* ── Spot-check: Director Summary Report ── */
+[data-theme] .dr-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .dr-toggle:hover { background: var(--t-table-row-alt); }
+[data-theme] .dr-table-wrap { border-top-color: var(--t-table-border); background: var(--t-table); }
+[data-theme] .dr-thead tr {
+  background: var(--t-table-head);
+  border-color: var(--t-table-border);
+  color: var(--t-muted);
+}
+[data-theme] .dr-row {
+  border-color: var(--t-table-border);
+  background: var(--t-table);
+}
+[data-theme] .dr-row-alt { background: var(--t-table-row-alt); }
+[data-theme] .dr-row:hover { background: var(--t-accent-soft); }
+[data-theme] .dr-report .text-blue-600,
+[data-theme] .dr-row .text-blue-600 { color: var(--t-accent); }
+[data-theme] .dr-export-strip {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+
+/* ── KPI cards + shared metric readability ── */
+[data-theme] .kpi-card {
+  background: var(--t-card);
+  border: none;
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.30),
+    0 1px 3px 1px rgba(0, 0, 0, 0.15);
+}
+
+/* Cable schematic — contrasting well so blue/grey/white wires stay visible on mid-tone UI */
+[data-theme] .wire-schematic-wrap {
+  background: var(--t-schematic-well);
+  border: 1px solid var(--t-schematic-border);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+[data-theme] .wire-schematic-issue { border-color: rgba(248, 113, 113, 0.55); background: var(--t-danger-soft); }
+
+/* ── Topbar extras ── */
+[data-theme] .topbar-logo-img-wrap {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+/* §1.3 Distinctive live digital clock */
+[data-theme] .topbar-clock-card {
+  padding: 0.4rem 0.85rem 0.4rem 0.7rem;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 22%, transparent) 0%, transparent 58%),
+    var(--t-header-float-bg);
+}
+[data-theme] .topbar-clock-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--t-header-icon-accent, #93C5FD), transparent);
+}
+[data-theme] .topbar-clock-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #34D399;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+  animation: topbar-clock-pulse 2s ease-out infinite;
+}
+@keyframes topbar-clock-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+[data-theme] .topbar-clock-digits {
+  color: var(--t-on-header);
+  letter-spacing: 0.06em;
+}
+[data-theme] .topbar-clock-sep {
+  color: rgba(125, 211, 252, 0.9);
+  animation: topbar-clock-blink 1s steps(1) infinite;
+}
+@keyframes topbar-clock-blink {
+  0%, 50%       { opacity: 1; }
+  50.01%, 100%  { opacity: 0.3; }
+}
+[data-theme] .topbar-clock-secs {
+  color: var(--t-header-icon-accent, #93C5FD);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+[data-theme] .topbar-clock-date { color: var(--t-on-header-muted); }
+@media (prefers-reduced-motion: reduce) {
+  [data-theme] .topbar-clock-live,
+  [data-theme] .topbar-clock-sep { animation: none; }
+}
+
+[data-theme] .login-support-note {
+  background: var(--t-surface-subtle, #F8FAFC);
+  border-color: var(--t-border, rgba(15, 23, 42, 0.1));
+  color: var(--t-text-muted, #475569);
+}
+[data-theme] .login-support-note strong { color: var(--t-text, #0F172A); }
+[data-theme] .login-clock-widget {
+  border-color: var(--t-border-strong, rgba(15, 23, 42, 0.14));
+  background: linear-gradient(140deg, rgba(var(--t-surface-white-rgb), 0.9), rgba(var(--t-surface-white-rgb), 0.72));
+}
+[data-theme] .login-clock-time { color: var(--t-text, #0f172a); }
+[data-theme] .login-clock-date { color: var(--t-muted, #475569); }
+[data-theme] .login-install-btn {
+  background: var(--t-primary-grad);
+  color: var(--t-on-accent);
+}
+[data-theme] .login-install-hint {
+  background: var(--t-surface-white, #fff);
+  border-color: var(--t-border);
+  color: var(--t-text-muted);
+}
+
+/* ── Login page (outside AppShell; left brand panel keeps design-system navy gradient) ── */
+[data-theme] .login-card-surface {
+  background: var(--t-card);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+[data-theme] .login-panel-right {
+  background: var(--t-bg-grad);
+}
+[data-theme] .login-input {
+  background: var(--t-surface-2);
+  border-color: var(--t-border);
+  color: var(--t-text);
+}
+[data-theme] .login-input::placeholder { color: var(--t-faint); }
+[data-theme] .login-input:focus {
+  background: var(--t-elev);
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 4px var(--t-accent-soft);
+}
+[data-theme] .login-btn {
+  background: var(--t-primary-grad);
+  color: var(--t-on-accent);
+}
+[data-theme] .login-clock-chip {
+  background: var(--t-surface);
+  border-color: var(--t-border-strong);
+  color: var(--t-text);
+}
+[data-theme] .login-card-mark {
+  background: var(--t-primary-grad);
+  box-shadow: var(--t-shadow-2);
+}
+[data-theme] .login-card-intro .login-heading { color: var(--t-text); }
+[data-theme] .login-card-intro .login-subtext { color: var(--t-muted); }
+[data-theme] .login-brand-title {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme] .login-brand-tagline { color: rgba(248,250,252,0.85); }
+[data-theme] .login-brand-accent { color: rgba(248,250,252,0.72); }
+[data-theme] .login-feature-icon {
+  background: rgba(var(--t-surface-white-rgb, 255, 255, 255), 0.12);
+  color: var(--t-on-accent);
+}
+[data-theme] .login-feature-text { color: rgba(248,250,252,0.88); }
+[data-theme] .login-colon { color: var(--t-accent-bright); }
+
+/* Login page — SaaS polish scope (matches AppShell) */
+[data-theme] [data-ui-polish="saas"] .login-card-surface {
+  border-radius: var(--rx-xl);
+  box-shadow: var(--sx-3);
+}
+[data-theme] [data-ui-polish="saas"] .login-card-mark {
+  border-radius: var(--rx-lg);
+  box-shadow: var(--sx-2);
+}
+[data-theme] [data-ui-polish="saas"] .login-input,
+[data-theme] [data-ui-polish="saas"] .login-btn,
+[data-theme] [data-ui-polish="saas"] .login-bio-btn,
+[data-theme] [data-ui-polish="saas"] .login-demo-select {
+  border-radius: var(--rx-lg);
+}
+[data-theme] [data-ui-polish="saas"] .login-panel-left {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
+}
+@media (min-width: 1024px) {
+  [data-theme] [data-ui-polish="saas"] .login-panel-left {
+    /* Flat divider only — no elevated panel cast shadow */
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Director report — remap hardcoded Tailwind utility leaks */
+[data-theme] .dr-report .text-slate-800,
+[data-theme] .dr-report .text-slate-700,
+[data-theme] .dr-report .font-medium.text-slate-800 { color: var(--t-text); }
+[data-theme] .dr-report .text-slate-600,
+[data-theme] .dr-report .text-slate-500,
+[data-theme] .dr-report .text-slate-400 { color: var(--t-muted); }
+[data-theme] .dr-report .text-green-600 { color: var(--t-success); }
+[data-theme] .dr-report .text-amber-600 { color: var(--t-warning); }
+[data-theme] .dr-report .dr-mini-track,
+[data-theme] .dr-report .dr-proj-track { background: var(--t-surface-2); }
+[data-theme] .dr-report .dr-btn-refresh {
+  background: var(--t-primary-grad);
+  color: var(--t-on-accent);
+}
+[data-theme] .dr-report .dr-btn-refresh:hover { filter: brightness(1.06); }
+
+/* Director report — neutralize hardcoded Tailwind surface utilities on dark themes */
+[data-theme] .dr-report .bg-white { background: var(--t-card); }
+[data-theme] .dr-report .bg-slate-50,
+[data-theme] .dr-report .bg-slate-50\/30 { background: var(--t-table-row-alt); }
+[data-theme] .dr-report .bg-slate-100 { background: var(--t-table-head); }
+[data-theme] .dr-report .border-slate-200,
+[data-theme] .dr-report .border-slate-100,
+[data-theme] .dr-report .border-slate-50 { border-color: var(--t-border); }
+[data-theme] .dr-toggle:hover,
+[data-theme] .dr-report .hover\:bg-slate-50:hover { background: var(--t-table-row-alt); }
+[data-theme] .dr-report .dr-row.hover\:bg-slate-50\/60:hover { background: var(--t-accent-soft); }

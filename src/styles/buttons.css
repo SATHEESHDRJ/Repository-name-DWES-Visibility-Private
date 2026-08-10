@@ -1,0 +1,754 @@
+/* ── Centralized Android MD3 button design system ───────────────────────────
+   Token source: local MD3 baseline (index.css + theme-palettes.css).
+   No Figma fileKey in repo — provide a figma.com/design URL to map exact vars.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  :root {
+    /* Touch & sizing — tablet plant-floor baseline */
+    --btn-min-h:        48px;
+    --btn-min-h-lg:     52px;
+    --btn-min-h-sm:     44px;
+    --btn-min-h-icon:   48px;
+    --btn-min-w:        48px;
+    --btn-px:           20px;
+    --btn-px-lg:        24px;
+    --btn-px-sm:        16px;
+    --btn-py:           0;
+    --btn-gap:          8px;
+    --btn-gap-icon:     6px;
+
+    /* Typography — scales with clamp for dynamic text */
+    --btn-fs:           clamp(0.8125rem, 2.5vw, 0.875rem);
+    --btn-fs-lg:        clamp(0.875rem, 2.8vw, 1rem);
+    --btn-fs-sm:        clamp(0.75rem, 2.2vw, 0.8125rem);
+    --btn-fw:           500;
+    --btn-fw-bold:      600;
+
+    /* Shape & motion */
+    --btn-radius:       var(--radius-full, 9999px);
+    --btn-radius-md:    var(--radius-md, 12px);
+    --btn-ease:         cubic-bezier(0.4, 0, 0.2, 1);
+    --btn-spring:       cubic-bezier(0.34, 1.2, 0.64, 1);
+    --btn-ripple:       color-mix(in srgb, var(--color-primary) 22%, transparent);
+    --btn-ripple-danger: color-mix(in srgb, #DC2626 22%, transparent);
+
+    /* Elevation */
+    --btn-shadow:       var(--shadow-elevation-1, 0 1px 3px rgba(0,0,0,0.08));
+    --btn-shadow-hover: var(--shadow-elevation-2, 0 4px 8px rgba(0,0,0,0.08));
+    --btn-shadow-active: var(--shadow-elevation-1, 0 1px 2px rgba(0,0,0,0.06));
+
+    /* Filled primary gradient (overridden per theme via --t-primary-grad) */
+    --btn-primary-bg:   var(--color-primary);
+    --btn-primary-hover: var(--color-primary-hover);
+    --btn-on-primary:   var(--color-on-primary);
+  }
+
+  @keyframes btn-ripple {
+    0%   { transform: scale(0); opacity: 0.42; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+
+  @keyframes btn-spinner {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Shared base — all interactive button classes ─────────────────────── */
+  .btn,
+  .btn-primary,
+  .btn-primary-lg,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .btn-sm,
+  .btn-icon,
+  .btn-success,
+  .btn-warning,
+  .pj-btn-primary,
+  .pj-btn-secondary,
+  .pj-btn-danger-ghost,
+  .pj-btn-teal,
+  .pj-btn-indigo,
+  .frame-pill-btn,
+  .login-btn,
+  .login-bio-btn,
+  .ws-btn-primary,
+  .ws-btn-ghost,
+  .ws-btn-warn,
+  .ws-btn-issue,
+  .ws-footer-btn,
+  .ws-end-btn,
+  .tc-cta-btn,
+  .tc-cta-neutral,
+  .tc-btn-drawing,
+  .dr-btn-refresh,
+  .dr-export-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--btn-gap);
+    min-height: var(--btn-min-h);
+    min-width: var(--btn-min-w);
+    padding: var(--btn-py) var(--btn-px);
+    font-family: inherit;
+    font-size: var(--btn-fs);
+    font-weight: var(--btn-fw);
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    transition:
+      color 0.22s var(--btn-ease),
+      background 0.22s var(--btn-ease),
+      border-color 0.22s var(--btn-ease),
+      box-shadow 0.22s var(--btn-ease),
+      filter 0.22s var(--btn-ease),
+      transform 0.18s var(--btn-spring),
+      opacity 0.18s var(--btn-ease);
+  }
+
+  /* Ripple overlay */
+  .btn::before,
+  .btn-primary::before,
+  .btn-primary-lg::before,
+  .btn-secondary::before,
+  .btn-danger::before,
+  .btn-ghost::before,
+  .btn-sm::before,
+  .btn-icon::before,
+  .btn-success::before,
+  .btn-warning::before,
+  .pj-btn-primary::before,
+  .pj-btn-secondary::before,
+  .pj-btn-danger-ghost::before,
+  .frame-pill-btn::before,
+  .login-btn::before,
+  .login-bio-btn::before,
+  .ws-btn-primary::before,
+  .ws-footer-btn::before,
+  .tc-cta-btn::before,
+  .tc-btn-drawing::before,
+  .dr-btn-refresh::before,
+  .dr-export-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, var(--btn-ripple) 0%, transparent 68%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .btn-danger::before,
+  .pj-btn-danger-ghost::before,
+  .frame-pill-danger::before {
+    background: radial-gradient(circle at center, var(--btn-ripple-danger) 0%, transparent 68%);
+  }
+
+  .btn:active:not(:disabled)::before,
+  .btn-primary:active:not(:disabled)::before,
+  .btn-primary-lg:active:not(:disabled)::before,
+  .btn-secondary:active:not(:disabled)::before,
+  .btn-danger:active:not(:disabled)::before,
+  .btn-ghost:active:not(:disabled)::before,
+  .btn-sm:active:not(:disabled)::before,
+  .btn-icon:active:not(:disabled)::before,
+  .btn-success:active:not(:disabled)::before,
+  .btn-warning:active:not(:disabled)::before,
+  .pj-btn-primary:active:not(:disabled)::before,
+  .pj-btn-secondary:active:not(:disabled)::before,
+  .pj-btn-danger-ghost:active:not(:disabled)::before,
+  .frame-pill-btn:active:not(:disabled)::before,
+  .login-btn:active:not(:disabled)::before,
+  .login-bio-btn:active:not(:disabled)::before,
+  .ws-btn-primary:active:not(:disabled)::before,
+  .ws-footer-btn:active:not(:disabled)::before,
+  .tc-cta-btn:active:not(:disabled)::before,
+  .tc-btn-drawing:active:not(:disabled)::before,
+  .dr-btn-refresh:active:not(:disabled)::before,
+  .dr-export-btn:active:not(:disabled)::before {
+    animation: btn-ripple 0.52s var(--btn-ease);
+  }
+
+  /* Keep label + icon above ripple */
+  .btn > *,
+  .btn-primary > *,
+  .btn-primary-lg > *,
+  .btn-secondary > *,
+  .btn-danger > *,
+  .btn-ghost > *,
+  .btn-sm > *,
+  .btn-icon > *,
+  .btn-success > *,
+  .btn-warning > *,
+  .pj-btn-primary > *,
+  .pj-btn-secondary > *,
+  .pj-btn-danger-ghost > *,
+  .frame-pill-btn > * {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  /* Disabled state */
+  .btn:disabled,
+  .btn-primary:disabled,
+  .btn-primary-lg:disabled,
+  .btn-secondary:disabled,
+  .btn-danger:disabled,
+  .btn-ghost:disabled,
+  .btn-sm:disabled,
+  .btn-icon:disabled,
+  .btn-success:disabled,
+  .btn-warning:disabled,
+  .pj-btn-primary:disabled,
+  .pj-btn-secondary:disabled,
+  .pj-btn-danger-ghost:disabled,
+  .pj-btn-teal:disabled,
+  .pj-btn-indigo:disabled,
+  .frame-pill-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    filter: none;
+  }
+
+  /* Loading state */
+  .btn--loading,
+  .btn-primary.btn--loading,
+  .btn-secondary.btn--loading,
+  .pj-btn-primary.btn--loading {
+    pointer-events: none;
+    opacity: 0.72;
+  }
+  .btn--loading .btn-spinner,
+  .btn-primary.btn--loading .btn-spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-spinner 0.65s linear infinite;
+    flex-shrink: 0;
+  }
+
+  /* ── Variants ───────────────────────────────────────────────────────────── */
+
+  /* MD3 filled primary — stadium pill */
+  .btn-primary {
+    min-height: var(--btn-min-h);
+    height: auto;
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius);
+    background: var(--btn-primary-bg);
+    color: var(--btn-on-primary);
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--btn-primary-hover);
+    box-shadow: var(--btn-shadow-hover);
+    filter: brightness(1.04);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: var(--btn-shadow-active);
+  }
+
+  .btn-primary-lg {
+    min-height: var(--btn-min-h-lg);
+    padding: var(--btn-py) var(--btn-px-lg);
+    font-size: var(--btn-fs-lg);
+    font-weight: var(--btn-fw-bold);
+    border-radius: var(--btn-radius);
+    background: var(--btn-primary-bg);
+    color: var(--btn-on-primary);
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-primary-lg:hover:not(:disabled) {
+    background: var(--btn-primary-hover);
+    box-shadow: var(--btn-shadow-hover);
+    filter: brightness(1.04);
+  }
+  .btn-primary-lg:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: var(--btn-shadow-active);
+  }
+
+  /* MD3 outlined secondary — subtle glass */
+  .btn-secondary {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius);
+    background: var(--glass-bg-solid, var(--color-surface));
+    color: var(--glass-text, var(--color-on-surface));
+    border-color: var(--glass-border-strong, var(--color-outline));
+    box-shadow: var(--glass-shadow, var(--btn-shadow));
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--glass-bg-solid, var(--color-surface-variant)) 92%, var(--t-surface-white, white));
+    border-color: var(--glass-border-strong, var(--color-outline));
+    box-shadow: var(--glass-shadow-hover, var(--btn-shadow-hover));
+  }
+  .btn-secondary:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: var(--btn-shadow-active);
+  }
+
+  /* Danger filled */
+  .btn-danger {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius-md);
+    background: #DC2626;
+    color: #FFFFFF;
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: #B91C1C;
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .btn-danger:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .btn-secondary,
+    .pj-btn-secondary {
+      background: var(--glass-bg, var(--color-surface));
+      backdrop-filter: blur(8px) saturate(150%);
+      -webkit-backdrop-filter: blur(8px) saturate(150%);
+    }
+  }
+
+  /* Ghost / text button */
+  .btn-ghost {
+    min-height: var(--btn-min-h-sm);
+    min-width: var(--btn-min-w);
+    padding: var(--btn-py) 12px;
+    border-radius: var(--btn-radius-md);
+    background: transparent;
+    color: #475569;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: #F1F5F9;
+    color: #1E293B;
+  }
+  .btn-ghost:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* Small outlined */
+  .btn-sm {
+    min-height: var(--btn-min-h-sm);
+    padding: var(--btn-py) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+    border-radius: var(--btn-radius-md);
+    background: var(--t-surface-white, #FFFFFF);
+    color: #334155;
+    border-color: #E2E8F0;
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-sm:hover:not(:disabled) {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+  }
+  .btn-sm:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* Icon-only square */
+  .btn-icon {
+    width: var(--btn-min-h-icon);
+    height: var(--btn-min-h-icon);
+    min-width: var(--btn-min-h-icon);
+    min-height: var(--btn-min-h-icon);
+    padding: 0;
+    border-radius: var(--radius-sm, 8px);
+    background: transparent;
+    color: #475569;
+  }
+  .btn-icon:hover:not(:disabled) {
+    background: #F1F5F9;
+    color: #1E293B;
+  }
+  .btn-icon:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  @media (min-width: 768px) and (max-width: 1366px) {
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .btn-icon,
+    .btn-success,
+    .btn-warning,
+    .pj-btn-primary,
+    .pj-btn-secondary,
+    .frame-pill-btn,
+    .ws-btn-primary,
+    .ws-btn-ghost,
+    .ws-btn-warn,
+    .ws-btn-issue,
+    .ws-footer-btn,
+    .ws-end-btn,
+    .tc-cta-btn,
+    .tc-cta-neutral,
+    .tc-btn-drawing,
+    .dr-btn-refresh,
+    .dr-export-btn {
+      min-height: 48px;
+    }
+
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+
+  .btn-success {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius-md);
+    background: #16A34A;
+    color: #FFFFFF;
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-success:hover:not(:disabled) { background: #15803D; box-shadow: var(--btn-shadow-hover); }
+  .btn-success:active:not(:disabled) { transform: scale(0.97); }
+
+  .btn-warning {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius-md);
+    background: #F59E0B;
+    color: #FFFFFF;
+    box-shadow: var(--btn-shadow);
+  }
+  .btn-warning:hover:not(:disabled) { background: #D97706; box-shadow: var(--btn-shadow-hover); }
+  .btn-warning:active:not(:disabled) { transform: scale(0.97); }
+
+  /* ── Record-action buttons — distinct gradient per action ──────────────────
+     Shared style so Edit / Reset / Delete / Block look the same everywhere.
+     Works as text+icon (default) or icon-only (add .btn-action--icon).       */
+  .btn-action {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) 16px;
+    font-family: inherit;
+    font-size: var(--btn-fs-sm);
+    font-weight: var(--btn-fw-bold);
+    line-height: 1.2;
+    border-radius: var(--btn-radius-md);
+    border: 1px solid transparent;
+    color: #FFFFFF;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    box-shadow: var(--btn-shadow);
+    transition:
+      background 0.2s var(--btn-ease),
+      box-shadow 0.2s var(--btn-ease),
+      filter 0.2s var(--btn-ease),
+      transform 0.16s var(--btn-spring);
+  }
+  .btn-action:hover:not(:disabled) { filter: brightness(1.06); box-shadow: var(--btn-shadow-hover); }
+  .btn-action:active:not(:disabled) { transform: scale(0.96); }
+  .btn-action:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; filter: none; }
+  .btn-action svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+  /* Icon-only square (compact table-row actions) */
+  .btn-action--icon {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .btn-action--view     { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); border-color: rgba(29, 78, 216, 0.55); }
+  .btn-action--edit     { background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%); border-color: rgba(79, 70, 229, 0.55); }
+  .btn-action--role     { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); border-color: rgba(91, 33, 182, 0.55); }
+  .btn-action--reset    { background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%); border-color: rgba(180, 83, 9, 0.5); }
+  .btn-action--delete   { background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%); border-color: rgba(185, 28, 28, 0.55); }
+  .btn-action--block    { background: linear-gradient(180deg, #64748B 0%, #475569 100%); border-color: rgba(51, 65, 85, 0.55); }
+  .btn-action--activate { background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%); border-color: rgba(21, 128, 61, 0.5); }
+
+  /* ── Project card buttons (supervisor) — rounded-md variant ─────────────── */
+  .pj-btn-primary {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px);
+    font-size: var(--btn-fs);
+    font-weight: var(--btn-fw-bold);
+    border-radius: var(--btn-radius-md);
+    background: var(--btn-primary-bg);
+    color: var(--btn-on-primary);
+    box-shadow: var(--btn-shadow);
+  }
+  .pj-btn-primary:hover:not(:disabled) {
+    background: var(--btn-primary-hover);
+    filter: brightness(1.06);
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .pj-btn-primary:active:not(:disabled) { transform: scale(0.97); }
+
+  .pj-btn-secondary {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+    font-weight: var(--btn-fw-bold);
+    border-radius: var(--btn-radius-md);
+    background: var(--color-surface);
+    color: var(--color-on-surface);
+    border-color: var(--color-outline);
+    box-shadow: var(--btn-shadow);
+  }
+  .pj-btn-secondary:hover:not(:disabled) {
+    background: var(--color-surface-variant);
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .pj-btn-secondary:active:not(:disabled) { transform: scale(0.97); }
+
+  .pj-btn-danger-ghost {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+    font-weight: var(--btn-fw);
+    border-radius: var(--btn-radius-md);
+    background: var(--color-surface);
+    color: var(--color-on-surface);
+    border-color: var(--color-outline);
+  }
+  .pj-btn-danger-ghost:hover:not(:disabled) {
+    background: #FEF2F2;
+    color: #DC2626;
+    border-color: #FECACA;
+  }
+  .pj-btn-danger-ghost:active:not(:disabled) { transform: scale(0.97); }
+
+  /* View Drawing — teal filled (distinct from primary blue + white secondary) */
+  .pj-btn-teal {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+    font-weight: var(--btn-fw-bold);
+    border-radius: var(--btn-radius-md);
+    background: linear-gradient(180deg, #14B8A6 0%, #0D9488 100%);
+    color: #FFFFFF;
+    border-color: rgba(15, 118, 110, 0.55);
+    box-shadow: var(--btn-shadow);
+  }
+  .pj-btn-teal:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .pj-btn-teal:active:not(:disabled) { transform: scale(0.97); }
+
+  /* Digital Wiring View — indigo filled */
+  .pj-btn-indigo {
+    min-height: var(--btn-min-h);
+    padding: var(--btn-py) var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+    font-weight: var(--btn-fw-bold);
+    border-radius: var(--btn-radius-md);
+    background: linear-gradient(180deg, #6366F1 0%, #4F46E5 100%);
+    color: #FFFFFF;
+    border-color: rgba(67, 56, 202, 0.55);
+    box-shadow: var(--btn-shadow);
+  }
+  .pj-btn-indigo:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .pj-btn-indigo:active:not(:disabled) { transform: scale(0.97); }
+
+  /* ── Project information card action group (Supervisor Projects tab) ─────
+     One consistent height/padding/radius/icon/type for all five actions.
+     Enabled = high-contrast filled or outlined; disabled = muted only when
+     the document is genuinely unavailable (not pastel “looks disabled”). */
+  .pj-info-action {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--btn-gap);
+    min-height: 36px;
+    min-width: 0;
+    padding: 0 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: var(--btn-fw-bold);
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    box-shadow: var(--btn-shadow);
+    transition:
+      background 0.18s var(--btn-ease),
+      border-color 0.18s var(--btn-ease),
+      color 0.18s var(--btn-ease),
+      box-shadow 0.18s var(--btn-ease),
+      transform 0.12s var(--btn-ease),
+      filter 0.18s var(--btn-ease),
+      opacity 0.18s var(--btn-ease);
+  }
+  .pj-info-action svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+  }
+  .pj-info-action:hover:not(:disabled) {
+    box-shadow: var(--btn-shadow-hover);
+  }
+  .pj-info-action:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: var(--btn-shadow-active);
+  }
+  .pj-info-action:focus-visible {
+    outline: 2px solid var(--color-primary, #2563EB);
+    outline-offset: 2px;
+  }
+  .pj-info-action:not(:disabled) {
+    opacity: 1;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .pj-info-action:disabled {
+    cursor: not-allowed;
+    transform: none;
+    /* Keep hover for native title tooltips; :disabled still blocks activation */
+    pointer-events: auto;
+  }
+  .pj-info-action.btn--loading {
+    pointer-events: none;
+    cursor: wait;
+  }
+  .pj-info-action--secondary.btn--loading,
+  .pj-info-action--danger.btn--loading {
+    opacity: 0.78;
+  }
+  .pj-info-action--drawing.btn--loading,
+  .pj-info-action--wiring.btn--loading {
+    opacity: 0.88;
+    filter: none;
+  }
+
+  /* One muted slate for every action in the group — no accent-per-button. */
+  .pj-info-action--secondary,
+  .pj-info-action--drawing,
+  .pj-info-action--wiring,
+  .pj-info-action--edit {
+    background: #1E293B;
+    color: #FFFFFF;
+    border-color: #1E293B;
+  }
+
+  .pj-info-action--secondary:hover:not(:disabled),
+  .pj-info-action--drawing:hover:not(:disabled),
+  .pj-info-action--wiring:hover:not(:disabled),
+  .pj-info-action--edit:hover:not(:disabled) {
+    background: #334155;
+    border-color: #475569;
+  }
+
+  .pj-info-action--secondary:active:not(:disabled),
+  .pj-info-action--drawing:active:not(:disabled),
+  .pj-info-action--wiring:active:not(:disabled),
+  .pj-info-action--edit:active:not(:disabled) {
+    background: #0F172A;
+  }
+
+  /* Document actions when genuinely unavailable — flat muted, not gradient + opacity */
+  .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
+  .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
+  .pj-info-action--edit:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+    background: var(--color-surface-variant, #E2E8F0);
+    color: var(--color-text-secondary, #64748B);
+    border-color: var(--color-outline, #CBD5E1);
+    opacity: 0.72;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: none;
+  }
+
+  .pj-info-action--danger {
+    background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+    color: #FFFFFF;
+    border-color: rgba(153, 27, 27, 0.62);
+  }
+  .pj-info-action--danger:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  /* Icon sizing inside buttons */
+  .btn svg,
+  .btn-primary svg,
+  .btn-secondary svg,
+  .btn-danger svg,
+  .btn-ghost svg,
+  .btn-sm svg,
+  .btn-success svg,
+  .btn-warning svg,
+  .pj-btn-primary svg,
+  .pj-btn-secondary svg,
+  .pj-btn-danger-ghost svg,
+  .pj-btn-teal svg,
+  .pj-btn-indigo svg,
+  .pj-info-action svg,
+  .frame-pill-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn::before,
+    .btn-primary::before,
+    .btn-secondary::before,
+    .pj-btn-primary::before,
+    .pj-btn-secondary::before,
+    .frame-pill-btn::before {
+      animation: none !important;
+    }
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .pj-btn-primary,
+    .pj-btn-secondary {
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+  }
+}

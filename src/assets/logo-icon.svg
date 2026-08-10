@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ingenious Network FZC — Icon-only asset (globe + orbitals + speed lines, no text)
+  ViewBox is a square centred on the icon so it renders cleanly at any square size.
+  Transparent background — place inside a styled tile div.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="55 -24 192 192" fill="none">
+
+  <!-- Outer globe ring -->
+  <circle cx="150" cy="72" r="56"
+          stroke="#2A7A8A" stroke-width="2.5" opacity="0.45"/>
+
+  <!-- Primary orbital ellipse — tilted -38° -->
+  <ellipse cx="150" cy="72" rx="56" ry="20"
+           stroke="#2E9DAA" stroke-width="4"
+           transform="rotate(-38 150 72)"/>
+
+  <!-- Secondary orbital ellipse — tilted -56° -->
+  <ellipse cx="150" cy="72" rx="56" ry="20"
+           stroke="#6DCFD4" stroke-width="2.5" opacity="0.72"
+           transform="rotate(-56 150 72)"/>
+
+  <!-- Diagonal speed lines -->
+  <line x1="76"  y1="90"  x2="224" y2="54"
+        stroke="#2E9DAA" stroke-width="6" stroke-linecap="round"/>
+  <line x1="80"  y1="100" x2="220" y2="64"
+        stroke="#5BBFCC" stroke-width="4.2" stroke-linecap="round" opacity="0.88"/>
+  <line x1="72"  y1="80"  x2="228" y2="44"
+        stroke="#1B7080" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
+
+</svg>

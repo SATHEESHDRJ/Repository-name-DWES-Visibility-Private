@@ -1,0 +1,5 @@
+﻿ projects          |     8
+ users             |    36
+ tech_assignments  |     4
+ panel_inspections |     0
+

@@ -1,0 +1,49 @@
+# Staging — same VM, port 8443, isolated data under /mnt/dwes-data/staging
+name: dwes-staging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-WiringSchemeDB_staging}
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/staging/postgres:/var/lib/postgresql/data
+    networks: [internal]
+
+  api:
+    image: ${DWES_API_IMAGE:-dwes-api:staging}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-WiringSchemeDB_staging}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      UPLOAD_DIR: /app/uploads
+      TRUST_PROXY: "true"
+      RP_ID: ${RP_ID:-localhost}
+      RP_ORIGIN: ${RP_ORIGIN:-https://localhost:8443}
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/staging/uploads:/app/uploads
+      - ${DATA_ROOT:-/mnt/dwes-data}/staging/auth:/app/data
+    depends_on: [postgres]
+    networks: [internal]
+
+  nginx:
+    image: ${DWES_NGINX_IMAGE:-dwes-nginx:staging}
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ${DATA_ROOT:-/mnt/dwes-data}/staging/ssl/nginx:/etc/nginx/ssl:ro
+    depends_on: [api]
+    networks: [internal, public]
+
+networks:
+  internal:
+    internal: true
+  public:

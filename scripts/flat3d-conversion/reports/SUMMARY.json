@@ -1,0 +1,285 @@
+{
+  "core_fixtures": [
+    "clean_named_blocks",
+    "units_mm",
+    "rotated_devices"
+  ],
+  "core_pass": true,
+  "core_failures": [],
+  "fixtures": {
+    "clean_named_blocks": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 5152,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 800.0,
+          "height": 600.0
+        },
+        "drawing_insert_count": 2,
+        "flat3d_part_count": 2,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "exploded_lines": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 2112,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 600.0,
+          "height": 400.0
+        },
+        "drawing_insert_count": 0,
+        "flat3d_part_count": 0,
+        "matched_device_pct": 0.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": null,
+          "max": null
+        },
+        "size_deviation_mm": {
+          "mean": null,
+          "max": null
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "nested_blocks": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 3628,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 700.0,
+          "height": 500.0
+        },
+        "drawing_insert_count": 1,
+        "flat3d_part_count": 1,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "rotated_devices": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 3624,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 500.0,
+          "height": 400.0
+        },
+        "drawing_insert_count": 1,
+        "flat3d_part_count": 1,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "duplicate_tags": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 5128,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 600.0,
+          "height": 400.0
+        },
+        "drawing_insert_count": 2,
+        "flat3d_part_count": 2,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "units_mm": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 3608,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 600.0,
+          "height": 400.0
+        },
+        "drawing_insert_count": 1,
+        "flat3d_part_count": 1,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "units_inches": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 3696,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 1016.0,
+          "height": 762.0
+        },
+        "drawing_insert_count": 1,
+        "flat3d_part_count": 1,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "vector_pdf": {
+      "status": "FAILED",
+      "fallback": "APPROVED_2D_ONLY",
+      "verdict": "PASS",
+      "expected_outcome": "approved_2d",
+      "glb_bytes": 0,
+      "overlay": {}
+    },
+    "scanned_pdf": {
+      "status": "FAILED",
+      "fallback": "APPROVED_2D_ONLY",
+      "verdict": "PASS",
+      "expected_outcome": "approved_2d",
+      "glb_bytes": 0,
+      "overlay": {}
+    },
+    "corrupted_dxf": {
+      "status": "FAILED",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": "expected_fail",
+      "glb_bytes": 0,
+      "overlay": {}
+    },
+    "empty_drawing": {
+      "status": "FAILED",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": "expected_fail",
+      "glb_bytes": 0,
+      "overlay": {}
+    },
+    "large_panel": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 124060,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 2000.0,
+          "height": 1500.0
+        },
+        "drawing_insert_count": 80,
+        "flat3d_part_count": 80,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 0
+      }
+    },
+    "revision_mismatch": {
+      "status": "READY_FOR_REVIEW",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": null,
+      "glb_bytes": 5152,
+      "overlay": {
+        "panel_bounds_mm": {
+          "width": 600.0,
+          "height": 400.0
+        },
+        "drawing_insert_count": 2,
+        "flat3d_part_count": 2,
+        "matched_device_pct": 100.0,
+        "missing_device_pct": 0.0,
+        "positional_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "size_deviation_mm": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "unresolved_object_count": 1
+      }
+    },
+    "corrupted_dwg": {
+      "status": "FAILED",
+      "fallback": null,
+      "verdict": "PASS",
+      "expected_outcome": "expected_fail",
+      "glb_bytes": 0,
+      "overlay": {}
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "description": "Empty drawing: valid DXF zero entities; pipeline fails DXF_PARSE or GEOMETRY_NORMALIZATION",
+  "expected_status": "FAILED"
+}

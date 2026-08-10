@@ -1,0 +1,807 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model file_hashes {
+  id           Int       @id @default(autoincrement())
+  file_hash    String    @db.VarChar(64)
+  file_name    String    @db.VarChar(255)
+  file_type    String    @db.VarChar(20)
+  project_code String    @db.VarChar(150)
+  uploaded_at  DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([file_hash], map: "idx_file_hashes_hash")
+  @@index([project_code, file_type], map: "idx_file_hashes_project_type")
+  @@index([file_type], map: "idx_file_hashes_type")
+}
+
+model panel_inspections {
+  id                   Int              @id @default(autoincrement())
+  assignment_id        Int
+  qc_user_id           Int
+  visual_check         String?          @db.VarChar(10)
+  visual_note          String?
+  redmarkup_check      String?          @db.VarChar(10)
+  redmarkup_note       String?
+  redmarkup_photo_hash String?          @db.VarChar(128)
+  labeling_check       String?          @db.VarChar(10)
+  labeling_note        String?
+  compliance_check     String?          @db.VarChar(10)
+  compliance_note      String?
+  overall_result       String?          @db.VarChar(20)
+  issues               Json?            @default("[]")
+  inspection_notes     String?
+  created_at           DateTime?        @default(now()) @db.Timestamp(6)
+  signed_off_at        DateTime?        @db.Timestamp(6)
+  tech_assignments     tech_assignments @relation(fields: [assignment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                users            @relation(fields: [qc_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([assignment_id], map: "idx_panel_inspections_assignment")
+  @@index([created_at(sort: Desc)], map: "idx_panel_inspections_created_at")
+  @@index([qc_user_id], map: "idx_panel_inspections_qc_user")
+}
+
+model projects {
+  id                   Int       @default(autoincrement())
+  code                 String    @id @db.VarChar(150)
+  client               String    @db.VarChar(100)
+  name                 String    @db.VarChar(200)
+  description          String?   @default("") @db.VarChar(500)
+  sequence             Int?      @default(1)
+  is_active            Boolean?  @default(true)
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  project_state        String?   @default("not_started") @db.VarChar(20)
+  assigned_technicians String?   @default("") @db.VarChar(500)
+
+  @@index([is_active], map: "idx_projects_active")
+  @@index([is_active, project_state], map: "idx_projects_active_state")
+}
+
+model session_log {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  action       String    @db.VarChar(20)
+  project_code String?   @db.VarChar(150)
+  login_role   String?   @db.VarChar(30)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  ip_address   String?   @db.VarChar(50)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_session_log_user")
+  @@index([created_at(sort: Desc)], map: "idx_session_log_created_at")
+  @@index([project_code], map: "idx_session_log_project")
+}
+
+model tech_assignments {
+  id                   Int                 @id @default(autoincrement())
+  project_code         String              @db.VarChar(150)
+  frame_id             String              @db.VarChar(100)
+  panel_name           String?             @default("") @db.VarChar(200)
+  technician_id        Int
+  assigned_by          Int
+  assigned_at          DateTime?           @default(now()) @db.Timestamp(6)
+  status               String?             @default("assigned") @db.VarChar(20)
+  started_at           DateTime?           @db.Timestamp(6)
+  paused_at            DateTime?           @db.Timestamp(6)
+  completed_at         DateTime?           @db.Timestamp(6)
+  total_wiring_seconds Int?                @default(0)
+  cables_total         Int?                @default(0)
+  cables_src_done      Int?                @default(0)
+  cables_dst_done      Int?                @default(0)
+  cable_status         String?             @default("{}")
+  is_hidden            Boolean?            @default(false)
+  report_submitted     Boolean?            @default(false)
+  report_submitted_at  DateTime?           @db.Timestamp(6)
+  review_status        String?             @db.VarChar(20)
+  review_notes         String?             @default("") @db.VarChar(500)
+  reviewed_by          Int?
+  reviewed_at          DateTime?           @db.Timestamp(6)
+  otp_code             String?             @db.VarChar(10)
+  qr_code              String?             @db.VarChar(20)
+  otp_verified         Boolean?            @default(false)
+  supervisor_approved  Boolean?            @default(true)
+  approved_at          DateTime?           @db.Timestamp(6)
+  approved_by          Int?
+  rework_requested     Boolean?            @default(false)
+  rework_reason        String?             @default("")
+  rework_requested_at  DateTime?           @db.Timestamp(6)
+  rework_requested_by  Int?
+  pause_reason         String?             @default("") @db.VarChar(200)
+  changeover_locked    Boolean?            @default(false)
+  handover_from_id     Int?
+  handover_to_id       Int?
+  otp_expires_at       DateTime?           @db.Timestamp(6)
+  otp_attempts         Int?                @default(0)
+  qr_panel_verified    Boolean?            @default(false)
+  secure_link_token    String?             @db.VarChar(64)
+  qc_status            String?             @default("not_ready") @db.VarChar(20)
+  panel_inspections    panel_inspections[]
+
+  @@unique([project_code, frame_id, technician_id], map: "uq_tech_frame")
+  @@index([project_code], map: "idx_tech_assignments_project")
+  @@index([technician_id], map: "idx_tech_assignments_tech")
+  @@index([assigned_at(sort: Desc)], map: "idx_tech_assignments_assigned_at")
+  @@index([completed_at(sort: Desc)], map: "idx_tech_assignments_completed_at")
+  @@index([project_code, status], map: "idx_tech_assignments_proj_status")
+  @@index([status], map: "idx_tech_assignments_status")
+  @@index([technician_id, is_hidden, changeover_locked], map: "idx_tech_assignments_tech_active")
+  @@index([project_code, is_hidden], map: "idx_tech_assignments_proj_hidden")
+}
+
+model tech_audit_log {
+  id              Int       @id @default(autoincrement())
+  technician_id   Int
+  technician_name String?   @default("") @db.VarChar(100)
+  project_code    String?   @default("") @db.VarChar(150)
+  frame_id        String?   @default("") @db.VarChar(100)
+  panel_name      String?   @default("") @db.VarChar(200)
+  action          String    @db.VarChar(30)
+  details         String?   @default("") @db.VarChar(500)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([technician_id], map: "idx_tech_audit_tech")
+  @@index([created_at(sort: Desc)], map: "idx_tech_audit_created_at")
+  @@index([project_code, created_at(sort: Desc)], map: "idx_tech_audit_proj_created")
+}
+
+model users {
+  id                   Int                 @id @default(autoincrement())
+  username             String              @unique @db.VarChar(50)
+  hashed_password      String              @db.VarChar(256)
+  full_name            String?             @default("") @db.VarChar(100)
+  employee_id          String?             @default("") @db.VarChar(20)
+  role                 String?             @default("technician") @db.VarChar(30)
+  is_active            Boolean?            @default(true)
+  created_at           DateTime?           @default(now()) @db.Timestamp(6)
+  last_login           DateTime?           @db.Timestamp(6)
+  whatsapp_number      String?             @default("") @db.VarChar(20)
+  ready_for_assignment Boolean?            @default(false)
+  ready_since          DateTime?           @db.Timestamp(6)
+  panel_inspections    panel_inspections[]
+  session_log          session_log[]
+  panel_workflow_stage_assignees panel_workflow_stage_assignees[]
+
+  @@index([role], map: "idx_users_role")
+  @@index([username], map: "idx_users_username")
+}
+
+model drawing_assets {
+  id                Int       @id @default(autoincrement())
+  project_code      String    @db.VarChar(150)
+  frame_id          String    @map("panel_id") @db.VarChar(100)
+  drawing_number    String    @db.VarChar(100)
+  title             String?   @db.VarChar(200)
+  revision          String    @db.VarChar(50)
+  drawing_type      String    @db.VarChar(50)
+  approval_status   String?   @default("pending_review") @db.VarChar(50)
+  original_filename String    @db.VarChar(255)
+  storage_path      String    @db.VarChar(500)
+  mime_type         String    @db.VarChar(100)
+  size              Int
+  uploaded_by       Int
+  uploaded_at       DateTime? @default(now()) @db.Timestamp(6)
+  approved_by       Int?
+  approved_at       DateTime? @db.Timestamp(6)
+  superseded_at     DateTime? @db.Timestamp(6)
+  sha256            String?   @db.VarChar(64)
+  source_face       String?   @db.VarChar(50)
+  conversion_job_id String?   @db.Uuid
+  conversion_status String?   @default("not_required") @db.VarChar(50)
+  converter_name    String?   @db.VarChar(100)
+  converter_version String?   @db.VarChar(100)
+  derivative_path   String?   @db.VarChar(500)
+  derivative_mime   String?   @db.VarChar(100)
+  conversion_error  String?   @db.VarChar(500)
+  tb_markers        tb_markers[]
+
+  @@index([project_code, frame_id], map: "idx_drawing_assets_frame")
+}
+
+model panel_models {
+  id                 Int       @id @default(autoincrement())
+  project_code       String    @db.VarChar(150)
+  frame_id           String    @map("panel_id") @db.VarChar(100)
+  drawing_asset_id   Int?
+  model_revision     String    @db.VarChar(50)
+  model_format       String    @db.VarChar(50)
+  units              String?   @default("mm") @db.VarChar(20)
+  origin             Json?     @default("{\"x\":0,\"y\":0,\"z\":0}")
+  width              Float?
+  height             Float?
+  depth              Float?
+  model_storage_path String?   @db.VarChar(500)
+  processing_status  String?   @default("processing") @db.VarChar(50)
+  validation_status  String?   @default("unvalidated") @db.VarChar(50)
+  approval_status    String?   @default("pending_review") @db.VarChar(50)
+  published_at       DateTime? @db.Timestamp(6)
+  ga_asset_set_id    String?   @db.Uuid
+  source_ga_revision String?   @db.VarChar(100)
+  mapping_revision   String?   @db.VarChar(100)
+  mapping_state      String?   @default("draft") @db.VarChar(50)
+  created_by         Int?
+  confirmed_by       Int?
+  confirmed_at       DateTime? @db.Timestamp(6)
+
+  @@index([project_code, frame_id], map: "idx_panel_models_frame")
+}
+
+model device_geometries {
+  id                    Int       @id @default(autoincrement())
+  panel_model_id        Int
+  device_tag            String    @db.VarChar(100)
+  normalized_device_tag String    @db.VarChar(100)
+  device_type           String?   @db.VarChar(100)
+  manufacturer          String?   @db.VarChar(100)
+  model                 String?   @db.VarChar(100)
+  x                     Float
+  y                     Float
+  z                     Float
+  width                 Float?
+  height                Float?
+  depth                 Float?
+  rotation_x            Float?    @default(0)
+  rotation_y            Float?    @default(0)
+  rotation_z            Float?    @default(0)
+  layer                 String?   @db.VarChar(100)
+  block_reference       String?   @db.VarChar(100)
+  mapping_confidence    Float?
+  validation_status     String?   @default("unvalidated") @db.VarChar(50)
+  stable_item_id        String?   @db.Uuid
+  description           String?   @db.VarChar(500)
+  face                  String?   @db.VarChar(50)
+  normalized_x          Float?
+  normalized_y          Float?
+  normalized_width      Float?
+  normalized_height     Float?
+  terminal_block_tag    String?   @db.VarChar(100)
+  terminal_count        Int?
+  first_terminal_number String?   @db.VarChar(100)
+  terminal_pitch        Float?
+  terminal_orientation  String?   @db.VarChar(20)
+  terminal_reversed     Boolean?  @default(false)
+  aliases               Json?
+  source_ga_revision    String?   @db.VarChar(100)
+  mapping_revision      String?   @db.VarChar(100)
+  mapping_state         String?   @default("draft") @db.VarChar(50)
+  created_by            Int?
+  updated_by            Int?
+  confirmed_by          Int?
+  confirmed_at          DateTime? @db.Timestamp(6)
+
+  @@index([panel_model_id], map: "idx_device_geometries_model")
+  @@index([normalized_device_tag], map: "idx_device_geometries_tag")
+}
+
+model terminal_geometries {
+  id                            Int     @id @default(autoincrement())
+  device_geometry_id            Int
+  terminal_block                String? @db.VarChar(100)
+  terminal_number               String  @db.VarChar(100)
+  normalized_terminal_reference String  @db.VarChar(100)
+  x                             Float
+  y                             Float
+  z                             Float
+  direction                     String? @db.VarChar(50)
+  drawing_sheet                 String? @db.VarChar(100)
+  drawing_element_reference     String? @db.VarChar(100)
+  mapping_confidence            Float?
+  validation_status             String? @default("unvalidated") @db.VarChar(50)
+  terminal_index                Int?
+  face                          String? @db.VarChar(50)
+  normalized_x                  Float?
+  normalized_y                  Float?
+  mapping_revision              String? @db.VarChar(100)
+
+  @@index([device_geometry_id], map: "idx_terminal_geometries_device")
+  @@index([normalized_terminal_reference], map: "idx_terminal_geometries_ref")
+}
+
+model duct_nodes {
+  id              Int     @id @default(autoincrement())
+  panel_model_id  Int
+  duct_identifier String? @db.VarChar(100)
+  x               Float
+  y               Float
+  z               Float
+  node_type       String? @db.VarChar(50)
+
+  @@index([panel_model_id], map: "idx_duct_nodes_model")
+}
+
+model duct_segments {
+  id                  Int      @id @default(autoincrement())
+  panel_model_id      Int
+  source_node_id      Int
+  destination_node_id Int
+  length              Float
+  width               Float?
+  height              Float?
+  capacity            Float?
+  direction           String?  @db.VarChar(50)
+  routing_restriction String?  @db.VarChar(100)
+  enabled             Boolean? @default(true)
+
+  @@index([panel_model_id], map: "idx_duct_segments_model")
+}
+
+model cable_route_mappings {
+  id                               Int       @id @default(autoincrement())
+  wiring_row_id                    String    @db.VarChar(100)
+  source_terminal_geometry_id      Int?
+  destination_terminal_geometry_id Int?
+  route_classification             String    @db.VarChar(50)
+  route_calculation_method         String?   @db.VarChar(50)
+  route_nodes                      Json?
+  route_segments                   Json?
+  route_length                     Float?
+  validation_status                String?   @default("unvalidated") @db.VarChar(50)
+  approval_status                  String?   @default("pending_review") @db.VarChar(50)
+  approved_by                      Int?
+  approved_at                      DateTime? @db.Timestamp(6)
+  drawing_revision                 String?   @db.VarChar(50)
+  schedule_revision                String?   @db.VarChar(50)
+  model_revision                   String?   @db.VarChar(50)
+
+  @@index([wiring_row_id], map: "idx_cable_route_mappings_row")
+}
+
+model mapping_issues {
+  id            Int       @id @default(autoincrement())
+  project_code  String    @db.VarChar(150)
+  frame_id      String    @map("panel_id") @db.VarChar(100)
+  wiring_row_id String?   @db.VarChar(100)
+  reported_by   Int
+  issue_type    String    @db.VarChar(50)
+  description   String
+  status        String?   @default("open") @db.VarChar(50)
+  resolved_by   Int?
+  resolved_at   DateTime? @db.Timestamp(6)
+
+  @@index([project_code, frame_id], map: "idx_mapping_issues_frame")
+}
+
+model ga_asset_sets {
+  id                 String    @id @default(uuid()) @db.Uuid
+  project_code       String    @db.VarChar(150)
+  frame_id           String    @map("panel_id") @db.VarChar(100)
+  revision           Int
+  source_revision    String    @db.VarChar(100)
+  status             String    @default("draft") @db.VarChar(50)
+  panel_height       Float?
+  panel_width        Float?
+  panel_depth        Float?
+  dimension_unit     String    @default("mm") @db.VarChar(20)
+  mapping_model_id   Int?
+  mapping_revision   String?   @db.VarChar(100)
+  schedule_revision  String?   @db.VarChar(100)
+  release_status     String    @default("blocked") @db.VarChar(50)
+  invalidated_reason String?   @db.VarChar(500)
+  created_by         Int
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_by         Int
+  updated_at         DateTime  @updatedAt @db.Timestamp(6)
+  confirmed_by       Int?
+  confirmed_at       DateTime? @db.Timestamp(6)
+  released_by        Int?
+  released_at        DateTime? @db.Timestamp(6)
+  superseded_at      DateTime? @db.Timestamp(6)
+
+  @@unique([project_code, frame_id, revision], map: "uq_ga_asset_set_revision")
+  @@index([project_code, frame_id, status], map: "idx_ga_asset_sets_panel")
+  @@index([release_status], map: "idx_ga_asset_sets_release")
+}
+
+model ga_faces {
+  id                 String    @id @default(uuid()) @db.Uuid
+  ga_asset_set_id    String    @db.Uuid
+  face               String    @db.VarChar(50)
+  custom_label       String?   @db.VarChar(100)
+  drawing_asset_id   Int
+  source_revision    String    @db.VarChar(100)
+  selected_page      Int?
+  crop               Json
+  viewport           Json
+  scale              Float
+  image_storage_path String    @db.VarChar(500)
+  image_sha256       String    @db.VarChar(64)
+  image_width        Int
+  image_height       Int
+  status             String    @default("draft") @db.VarChar(50)
+  created_by         Int
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_by         Int
+  updated_at         DateTime  @updatedAt @db.Timestamp(6)
+  confirmed_by       Int?
+  confirmed_at       DateTime? @db.Timestamp(6)
+
+  @@index([ga_asset_set_id, face], map: "idx_ga_faces_asset_face")
+  @@index([drawing_asset_id], map: "idx_ga_faces_source")
+}
+
+model background_jobs {
+  id                  String    @id @default(uuid()) @db.Uuid
+  job_type            String    @db.VarChar(100)
+  project_code        String    @db.VarChar(150)
+  frame_id            String    @map("panel_id") @db.VarChar(100)
+  requested_by        Int
+  status              String    @default("queued") @db.VarChar(50)
+  payload             Json
+  result              Json?
+  attempts            Int       @default(0)
+  max_attempts        Int       @default(2)
+  available_at        DateTime  @default(now()) @db.Timestamp(6)
+  lease_owner         String?   @db.VarChar(100)
+  lease_expires_at    DateTime? @db.Timestamp(6)
+  provider_name       String?   @db.VarChar(100)
+  provider_version    String?   @db.VarChar(100)
+  safe_error          String?   @db.VarChar(500)
+  created_at          DateTime  @default(now()) @db.Timestamp(6)
+  started_at          DateTime? @db.Timestamp(6)
+  finished_at         DateTime? @db.Timestamp(6)
+  cancel_requested_at DateTime? @db.Timestamp(6)
+
+  @@index([status, available_at], map: "idx_background_jobs_pending")
+  @@index([project_code, frame_id, created_at], map: "idx_background_jobs_panel")
+}
+
+model ga_correlation_results {
+  id                    String    @id @default(uuid()) @db.Uuid
+  job_id                String    @db.Uuid
+  project_code          String    @db.VarChar(150)
+  frame_id              String    @map("panel_id") @db.VarChar(100)
+  wiring_row_id         String    @db.VarChar(150)
+  endpoint              String    @db.VarChar(20)
+  raw_device            String?   @db.VarChar(200)
+  raw_terminal          String?   @db.VarChar(200)
+  normalized_reference  String?   @db.VarChar(250)
+  state                 String    @db.VarChar(50)
+  method                String    @db.VarChar(50)
+  evidence              Json
+  confidence            Float
+  candidate_references  Json
+  matched_terminal_id   Int?
+  suggested_terminal_id Int?
+  final_terminal_id     Int?
+  mapping_model_id      Int
+  mapping_revision      String    @db.VarChar(100)
+  schedule_revision     String    @db.VarChar(100)
+  review_status         String    @default("pending") @db.VarChar(50)
+  exception_hold        Boolean   @default(false)
+  decided_by            Int?
+  decided_at            DateTime? @db.Timestamp(6)
+  decision_reason       String?   @db.VarChar(1000)
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([project_code, frame_id, review_status], map: "idx_ga_correlation_review")
+  @@index([job_id], map: "idx_ga_correlation_job")
+  @@index([wiring_row_id], map: "idx_ga_correlation_row")
+}
+
+model ga_finalization_decisions {
+  id                    String   @id @default(uuid()) @db.Uuid
+  correlation_result_id String   @db.Uuid
+  project_code          String   @db.VarChar(150)
+  frame_id              String   @map("panel_id") @db.VarChar(100)
+  decision              String   @db.VarChar(50)
+  original_value        Json
+  suggested_value       Json?
+  final_value           Json?
+  reason                String?  @db.VarChar(1000)
+  decided_by            Int
+  decided_at            DateTime @default(now()) @db.Timestamp(6)
+  ga_revision           String   @db.VarChar(100)
+  mapping_revision      String   @db.VarChar(100)
+  schedule_revision     String   @db.VarChar(100)
+
+  @@index([project_code, frame_id, decided_at], map: "idx_ga_decisions_panel")
+  @@index([correlation_result_id], map: "idx_ga_decisions_result")
+}
+
+// ── Panel Workflow Phase W1 (additive only; optional per panel) ──────────────
+
+model panel_workflow_templates {
+  id          Int                              @id @default(autoincrement())
+  code        String                           @unique @db.VarChar(50)
+  name        String                           @db.VarChar(200)
+  description String?                          @db.VarChar(500)
+  version     String                           @default("v1") @db.VarChar(30)
+  is_system   Boolean                          @default(false)
+  created_by  Int?
+  created_at  DateTime?                        @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?                        @default(now()) @updatedAt @db.Timestamp(6)
+  stages      panel_workflow_template_stages[]
+  workflows   panel_workflows[]
+
+  @@index([is_system], map: "idx_pw_templates_system")
+}
+
+model panel_workflow_template_stages {
+  id                       Int                      @id @default(autoincrement())
+  template_id              Int
+  stage_key                String                   @db.VarChar(50)
+  name                     String                   @db.VarChar(200)
+  sequence                 Int
+  mandatory                Boolean                  @default(true)
+  requires_approval        Boolean                  @default(false)
+  approval_role            String?                  @db.VarChar(30)
+  default_duration_minutes Int?
+  default_duration_value   Decimal?                 @db.Decimal(10, 2)
+  duration_unit            String?                  @db.VarChar(20)
+  confirmation_required    Boolean                  @default(false)
+  supervisor_input_required Boolean                 @default(false)
+  enabled_by_default       Boolean                  @default(true)
+  default_dep_stage_key    String?                  @db.VarChar(50)
+  template                 panel_workflow_templates @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([template_id, stage_key], map: "uq_pw_tpl_stage_key")
+  @@unique([template_id, sequence], map: "uq_pw_tpl_stage_seq")
+  @@index([template_id], map: "idx_pw_tpl_stages_template")
+}
+
+model panel_workflows {
+  id                     Int                          @id @default(autoincrement())
+  project_code           String                       @db.VarChar(150)
+  frame_id               String                       @db.VarChar(100)
+  panel_name             String?                      @db.VarChar(200)
+  template_id            Int?
+  planning_template_version String?                   @db.VarChar(30)
+  status                 String                       @default("NOT_PLANNED") @db.VarChar(30)
+  planned_completion_at  DateTime?                    @db.Timestamp(6)
+  forecast_completion_at DateTime?                    @db.Timestamp(6)
+  target_completion_at   DateTime?                    @db.Timestamp(6)
+  efficiency_factor      Decimal?                     @db.Decimal(6, 3)
+  notes                  String?
+  created_by             Int?
+  updated_by             Int?
+  created_at             DateTime?                    @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                    @default(now()) @updatedAt @db.Timestamp(6)
+  template               panel_workflow_templates?    @relation(fields: [template_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  stages                 panel_workflow_stages[]
+  stage_deps             panel_workflow_stage_deps[]
+  history                panel_workflow_history[]
+
+  @@unique([project_code, frame_id], map: "uq_pw_project_frame")
+  @@index([project_code], map: "idx_pw_project")
+  @@index([status], map: "idx_pw_status")
+  @@index([project_code, status], map: "idx_pw_project_status")
+}
+
+model panel_workflow_stages {
+  id                       Int                              @id @default(autoincrement())
+  workflow_id              Int
+  stage_key                String                           @db.VarChar(50)
+  name                     String                           @db.VarChar(200)
+  sequence                 Int
+  enabled                  Boolean                          @default(true)
+  mandatory                Boolean                          @default(true)
+  requires_approval        Boolean                          @default(false)
+  approval_role            String?                          @db.VarChar(30)
+  priority                 String?                          @db.VarChar(20)
+  status                   String                           @default("NOT_PLANNED") @db.VarChar(30)
+  planned_duration_minutes Int?
+  planned_duration_value   Decimal?                         @db.Decimal(10, 2)
+  duration_unit            String?                          @db.VarChar(20)
+  confirmation_required    Boolean                          @default(false)
+  supervisor_input_required Boolean                         @default(false)
+  is_legacy                Boolean                          @default(false)
+  terminology_unconfirmed  Boolean                          @default(false)
+  planned_start_at         DateTime?                        @db.Timestamp(6)
+  planned_finish_at        DateTime?                        @db.Timestamp(6)
+  actual_start_at          DateTime?                        @db.Timestamp(6)
+  actual_finish_at         DateTime?                        @db.Timestamp(6)
+  progress_pct             Int                              @default(0)
+  instructions             String?
+  remarks                  String?
+  delay_minutes            Int?
+  delay_reason             String?
+  approval_status          String?                          @db.VarChar(30)
+  approved_by              Int?
+  approved_at              DateTime?                        @db.Timestamp(6)
+  evidence_path            String?                          @db.VarChar(500)
+  created_at               DateTime?                        @default(now()) @db.Timestamp(6)
+  updated_at               DateTime?                        @default(now()) @updatedAt @db.Timestamp(6)
+  workflow                 panel_workflows                  @relation(fields: [workflow_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deps_as_stage            panel_workflow_stage_deps[]      @relation("PwDepStage")
+  deps_as_prerequisite     panel_workflow_stage_deps[]      @relation("PwDepPrereq")
+  assignees                panel_workflow_stage_assignees[]
+  history                  panel_workflow_history[]
+
+  @@unique([workflow_id, stage_key], map: "uq_pw_stage_key")
+  @@unique([workflow_id, sequence], map: "uq_pw_stage_seq")
+  @@index([workflow_id, enabled], map: "idx_pw_stages_enabled")
+}
+
+model panel_workflow_stage_deps {
+  id                    Int                   @id @default(autoincrement())
+  workflow_id           Int
+  stage_id              Int
+  prerequisite_stage_id Int
+  created_at            DateTime?             @default(now()) @db.Timestamp(6)
+  workflow              panel_workflows       @relation(fields: [workflow_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  stage                 panel_workflow_stages @relation("PwDepStage", fields: [stage_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prerequisite          panel_workflow_stages @relation("PwDepPrereq", fields: [prerequisite_stage_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([stage_id, prerequisite_stage_id], map: "uq_pw_stage_dep")
+  @@index([workflow_id], map: "idx_pw_deps_workflow")
+}
+
+model panel_workflow_stage_assignees {
+  id          Int                   @id @default(autoincrement())
+  stage_id    Int
+  user_id     Int
+  role_hint   String?               @db.VarChar(50)
+  assigned_at DateTime?             @default(now()) @db.Timestamp(6)
+  assigned_by Int?
+  stage       panel_workflow_stages @relation(fields: [stage_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([stage_id, user_id], map: "uq_pw_stage_assignee")
+  @@index([user_id], map: "idx_pw_assignees_user")
+}
+
+model panel_workflow_history {
+  id             Int                    @id @default(autoincrement())
+  workflow_id    Int
+  stage_id       Int?
+  project_code   String                 @db.VarChar(150)
+  frame_id       String                 @db.VarChar(100)
+  event_type     String                 @db.VarChar(50)
+  previous_value String?
+  new_value      String?
+  user_id        Int?
+  user_role      String?                @db.VarChar(30)
+  reason         String?
+  created_at     DateTime?              @default(now()) @db.Timestamp(6)
+  workflow       panel_workflows        @relation(fields: [workflow_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  stage          panel_workflow_stages? @relation(fields: [stage_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([workflow_id, created_at(sort: Desc)], map: "idx_pw_history_workflow")
+  @@index([project_code, created_at(sort: Desc)], map: "idx_pw_history_project")
+}
+
+model panel_workflow_productivity_defaults {
+  id                         Int       @id @default(autoincrement())
+  /// Null = global defaults row (enforced by partial unique index in migration).
+  project_code               String?   @db.VarChar(150)
+  regular_hours_per_day      Decimal?  @db.Decimal(6, 2)
+  productive_hours_per_shift Decimal?  @db.Decimal(6, 2)
+  target_wires_per_day       Int?
+  target_wires_per_hour      Int?
+  standard_minutes_per_wire  Decimal?  @db.Decimal(8, 2)
+  wire_delay_warning_minutes Int?
+  break_duration_minutes     Int?
+  lunch_duration_minutes     Int?
+  allowed_overtime_minutes   Int?
+  updated_by                 Int?
+  created_at                 DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([project_code], map: "idx_pw_prod_project")
+}
+
+// ── TB Marker Drawing Annotations (additive only) ─────────────────────────────
+// Geometry is stored in normalized page coordinates (0..1) in application layer.
+model tb_markers {
+  id                     Int       @id @default(autoincrement())
+  project_code           String    @db.VarChar(150)
+  frame_id               String    @db.VarChar(100)
+  drawing_asset_id       Int?
+  page_number            Int       @default(1)
+  view_name              String?
+  marker_type            String    @db.VarChar(30)
+  tb_number              String    @db.VarChar(80)
+  terminal_group         String    @db.VarChar(120)
+  geometry               Json
+  notes                  String?
+  drawing_revision       String?   @db.VarChar(50)
+  drawing_checksum       String?   @db.VarChar(64)
+  detection_method       String?   @db.VarChar(80)
+  confidence_score       Float?
+  created_automatically  Boolean   @default(false)
+  marker_status          String    @default("ACTIVE") @db.VarChar(30)
+  analysis_run_id        String?   @db.VarChar(50)
+  created_by             Int
+  updated_by             Int?
+  created_at             DateTime  @default(now()) @db.Timestamp(6)
+  updated_at             DateTime  @default(now()) @db.Timestamp(6)
+
+  drawing_asset     drawing_assets? @relation(fields: [drawing_asset_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  history           tb_marker_history[]
+
+  @@index([project_code, frame_id], map: "idx_tb_markers_frame")
+  @@index([drawing_asset_id, page_number], map: "idx_tb_markers_drawing")
+  @@index([project_code, frame_id, marker_status, drawing_checksum], map: "idx_tb_markers_active_rev")
+}
+
+/// Automatic drawing TB analysis runs (additive; does not alter original GA files).
+model drawing_tb_analysis_runs {
+  id                 String    @id @db.VarChar(50)
+  project_code       String    @db.VarChar(150)
+  frame_id           String    @db.VarChar(100) @map("panel_id")
+  drawing_revision   String?   @db.VarChar(50)
+  drawing_checksum   String?   @db.VarChar(64)
+  status             String    @default("ANALYSIS_PENDING") @db.VarChar(40)
+  expected_headers   Json?
+  result_summary     Json?
+  failure_reason     String?   @db.VarChar(500)
+  job_id             String?   @db.VarChar(50)
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([project_code, frame_id, created_at(sort: Desc)], map: "idx_tb_analysis_runs_panel")
+  @@index([status], map: "idx_tb_analysis_runs_status")
+}
+
+model tb_marker_history {
+  id             Int       @id @default(autoincrement())
+  marker_id      Int?
+  project_code   String   @db.VarChar(150)
+  frame_id       String   @db.VarChar(100)
+  event_type     String   @db.VarChar(50)
+  previous_value String?
+  new_value      String?
+  user_id        Int?
+  user_role      String?  @db.VarChar(30)
+  reason         String?  @db.VarChar(500)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  marker tb_markers? @relation(fields: [marker_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([marker_id, created_at(sort: Desc)], map: "idx_tb_marker_history_marker")
+  @@index([project_code, created_at(sort: Desc)], map: "idx_tb_marker_history_project")
+}
+
+model ga_device_locations {
+  id                      Int       @id @default(autoincrement())
+  
+  // Drawing identification
+  drawing_id              Int
+  drawing_checksum        String    @db.VarChar(64)
+  
+  // Device identification
+  device_identity         String    @db.VarChar(100)
+  
+  // Location in drawing
+  page                    Int
+  view_classification     String    @db.VarChar(50)
+  
+  // 2D normalized geometry
+  geometry_bbox_x         Float
+  geometry_bbox_y         Float
+  geometry_bbox_width     Float
+  geometry_bbox_height    Float
+  
+  // Analysis metadata
+  analysis_run_id         String    @db.VarChar(64)
+  pipeline_version        String    @db.VarChar(20)
+  confidence_score        Float?
+  
+  // Verification/status
+  verification_status     String    @db.VarChar(30)  // UNVERIFIED, AUTO_VERIFIED, SUPERVISOR_VERIFIED, BLOCKED_GROUNDING
+  grounding_available     Boolean   @default(false)
+  auto_verified_at        DateTime?
+  supervisor_verified_at  DateTime?
+  
+  // Detection context
+  detection_method        String?   @db.VarChar(50)
+  candidates_total        Int?
+  rank_position           Int?
+  
+  // Audit
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+  
+  // Unique constraint: only one DEVICE record per drawing-revision + device + page
+  @@unique([drawing_checksum, device_identity, page], map: "uq_device_loc_drawing_device_page")
+  
+  // Indexes for common queries
+  @@index([drawing_checksum, device_identity], map: "idx_device_loc_drawing_device")
+  @@index([device_identity], map: "idx_device_loc_device")
+  @@index([drawing_id], map: "idx_device_loc_drawing")
+  @@index([verification_status], map: "idx_device_loc_status")
+}

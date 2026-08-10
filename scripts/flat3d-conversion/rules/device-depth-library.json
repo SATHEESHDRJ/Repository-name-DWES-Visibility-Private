@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "units": "mm",
+  "depths": {
+    "mcb": { "depth_mm": 75, "source": "LIBRARY_DEFAULT" },
+    "mccb": { "depth_mm": 100, "source": "LIBRARY_DEFAULT" },
+    "contactor": { "depth_mm": 95, "source": "LIBRARY_DEFAULT" },
+    "relay": { "depth_mm": 110, "source": "LIBRARY_DEFAULT" },
+    "terminal_block": { "depth_mm": 60, "source": "LIBRARY_DEFAULT" },
+    "din_rail": { "depth_mm": 15, "source": "LIBRARY_DEFAULT" },
+    "duct": { "depth_mm": 60, "source": "LIBRARY_DEFAULT" },
+    "device": { "depth_mm": 90, "source": "LIBRARY_DEFAULT" }
+  }
+}

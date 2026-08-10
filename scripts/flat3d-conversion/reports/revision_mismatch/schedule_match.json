@@ -1,0 +1,15 @@
+{
+  "schedule_tag_count": 2,
+  "matched": [
+    {
+      "object_tag": "=Q1+F1",
+      "schedule_tag": "=Q1+F1",
+      "confidence": "CONFIRMED"
+    }
+  ],
+  "matched_count": 1,
+  "unmatched_schedule_tags": [
+    "=Q9+EXTRA"
+  ],
+  "duplicate_tags": {}
+}

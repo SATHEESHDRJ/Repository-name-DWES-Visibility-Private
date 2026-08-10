@@ -1,0 +1,120 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "revision_mismatch",
+  "drawing_revision": null,
+  "source": {
+    "name": "drawing.dxf",
+    "sha256": "4fb2fae0bdf82c78bcceff01c82c025d4ed9e6dd5003e562ea67a838a22282c4",
+    "format": ".dxf"
+  },
+  "normalized": {
+    "entities": 3,
+    "texts": 0,
+    "layers": 2,
+    "blocks": 2
+  },
+  "objects": [
+    {
+      "kind": "panel_envelope",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "footprint": {
+        "cx": 300.0,
+        "cy": 200.0,
+        "width": 600.0,
+        "height": 400.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "largest_closed_polyline"
+      ],
+      "device_tag": null
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "3A",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q1+F1",
+      "footprint": {
+        "cx": 100.0,
+        "cy": 150.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "kind": "contactor",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "3D",
+      "source_layer": "DEVICE",
+      "block_name": "CONTACTOR",
+      "device_tag": "=Q2+K1",
+      "footprint": {
+        "cx": 300.0,
+        "cy": 250.0,
+        "width": 120.0,
+        "height": 100.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "block:CONTACTOR",
+        "layer:DEVICE",
+        "block_or_layer_hint_with_tag"
+      ]
+    }
+  ],
+  "schedule_match": {
+    "schedule_tag_count": 2,
+    "matched": [
+      {
+        "object_tag": "=Q1+F1",
+        "schedule_tag": "=Q1+F1",
+        "confidence": "CONFIRMED"
+      }
+    ],
+    "matched_count": 1,
+    "unmatched_schedule_tags": [
+      "=Q9+EXTRA"
+    ],
+    "duplicate_tags": {}
+  },
+  "flat3d": {
+    "authoritative_part_count": 2,
+    "suggested_part_count": 1,
+    "warnings": [],
+    "rejected_count": 0
+  },
+  "overlay": {
+    "panel_bounds_mm": {
+      "width": 600.0,
+      "height": 400.0
+    },
+    "drawing_insert_count": 2,
+    "flat3d_part_count": 2,
+    "matched_device_pct": 100.0,
+    "missing_device_pct": 0.0,
+    "positional_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "size_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "unresolved_object_count": 1
+  },
+  "glb": {
+    "path": "model.glb",
+    "bytes": 5152
+  },
+  "publication": "READY_FOR_REVIEW — supervisor must approve; never auto-published"
+}

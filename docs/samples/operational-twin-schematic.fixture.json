@@ -1,0 +1,42 @@
+{
+  "package_type": "dwes-operational-twin-fixture",
+  "mode": "SCHEMATIC",
+  "project_code": "DEMO_SCHEMATIC",
+  "frame_id": "PANEL-SCHEMATIC-01",
+  "drawing": { "kind": "pdf-only", "filename": "panel-ga.pdf", "note": "No CAD coordinates" },
+  "cables": [
+    {
+      "sno": 1,
+      "source_device": "K1",
+      "source_terminal": "A1",
+      "dest_device": "XT1",
+      "dest_terminal": "1",
+      "color": "BK",
+      "size": "1.5"
+    },
+    {
+      "sno": 2,
+      "source_device": "K1",
+      "source_terminal": "A2",
+      "dest_device": "XT1",
+      "dest_terminal": "2",
+      "color": "RD",
+      "size": "1.5"
+    },
+    {
+      "sno": 3,
+      "source_device": "K2",
+      "source_terminal": "13",
+      "dest_device": "=H001+XB1",
+      "dest_terminal": "X1",
+      "color": "BU",
+      "size": "0.75"
+    }
+  ],
+  "expect": {
+    "drawingMode": "SCHEMATIC",
+    "noManualMapping": true,
+    "stableAfterRefresh": true,
+    "routeLabelAllowed": ["Calculated Guidance", "Endpoint Guidance"]
+  }
+}

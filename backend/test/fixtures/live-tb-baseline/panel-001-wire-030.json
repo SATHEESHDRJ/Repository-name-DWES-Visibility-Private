@@ -1,0 +1,32 @@
+{
+  "description": "Dev-only known-geometry baseline for LIVE TB consume-path proof (G7→G8→G9). Not production AUTO_VERIFIED. Enable with DWES_LIVE_TB_BASELINE=1.",
+  "project_code": "001",
+  "frame_id": "frame_1785319116166_0_wcplt",
+  "panel_name": "001",
+  "ga_file": "E01_R1.pdf",
+  "drawing_checksum": "3cd70ab1e8afec81",
+  "wire": {
+    "wire_number": "030",
+    "source_tb": "X321",
+    "source_terminal": "17",
+    "dest_tb": "X9",
+    "dest_terminal": "1",
+    "note": "Schedule ends for Wire 030; auto-detection cannot locate X321 on this GA (absent) / X9 legend-only."
+  },
+  "markers": [
+    {
+      "tb_number": "X321",
+      "page_number": 1,
+      "terminal_group": "1-40",
+      "geometry": { "x": 0.12, "y": 0.42, "width": 0.1, "height": 0.14, "rotation": 0 },
+      "placement_note": "DEV fixture oval for Source consume-path; visually placed relative to left strip band on E01_R1 p1"
+    },
+    {
+      "tb_number": "X9",
+      "page_number": 1,
+      "terminal_group": "1-40",
+      "geometry": { "x": 0.62, "y": 0.38, "width": 0.1, "height": 0.14, "rotation": 0 },
+      "placement_note": "DEV fixture oval for Dest consume-path; distinct from legend-only X9 text"
+    }
+  ]
+}

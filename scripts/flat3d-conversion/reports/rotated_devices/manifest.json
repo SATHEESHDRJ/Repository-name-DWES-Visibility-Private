@@ -1,0 +1,98 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "rotated_devices",
+  "drawing_revision": null,
+  "source": {
+    "name": "drawing.dxf",
+    "sha256": "95d9e2865feedf38cd8a1d88525f8d9bd4d2c9203357c1971d9205fee3125693",
+    "format": ".dxf"
+  },
+  "normalized": {
+    "entities": 2,
+    "texts": 0,
+    "layers": 2,
+    "blocks": 1
+  },
+  "objects": [
+    {
+      "kind": "panel_envelope",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "footprint": {
+        "cx": 250.0,
+        "cy": 200.0,
+        "width": 500.0,
+        "height": 400.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "largest_closed_polyline"
+      ],
+      "device_tag": null
+    },
+    {
+      "kind": "mcb",
+      "confidence": "CONFIRMED",
+      "source_handle": "35",
+      "source_layer": "DEVICE",
+      "block_name": "MCB",
+      "device_tag": "=Q1+R1",
+      "footprint": {
+        "cx": 200.0,
+        "cy": 200.0,
+        "width": 80.0,
+        "height": 80.0
+      },
+      "rotation_deg": 90.0,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    }
+  ],
+  "schedule_match": {
+    "schedule_tag_count": 1,
+    "matched": [
+      {
+        "object_tag": "=Q1+R1",
+        "schedule_tag": "=Q1+R1",
+        "confidence": "CONFIRMED"
+      }
+    ],
+    "matched_count": 1,
+    "unmatched_schedule_tags": [],
+    "duplicate_tags": {}
+  },
+  "flat3d": {
+    "authoritative_part_count": 2,
+    "suggested_part_count": 0,
+    "warnings": [],
+    "rejected_count": 0
+  },
+  "overlay": {
+    "panel_bounds_mm": {
+      "width": 500.0,
+      "height": 400.0
+    },
+    "drawing_insert_count": 1,
+    "flat3d_part_count": 1,
+    "matched_device_pct": 100.0,
+    "missing_device_pct": 0.0,
+    "positional_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "size_deviation_mm": {
+      "mean": 0.0,
+      "max": 0.0
+    },
+    "unresolved_object_count": 0
+  },
+  "glb": {
+    "path": "model.glb",
+    "bytes": 3624
+  },
+  "publication": "READY_FOR_REVIEW — supervisor must approve; never auto-published"
+}

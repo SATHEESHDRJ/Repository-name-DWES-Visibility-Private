@@ -1,0 +1,19 @@
+{
+  "panel_bounds_mm": {
+    "width": 800.0,
+    "height": 600.0
+  },
+  "drawing_insert_count": 2,
+  "flat3d_part_count": 2,
+  "matched_device_pct": 100.0,
+  "missing_device_pct": 0.0,
+  "positional_deviation_mm": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "size_deviation_mm": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "unresolved_object_count": 0
+}

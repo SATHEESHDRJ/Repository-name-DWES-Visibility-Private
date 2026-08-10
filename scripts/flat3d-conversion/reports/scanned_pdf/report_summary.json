@@ -1,0 +1,9 @@
+{
+  "fixture": "scanned_pdf",
+  "status": "FAILED",
+  "fallback": "APPROVED_2D_ONLY",
+  "verdict": "PASS",
+  "expected_outcome": "approved_2d",
+  "glb_bytes": 0,
+  "overlay": {}
+}

@@ -1,0 +1,78 @@
+{
+  "parts": [
+    {
+      "name": "panel_backplate:2F",
+      "kind": "panel_backplate",
+      "cx": 300.0,
+      "cy": 200.0,
+      "cz": 100.0,
+      "sx": 600.0,
+      "sy": 400.0,
+      "sz": 200.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "device_tag": null,
+      "authoritative": true,
+      "evidence": [
+        "largest_closed_polyline"
+      ]
+    },
+    {
+      "name": "mcb:=Q1+F1",
+      "kind": "mcb",
+      "cx": 100.0,
+      "cy": 100.0,
+      "cz": 37.5,
+      "sx": 80.0,
+      "sy": 80.0,
+      "sz": 75.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "CONFIRMED",
+      "source_handle": "35",
+      "source_layer": "DEVICE",
+      "device_tag": "=Q1+F1",
+      "authoritative": true,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    },
+    {
+      "name": "mcb:=Q1+F1",
+      "kind": "mcb",
+      "cx": 300.0,
+      "cy": 100.0,
+      "cz": 37.5,
+      "sx": 80.0,
+      "sy": 80.0,
+      "sz": 75.0,
+      "rotation_deg": 0.0,
+      "depth_source": "LIBRARY_DEFAULT",
+      "confidence": "CONFIRMED",
+      "source_handle": "38",
+      "source_layer": "DEVICE",
+      "device_tag": "=Q1+F1",
+      "authoritative": true,
+      "evidence": [
+        "block:MCB",
+        "layer:DEVICE",
+        "exact_schedule_tag"
+      ]
+    }
+  ],
+  "rejected": [],
+  "warnings": [],
+  "authoritative_part_count": 3,
+  "suggested_part_count": 0,
+  "panel": {
+    "width": 600.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "units": "mm"
+  }
+}

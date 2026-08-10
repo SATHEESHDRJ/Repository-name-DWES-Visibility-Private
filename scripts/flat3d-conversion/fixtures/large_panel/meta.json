@@ -1,0 +1,6 @@
+{
+  "description": "Large panel: 80 INSERT devices on 2000x1500mm",
+  "insunits": 4,
+  "device_count": 80,
+  "expected_status": "READY_FOR_REVIEW"
+}
