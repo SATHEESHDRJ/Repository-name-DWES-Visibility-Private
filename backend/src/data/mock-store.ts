@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcryptjs';
+import { loadDemoAccounts } from '../common/demo-accounts';
 
 // ─── Primitive types ──────────────────────────────────────────────────────────
 
@@ -47,6 +48,10 @@ export interface Project {
 }
 
 export interface Cable {
+  /** Stable identity of this parsed wiring record within its panel frame. */
+  record_id?: string;
+  /** One-based source row in the uploaded Excel worksheet. */
+  excel_row?: number;
   sno: number | string;
   panel: string;
   ferrule: string;
@@ -103,12 +108,54 @@ export interface FrameData {
 export interface Drawing {
   id: string;
   project_code: string;
+  /** Exact panel/frame this drawing belongs to. Undefined only for legacy project-level uploads. */
+  frame_id?: string;
+  /** Optional shared package metadata; absent on legacy flat drawing files. */
+  package_id?: string;
+  kind?: PanelDrawingAssetKind;
+  sha256?: string;
+  uploaded_by?: number;
   filename: string;
   original_name: string;
   content_type: string;
   uploaded_at: string;
   size: number;
   buffer?: Buffer;
+}
+
+export type PanelDrawingAssetKind = '2d' | '3d';
+
+/** A source drawing/model stored in one of the two slots of a panel drawing package. */
+export interface PanelDrawingAsset {
+  id: string;
+  kind: PanelDrawingAssetKind;
+  filename: string;
+  original_name: string;
+  content_type: string;
+  source_format: string;
+  size: number;
+  sha256: string;
+  uploaded_at: string;
+  uploaded_by?: number;
+  preview?: {
+    filename: string;
+    content_type: string;
+    format: string;
+    status: 'source' | 'pending' | 'ready' | 'failed';
+    error?: string;
+  };
+}
+
+/** One stable logical drawing record per project panel, with independent 2D/3D slots. */
+export interface PanelDrawingPackage {
+  id: string;
+  project_code: string;
+  frame_id: string;
+  revision: number;
+  created_at: string;
+  updated_at: string;
+  drawing_2d: PanelDrawingAsset | null;
+  model_3d: PanelDrawingAsset | null;
 }
 
 export interface DirectorReport {
@@ -120,6 +167,128 @@ export interface DirectorReport {
   uploaded_at: string;
   size: number;
   buffer?: Buffer;
+}
+
+// ─── Generated 3D panel models (2D drawing → 3D conversion) ──────────────────
+
+/** Resting + pipeline statuses for one generated model revision of one panel. */
+export type PanelModelStatus =
+  | 'drawing_uploaded'
+  | 'analysing'
+  | 'extracting_dimensions'
+  | 'identifying_components'
+  | 'generating_model'
+  | 'verification_required'
+  | 'approved'
+  | 'conversion_failed'
+  | 'superseded';
+
+/** Drawing-view roles detected per source file. Purely informational — never invented. */
+export type PanelDrawingRole =
+  | 'ga' | 'front' | 'rear' | 'side' | 'top' | 'section' | 'internal'
+  | 'construction' | 'apparatus_list' | 'schematic' | 'revision' | 'unknown';
+
+export interface PanelModelStageEvent {
+  stage: PanelModelStatus;
+  at: string;
+  detail?: string;
+}
+
+/** A single dimension with provenance. `null` value = unknown (never guessed silently). */
+export interface PanelModelDimension {
+  value_mm: number | null;
+  source: 'extracted' | 'manual' | 'placeholder';
+  confidence: number;
+}
+
+export interface PanelModelComponent {
+  id: string;
+  label: string;
+  type: string;
+  source: 'extracted' | 'manual';
+  /** Positions are never extracted from text — always placeholder until a supervisor confirms. */
+  position: 'placeholder' | 'manual';
+}
+
+export interface PanelModelSpec {
+  enclosure: {
+    width: PanelModelDimension;
+    height: PanelModelDimension;
+    depth: PanelModelDimension;
+  };
+  doors: { count: number; source: 'extracted' | 'manual' | 'placeholder' };
+  mounting_plate: { present: boolean; source: 'extracted' | 'manual' | 'placeholder' };
+  gland_plate: { present: boolean; source: 'extracted' | 'manual' | 'placeholder' };
+  base_frame: { present: boolean; height_mm: number; source: 'extracted' | 'manual' | 'placeholder' };
+  wire_troughs: { count: number; source: 'extracted' | 'manual' | 'placeholder' };
+  terminal_rows: { count: number; source: 'extracted' | 'manual' | 'placeholder' };
+  components: PanelModelComponent[];
+}
+
+export interface PanelModelSourceRef {
+  drawing_id: string;
+  original_name: string;
+  sha256: string;
+  role: PanelDrawingRole;
+  package_revision: number;
+}
+
+/** One generated-model revision for exactly one Project + Panel. Persisted as a JSON file. */
+export interface PanelGeneratedModel {
+  id: string;
+  project_code: string;
+  frame_id: string;
+  panel_name: string;
+  panel_type?: string;
+  revision: number;
+  status: PanelModelStatus;
+  status_message?: string;
+  stages: PanelModelStageEvent[];
+  sources: PanelModelSourceRef[];
+  source_package_revision: number;
+  views_detected: PanelDrawingRole[];
+  extraction: { text_quality: number; confidence: number; notes: string[] };
+  /** GA/schedule evidence captured for this exact project + panel revision. */
+  analysis?: {
+    ga_detected: boolean;
+    ga_pages: number[];
+    ga_confidence: number;
+    drawing_references: string[];
+    schedule_comparison: import('../panel-model/schedule-compare').ScheduleComparison;
+  };
+  spec: PanelModelSpec;
+  placeholders: string[];
+  model_file: { filename: string; content_type: string; size: number; sha256: string } | null;
+  created_at: string;
+  updated_at: string;
+  converted_by: number;
+  converted_by_name: string;
+  conversion_started_at: string;
+  conversion_completed_at: string | null;
+  /** Audit for a supervisor-entered specification used to create this revision. */
+  manual_entry?: {
+    source: 'supervisor_verified_manual';
+    entered_by: number;
+    entered_by_name: string;
+    entered_at: string;
+    prior_automatic_confidence: number;
+    corrected_from_model_id: string;
+    corrected_from_revision: number;
+    verification_notes?: string;
+  };
+  verified_by: number | null;
+  verified_by_name: string;
+  approved_at: string | null;
+  assumptions_acknowledged?: boolean;
+  assumptions_acknowledged_by?: number | null;
+  assumptions_acknowledged_by_name?: string;
+  assumptions_acknowledged_at?: string | null;
+  verification_notes?: string;
+  superseded_by: string | null;
+  superseded_at: string | null;
+  /** Preserve the prior state/reason when the active revision becomes historical. */
+  superseded_from_status?: Exclude<PanelModelStatus, 'superseded'>;
+  superseded_status_message?: string;
 }
 
 export interface CableStatus {
@@ -219,17 +388,6 @@ export interface PanelInspection {
   signed_off_at: string | null;
 }
 
-// ─── Seed data ────────────────────────────────────────────────────────────────
-
-const SEED_USERS_RAW = [
-  { username: 'sysadmin',      password: 'admin123',        full_name: 'System Administrator', employee_id: 'EMP-001',     role: 'system_admin'      as UserRole, whatsapp: '+966500000001' },
-  { username: 'director1',     password: 'dir123',          full_name: 'Operations Director',   employee_id: 'EMP-005',     role: 'ops_director'      as UserRole, whatsapp: '+966500000002' },
-  { username: 'ops_director1', password: 'ops_director123', full_name: 'Operations Director',   employee_id: 'EMP-DIR-001', role: 'ops_director'      as UserRole, whatsapp: '+966500000003' },
-  { username: 'supervisor1',   password: 'super123',        full_name: 'Production Supervisor', employee_id: 'EMP-020',     role: 'prod_supervisor'   as UserRole, whatsapp: '+966500000004' },
-  { username: 'qa1',           password: 'qa1',             full_name: 'QA Engineer One',       employee_id: 'EMP-010',     role: 'qaqc_engineer'     as UserRole, whatsapp: '+966500000005' },
-  { username: 'qa2',           password: 'qa2',             full_name: 'QA Engineer Two',       employee_id: 'EMP-011',     role: 'qaqc_engineer'     as UserRole, whatsapp: '+966500000006' },
-];
-
 function mkCable(sno: number, src: string, dst: string, ferrule: string, color = 'GREY', size = '1.5SQ.mm', len = '3m', panel = 'P1'): Cable {
   const [sd, st] = src.includes(':') ? src.split(':') : [src, ''];
   const [dd, dt] = dst.includes(':') ? dst.split(':') : [dst, ''];
@@ -287,6 +445,8 @@ export class MockStore {
   static projects: Project[] = [];
   static frames: FrameData[] = [];
   static drawings: Drawing[] = [];
+  static drawingPackages: PanelDrawingPackage[] = [];
+  static panelModels: PanelGeneratedModel[] = [];
   static directorReports: DirectorReport[] = [];
   static techAssignments: TechAssignment[] = [];
   static sessionLogs: SessionLog[] = [];
@@ -313,7 +473,7 @@ export class MockStore {
     const now = new Date().toISOString();
 
     // ── Users
-    for (const raw of SEED_USERS_RAW) {
+    for (const raw of loadDemoAccounts()) {
       const hashed = await bcrypt.hash(raw.password, 10);
       this.users.push({
         id: this._userId++,
@@ -321,11 +481,11 @@ export class MockStore {
         hashed_password: hashed,
         full_name: raw.full_name,
         employee_id: raw.employee_id,
-        role: raw.role,
+        role: raw.role as UserRole,
         is_active: true,
         created_at: now,
         last_login: null,
-        whatsapp_number: raw.whatsapp,
+        whatsapp_number: raw.whatsapp_number ?? '',
         ready_for_assignment: false,
         ready_since: null,
       });
@@ -433,6 +593,17 @@ export class MockStore {
 
   static findDrawingsByProject(code: string) { return this.drawings.filter(d => d.project_code === code); }
   static findDrawingById(id: string)         { return this.drawings.find(d => d.id === id); }
+
+  // ── Generated panel model helpers ────────────────────────────────────────
+
+  static findPanelModels(code: string, frameId: string) {
+    return this.panelModels
+      .filter(m => m.project_code === code && m.frame_id === frameId)
+      .sort((a, b) => b.revision - a.revision);
+  }
+  static findPanelModelById(code: string, frameId: string, modelId: string) {
+    return this.panelModels.find(m => m.project_code === code && m.frame_id === frameId && m.id === modelId);
+  }
   static findDirectorReportsByProject(code: string) { return this.directorReports.filter(d => d.project_code === code); }
   static findDirectorReportById(id: string) { return this.directorReports.find(d => d.id === id); }
 
