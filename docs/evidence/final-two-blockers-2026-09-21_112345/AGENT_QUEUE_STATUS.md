@@ -23,7 +23,7 @@
 |------|--------|
 | Unseeded AUTO/HIGH | Supply drawing per acceptance doc |
 | Satheesh UI | `scripts/open-owner-rereview-gallery.ps1` → overall approve |
-| Remote CI | `git push -u origin security/nest11-fastify5` when authorized |
+| Remote CI | **PUSHED** `origin/security/nest11-fastify5` @ `d2ff3402` — confirm GitHub Actions green + PR |
 | Production | Separate deploy authority |
 
 No further agent work is required for blockers (1–2) unless new drawings land or Nest11 branch changes.

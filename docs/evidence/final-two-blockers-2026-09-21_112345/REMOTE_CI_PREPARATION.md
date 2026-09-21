@@ -1,8 +1,9 @@
 # Remote CI — preparation (not run)
 
 **Branch:** `security/nest11-fastify5`  
-**Local stack:** Nest11 bundle `8f0f666` + verify follow-up (`git log -1 --oneline` on `security/nest11-fastify5`) — **not pushed**.  
-**Origin:** `security/nest11-fastify5` **not present** on `origin` (2026-09-21).
+**Origin (2026-09-21):** **`d2ff3402`** — single commit on `origin/main` (restore tree minus GitHub-blocked blobs: `.terraform` providers, `logs/launcher/*.log.*`, entire `Backup/`).  
+**Local full history:** `backup/security-nest11-full-history` → `a2221734` (7 commits; **not pushable** due to 100MB files in snapshot history).  
+**Push helper branch used:** `security/nest11-fastify5-remote` tracks `origin/security/nest11-fastify5`.
 
 ## Push candidate (HEAD)
 
@@ -38,9 +39,12 @@ Defer unrelated FE/LIVE TB feature WIP unless the PR owner wants a single mega-P
 ## When authorized
 
 ```powershell
-git push -u origin security/nest11-fastify5
-# Open PR → confirm "DWES CI (local validation)" green → save run URL here.
+# Already pushed: origin/security/nest11-fastify5 @ d2ff3402
+# PR: https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/pull/new/security/nest11-fastify5
+# Confirm "DWES CI (local validation)" green → save run URL below.
 ```
+
+**CI run URL:** _(pending — check GitHub Actions after PR/open)_
 
 No production deploy from this push.
 
