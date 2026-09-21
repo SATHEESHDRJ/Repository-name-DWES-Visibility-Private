@@ -23,9 +23,9 @@
 |------|--------|
 | Unseeded AUTO/HIGH | Supply drawing per acceptance doc |
 | Satheesh UI | `scripts/open-owner-rereview-gallery.ps1` → overall approve |
-| Remote CI | **PUSHED** `origin/security/nest11-fastify5` @ `d2ff3402` — confirm GitHub Actions green + PR |
+| Remote CI | **PUSHED** `origin/security/nest11-fastify5` @ **`953f153f`** — Actions **blocked (billing lock)**; local parity **PASS** — see `verify/GITHUB_ACTIONS_RUNS_2026-09-21.txt` |
 | Production | Separate deploy authority |
 
 No further agent work is required for blockers (1–2) unless new drawings land or Nest11 branch changes.
 
-**Remote CI prep (2026-09-21):** HEAD **`1daddc54`** on `security/nest11-fastify5` (includes verify smoke + JWT redaction on top of **`8f0f6664`** Nest11) · origin branch **still absent** · Re-verify: **426/426** BE, `CI_LOCAL_PARITY_PASS`, `VERIFY_RESTORE_PASS`, `BROWSER_SMOKE_PASS`, backend `npm audit --audit-level=high` exit **0**. **Uncommitted:** `scripts/run-ci-local-parity.ps1` (UTF-8 log) + `verify/` timestamp refresh — commit when requested. **Push not performed** (awaiting authorization).
+**Remote CI (2026-09-21):** `origin/security/nest11-fastify5` @ **`953f153f`** · four workflow runs recorded — all failed **before job start** (GitHub **billing lock**) · merge candidate **CI_LOCAL_PARITY_PASS** locally · PR: https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/pull/new/security/nest11-fastify5

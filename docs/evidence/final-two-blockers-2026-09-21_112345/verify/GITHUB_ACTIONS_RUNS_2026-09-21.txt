@@ -1,0 +1,22 @@
+Remote CI — GitHub Actions status (unauthenticated API + check-run annotations)
+Branch: security/nest11-fastify5
+Recorded: 2026-09-21T~14:50+04:00
+
+ROOT CAUSE (all runs): jobs never started — no runner allocated (runner_id=0, 0 steps).
+Annotation (every job): "The job was not started because your account is locked due to a billing issue."
+
+Runs (newest first):
+  Run 4 | 953f153f | failure | https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/actions/runs/35590400702
+  Run 3 | 8d12a77a | cancelled (concurrency; superseded by Run 4) | https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/actions/runs/35590388116
+  Run 2 | 8e0f5c4c | failure | https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/actions/runs/35589976560
+  Run 1 | d2ff3402 | failure | https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/actions/runs/35589801505
+
+Code readiness (local, same tree as origin @ 953f153f):
+  scripts/run-ci-local-parity.ps1 → CI_LOCAL_PARITY_PASS (2026-09-21 re-run after Run 4 check)
+  backend nest build + npm test 426/426 on security/nest11-fastify5-remote
+
+Owner action for Remote CI gate:
+  Resolve GitHub billing / account lock → re-run workflow (workflow_dispatch or empty commit) → attach green run URL.
+
+Proactive fix already on branch (for when runners work):
+  8d12a77a — full backend/src/data/mock-store.ts (CI build parity vs restore types)

@@ -8,7 +8,7 @@
 | Unseeded LIVE TB AUTO/HIGH | Engineering + drawing supplier | Match UI: both ends AUTO/HIGH on eligible INTERNAL\|REAR page; quarantine MANUAL_MAP | **BLOCKED** — see [`docs/ACCEPTANCE_DRAWING_REQUIRED.md`](../../ACCEPTANCE_DRAWING_REQUIRED.md) |
 | Security (no middie critical/high, no owner waiver) | Engineering | `verify/SUMMARY.txt`, `security/MIDDIE_NEST11_CLOSURE.md` | **MET** on restore (`security/nest11-fastify5`) |
 | Satheesh overall UI acceptance | Satheesh | Exported gallery summary + explicit “overall approve” in writing | **PENDING** — `ui/OWNER_REVIEW_GALLERY.html` (26 PNGs) |
-| Remote CI | Repo admin (push/PR authority) | Green GitHub Actions run on the merge candidate | **NOT RUN** — `security/nest11-fastify5` **not on origin** (empty `git ls-remote`); workflow triggers `main`, `master`, `change/**`, **`security/**`** |
+| Remote CI | Repo admin (push/PR authority) | Green GitHub Actions run on the merge candidate | **BLOCKED** — branch on origin @ **`953f153f`**; runs **35589801505–35590400702** failed: *account locked due to billing* (0 job steps). Local mirror: **CI_LOCAL_PARITY_PASS**. Unblock billing → re-run workflow. |
 | Production deploy | Separate prod authority | Signed deploy record (out of scope here) | **NOT AUTHORIZED** |
 
 ## Satheesh — UI re-review (≈5 min)

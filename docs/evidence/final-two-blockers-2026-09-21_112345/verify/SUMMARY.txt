@@ -16,7 +16,8 @@ Browser smoke: verify/browser-smoke-nest11.txt PASS (/login + tech3 /technician 
 Audit backend omit-dev: 0 critical / 0 high (4 moderate residual)
 Audit root omit-dev: 0 critical / 0 high (1 moderate)
 Scripts: verify-final-two-blockers-restore.mjs, verify-browser-restore-smoke.mjs
-CI local parity (FE+BE incl. root build): verify/ci-local-parity-nest11.txt PASS (re-run 2026-09-21T14:20:52+04:00; run-ci-local-parity.ps1 writes UTF-8 no BOM — open log as UTF-8 if an editor shows mojibake)
+CI local parity (FE+BE incl. root build): verify/ci-local-parity-nest11.txt PASS (re-run 2026-09-21T14:48+04:00 after remote Run 4 check; UTF-8 no BOM)
+Remote GitHub Actions: BLOCKED — billing lock on SATHEESHDRJ account (verify/GITHUB_ACTIONS_RUNS_2026-09-21.txt; Run 4 https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private/actions/runs/35590400702)
 CI audit --audit-level=high: backend+root exit 0 (moderate only) → npm-audit-*-high-gate.txt
 CI container-api job parity: docker build Dockerfile.api → dwes-api:ci-local-parity-nest11 OK (verify/docker-api-build-nest11.log)
 
