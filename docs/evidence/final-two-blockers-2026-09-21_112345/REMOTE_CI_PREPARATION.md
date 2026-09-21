@@ -46,6 +46,8 @@ Defer unrelated FE/LIVE TB feature WIP unless the PR owner wants a single mega-P
 
 **CI run URL:** _(pending — check GitHub Actions after PR/open)_
 
+**Run 1 (`d2ff3402`): FAILED** — backend `nest build`: stub `backend/src/data/mock-store.ts` from `origin/main` overlay vs restore code needing `PanelDrawingPackage` / `panelModels` (87 TS errors). **Fix:** commit full mock-store from restore extract (`fix(backend): restore full mock-store…`).
+
 No production deploy from this push.
 
 **DB guard:** `backend/prisma/migrations/` may appear in the bundle for code parity. **Do not** run `prisma migrate deploy` against **WiringSchemeDB** (read-only schema policy). CI uses placeholder `DATABASE_URL` + `prisma generate` only.
