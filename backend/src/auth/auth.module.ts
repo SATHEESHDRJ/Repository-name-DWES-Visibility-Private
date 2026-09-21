@@ -9,14 +9,39 @@ import { WebAuthnController } from './webauthn.controller';
 import { WebAuthnStoreService } from './webauthn-store.service';
 import { AuthTokenStoreService } from './auth-token-store.service';
 import { ProductionBootstrapService } from './production-bootstrap.service';
+import { TeamInstallLinkStoreService } from './team-install-link-store.service';
+import { TeamInstallLinkService } from './team-install-link.service';
+import { InstallLinkController } from './install-link.controller';
+import { InstallLinkAdminController } from './install-link-admin.controller';
 import { HealthModule } from '../common/health.module';
 
-function jwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (process.env.NODE_ENV === 'production' && !secret) {
-    throw new Error('JWT_SECRET is required when NODE_ENV=production');
+const WEAK_JWT_SECRETS = new Set([
+  'DWES_JWT_SECRET_DEV_2026',
+  'secret',
+  'changeme',
+  'jwt-secret',
+  'dev-secret',
+  'test-secret',
+  'your-secret-key',
+  'my-secret',
+]);
+
+function validateJwtSecret(secret: string | undefined): string {
+  if (!secret || secret.trim().length === 0) {
+    throw new Error('[DWES] JWT_SECRET environment variable is required but not set');
   }
-  return secret || 'DWES_JWT_SECRET_DEV_2026';
+  const trimmed = secret.trim();
+  if (trimmed.length < 32) {
+    throw new Error('[DWES] JWT_SECRET must be at least 32 characters long');
+  }
+  if (WEAK_JWT_SECRETS.has(trimmed)) {
+    throw new Error('[DWES] JWT_SECRET must not be a known default or weak value');
+  }
+  return trimmed;
+}
+
+function jwtSecret(): string {
+  return validateJwtSecret(process.env.JWT_SECRET);
 }
 
 @Module({
@@ -25,11 +50,20 @@ function jwtSecret(): string {
     PassportModule,
     JwtModule.register({
       secret: jwtSecret(),
-      signOptions: { expiresIn: process.env.JWT_ACCESS_EXPIRES || '12h' },
+      // Nest 11 / @types/jsonwebtoken: expiresIn is StringValue | number, not bare string.
+      signOptions: {
+        expiresIn: (process.env.JWT_ACCESS_EXPIRES || '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+      },
     }),
   ],
-  providers: [AuthService, JwtStrategy, WebAuthnService, WebAuthnStoreService, AuthTokenStoreService, ProductionBootstrapService],
-  controllers: [AuthController, WebAuthnController],
-  exports: [AuthService, JwtModule, WebAuthnStoreService, AuthTokenStoreService, ProductionBootstrapService],
+  providers: [
+    AuthService, JwtStrategy, WebAuthnService, WebAuthnStoreService, AuthTokenStoreService,
+    ProductionBootstrapService, TeamInstallLinkStoreService, TeamInstallLinkService,
+  ],
+  controllers: [AuthController, WebAuthnController, InstallLinkController, InstallLinkAdminController],
+  exports: [
+    AuthService, JwtModule, WebAuthnStoreService, AuthTokenStoreService, ProductionBootstrapService,
+    TeamInstallLinkService,
+  ],
 })
 export class AuthModule {}

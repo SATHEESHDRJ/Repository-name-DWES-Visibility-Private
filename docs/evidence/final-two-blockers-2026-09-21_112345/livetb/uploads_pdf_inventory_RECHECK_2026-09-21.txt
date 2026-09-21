@@ -1,0 +1,9 @@
+# Restore uploads PDF recheck — 2026-09-21 (post exhaustive search)
+
+Container: dwes_oci_restore_api_20260725_082028
+Command: find /app/uploads -name '*.pdf' -o -name '*.PDF' | sort
+Result: 12 paths — byte-for-byte same path set as uploads_pdf_inventory_2026-09-21.txt
+
+No new project drawings since livetb exhaustive search.
+LIVE TB acceptance status unchanged: docs/ACCEPTANCE_DRAWING_REQUIRED.md (BLOCKED).
+Policy: no detector changes without acceptance drawing; hybrids excluded.

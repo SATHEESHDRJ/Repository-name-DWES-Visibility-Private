@@ -1,0 +1,51 @@
+﻿{
+  "slice": 3,
+  "role": "prod_supervisor",
+  "username": "supervisor1",
+  "verdict": "PARTIAL",
+  "reason": "Five primary KPIs retained and match baseline; exclusive assignment portfolio strip verified; Projects technician exclusivity fixed. Cut/Strip/Crimp readiness portfolio deferred (no inventing from missing APIs). Full organised sections (alerts history, report submission) and responsive evidence still pending overall goal.",
+  "ui_kpis_after": {
+    "Total Projects": "3",
+    "Total Panels": "5",
+    "In Progress": "4",
+    "Completed": "0",
+    "Overall Progress": "8%"
+  },
+  "matches_baseline_kpis": true,
+  "portfolio_exclusive_counts": {
+    "Not Assigned": 1,
+    "Assigned / Not Started": 0,
+    "In Progress": 4,
+    "Paused": 0,
+    "Mid Changed": 0,
+    "Pending Approval": 0,
+    "QA Hold": 0,
+    "Completed": 0,
+    "sum": 5,
+    "matches_total_panels": true
+  },
+  "wiring_totals": {
+    "Completed cables": 163,
+    "Remaining cables": 1940,
+    "Rework / QA Hold": 0
+  },
+  "assignment_exclusivity": {
+    "panel": "=D00+Q01",
+    "status_badge": "Logged Out",
+    "assigned_technician": "Subin Rajendran",
+    "never_shows_Assigned_and_Not_Assigned_together": true
+  },
+  "shell": {
+    "live_indicator": "LIVE Updated",
+    "user_role": "supervisor1 SUPERVISOR"
+  },
+  "api": {
+    "all_panels_count": 10,
+    "note": "UI Total Panels=5 remains frame-universe projection; all-panels assignment rows=10 — documented projection split unchanged."
+  },
+  "screenshots": [
+    "after-supervisor-status-desktop.png",
+    "after-supervisor-projects-desktop.png"
+  ],
+  "build": "npm run build exit 0; dist deployed to nginx"
+}

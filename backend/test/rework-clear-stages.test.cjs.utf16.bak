@@ -1,0 +1,32 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('path');
+// Use compiled JS after build — for now require ts via running against source after nest build
+const {
+  markWireCut, markBothEndsStripped, markWireCrimped, markPrepReworkWithAffectedEnd,
+  isReadyForWiring, isWiringLockedByCrimping, normalizeCrimping,
+} = require('../dist/common/crimping');
+
+test('V2: rework BOTH then re-crimp clears readiness block preserving history', () => {
+  let cable = { openEnd: null, crimping: { required: true } };
+  cable.crimping = markWireCut(cable, 42, { plannedLength: '1' }, '2026-09-18T10:00:00.000Z').state;
+  cable = { ...cable, crimping: markBothEndsStripped(cable, 42, '2026-09-18T10:01:00.000Z').state };
+  cable = { ...cable, crimping: markWireCrimped(cable, 42, '2026-09-18T10:02:00.000Z').state };
+  assert.equal(isReadyForWiring(cable.crimping), true);
+  const origCrimpedBy = cable.crimping.source.crimpedBy;
+  const origAt = cable.crimping.source.crimpedAt;
+  cable = { ...cable, crimping: markPrepReworkWithAffectedEnd(cable, 'BOTH', 'crimp', 3, 'inspect', '2026-09-18T11:00:00.000Z', 'prod_supervisor').state };
+  assert.equal(isReadyForWiring(cable.crimping), false);
+  assert.equal(isWiringLockedByCrimping(cable), true);
+  // strip idempotent (no strip rework)
+  const strip = markBothEndsStripped(cable, 42, '2026-09-18T11:05:00.000Z');
+  cable = { ...cable, crimping: strip.state };
+  // crimp must clear REWORK
+  const crimp = markWireCrimped(cable, 99, '2026-09-18T11:06:00.000Z');
+  assert.equal(crimp.changed, true);
+  assert.equal(crimp.state.source.crimpingStatus, 'COMPLETED');
+  assert.equal(crimp.state.destination.crimpingStatus, 'COMPLETED');
+  assert.equal(crimp.state.source.crimpedBy, origCrimpedBy);
+  assert.equal(crimp.state.source.crimpedAt, origAt);
+  assert.equal(isReadyForWiring(crimp.state), true);
+});

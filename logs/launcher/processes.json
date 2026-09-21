@@ -1,0 +1,25 @@
+[
+  {
+    "role": "backend",
+    "pid": 2540,
+    "root": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES\\scripts\\backend-dev-runner.mjs"
+    ],
+    "startedAt": "2026-07-21T04:15:57.331Z"
+  },
+  {
+    "role": "frontend",
+    "pid": 24824,
+    "root": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "args": [
+      "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES\\node_modules\\vite\\bin\\vite.js",
+      "--host",
+      "--port",
+      "5175"
+    ],
+    "startedAt": "2026-07-21T04:16:04.699Z"
+  }
+]

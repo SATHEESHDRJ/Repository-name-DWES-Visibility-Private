@@ -1,0 +1,80 @@
+{
+  "capturedAt": "2026-09-04T11:56:54.676Z",
+  "baseUrl": "http://127.0.0.1:5275",
+  "consoleErrors": [],
+  "checks": [
+    {
+      "viewport": "desktop-1920x1080",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\final-brand-size-correction\\login-desktop-1920x1080.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "companyLines": 1,
+      "companyNowrap": true,
+      "wrapW": 178,
+      "imgW": 160,
+      "imgH": 90,
+      "companyFs": 28,
+      "titleFs": 30,
+      "companyLtTitle": true,
+      "logoSrc": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "filter": "none",
+      "aspectOk": true,
+      "scrollX": false,
+      "hasUser": true,
+      "hasPassword": true,
+      "hasSignIn": true
+    },
+    {
+      "viewport": "desktop-1600x900",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\final-brand-size-correction\\login-desktop-1600x900.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "companyLines": 1,
+      "companyNowrap": true,
+      "wrapW": 162,
+      "imgW": 144,
+      "imgH": 81,
+      "companyFs": 27.2,
+      "titleFs": 30,
+      "companyLtTitle": true,
+      "logoSrc": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "filter": "none",
+      "aspectOk": true,
+      "scrollX": false,
+      "hasUser": true,
+      "hasPassword": true,
+      "hasSignIn": true
+    },
+    {
+      "viewport": "laptop-1366x768",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\final-brand-size-correction\\login-laptop-1366x768.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "companyLines": 1,
+      "companyNowrap": true,
+      "wrapW": 153,
+      "imgW": 135,
+      "imgH": 76,
+      "companyFs": 23.2,
+      "titleFs": 18.4,
+      "companyLtTitle": false,
+      "logoSrc": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "filter": "none",
+      "aspectOk": true,
+      "scrollX": false,
+      "hasUser": true,
+      "hasPassword": true,
+      "hasSignIn": true
+    }
+  ],
+  "authSmoke": {
+    "usernameTyped": true,
+    "passwordTyped": true,
+    "toggleOk": true,
+    "signInPresent": true
+  },
+  "acceptance": {
+    "noConsoleErrors": true,
+    "oneLineDesktop": true,
+    "logoInBand": true,
+    "noScroll": true,
+    "artworkOk": true
+  }
+}

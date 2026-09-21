@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { webAuthnApi } from '../services/webauthnApi';
 import { ROLE_ROUTES } from '../types';
 import type { UserRole } from '../types';
+import { postLoginDestination } from '../utils/safeReturnPath';
 import {
   assessWebAuthnContext,
   friendlyWebAuthnError,
@@ -19,28 +20,58 @@ export const BIOMETRIC_DISMISSED_KEY = 'dwes-biometric-enroll-dismissed'; // suf
 
 // ── Capability + enrolment state ─────────────────────────────────────────────
 
+/**
+ * Device/browser biometric capability, expressed as an explicit state so the UI
+ * never claims fingerprint support just because a sensor exists. Capability is the
+ * real WebAuthn *platform authenticator* result inside a secure context; enrolment
+ * is tracked separately (backend credentials + this-device flag).
+ *
+ * - `loading`        — capability probe still running
+ * - `no-context`     — not HTTPS / wrong hostname (secure-context requirement unmet)
+ * - `unsupported`    — secure context, but no platform authenticator on this device
+ * - `error`          — the capability probe itself threw (check failed)
+ * - `ready`          — platform authenticator available (enrol / sign-in allowed)
+ */
+export type BiometricStatus = 'loading' | 'no-context' | 'unsupported' | 'error' | 'ready';
+
 export function useBiometricAvailable() {
   const [available, setAvailable] = useState(false);
   const [checking, setChecking]   = useState(true);
+  const [failed,   setFailed]     = useState(false);
   const context = useMemo(() => assessWebAuthnContext(), []);
 
   useEffect(() => {
     if (!context.supported) {
       setAvailable(false);
+      setFailed(false);
       setChecking(false);
       return;
     }
 
+    let cancelled = false;
+    setChecking(true);
+    setFailed(false);
     platformAuthenticatorIsAvailable()
-      .then(ok => setAvailable(ok))
-      .catch(() => setAvailable(false))
-      .finally(() => setChecking(false));
+      .then(ok => { if (!cancelled) setAvailable(ok); })
+      .catch(() => { if (!cancelled) { setAvailable(false); setFailed(true); } })
+      .finally(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
   }, [context.supported]);
 
   const isEnrolled = available && localStorage.getItem(BIOMETRIC_ENROLLED_KEY) === 'true';
+
+  const status: BiometricStatus =
+      checking            ? 'loading'
+    : !context.supported  ? 'no-context'
+    : failed              ? 'error'
+    : available           ? 'ready'
+    :                       'unsupported';
+
   return {
     available,
     checking,
+    failed,
+    status,
     isEnrolled,
     contextSupported: context.supported,
     contextMessage: context.message,
@@ -94,7 +125,7 @@ export function useBiometricLogin() {
   const navigate              = useNavigate();
 
   const loginWithBiometric = useCallback(
-    async (username?: string) => {
+    async (username?: string, returnToAfterLogin?: string) => {
       const ctx = assessWebAuthnContext();
       if (!ctx.supported) {
         setError(ctx.message ?? 'Fingerprint is not available on this page.');
@@ -118,7 +149,11 @@ export function useBiometricLogin() {
           error:     null,
         });
 
-        navigate(ROLE_ROUTES[data.user.role as UserRole] ?? '/', { replace: true });
+        const dest = postLoginDestination(
+          returnToAfterLogin,
+          ROLE_ROUTES[data.user.role as UserRole] ?? '/',
+        );
+        navigate(dest, { replace: true });
       } catch (e: unknown) {
         const msg =
           (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';

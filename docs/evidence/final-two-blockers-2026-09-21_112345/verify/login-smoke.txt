@@ -1,0 +1,6 @@
+LOGIN ok role=prod_supervisor
+project_count=3
+portfolio_sup_err=The remote server returned an error: (404) Not Found.
+portfolio_err=The remote server returned an error: (404) Not Found.
+tech_panels=1
+portfolio_ok cut keys=scope,assignment_count,portfolio,panels,invented,source

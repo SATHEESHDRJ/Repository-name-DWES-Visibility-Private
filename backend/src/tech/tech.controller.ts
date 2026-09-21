@@ -1,12 +1,16 @@
 import {
-  Controller, Get, Post, Delete, Body, Param, ParseIntPipe, UseGuards, BadRequestException, NotFoundException,
+  Controller, Get, Post, Delete, Body, Param, ParseIntPipe, Query, UseGuards, BadRequestException, NotFoundException, Res,
 } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import { TechService } from './tech.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { FastifySchema } from '../common/decorators/fastify-schema.decorator';
+import { AssignPanelDto } from '../common/dto/fastify-schemas.dto';
 import { User } from '../data/mock-store';
+import * as fs from 'fs';
 
 @Controller('api/tech')
 @UseGuards(JwtAuthGuard)
@@ -17,34 +21,26 @@ export class TechController {
 
   @Post('assign-frame')
   @UseGuards(RolesGuard)
-  @Roles('prod_supervisor', 'system_admin', 'ops_director', 'qaqc_engineer')
-  assignFrame(@Body() dto: { project_code: string; frame_id: string; technician_id: number }, @CurrentUser() user: User) {
-    return this.svc.assignFrame({ ...dto, assigned_by_id: user.id });
-  }
-
-  @Post('changeover')
-  @UseGuards(RolesGuard)
   @Roles('prod_supervisor')
-  changeover(
-    @Body() body: {
-      old_assignment_id: number;
-      new_technician_id: number;
-      changeover_reason?: string;
-      reason_notes?: string;
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['project_code', 'frame_id', 'technician_id'],
+      properties: {
+        project_code: { type: 'string', minLength: 1 },
+        frame_id: { type: 'string', minLength: 1 },
+        technician_id: { type: 'integer', minimum: 1 },
+      },
     },
-    @CurrentUser() user: User,
-  ) {
-    return this.svc.changeover(
-      body.old_assignment_id,
-      body.new_technician_id,
-      user.id,
-      body.changeover_reason || '',
-      body.reason_notes || '',
-    );
+  })
+  assignFrame(@Body() dto: AssignPanelDto, @CurrentUser() user: User) {
+    return this.svc.assignFrame({ ...dto, assigned_by_id: user.id });
   }
 
   @Get('audit/:code')
   @UseGuards(RolesGuard)
+  // sales_director excluded — the audit trail exposes technician names, pause
+  // reasons and per-cable remarks, which the aggregate sales view must not receive.
   @Roles('system_admin', 'prod_supervisor', 'ops_director', 'qaqc_engineer')
   audit(@Param('code') code: string) { return this.svc.audit(code); }
 
@@ -65,6 +61,275 @@ export class TechController {
   @Roles('wiring_technician')
   myAssignmentDetail(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
     return this.svc.myAssignmentDetail(id, user.id);
+  }
+
+  @Get('crimping/:id')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  crimpingSummary(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
+    return this.svc.getCrimpingSummary(id, user.id);
+  }
+
+  /** Complete engineering Crimping Report — assignment-scoped, ownership enforced. */
+  @Get('crimping-report/:id')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  crimpingReport(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: User) {
+    return this.svc.getCrimpingReportForTech(id, user.id);
+  }
+
+  @Post('crimping/action')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_index', 'end'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_index: { type: 'integer', minimum: 0 },
+        end: { type: 'string', enum: ['source', 'destination'] },
+        operation: { type: 'string', enum: ['strip', 'crimp'] },
+        remarks: { type: 'string' },
+      },
+    },
+  })
+  crimpingAction(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      end: 'source' | 'destination';
+      operation?: 'strip' | 'crimp';
+      remarks?: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.crimpingAction(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      body.end,
+      body.remarks,
+      body.operation === 'strip' ? 'strip' : 'crimp',
+    );
+  }
+
+  @Post('crimping/prepare-wire')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_index'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_index: { type: 'integer', minimum: 0 },
+        remarks: { type: 'string' },
+        expected_sno: {},
+        expected_ferrule: { type: 'string' },
+      },
+    },
+  })
+  prepareWire(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      remarks?: string;
+      expected_sno?: string | number;
+      expected_ferrule?: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.prepareWire(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      body.remarks,
+      body.expected_sno,
+      body.expected_ferrule,
+    );
+  }
+
+  @Post('crimping/cut')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_index'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_index: { type: 'integer', minimum: 0 },
+        planned_length: { type: 'string' },
+        actual_length: { type: 'string' },
+        remarks: { type: 'string' },
+        expected_sno: {},
+        expected_ferrule: { type: 'string' },
+      },
+    },
+  })
+  cutWire(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      planned_length?: string;
+      actual_length?: string;
+      remarks?: string;
+      expected_sno?: string | number;
+      expected_ferrule?: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.cutWire(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      {
+        plannedLength: body.planned_length,
+        actualLength: body.actual_length,
+        remarks: body.remarks,
+        expectedSno: body.expected_sno,
+        expectedFerrule: body.expected_ferrule,
+      },
+    );
+  }
+
+  @Post('crimping/strip-wire')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_index'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_index: { type: 'integer', minimum: 0 },
+        remarks: { type: 'string' },
+        expected_sno: {},
+        expected_ferrule: { type: 'string' },
+      },
+    },
+  })
+  stripWire(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      remarks?: string;
+      expected_sno?: string | number;
+      expected_ferrule?: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.stripWire(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      {
+        remarks: body.remarks,
+        expectedSno: body.expected_sno,
+        expectedFerrule: body.expected_ferrule,
+      },
+    );
+  }
+
+  @Post('crimping/crimp-wire')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_index'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_index: { type: 'integer', minimum: 0 },
+        remarks: { type: 'string' },
+        expected_sno: {},
+        expected_ferrule: { type: 'string' },
+      },
+    },
+  })
+  crimpWire(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      remarks?: string;
+      expected_sno?: string | number;
+      expected_ferrule?: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.crimpWire(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      {
+        remarks: body.remarks,
+        expectedSno: body.expected_sno,
+        expectedFerrule: body.expected_ferrule,
+      },
+    );
+  }
+
+  @Post('crimping/bulk-action')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  @FastifySchema({
+    body: {
+      type: 'object',
+      required: ['assignment_id', 'cable_indexes', 'end', 'operation'],
+      properties: {
+        assignment_id: { type: 'integer', minimum: 1 },
+        cable_indexes: { type: 'array', items: { type: 'integer', minimum: 0 } },
+        end: { type: 'string', enum: ['source', 'destination'] },
+        operation: { type: 'string', enum: ['strip', 'crimp'] },
+      },
+    },
+  })
+  crimpingBulkAction(
+    @Body() body: {
+      assignment_id: number;
+      cable_indexes: number[];
+      end: 'source' | 'destination';
+      operation: 'strip' | 'crimp';
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.crimpingBulkAction(
+      Number(body.assignment_id),
+      user.id,
+      Array.isArray(body.cable_indexes) ? body.cable_indexes : [],
+      body.end,
+      body.operation === 'strip' ? 'strip' : 'crimp',
+    );
+  }
+
+  @Get('mid-change/targets')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeTargets(@CurrentUser() user: User) {
+    return this.svc.midChangeTargets(user.id);
+  }
+
+  @Get('mid-change/requests')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  midChangeRequests(@CurrentUser() user: User) {
+    return this.svc.midChangeRequests(user.id);
+  }
+
+  @Post('mid-change/execute')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  executeMidChange(
+    @Body() body: { source_assignment_id: number; target_technician_id: number; reason: string },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.executeMidChange(
+      user.id,
+      Number(body.source_assignment_id),
+      Number(body.target_technician_id),
+      body.reason || '',
+    );
   }
 
   @Post('start/:id')
@@ -125,10 +390,92 @@ export class TechController {
   @UseGuards(RolesGuard)
   @Roles('wiring_technician')
   cableAction(
-    @Body() body: { assignment_id: number; cable_index: number; action: 'complete' | 'src_only' | 'dst_only' | 'reset_all'; note?: string },
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      action: 'complete' | 'src_only' | 'dst_only' | 'reset_all' | 'skip' | 'flag_issue' | 'source_end_open' | 'destination_end_open';
+      note?: string;
+    },
     @CurrentUser() user: User,
   ) {
     return this.svc.cableAction(body.assignment_id, user.id, body.cable_index, body.action, body.note || '');
+  }
+
+  @Post('cable-correction')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician')
+  correctCable(
+    @Body() body: {
+      assignment_id: number;
+      cable_index: number;
+      field: string;
+      corrected_value: string;
+      reason: string;
+    },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.correctCable(
+      Number(body.assignment_id),
+      user.id,
+      Number(body.cable_index),
+      body.field || '',
+      body.corrected_value ?? '',
+      body.reason || '',
+    );
+  }
+
+  @Get('cable-corrections/:id/excel')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician', 'prod_supervisor', 'qaqc_engineer', 'ops_director', 'system_admin')
+  async downloadCorrectedExcel(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+    @Res() res: FastifyReply,
+  ) {
+    const file = await this.svc.downloadCorrectedExcel(id, { id: user.id, role: user.role });
+    const safeAscii = String(file.filename || 'wiring_schedule.xlsx').replace(/[^\x20-\x7E]/g, '_');
+    const utf8Name = encodeURIComponent(String(file.filename || 'wiring_schedule.xlsx'));
+    res.header('Content-Type', file.contentType);
+    res.header(
+      'Content-Disposition',
+      `attachment; filename="${safeAscii}"; filename*=UTF-8''${utf8Name}`,
+    );
+    res.header('X-DWES-Corrected-Excel-Path', file.displayPath);
+    res.header('Access-Control-Expose-Headers', 'Content-Disposition, X-DWES-Corrected-Excel-Path');
+    return res.send(fs.createReadStream(file.absolutePath));
+  }
+
+  @Get('cable-corrections/:id/excel-preview')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician', 'prod_supervisor', 'qaqc_engineer', 'ops_director', 'system_admin')
+  previewCorrectedExcel(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('wireNumber') wireNumber: string | undefined,
+    @Query('focusField') focusField: string | undefined,
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.previewCorrectedExcel(id, { id: user.id, role: user.role }, wireNumber, focusField);
+  }
+
+  @Get('cable-corrections/:id')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician', 'prod_supervisor', 'qaqc_engineer', 'ops_director', 'system_admin')
+  cableCorrections(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.cableCorrections(id, { id: user.id, role: user.role });
+  }
+
+  @Get('cable-corrections/:id/:cableIndex')
+  @UseGuards(RolesGuard)
+  @Roles('wiring_technician', 'prod_supervisor', 'qaqc_engineer', 'ops_director', 'system_admin')
+  cableCorrectionsForWire(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('cableIndex', ParseIntPipe) cableIndex: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.cableCorrections(id, { id: user.id, role: user.role }, cableIndex);
   }
 
   /** DEMO_MODE only — bulk mark/reset helpers for dev testing (404 in production). */

@@ -1,8 +1,7 @@
-' Stop DWES.vbs — terminates hidden DWES backend/frontend node processes.
-Dim sh, fso, root, ps1, cmd
+' Compatibility wrapper for the canonical hidden Stop launcher in scripts.
+Dim sh, fso, root, launcher
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 root = fso.GetParentFolderName(WScript.ScriptFullName)
-ps1 = root & "\scripts\stop-dwes.ps1"
-cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File " & Chr(34) & ps1 & Chr(34)
-sh.Run cmd, 0, True
+launcher = root & "\scripts\Stop-DWES-Hidden.vbs"
+sh.Run Chr(34) & sh.ExpandEnvironmentStrings("%SystemRoot%\System32\wscript.exe") & Chr(34) & " " & Chr(34) & launcher & Chr(34), 0, False

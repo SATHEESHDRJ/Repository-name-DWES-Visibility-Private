@@ -1,0 +1,330 @@
+{
+  "executed_at": "2026-07-07T06:01:13.462Z",
+  "keep": [
+    "sysadmin",
+    "supervisor1",
+    "director1",
+    "tech02",
+    "tech03",
+    "tech01",
+    "tech04",
+    "ops_director1",
+    "tech05",
+    "qa1",
+    "qa2",
+    "tech1",
+    "tech2",
+    "tech3",
+    "tech4",
+    "tech5",
+    "tech6",
+    "tech7",
+    "tech8",
+    "tech9",
+    "tech10",
+    "tech11",
+    "tech12",
+    "tech13",
+    "tech14",
+    "tech15",
+    "tech16",
+    "tech17",
+    "tech18",
+    "tech19",
+    "tech20",
+    "tech21",
+    "tech22",
+    "tech23",
+    "tech24"
+  ],
+  "delete": [
+    {
+      "username": "qcengineer1",
+      "role": "qaqc_engineer",
+      "id": 28,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 0,
+        "user": 1
+      }
+    },
+    {
+      "username": "eng001",
+      "role": "qaqc_engineer",
+      "id": 31,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 3,
+        "user": 1
+      }
+    },
+    {
+      "username": "tech001",
+      "role": "wiring_technician",
+      "id": 32,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 13,
+        "session_log": 22,
+        "user": 1
+      }
+    },
+    {
+      "username": "eng002",
+      "role": "qaqc_engineer",
+      "id": 33,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 3,
+        "user": 1
+      }
+    },
+    {
+      "username": "tech002",
+      "role": "wiring_technician",
+      "id": 34,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 5,
+        "user": 1
+      }
+    },
+    {
+      "username": "tech055",
+      "role": "wiring_technician",
+      "id": 35,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 2,
+        "user": 1
+      }
+    },
+    {
+      "username": "admin1",
+      "role": "system_admin",
+      "id": 36,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 200,
+        "user": 1
+      }
+    },
+    {
+      "username": "director2",
+      "role": "ops_director",
+      "id": 37,
+      "removed": {
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 74,
+        "user": 1
+      }
+    },
+    {
+      "username": "supervisor2",
+      "role": "prod_supervisor",
+      "id": 94,
+      "removed": {
+        "reassigned_assigned_by": 4,
+        "panel_inspections_on_assignments": 0,
+        "panel_inspections_as_qc": 0,
+        "tech_assignments": 0,
+        "tech_audit_log": 0,
+        "session_log": 268,
+        "user": 1
+      }
+    }
+  ],
+  "orphan_checks": [
+    {
+      "table": "session_log",
+      "column": "user_id",
+      "dangling": 0
+    },
+    {
+      "table": "panel_inspections",
+      "column": "qc_user_id",
+      "dangling": 0
+    },
+    {
+      "table": "tech_assignments",
+      "column": "technician_id",
+      "dangling": 0
+    },
+    {
+      "table": "tech_assignments",
+      "column": "assigned_by",
+      "dangling": 0
+    },
+    {
+      "table": "tech_audit_log",
+      "column": "technician_id",
+      "dangling": 0
+    }
+  ],
+  "remaining_users": [
+    {
+      "username": "director1",
+      "role": "ops_director"
+    },
+    {
+      "username": "ops_director1",
+      "role": "ops_director"
+    },
+    {
+      "username": "supervisor1",
+      "role": "prod_supervisor"
+    },
+    {
+      "username": "qa1",
+      "role": "qaqc_engineer"
+    },
+    {
+      "username": "qa2",
+      "role": "qaqc_engineer"
+    },
+    {
+      "username": "sysadmin",
+      "role": "system_admin"
+    },
+    {
+      "username": "tech01",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech02",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech03",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech04",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech05",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech1",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech10",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech11",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech12",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech13",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech14",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech15",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech16",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech17",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech18",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech19",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech2",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech20",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech21",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech22",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech23",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech24",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech3",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech4",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech5",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech6",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech7",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech8",
+      "role": "wiring_technician"
+    },
+    {
+      "username": "tech9",
+      "role": "wiring_technician"
+    }
+  ],
+  "remaining_count": 35
+}

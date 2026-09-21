@@ -1,0 +1,9 @@
+{
+  "fixture": "corrupted_dwg",
+  "status": "FAILED",
+  "fallback": null,
+  "verdict": "PASS",
+  "expected_outcome": "expected_fail",
+  "glb_bytes": 0,
+  "overlay": {}
+}

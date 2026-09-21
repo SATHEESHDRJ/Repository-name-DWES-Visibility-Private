@@ -10,6 +10,7 @@
  */
 import puppeteer from 'puppeteer-core';
 import { FE, CHROME, resolveApiBase } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const API = resolveApiBase();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -59,12 +60,22 @@ async function measure(page) {
 
     // topbar magic-number coupling
     const shell = q('.app-shell');
-    const cssTopbar = shell ? parseFloat(getComputedStyle(shell).getPropertyValue('--dash-topbar-height')) * 16 : null;
+    const cssTopbarRaw = shell ? getComputedStyle(shell).getPropertyValue('--dash-topbar-height').trim() : '';
+    // Computed custom properties retain their unit. The app writes this value
+    // in px; only rem fallbacks need conversion.
+    const cssTopbar = cssTopbarRaw.endsWith('px')
+      ? parseFloat(cssTopbarRaw)
+      : cssTopbarRaw.endsWith('rem')
+        ? parseFloat(cssTopbarRaw) * parseFloat(getComputedStyle(document.documentElement).fontSize)
+        : parseFloat(cssTopbarRaw) || null;
     const topbar = q('.topbar');
     const topbarH = topbar ? Math.round(topbar.getBoundingClientRect().height) : null;
 
-    // fixed/sticky descendants trapped by a transformed/filtered ancestor
+    // Fixed descendants are truly anchored by a transformed/filtered ancestor.
+    // Sticky descendants are reported separately: their scroll container, not
+    // an ancestor stacking context, determines their position.
     const trapped = [];
+    const stickyStackingAncestors = [];
     for (const el of document.querySelectorAll('*')) {
       const cs = getComputedStyle(el);
       if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
@@ -78,13 +89,15 @@ async function measure(page) {
           || (acs.contain && /paint|layout|strict|content/.test(acs.contain))
           || acs.willChange === 'transform';
         if (bad) {
-          trapped.push({
+          const record = {
             el: `${el.tagName.toLowerCase()}.${(el.className||'').toString().split(' ').slice(0,2).join('.')}`,
             pos: cs.position,
             ancestor: `${a.tagName.toLowerCase()}.${(a.className||'').toString().split(' ').slice(0,2).join('.')}`,
             cause: (acs.transform!=='none'&&'transform') || (acs.backdropFilter!=='none'&&'backdrop-filter')
                   || (acs.filter!=='none'&&'filter') || (acs.contain!=='none'&&`contain:${acs.contain}`) || 'will-change',
-          });
+          };
+          if (cs.position === 'fixed') trapped.push(record);
+          else stickyStackingAncestors.push(record);
           break;
         }
         a = a.parentElement; hop++;
@@ -114,6 +127,7 @@ async function measure(page) {
       topbarMismatch: (topbarH!=null && cssTopbar!=null) ? topbarH - cssTopbar : null,
       shell: rectOf('.app-shell'), layout: rectOf('.dash-layout'), main: rectOf('.dash-main'), sidebar: rectOf('.dash-sidebar'),
       trapped: trappedUniq.slice(0, 12),
+      stickyStackingAncestors: stickyStackingAncestors.slice(0, 12),
       overflowX: overflowX.slice(0, 8),
       cls: +(window.__cls || 0).toFixed(4),
       shifts: (window.__shifts || []).slice(0, 8),
@@ -121,7 +135,8 @@ async function measure(page) {
   });
 }
 
-const sup = await login('supervisor1', 'super123');
+const supervisorAccount = accountForRole('prod_supervisor');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'] });
 const report = {};
 try {

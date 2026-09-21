@@ -1,0 +1,29 @@
+﻿{
+    "evidence_dir":  "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\master-continuation-2026-09-21_084204",
+    "branch":  "change/technician-single-wire-matrix-2026-07-27",
+    "tags":  [
+                 "local-technician-single-wire-matrix-verified-2026-07-27",
+                 "local-3d-dead-code-cleanup-verified-2026-07-25",
+                 "local-ga-3d-cleanup-verified-2026-07-25",
+                 "snapshot-oci-production-reconstructed-2026-07-25-082028",
+                 "pre-deploy-baseline-2026-07-10"
+             ],
+    "preserve_uncommitted":  true,
+    "remote":  "origin https://github.com/SATHEESHDRJ/Repository-name-DWES-Visibility-Private.git",
+    "dirty":  true,
+    "services":  {
+                     "postgres_restore":  "127.0.0.1:55432",
+                     "api_restore":  "127.0.0.1:3101",
+                     "host_3001":  "LISTEN (investigate)",
+                     "docker":  [
+                                    "dwes_oci_restore_api_20260725_082028",
+                                    "dwes_oci_restore_nginx_20260725_082028",
+                                    "dwes_oci_restore_postgres_20260725_082028"
+                                ],
+                     "ui_nginx":  "127.0.0.1:5275"
+                 },
+    "timestamp":  "2026-09-21T08:42:43.6823679+04:00",
+    "repo":  "C:/dev/DWES-OCI-RESTORES/2026-07-25_115805_OCI-PRODUCTION-EXACT/02_GIT_PRODUCTION_SOURCE/DWES",
+    "head":  "949b6806377e01f9b12229f9292f37026133b7b3",
+    "working_tree_short_status_lines":  245
+}

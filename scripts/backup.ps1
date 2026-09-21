@@ -14,13 +14,17 @@
 param(
     [switch]$DryRun,
     [switch]$PreOperation,
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    # Explicit overrides (preferred over hardcoded OneDrive paths).
+    [string]$ProjectRoot = '',
+    [string]$BackupRoot = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoDefaultRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path
 $configPath = if ($env:DWES_BACKUP_CONFIG) { $env:DWES_BACKUP_CONFIG } else { Join-Path $scriptDir 'backup.config.json' }
 
 if (-not (Test-Path -LiteralPath $configPath)) {
@@ -39,8 +43,72 @@ function Resolve-ConfigPath {
     return (Join-Path $Base $Relative)
 }
 
-$projectRoot = if ($env:DWES_PROJECT_ROOT) { $env:DWES_PROJECT_ROOT } else { $config.projectRoot }
-$backupRoot = if ($env:DWES_BACKUP_ROOT) { $env:DWES_BACKUP_ROOT } else { $config.backupRoot }
+function Assert-SafeBackupDestination {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Backup destination is empty. Set -BackupRoot or DWES_BACKUP_ROOT."
+    }
+    $full = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($full)
+    if ($full.TrimEnd('\','/') -eq $root.TrimEnd('\','/')) {
+        throw "Refusing backup destination at drive root: $full"
+    }
+    $unsafe = @('C:\', 'C:\Windows', 'C:\Program Files', 'C:\Program Files (x86)', 'C:\Users')
+    foreach ($u in $unsafe) {
+        if ($full.TrimEnd('\','/').Equals($u.TrimEnd('\','/'), [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing unsafe backup destination: $full"
+        }
+    }
+    return $full
+}
+
+function Assert-BackupDestOutsideProject {
+    param(
+        [string]$ProjectRoot,
+        [string]$BackupRoot
+    )
+    $proj = [System.IO.Path]::GetFullPath($ProjectRoot).TrimEnd('\','/')
+    $dest = [System.IO.Path]::GetFullPath($BackupRoot).TrimEnd('\','/')
+    if ($dest.Equals($proj, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing backup destination equal to project root: $dest"
+    }
+    if ($dest.StartsWith($proj + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+        $dest.StartsWith($proj + [System.IO.Path]::AltDirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing backup destination inside project tree (causes recursive copy): $dest"
+    }
+}
+
+# Resolution order: -ProjectRoot param > DWES_PROJECT_ROOT > config (relative to scripts/) > repo parent of scripts/
+$projectRootRaw = if ($ProjectRoot) { $ProjectRoot }
+    elseif ($env:DWES_PROJECT_ROOT) { $env:DWES_PROJECT_ROOT }
+    elseif ($config.projectRoot) { $config.projectRoot }
+    else { $repoDefaultRoot }
+
+if (-not [System.IO.Path]::IsPathRooted($projectRootRaw)) {
+    $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDir $projectRootRaw))
+} else {
+    $projectRoot = [System.IO.Path]::GetFullPath($projectRootRaw)
+}
+
+$backupRootRaw = if ($BackupRoot) { $BackupRoot }
+    elseif ($env:DWES_BACKUP_ROOT) { $env:DWES_BACKUP_ROOT }
+    elseif ($config.backupRoot) { $config.backupRoot }
+    else { Join-Path $projectRoot 'Backup' }
+
+if (-not [System.IO.Path]::IsPathRooted($backupRootRaw)) {
+    # Relative backupRoot resolves against projectRoot (not scripts/), unless it starts with .. from scripts via config historically
+    if ($backupRootRaw.StartsWith('..') -or $backupRootRaw.StartsWith('.\')) {
+        $backupRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDir $backupRootRaw))
+    } else {
+        $backupRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $backupRootRaw))
+    }
+} else {
+    $backupRoot = [System.IO.Path]::GetFullPath($backupRootRaw)
+}
+
+$backupRoot = Assert-SafeBackupDestination -Path $backupRoot
+Assert-BackupDestOutsideProject -ProjectRoot $projectRoot -BackupRoot $backupRoot
+
 $prefix = if ($null -ne $config.PSObject.Properties['backupFolderPrefix'] -and $config.backupFolderPrefix) {
     [string]$config.backupFolderPrefix
 } else {
@@ -50,6 +118,9 @@ $prefix = if ($null -ne $config.PSObject.Properties['backupFolderPrefix'] -and $
 if (-not (Test-Path -LiteralPath $projectRoot)) {
     Write-Error "Project root not found: $projectRoot"
 }
+
+Write-Host "DWES backup projectRoot=$projectRoot"
+Write-Host "DWES backup backupRoot=$backupRoot"
 
 if ($VerifyOnly) {
     $verifyScript = Join-Path $scriptDir 'verify-backup.ps1'

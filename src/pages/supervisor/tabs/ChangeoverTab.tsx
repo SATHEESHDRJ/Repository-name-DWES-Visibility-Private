@@ -5,6 +5,7 @@ import Badge from '../../../components/Badge';
 import MidChangeoverModal, { type ChangeoverAssignment } from '../../../components/assignment/MidChangeoverModal';
 import Toast from '../../../components/ui/Toast';
 import { ArrowLeftRight, ArrowRight, Plus } from '../../../components/ui/icons';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 interface ChangeoverTabProps {
   projects: Project[];
@@ -58,7 +59,7 @@ export default function ChangeoverTab({ projects, projectCode, panelId }: Change
   };
 
   if (loading) {
-    return <div className="empty-state"><p className="empty-text">Loading changeover data…</p></div>;
+    return <DwesLoadingState label="Loading changeover data…" />;
   }
 
   return (
@@ -95,11 +96,11 @@ export default function ChangeoverTab({ projects, projectCode, panelId }: Change
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
         {filtered.map(panel => (
-          <div key={panel.id} className="h-[120px] bg-white border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
+          <div key={panel.id} className="h-[120px] bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
             <div className="flex items-start justify-between">
               <div className="flex flex-col min-w-0 pr-2">
-                <span className="text-[14px] font-bold text-slate-900 truncate" title={panel.panel_name}>{panel.panel_name}</span>
-                <span className="text-[12px] font-medium text-slate-500 truncate mt-0.5">
+                <span className="text-[14px] font-bold text-primary truncate" title={panel.panel_name}>{panel.panel_name}</span>
+                <span className="text-[12px] font-medium text-muted truncate mt-0.5">
                   {panel.technician_name} · {panel.project_code}
                 </span>
                 {panel.pause_reason && (
@@ -107,7 +108,7 @@ export default function ChangeoverTab({ projects, projectCode, panelId }: Change
                 )}
               </div>
               <div className="flex flex-col items-end flex-shrink-0">
-                <span className="text-[18px] font-bold text-slate-800 leading-none">{panel.completed_cables ?? 0}/{panel.total_cables ?? panel.cables_total ?? 0}</span>
+                <span className="text-[18px] font-bold text-primary leading-none">{panel.completed_cables ?? 0}/{panel.total_cables ?? panel.cables_total ?? 0}</span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Done</span>
               </div>
             </div>

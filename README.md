@@ -8,10 +8,11 @@ Tablet-optimised wiring execution platform for industrial panel shops. Replaces 
 
 ### One-click launcher (recommended — Development / HMR)
 
-1. Create the desktop icon once: `npm run shortcut:create`
-2. Double-click **DWES** on the Desktop (or `Start DWES (Hidden).vbs` / `Start DWES.cmd`).
+1. Create the desktop icons once: `npm run shortcut:create`
+2. Double-click **DWES — Start Application** on the Desktop.
+3. Use **DWES — Stop Application** to stop only the DWES frontend/backend while leaving PostgreSQL running.
 
-This starts Vite on **:5175** and Nest `start:dev` **with no console windows**, waits for `/api/health`, then opens the browser. Frontend edits hot-reload (HMR) — you do **not** need to close and reopen the shortcut. Details: `scripts/LAUNCH.md`.
+The shortcuts run hidden VBS entry points. Start checks PostgreSQL, ports and backend health before opening the browser; Stop uses checkout-scoped process ownership and never terminates unrelated Node.js or PostgreSQL processes. Frontend edits hot-reload (HMR). Details: `scripts/LAUNCH.md`.
 
 **Production (no HMR):** build first (`npm run build` + `npm --prefix backend run build`), then `Start DWES Prod (Hidden).vbs` or `npm run launch:prod`.
 
@@ -67,22 +68,12 @@ Source: `scripts/git-hooks/pre-commit` (blocks secrets, build artifacts, and fil
 
 ---
 
-## Login credentials
+## Local demo accounts
 
-| Role                | Username        | Password        |
-|---------------------|-----------------|-----------------|
-| System Administrator| sysadmin        | admin123        |
-| Operations Director | ops_director1   | ops_director123 |
-| Sales Director      | sales_director2 | sales_director2 |
-| Production Supervisor| supervisor1    | super123        |
-| QA/QC Engineer      | qa1             | qa1             |
-| Wiring Technician   | tech1           | tech1           |
-
-Additional accounts (from live DB — password = username unless noted above):
-- `qa2` / `qa2` (QA/QC Engineer)
-- `tech01`–`tech05`, `tech1`–`tech24` (Wiring Technicians)
-
-Retired demo login: `director1` (deactivated when `DEMO_MODE=true`).
+Usable usernames and passwords are intentionally not tracked in this repository.
+For local demo/test seeding, create the ignored private account file described in
+[`docs/DEMO_ACCOUNTS.md`](docs/DEMO_ACCOUNTS.md). Production accounts are issued
+and managed through System Administrator user management.
 
 ---
 
@@ -91,7 +82,7 @@ Retired demo login: `director1` (deactivated when `DEMO_MODE=true`).
 - **Host:** localhost:5432
 - **Database:** WiringSchemeDB
 - **User:** postgres
-- **Password:** postgres
+- **Password:** supplied through the ignored local `DATABASE_URL`/environment configuration
 - **ORM:** Prisma (schema at `backend/prisma/schema.prisma`)
 
 > Never run `prisma migrate` or `prisma db push` — the existing schema is live.  
@@ -136,7 +127,7 @@ DWES/
 ├── Start DWES (Hidden).vbs Dev launcher (Vite HMR, no console)
 ├── Start DWES Prod (Hidden).vbs  Production launcher (no HMR)
 ├── Start DWES.cmd          Delegates to hidden Dev launcher
-├── scripts/LAUNCH.md       Dev/Prod launch, autostart, HMR notes
+├── scripts/LAUNCH.md       Manual Dev/Prod launch and HMR notes
 └── README.md               This file
 ```
 

@@ -1,3 +1,4 @@
+import { Activity } from '../../../components/ui/icons';
 import SupervisorSectionHeader from '../../../components/supervisor/SupervisorSectionHeader';
 import SupervisorScopeToolbar from '../../../components/supervisor/SupervisorScopeToolbar';
 import { useSupervisorScope } from '../../../hooks/useSupervisorScope';
@@ -11,6 +12,7 @@ export default function PanelStatusSection() {
       <SupervisorSectionHeader
         title="Overall Panel Status"
         description="At-a-glance view of panel ownership, progress, completion, and submission state across projects."
+        icon={<Activity size={16} strokeWidth={1.75} />}
       />
 
       <SupervisorScopeToolbar

@@ -1,0 +1,9 @@
+{
+  "description": "Units inches: INSUNITS=1, 40x30in panel -> 1016x762mm after conversion",
+  "insunits": 1,
+  "expected_unit": "inches",
+  "expected_extents_mm": {
+    "width": 1016.0,
+    "height": 762.0
+  }
+}

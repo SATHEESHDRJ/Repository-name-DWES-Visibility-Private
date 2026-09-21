@@ -3,7 +3,9 @@ import {
   CheckCircle, XCircle, Database, Cloud, HardDrive,
   RefreshCw, AlertTriangle, Loader, FolderOpen,
 } from '../../../components/ui/icons';
+import { useAppDialog } from '../../../components/AppDialogProvider';
 import { adminApi } from '../../../services/api';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 interface DbConfig {
   mode: 'local' | 'cloud';
@@ -33,6 +35,7 @@ interface StorageInfo {
 }
 
 export default function DbConfigTab() {
+  const dialog = useAppDialog();
   const [config, setConfig] = useState<DbConfig | null>(null);
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +100,15 @@ export default function DbConfigTab() {
   };
 
   const handleRestart = async () => {
-    if (!window.confirm('This will restart the backend process. The app will be unavailable for ~3 seconds. Continue?')) return;
+    const ok = await dialog.confirm({
+      title: 'Restart backend',
+      message: 'The backend process will restart. DWES will be unavailable for about 3 seconds, then reconnect.',
+      tone: 'warning',
+      confirmText: 'Restart Backend',
+      actionSummary: 'Stop and restart the NestJS/Fastify backend process on this machine.',
+      entity: { label: 'Service', value: 'DWES backend', kind: 'other' },
+    });
+    if (!ok) return;
     setRestarting(true);
     try { await adminApi.triggerRestart(); } catch {}
     setTimeout(() => { setRestarting(false); setSaveResult(null); load(); }, 4000);
@@ -107,7 +118,7 @@ export default function DbConfigTab() {
     ? selectedMode !== config.mode || (selectedMode === 'cloud' && cloudUrl !== (config.cloudUrl || ''))
     : false;
 
-  if (loading) return <div className="empty-state"><p className="empty-text">Loading database configuration...</p></div>;
+  if (loading) return <DwesLoadingState label="Loading database configuration…" />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,7 +136,7 @@ export default function DbConfigTab() {
           }`}>
             Active: {config?.mode === 'cloud' ? 'Cloud Database' : 'Local Database'}
           </div>
-          <div className="text-[12px] text-slate-600 mt-0.5 font-mono truncate">{config?.activeDatabase}</div>
+          <div className="text-[12px] text-muted mt-0.5 font-mono truncate">{config?.activeDatabase}</div>
         </div>
         {config?.lastSwitched && (
           <div className="status-banner-meta">
@@ -136,10 +147,10 @@ export default function DbConfigTab() {
       </div>
 
       {/* ── Mode Selection ───────────────────────────────── */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <div className="text-[14px] font-bold text-slate-800 select-none">Database Mode</div>
-          <div className="text-[12px] text-slate-500 mt-0.5 select-none">
+          <div className="text-[14px] font-bold text-primary select-none">Database Mode</div>
+          <div className="text-[12px] text-muted mt-0.5 select-none">
             Choose where metadata is stored. Files are always local.
           </div>
         </div>
@@ -151,23 +162,23 @@ export default function DbConfigTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'local'
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 selectedMode === 'local' ? 'bg-emerald-100' : 'bg-slate-100'
               }`}>
-                <HardDrive size={16} className={selectedMode === 'local' ? 'text-emerald-700' : 'text-slate-500'} />
+                <HardDrive size={16} className={selectedMode === 'local' ? 'text-emerald-700' : 'text-muted'} />
               </div>
               <span className={`text-[14px] font-bold select-none ${
-                selectedMode === 'local' ? 'text-emerald-800' : 'text-slate-700'
+                selectedMode === 'local' ? 'text-emerald-800' : 'text-secondary'
               }`}>Local Database</span>
               {selectedMode === 'local' && (
                 <span className="ml-auto text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full select-none">SELECTED</span>
               )}
             </div>
-            <div className="text-[12px] text-slate-500 select-none">
+            <div className="text-[12px] text-muted select-none">
               PostgreSQL at localhost:5432 (WiringSchemeDB). Default for field use — no internet required.
             </div>
             <div className="text-[11px] font-mono text-slate-400 mt-1.5 truncate">{config?.localUrlMasked}</div>
@@ -180,27 +191,27 @@ export default function DbConfigTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'cloud'
                 ? 'border-indigo-500 bg-indigo-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 selectedMode === 'cloud' ? 'bg-indigo-100' : 'bg-slate-100'
               }`}>
-                <Cloud size={16} className={selectedMode === 'cloud' ? 'text-indigo-700' : 'text-slate-500'} />
+                <Cloud size={16} className={selectedMode === 'cloud' ? 'text-indigo-700' : 'text-muted'} />
               </div>
               <span className={`text-[14px] font-bold select-none ${
-                selectedMode === 'cloud' ? 'text-indigo-800' : 'text-slate-700'
+                selectedMode === 'cloud' ? 'text-indigo-800' : 'text-secondary'
               }`}>Cloud Database</span>
               {selectedMode === 'cloud' && (
                 <span className="ml-auto text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full select-none">SELECTED</span>
               )}
             </div>
-            <div className="text-[12px] text-slate-500 select-none">
+            <div className="text-[12px] text-muted select-none">
               Remote PostgreSQL (any host). Shared data across devices. Requires network connectivity.
             </div>
             {cloudUrl && selectedMode === 'cloud' && (
-              <div className="text-[11px] font-mono text-slate-400 mt-1.5 truncate">{cloudUrl.replace(/:([^@:\/?#]+)@/, ':****@')}</div>
+              <div className="text-[11px] font-mono text-slate-400 mt-1.5 truncate">{cloudUrl.replace(/:([^@:/?#]+)@/, ':****@')}</div>
             )}
           </button>
         </div>
@@ -208,7 +219,7 @@ export default function DbConfigTab() {
         {/* Cloud URL input */}
         {selectedMode === 'cloud' && (
           <div className="px-5 pb-4">
-            <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">
+            <label className="text-[12px] font-bold text-muted select-none block mb-1.5">
               Cloud PostgreSQL Connection URL
             </label>
             <input
@@ -227,7 +238,7 @@ export default function DbConfigTab() {
 
         {/* Notes */}
         <div className="px-5 pb-4">
-          <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">Notes (optional)</label>
+          <label className="text-[12px] font-bold text-muted select-none block mb-1.5">Notes (optional)</label>
           <input
             type="text"
             value={notes}
@@ -329,12 +340,12 @@ export default function DbConfigTab() {
 
       {/* ── File Storage Info ───────────────────────────── */}
       {storage && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-            <FolderOpen size={18} className="text-slate-500 shrink-0" />
+            <FolderOpen size={18} className="text-muted shrink-0" />
             <div>
-              <div className="text-[14px] font-bold text-slate-800 select-none">Local File Storage</div>
-              <div className="text-[12px] text-slate-500 select-none">
+              <div className="text-[14px] font-bold text-primary select-none">Local File Storage</div>
+              <div className="text-[12px] text-muted select-none">
                 Wiring schedules, drawings, and frame JSON files are always stored locally.
               </div>
             </div>
@@ -348,7 +359,7 @@ export default function DbConfigTab() {
               <div key={item.label} className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none">{item.label}</div>
                 <div className={`text-[13px] font-semibold mt-0.5 ${
-                  item.tone === 'completed' ? 'text-emerald-600' : item.tone === 'danger' ? 'text-red-600' : 'text-slate-700'
+                  item.tone === 'completed' ? 'text-emerald-600' : item.tone === 'danger' ? 'text-red-600' : 'text-secondary'
                 } ${item.mono ? 'font-mono text-[11px]' : ''}`}>
                   {item.val}
                 </div>

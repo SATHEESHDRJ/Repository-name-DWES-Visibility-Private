@@ -1,0 +1,86 @@
+{
+  "package_type": "dwes-engineering-package",
+  "spec_version": 1,
+  "project_code": "ENOWA_MOBILE_SUBSTATION_132KV_KSA_RIYADH_2026_001",
+  "frame_id": "frame_1719100000001",
+  "model_revision": "REV_TEST_1",
+  "units": "mm",
+  "panel": {
+    "width": 800,
+    "height": 2000,
+    "depth": 600
+  },
+  "devices": [
+    {
+      "device_tag": "=H001+K1",
+      "x": 100,
+      "y": 100,
+      "z": 0,
+      "width": 50,
+      "height": 50,
+      "depth": 50,
+      "terminals": [
+        {
+          "terminal_number": "13",
+          "x": 100,
+          "y": 110,
+          "z": 0,
+          "direction": "TOP"
+        },
+        {
+          "terminal_number": "14",
+          "x": 100,
+          "y": 90,
+          "z": 0,
+          "direction": "BOTTOM"
+        }
+      ]
+    },
+    {
+      "device_tag": "=H001+X1",
+      "x": 100,
+      "y": 400,
+      "z": 0,
+      "width": 50,
+      "height": 200,
+      "depth": 50,
+      "terminals": [
+        {
+          "terminal_number": "1",
+          "x": 100,
+          "y": 410,
+          "z": 0,
+          "direction": "TOP"
+        },
+        {
+          "terminal_number": "2",
+          "x": 100,
+          "y": 390,
+          "z": 0,
+          "direction": "BOTTOM"
+        }
+      ]
+    }
+  ],
+  "duct_nodes": [
+    {
+      "duct_identifier": "N1",
+      "x": 80,
+      "y": 100,
+      "z": 0
+    },
+    {
+      "duct_identifier": "N2",
+      "x": 80,
+      "y": 400,
+      "z": 0
+    }
+  ],
+  "duct_segments": [
+    {
+      "source": "N1",
+      "destination": "N2",
+      "direction": "bidirectional"
+    }
+  ]
+}

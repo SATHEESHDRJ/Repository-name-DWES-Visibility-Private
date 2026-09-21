@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawnSync } from 'child_process';
+import { runPgDumpCustomFormat, pgDumpFailureDetail } from '../common/pg-dump.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
 import { DbConfigStore } from './db-config';
@@ -12,6 +12,14 @@ import {
   DeploymentMode,
 } from './deployment-config';
 import { Client } from 'pg';
+import {
+  countProjectDataInventory,
+  deleteProjectScopedDatabaseRows,
+  permanentlyDeleteProject,
+  purgeAllProjectData,
+  purgeProjectMemoryStores,
+  type PermanentDeleteActor,
+} from '../common/project-delete.util';
 
 const APP_START = Date.now();
 const errorRingBuffer: { ts: string; message: string; context: string }[] = [];
@@ -20,7 +28,6 @@ export function recordError(message: string, context: string) {
   errorRingBuffer.unshift({ ts: new Date().toISOString(), message, context });
   if (errorRingBuffer.length > 50) errorRingBuffer.pop();
 }
-
 export function clearErrorRingBuffer() {
   errorRingBuffer.length = 0;
 }
@@ -128,22 +135,9 @@ export class AdminService {
     fs.mkdirSync(backupDir, { recursive: true });
     const dumpFile = path.join(backupDir, `SESSION_LOG_${ts}.dump`);
 
-    // ── Step 1: pg_dump (abort if it fails — no logs deleted) ──────────────
-    const pgDumpExe = process.env.PG_DUMP_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe';
-    const pgHost    = process.env.PGHOST     || 'localhost';
-    const pgPort    = process.env.PGPORT     || '5432';
-    const pgUser    = process.env.PGUSER     || 'postgres';
-    const pgPass    = process.env.PGPASSWORD || 'postgres';
-    const pgDb      = process.env.PGDATABASE || 'WiringSchemeDB';
-
-    const dumpResult = spawnSync(
-      pgDumpExe,
-      ['-h', pgHost, '-p', pgPort, '-U', pgUser, '-F', 'c', '-f', dumpFile, pgDb],
-      { env: { ...process.env, PGPASSWORD: pgPass }, timeout: 120_000 },
-    );
-    if (dumpResult.status !== 0) {
-      const errMsg = dumpResult.stderr?.toString() || dumpResult.error?.message || 'unknown';
-      return { error: `pg_dump failed — aborting clear (no logs deleted). Details: ${errMsg.slice(0, 300)}` };
+    const dumpResult = runPgDumpCustomFormat(dumpFile);
+    if (!dumpResult.ok) {
+      return { error: `pg_dump failed — aborting clear (no logs deleted). Details: ${pgDumpFailureDetail(dumpResult)}` };
     }
 
     // ── Step 2: Single transaction — all-or-nothing ───────────────────────
@@ -274,7 +268,7 @@ export class AdminService {
   // ── Hard Reset ────────────────────────────────────────────────────────────
 
   async projectResetPrecheck(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -315,7 +309,7 @@ export class AdminService {
   // ── Hard Delete (system_admin only; permanent — no backup, no restore) ────
 
   async hardDeleteProjectPrecheck(code: string) {
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -353,66 +347,20 @@ export class AdminService {
     };
   }
 
-  async hardDeleteProject(code: string, confirmedCode: string) {
+  async hardDeleteProject(code: string, actor?: PermanentDeleteActor) {
     if (!code) return { error: 'Project code required' };
-    if (code !== confirmedCode) {
-      return { error: 'Confirmation code does not match — type the exact project code' };
-    }
 
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
-    const uploadBase = this._resolveUploadDir();
-    const projectUploadsDir = path.join(uploadBase, code);
-
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: { project_code: code }, select: { id: true },
-    });
-    const assignmentIds = assignments.map(a => a.id);
-
-    const inspDel = assignmentIds.length
-      ? await this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
-      : { count: 0 };
-
-    const assnDel  = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
-    const hashDel  = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
-    const auditDel = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
-    const sessionDel = await this.prisma.session_log.deleteMany({ where: { project_code: code } });
-
-    await this.prisma.projects.delete({ where: { code } });
-
-    MockStore.frames   = MockStore.frames.filter(f => f.project_code !== code);
-    MockStore.drawings = MockStore.drawings.filter(d => d.project_code !== code);
-
-    let folderRemoved = false;
-    if (fs.existsSync(projectUploadsDir)) {
-      fs.rmSync(projectUploadsDir, { recursive: true, force: true });
-      folderRemoved = true;
-    }
-
-    return {
-      success: true,
-      project_code: code,
-      deleted: {
-        inspections: inspDel.count,
-        assignments: assnDel.count,
-        file_hashes: hashDel.count,
-        audit_logs:  auditDel.count,
-        session_logs: sessionDel.count,
-        project_row: 1,
-        uploads_removed: folderRemoved,
-        folder_removed: folderRemoved,
-      },
-      message: `Project "${code}" permanently deleted from database and storage.`,
-      ts: new Date().toISOString(),
-    };
+    return permanentlyDeleteProject(this.prisma, code, this._resolveUploadDir(), actor);
   }
 
   async hardResetProject(code: string, confirmedCode: string) {
     if (!code) return { error: 'Project code required' };
     if (code !== confirmedCode) return { error: 'Confirmation code does not match — type the exact project code' };
 
-    const project = await this.prisma.projects.findUnique({ where: { code } });
+    const project = await this.prisma.projects.findFirst({ where: { code, is_active: true } });
     if (!project) return { error: `Project "${code}" not found` };
 
     const uploadBase = this._resolveUploadDir();
@@ -423,22 +371,9 @@ export class AdminService {
     const dumpFile  = path.join(backupDir, `${code}_${ts}.dump`);
     const archiveDir = path.join(backupDir, `${code}_${ts}`);
 
-    // ── Step 1: pg_dump (abort if it fails) ────────────────────────────────
-    const pgDumpExe = process.env.PG_DUMP_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe';
-    const pgHost    = process.env.PGHOST     || 'localhost';
-    const pgPort    = process.env.PGPORT     || '5432';
-    const pgUser    = process.env.PGUSER     || 'postgres';
-    const pgPass    = process.env.PGPASSWORD || 'postgres';
-    const pgDb      = process.env.PGDATABASE || 'WiringSchemeDB';
-
-    const dumpResult = spawnSync(
-      pgDumpExe,
-      ['-h', pgHost, '-p', pgPort, '-U', pgUser, '-F', 'c', '-f', dumpFile, pgDb],
-      { env: { ...process.env, PGPASSWORD: pgPass }, timeout: 120_000 },
-    );
-    if (dumpResult.status !== 0) {
-      const errMsg = dumpResult.stderr?.toString() || dumpResult.error?.message || 'unknown';
-      return { error: `pg_dump failed — aborting reset. Details: ${errMsg.slice(0, 300)}` };
+    const dumpResult = runPgDumpCustomFormat(dumpFile);
+    if (!dumpResult.ok) {
+      return { error: `pg_dump failed — aborting reset. Details: ${pgDumpFailureDetail(dumpResult)}` };
     }
 
     // ── Step 2: Archive uploads/<CODE>/ (abort if copy fails) ──────────────
@@ -451,19 +386,11 @@ export class AdminService {
       }
     }
 
-    // ── Step 3: Delete DB rows (panel_inspections → tech_assignments → hashes → audit) ──
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: { project_code: code }, select: { id: true },
+    // ── Step 3: Delete all project-scoped DB rows (engineering + workflow) ──
+    const deleted = await deleteProjectScopedDatabaseRows(this.prisma, {
+      projectCode: code,
+      includeProjectRow: false,
     });
-    const assignmentIds = assignments.map(a => a.id);
-
-    const inspDel = assignmentIds.length
-      ? await this.prisma.panel_inspections.deleteMany({ where: { assignment_id: { in: assignmentIds } } })
-      : { count: 0 };
-
-    const assnDel  = await this.prisma.tech_assignments.deleteMany({ where: { project_code: code } });
-    const hashDel  = await this.prisma.file_hashes.deleteMany({ where: { project_code: code } });
-    const auditDel = await this.prisma.tech_audit_log.deleteMany({ where: { project_code: code } });
 
     // Reset project state
     await this.prisma.projects.update({
@@ -471,34 +398,22 @@ export class AdminService {
       data: { project_state: 'not_started', assigned_technicians: '' },
     });
 
-    // ── Step 4: Clear in-memory MockStore ───────────────────────────────────
-    MockStore.frames   = MockStore.frames.filter(f => f.project_code !== code);
-    MockStore.drawings = MockStore.drawings.filter(d => d.project_code !== code);
+    purgeProjectMemoryStores(code);
 
-    // ── Step 5: Remove files from disk ──────────────────────────────────────
-    const framesDir   = path.join(uploadBase, code, 'frames');
-    const drawingsDir = path.join(uploadBase, code, 'drawings');
-    let filesDeleted = 0;
-
-    for (const dir of [framesDir, drawingsDir]) {
-      if (!fs.existsSync(dir)) continue;
-      for (const f of fs.readdirSync(dir)) {
-        fs.unlinkSync(path.join(dir, f));
-        filesDeleted++;
-      }
-      fs.rmdirSync(dir);
+    // ── Step 4: Remove entire project upload tree from disk ─────────────────
+    let folderRemoved = false;
+    if (fs.existsSync(projectUploadsDir)) {
+      fs.rmSync(projectUploadsDir, { recursive: true, force: true });
+      folderRemoved = true;
     }
 
     return {
       success: true,
       project_code: code,
-      backup: { dump: dumpFile, archive: fs.existsSync(projectUploadsDir) ? archiveDir : '(no uploads folder existed)' },
+      backup: { dump: dumpFile, archive: fs.existsSync(archiveDir) ? archiveDir : '(no uploads folder existed)' },
       deleted: {
-        inspections: inspDel.count,
-        assignments: assnDel.count,
-        file_hashes: hashDel.count,
-        audit_logs:  auditDel.count,
-        disk_files:  filesDeleted,
+        ...deleted,
+        disk_folder_removed: folderRemoved,
       },
       message: `Project "${code}" reset to clean state. Backup at: backups/${code}_${ts}`,
       ts: new Date().toISOString(),
@@ -509,41 +424,10 @@ export class AdminService {
 
   async resetAllProjectsPrecheck() {
     const uploadBase = this._resolveUploadDir();
-    const projects = await this.prisma.projects.findMany({ select: { code: true, name: true } });
-    const codes = projects.map(p => p.code);
-
-    const allAssignments = await this.prisma.tech_assignments.findMany({ select: { id: true } });
-    const allAssignmentIds = allAssignments.map(a => a.id);
-
-    const [inspections, hashes, auditLogs] = await Promise.all([
-      allAssignmentIds.length
-        ? this.prisma.panel_inspections.count({ where: { assignment_id: { in: allAssignmentIds } } })
-        : Promise.resolve(0),
-      this.prisma.file_hashes.count(),
-      this.prisma.tech_audit_log.count(),
-    ]);
-
-    let totalFrameFiles = 0;
-    let totalDrawingFiles = 0;
-    for (const code of codes) {
-      const framesDir   = path.join(uploadBase, code, 'frames');
-      const drawingsDir = path.join(uploadBase, code, 'drawings');
-      if (fs.existsSync(framesDir))
-        totalFrameFiles += fs.readdirSync(framesDir).filter((f: string) => f.endsWith('.json')).length;
-      if (fs.existsSync(drawingsDir))
-        totalDrawingFiles += fs.readdirSync(drawingsDir).length;
-    }
+    const inventory = await countProjectDataInventory(this.prisma, uploadBase);
 
     return {
-      counts: {
-        projects:    projects.length,
-        frames:      Math.max(MockStore.frames.length, totalFrameFiles),
-        drawings:    Math.max(MockStore.drawings.length, totalDrawingFiles),
-        assignments: allAssignments.length,
-        inspections,
-        file_hashes: hashes,
-        audit_logs:  auditLogs,
-      },
+      counts: inventory,
       backup_note: 'pg_dump + all uploads/<CODE>/ directories will be archived to uploads/backups/ before deletion',
     };
   }
@@ -562,22 +446,9 @@ export class AdminService {
     const dumpFile   = path.join(backupDir, `RESET_ALL_${ts}.dump`);
     const archiveDir = path.join(backupDir, `RESET_ALL_${ts}`);
 
-    // ── Step 1: pg_dump (abort if it fails) ──────────────────────────────
-    const pgDumpExe = process.env.PG_DUMP_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe';
-    const pgHost    = process.env.PGHOST     || 'localhost';
-    const pgPort    = process.env.PGPORT     || '5432';
-    const pgUser    = process.env.PGUSER     || 'postgres';
-    const pgPass    = process.env.PGPASSWORD || 'postgres';
-    const pgDb      = process.env.PGDATABASE || 'WiringSchemeDB';
-
-    const dumpResult = spawnSync(
-      pgDumpExe,
-      ['-h', pgHost, '-p', pgPort, '-U', pgUser, '-F', 'c', '-f', dumpFile, pgDb],
-      { env: { ...process.env, PGPASSWORD: pgPass }, timeout: 120_000 },
-    );
-    if (dumpResult.status !== 0) {
-      const errMsg = dumpResult.stderr?.toString() || dumpResult.error?.message || 'unknown';
-      return { error: `pg_dump failed — aborting. Details: ${errMsg.slice(0, 300)}` };
+    const dumpResult = runPgDumpCustomFormat(dumpFile);
+    if (!dumpResult.ok) {
+      return { error: `pg_dump failed — aborting. Details: ${pgDumpFailureDetail(dumpResult)}` };
     }
 
     // ── Step 2: Snapshot project list + archive all uploads (abort if fails)
@@ -596,43 +467,18 @@ export class AdminService {
       return { error: `File archive failed — aborting. Details: ${e.message}` };
     }
 
-    // ── Step 3: Single transaction — all-or-nothing ───────────────────────
-    // FK order: panel_inspections (child of tech_assignments, which are child of projects)
-    //           → tech_assignments → file_hashes → tech_audit_log → projects
-    const [inspDel, assnDel, hashDel, auditDel, projDel] = await this.prisma.$transaction([
-      this.prisma.panel_inspections.deleteMany({}),
-      this.prisma.tech_assignments.deleteMany({}),
-      this.prisma.file_hashes.deleteMany({}),
-      this.prisma.tech_audit_log.deleteMany({}),
-      this.prisma.projects.deleteMany({}),
-    ]);
-
-    // ── Step 4: Clear in-memory MockStore ────────────────────────────────
-    MockStore.frames   = [];
-    MockStore.drawings = [];
-
-    // ── Step 5: Remove on-disk project folders (NOT uploads/backups/) ────
-    let foldersRemoved = 0;
-    for (const code of codes) {
-      const dir = path.join(uploadBase, code);
-      if (fs.existsSync(dir)) {
-        fs.rmSync(dir, { recursive: true, force: true });
-        foldersRemoved++;
-      }
-    }
+    // ── Step 3: Purge all project-scoped DB rows + uploads + memory stores ──
+    const purgeResult = await purgeAllProjectData(this.prisma, uploadBase);
 
     return {
       success: true,
       backup: { dump: dumpFile, archive: archiveDir },
       deleted: {
-        projects:        projDel.count,
-        inspections:     inspDel.count,
-        assignments:     assnDel.count,
-        file_hashes:     hashDel.count,
-        audit_logs:      auditDel.count,
-        folders_removed: foldersRemoved,
+        ...purgeResult.deleted,
+        folders_removed: purgeResult.folders_removed,
+        project_codes: purgeResult.project_codes,
       },
-      message: `All ${projDel.count} project(s) permanently deleted. Backup at backups/RESET_ALL_${ts}/`,
+      message: `All ${purgeResult.deleted.projects} project(s) permanently deleted. Backup at backups/RESET_ALL_${ts}/`,
       ts: new Date().toISOString(),
     };
   }

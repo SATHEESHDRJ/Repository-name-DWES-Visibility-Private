@@ -3,6 +3,8 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User } from '../data/mock-store';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('system_admin')
@@ -139,12 +141,13 @@ export class AdminController {
   }
 
   @Post('projects/:code/hard-delete')
-  hardDelete(
-    @Param('code') code: string,
-    @Body('confirmed_code') confirmedCode?: string,
-  ) {
+  hardDelete(@Param('code') code: string, @CurrentUser() user: User) {
     if (!code || code.trim() === '') throw new BadRequestException('Project code required');
-    return this.svc.hardDeleteProject(code.trim(), (confirmedCode || code).trim());
+    return this.svc.hardDeleteProject(code.trim(), {
+      id: user.id,
+      full_name: user.full_name,
+      username: user.username,
+    });
   }
 
   // ── Hard Reset (system_admin only; backup-first; single project) ──────────

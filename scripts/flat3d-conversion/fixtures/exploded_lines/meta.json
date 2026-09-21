@@ -1,0 +1,5 @@
+{
+  "description": "Exploded lines: no INSERTs, rect outlines + TEXT tags approximate devices",
+  "insunits": 4,
+  "expected_status": "READY_FOR_REVIEW"
+}

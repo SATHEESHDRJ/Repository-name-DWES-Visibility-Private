@@ -20,7 +20,7 @@ const VALUE_CLASS: Record<KpiVariant, string> = {
 function enhanceKpiIcon(icon: ReactNode): ReactNode {
   if (!isValidElement(icon)) return icon;
   return cloneElement(icon as ReactElement<{ size?: number; filled?: boolean; className?: string }>, {
-    size: 22,
+    size: 18,
     filled: true,
     className: 'kpi-card-icon',
   });

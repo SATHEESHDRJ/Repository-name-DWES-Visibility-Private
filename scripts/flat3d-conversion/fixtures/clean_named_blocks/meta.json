@@ -1,0 +1,5 @@
+{
+  "description": "Clean named blocks: panel 800x600mm, MCB+CONTACTOR with ATTDEFs, schedule-matched, INSUNITS=4",
+  "insunits": 4,
+  "expected_status": "READY_FOR_REVIEW"
+}

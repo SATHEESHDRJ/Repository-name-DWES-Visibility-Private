@@ -1,0 +1,25 @@
+# npm audit report
+
+@fastify/middie  <=9.3.1
+Severity: critical
+Fastify Middie Middleware Path Bypass - https://github.com/advisories/GHSA-cxrg-g7r8-w69p
+@fastify/middie has Improper Path Normalization when Using Path-Scoped Middleware - https://github.com/advisories/GHSA-8p85-9qpw-fwgw
+@fastify/middie vulnerable to middleware authentication bypass in child plugin scopes - https://github.com/advisories/GHSA-72c6-fx6q-fr5w
+@fastify/middie vulnerable to middleware bypass via deprecated ignoreDuplicateSlashes option - https://github.com/advisories/GHSA-v9ww-2j6r-98q6
+fix available via `npm audit fix --force`
+Will install @nestjs/platform-fastify@12.0.3, which is a breaking change
+node_modules/@fastify/middie
+  @nestjs/platform-fastify  <=12.0.0-alpha.7
+  Depends on vulnerable versions of @fastify/middie
+  Depends on vulnerable versions of @nestjs/core
+  Depends on vulnerable versions of fastify
+  node_modules/@nestjs/platform-fastify
+
+@hono/node-server  <=1.19.14
+Severity: moderate
+@hono/node-server: Middleware bypass via repeated slashes in serveStatic - https://github.com/advisories/GHSA-92pp-h63x-v22m
+Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`) - https://github.com/advisories/GHSA-frvp-7c67-39w9
+fix available via `npm audit fix --force`
+Will install prisma@6.19.3, which is a breaking change
+node_modules/@hono/node-server
+  @prisma/dev  <=0.24.16

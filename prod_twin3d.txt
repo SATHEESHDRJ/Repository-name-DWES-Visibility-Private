@@ -1,0 +1,2 @@
+﻿{"projectCode":"DEMO_READY_001","frameId":"frame_1784567140663_0_unn4o","sceneScale":0.001,"panelMm":{"height":0,"width":0,"depth":200},"gaAssetSetId":null,"gaRevision":null,"mappingRevision":null,"scheduleRevision":null,"releaseStatus":null,"faces":[],"devices":[],"activeWire":null,"wires":[],"executionBySno":{},"legacy":true}
+HTTP:200

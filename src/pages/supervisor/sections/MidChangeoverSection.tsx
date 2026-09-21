@@ -25,6 +25,7 @@ export default function MidChangeoverSection() {
       <SupervisorSectionHeader
         title="Mid-Changeover"
         description="Initiate technician handovers for in-progress or paused panels without losing cable progress."
+        icon={<ArrowLeftRight size={16} strokeWidth={1.75} />}
       />
 
       {changeoverCount > 0 && (

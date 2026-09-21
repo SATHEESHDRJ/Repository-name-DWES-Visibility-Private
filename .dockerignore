@@ -1,22 +1,81 @@
+# DWES nginx/FE Docker build context — keep source + package files + public assets only
+.git
+.github
+.cursor
+.vscode
+.idea
+.claude
+
+# Dependencies & build outputs (reinstalled/rebuilt in image)
 node_modules
 backend/node_modules
 dist
 backend/dist
-.git
-.cursor
-.claude
-.smoke-shots
+**/dist
+**/.vite
+**/.turbo
+**/coverage
+*.tsbuildinfo
+
+# Logs & temp
 logs
+**/logs
 *.log
+tmp
+temp
+.tmp
+*.tmp
+
+# Local evidence / dumps / archives (not needed for FE nginx image)
+artifacts
+backups
+*.dump
+*.sql
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+*.7z
+
+# Screenshots / local smoke / credentials dumps
+**/screenshots
+**/viewport-screenshots
+login.json
+login_*.json
+*_login.json
+dir_login*.json
+tech_login*.json
+tmp-*-creds.json
+tmp-*-login.json
+
+# OCI / restore evidence that may be copied near tree (defensive)
+00_MANIFEST_AND_EVIDENCE
+01_IMMUTABLE_EXPORT
+08_LOCAL_RESTORE_WORKSPACE
+09_VERIFICATION_LOGS
+
+# Docker image archives
+*.tar
+dwes-*-images.tar
+dwes-demo-images.tar
+
+# Env secrets (never send to build context)
 .env
+.env.*
+!.env.example
 backend/.env
-**/.env
+backend/.env.*
 infra/docker/.env
-backend/data
-backend/uploads
-DWES-backup
-coverage
-.terraform
-**/.terraform
-*.tfstate
-*.tfstate.*
+
+# Test / playwright caches
+playwright-report
+test-results
+.nyc_output
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store

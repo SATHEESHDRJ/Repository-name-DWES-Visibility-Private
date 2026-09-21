@@ -1,36 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle, ArrowRight, Check, ClipboardCheck, ClipboardList,
-  ChevronDown, Eye, EyeOff, Fingerprint, Lock, ShieldCheck, Star, User, UserCog, Wrench, Zap,
+  AlertCircle, ArrowRight, Eye, EyeOff, Fingerprint, Lock, Palette, ShieldCheck, User,
 } from '../components/ui/icons';
-import type { ComponentType } from 'react';
-import type { IconProps } from '../components/ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { ROLE_ROUTES } from '../types';
 import type { UserRole } from '../types';
-import {
-  DEMO_CREDENTIALS, SHOW_DEMO_CREDENTIALS,
-  fetchDemoUsers, seedPasswordFor,
-  type DemoUser, type DemoCredential,
-} from '../data/demoCredentials';
 import EnrollBiometricModal from '../components/biometric/EnrollBiometricModal';
 import InstallAppButton from '../components/InstallAppButton';
+import BrowserFullscreenButton from '../components/BrowserFullscreenButton';
+import { THEME_SWITCHER_THEMES, useTheme } from '../components/layout/ThemeProvider';
+import DemoAccountSelector from '../components/login/DemoAccountSelector';
+import LoginHeroAtmosphere from '../components/login/LoginHeroAtmosphere';
+import LoginShowcaseFeatures from '../components/login/LoginShowcaseFeatures';
+import {
+  formatLoginErrorMessage,
+  LOGIN_SUPPORT_LINE,
+  LOGIN_TRUST_LINE,
+} from '../components/login/loginShowcaseContent';
 import {
   BIOMETRIC_DISMISSED_KEY,
   useBiometricAvailable,
   useBiometricLogin,
   useEnrollBiometric,
 } from '../hooks/useBiometric';
+import { postLoginDestination } from '../utils/safeReturnPath';
 
-const FEATURES = [
-  { Icon: Zap,           text: 'Real-time wiring progress tracking' },
-  { Icon: ClipboardList, text: 'Digital schedules replace paper' },
-  { Icon: ShieldCheck,   text: 'QA / QC verification & reports' },
-];
-
-/* ── Android-style live clock ── */
+/* ── Compact live clock (secondary utility) ── */
 function LiveClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -38,33 +35,39 @@ function LiveClock() {
     return () => clearInterval(id);
   }, []);
 
-  const [hh, mm, ss] = now
-    .toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    .split(':');
-  const dateStr = now.toLocaleDateString('en-GB', {
-    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+  const timeStr = now.toLocaleTimeString('en-GB', {
+    hour12: false, hour: '2-digit', minute: '2-digit',
   });
-
-  const colon = <span className="login-clock-colon">:</span>;
+  const weekday = now.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase();
+  const rest = now
+    .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    .toUpperCase();
 
   return (
-    <div className="login-clock-widget select-none" role="timer" aria-label={`Current time ${hh}:${mm}`}>
-      <span className="login-clock-live" aria-hidden="true">
-        <span className="login-clock-dot" />
-        Live
-      </span>
-      <div className="login-clock-time tabular-nums">
-        {hh}{colon}{mm}{colon}{ss}
+    <div
+      className="login-clock-widget login-clock-widget--rail select-none"
+      role="timer"
+      aria-label={`Current time ${timeStr}, ${weekday} ${rest}`}
+    >
+      <div className="login-clock-time tabular-nums" aria-hidden="true">{timeStr}</div>
+      <div className="login-clock-date" aria-hidden="true">
+        {weekday}
+        <span className="login-clock-sep" aria-hidden="true"> · </span>
+        {rest}
       </div>
-      <div className="login-clock-date">{dateStr}</div>
     </div>
   );
 }
 
-/* ── Main component ── */
-export default function LoginPage() {
+type LoginPageProps = {
+  returnToAfterLogin?: string;
+};
+
+/* ── Main component — auth logic frozen; presentation only changes ── */
+export default function LoginPage({ returnToAfterLogin }: LoginPageProps = {}) {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError, user } = useAuthStore();
+  const { theme, setTheme } = useTheme();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -76,38 +79,15 @@ export default function LoginPage() {
   const { loginWithBiometric, loading: bioLoading, error: bioError, clearError: clearBioError } = useBiometricLogin();
   const { enroll, enrolling, error: enrollError } = useEnrollBiometric();
   const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [, setDemoIdx] = useState(0);
-  const [demoUsers, setDemoUsers] = useState<DemoUser[] | null>(null);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [serverOk, setServerOk] = useState<boolean | null>(null);
-  const demoPopoverRef = useRef<HTMLDivElement>(null);
   const pendingUserIdRef = useRef<number | null>(null);
 
-  // DEV/testing only: fill username + password from the 5-slot legacy list
-  const fillDemo = (idx: number) => {
-    const c = DEMO_CREDENTIALS[idx];
-    if (!c) return;
-    setDemoIdx(idx);
-    setUsername(c.username);
-    setPassword(c.password);
-    clearError();
-    clearBioError();
-  };
-
-  // DEV/testing only: fill from the full API-fetched user list
-  const fillDemoUser = (username: string) => {
-    if (!username) return;
-    const pw = seedPasswordFor(username) ?? username; // seed pattern: password === username
-    setUsername(username);
-    setPassword(pw);
-    clearError();
-    clearBioError();
-  };
-
-  /* Redirect if already authenticated */
+  /* Redirect if already authenticated (unless returning to install deep link) */
   useEffect(() => {
-    if (user) navigate(ROLE_ROUTES[user.role as UserRole] ?? '/', { replace: true });
-  }, [user, navigate]);
+    if (!user) return;
+    const dest = postLoginDestination(returnToAfterLogin, ROLE_ROUTES[user.role as UserRole] ?? '/');
+    navigate(dest, { replace: true });
+  }, [user, navigate, returnToAfterLogin]);
 
   useEffect(() => {
     usernameRef.current?.focus();
@@ -121,28 +101,14 @@ export default function LoginPage() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    if (SHOW_DEMO_CREDENTIALS) {
-      // Try to fetch full demo user list from backend (DEMO_MODE=true required)
-      fetchDemoUsers().then(users => {
-        if (users && users.length > 0) {
-          setDemoUsers(users);
-          // Pre-fill with the first account (system_admin)
-          fillDemoUser(users[0].username);
-        } else if (DEMO_CREDENTIALS.length > 0) {
-          // Fallback: use the 5-slot legacy list
-          const c = DEMO_CREDENTIALS[0];
-          setUsername(c.username);
-          setPassword(c.password);
-        }
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const navigateToDashboard = useCallback(() => {
+  const navigateAfterLogin = useCallback(() => {
     const next = useAuthStore.getState().user;
-    if (next) navigate(ROLE_ROUTES[next.role as UserRole] ?? '/', { replace: true });
-  }, [navigate]);
+    if (!next) return;
+    const dest = postLoginDestination(returnToAfterLogin, ROLE_ROUTES[next.role as UserRole] ?? '/');
+    navigate(dest, { replace: true });
+  }, [navigate, returnToAfterLogin]);
+
+  const navigateToDashboard = navigateAfterLogin;
 
   const doLogin = async (u: string, p: string) => {
     clearError();
@@ -159,7 +125,7 @@ export default function LoginPage() {
         pendingUserIdRef.current = next.id;
         setShowEnrollModal(true);
       } else {
-        navigate(ROLE_ROUTES[next.role as UserRole] ?? '/', { replace: true });
+        navigateAfterLogin();
       }
     } catch { /* error surfaced through store */ }
   };
@@ -186,116 +152,128 @@ export default function LoginPage() {
     navigateToDashboard();
   };
 
-  useEffect(() => {
-    if (!demoOpen) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      const node = demoPopoverRef.current;
-      if (!node) return;
-      if (!node.contains(event.target as Node)) setDemoOpen(false);
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setDemoOpen(false);
-    };
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [demoOpen]);
+  const friendlyError = formatLoginErrorMessage(error);
+  const canSubmit = Boolean(username.trim() && password.trim()) && !isLoading && serverOk !== false;
 
   return (
     <>
-      <div className="login-page-root font-sans overflow-x-hidden" data-ui-polish="saas">
+      <div
+        id="main-content"
+        className="login-page-root login-page-root--master font-sans"
+        data-ui-polish="saas"
+        data-ui01-login-showcase="master"
+        tabIndex={-1}
+      >
 
         {/* ══════════════════════════════════════════════════════
-            LEFT PANEL — Brand / visual
+            LEFT PANEL — Premium product hero (no wiring diagram)
             ══════════════════════════════════════════════════════ */}
-        <aside className="login-panel-left lg:shrink-0" aria-label="Product overview">
+        <aside
+          className="login-panel-left login-panel-left--master"
+          aria-label="Product overview"
+          data-login-theme={theme}
+        >
+          <LoginHeroAtmosphere />
 
-          {/* Animated liquid mesh + flowing blobs (blue palette only) */}
-          <div className="login-aurora" aria-hidden="true" />
-          <div className="login-blob login-blob--morph w-[340px] h-[340px] bg-blue-500 opacity-[0.16] blur-[80px] top-[-70px] right-[-50px]" />
-          <div className="login-blob login-blob--morph w-[260px] h-[260px] bg-cyan-400 opacity-[0.11] blur-[70px] bottom-[10px] left-[-50px] [animation-delay:3.5s] [animation-direction:reverse]" />
-          <div className="login-blob login-blob--morph w-[220px] h-[220px] bg-sky-400 opacity-[0.10] blur-[60px] top-[42%] left-[34%] [animation-delay:6s]" />
-
-          <div className="login-panel-left-inner">
-            <span className="login-hero-badge">Enterprise Wiring Platform</span>
-
-            <div className="login-brand-lockup">
-              <div className="login-logo-wrap">
-                <img
-                  src="/logo-full.png"
-                  alt="Ingenious Network FZC"
-                />
-              </div>
-              <span className="leading-none min-w-0">
-                <span className="login-brand-name">INGENIOUS NETWORK FZC</span>
+          <div className="login-panel-left-inner login-panel-left-inner--master">
+            <div className="login-brand-lockup login-brand-lockup--official-stack">
+              <span className="login-brand-platform login-brand-platform--smart">
+                SMART WIRING PLATFORM
               </span>
-            </div>
-
-            <div>
-              <h2 className="login-brand-title">Digital Wiring Execution System</h2>
-              <p className="login-brand-tagline">Paperless. Precise. Real-Time.</p>
-            </div>
-
-            {/* Mobile / tablet portrait — compact feature chips */}
-            <div className="login-features-mobile" aria-label="Key features">
-              {FEATURES.map(({ Icon, text }) => (
-                <span key={text} className="login-feature-chip">
-                  <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
-                  {text.split(' ').slice(0, 3).join(' ')}
-                </span>
-              ))}
-            </div>
-
-            {/* Desktop — full feature list */}
-            <div className="login-features-list" aria-label="Key features">
-              {FEATURES.map(({ Icon, text }) => (
-                <div key={text} className="login-feature-row">
-                  <div className="login-feature-icon">
-                    <Icon size={20} strokeWidth={1.5} aria-hidden="true" />
-                  </div>
-                  <span className="login-feature-text">{text}</span>
+              <div className="login-brand-lockup login-brand-lockup--horizontal login-brand-lockup--official-inline">
+                <div className="login-logo-wrap login-logo-wrap--official login-logo-wrap--official-inline">
+                  <img
+                    src="/assets/ingenious-network-official-logo-color.png?v=20260725e"
+                    alt="Ingenious Network"
+                    width={352}
+                    height={198}
+                    decoding="async"
+                    fetchPriority="high"
+                  />
                 </div>
-              ))}
+                <span className="login-brand-text-col login-brand-text-col--accent min-w-0">
+                  <span className="login-brand-name">INGENIOUS NETWORK FZC</span>
+                  <span className="login-brand-descriptor">DIGITAL ENGINEERING PLATFORM</span>
+                </span>
+              </div>
             </div>
 
-            <p className="login-version">v1.0 · Local Development</p>
+            <div className="login-brand-copy login-brand-copy--master">
+              <p className="login-product-id">DWES</p>
+              <h2 className="login-brand-title">DIGITAL WIRING EXECUTION SYSTEM</h2>
+              <p className="login-brand-tagline">Paperless. Precise. Real-Time.</p>
+              <p className="login-brand-support">{LOGIN_SUPPORT_LINE}</p>
+            </div>
+
+            <LoginShowcaseFeatures />
+
+            <p className="login-trust-line">{LOGIN_TRUST_LINE}</p>
+
+            <p className="login-showcase-footer">
+              <span>© 2026 Ingenious Network FZC</span>
+              <span aria-hidden="true">·</span>
+              <span>DWES</span>
+            </p>
           </div>
         </aside>
 
         {/* ══════════════════════════════════════════════════════
-            RIGHT PANEL — Login form
+            RIGHT PANEL — Authentication environment
             ══════════════════════════════════════════════════════ */}
-        <main className="login-panel-right flex-1 min-w-0">
+        <main className="login-panel-right login-panel-right--master min-w-0">
 
-          <header className="login-panel-topbar items-start gap-3">
-            <InstallAppButton />
-            <LiveClock />
+          <header className="login-panel-topbar">
+            <div
+              className="login-utility-rail"
+              role="toolbar"
+              aria-label="Login utilities"
+            >
+              <div className="login-theme-switcher" role="group" aria-label="Appearance">
+                {THEME_SWITCHER_THEMES.map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`login-theme-icon-btn${theme === t.id ? ' is-active' : ''}`}
+                    onClick={() => setTheme(t.id)}
+                    aria-label={`Use ${t.label} theme`}
+                    aria-pressed={theme === t.id}
+                    data-tooltip={t.label}
+                  >
+                    {t.id === 'ingenious' ? (
+                      <img className="login-theme-brand-icon" src="/logo-icon.png" alt="" aria-hidden="true" width={22} height={22} />
+                    ) : (
+                      <Palette size={18} strokeWidth={1.75} aria-hidden="true" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="login-panel-topbar-actions">
+                <InstallAppButton />
+                <BrowserFullscreenButton />
+              </div>
+              <span className="login-utility-divider" aria-hidden="true" />
+              <LiveClock />
+            </div>
           </header>
 
           <div className="login-panel-body">
-            <div className="login-card-enter">
+            <div className="login-card-wrap">
 
-              <article className="login-card-surface login-card-surface--modern">
+              <article className="login-card-surface login-card-surface--master">
 
                 <header className="login-card-header">
                   <div className="login-card-mark" aria-hidden="true">
-                    <Fingerprint size={24} strokeWidth={1.5} />
+                    <Fingerprint size={22} strokeWidth={1.5} />
                   </div>
                   <div className="login-card-intro">
                     <h1 className="login-heading">Welcome back</h1>
-                    <p className="login-subtext">Sign in to Digital Wiring Execution System</p>
+                    <p className="login-subtext">Sign in to continue to DWES</p>
                   </div>
                 </header>
 
-                <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="login-form" noValidate>
 
-                  <div className="login-field login-row-enter" style={{ animationDelay: '0.05s',}}>
+                  <div className="login-field">
                     <label htmlFor="username" className="login-label">Username</label>
                     <div className="login-input-wrap">
                       <User size={18} strokeWidth={1.5} className="login-input-icon" aria-hidden="true" />
@@ -308,11 +286,13 @@ export default function LoginPage() {
                         onChange={e => { setUsername(e.target.value); clearError(); clearBioError(); }}
                         placeholder="Enter your username"
                         autoComplete="username"
+                        aria-invalid={Boolean(error) || undefined}
+                        aria-describedby={error ? 'login-error-msg' : undefined}
                       />
                     </div>
                   </div>
 
-                  <div className="login-field login-row-enter" style={{ animationDelay: '0.1s',}}>
+                  <div className="login-field">
                     <label htmlFor="password" className="login-label">Password</label>
                     <div className="login-input-wrap">
                       <Lock size={18} strokeWidth={1.5} className="login-input-icon" aria-hidden="true" />
@@ -324,12 +304,14 @@ export default function LoginPage() {
                         onChange={e => { setPassword(e.target.value); clearError(); }}
                         placeholder="Enter your password"
                         autoComplete="current-password"
+                        aria-invalid={Boolean(error) || undefined}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPass(v => !v)}
                         className="login-input-toggle"
                         aria-label={showPass ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPass}
                       >
                         {showPass
                           ? <EyeOff size={18} strokeWidth={1.5} />
@@ -343,90 +325,55 @@ export default function LoginPage() {
                     <div className="login-error login-error--offline" role="status" aria-live="polite">
                       <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
                       <span>
-                        <strong>Server is still starting.</strong>{' '}
-                        Automatic startup is in progress after system restart — this page will connect when the backend is ready.
+                        <strong>DWES backend is not available.</strong>{' '}
+                        Start DWES manually when required. This page will reconnect automatically when the backend is ready.
                       </span>
                     </div>
                   )}
 
                   {error && (
-                    <div className="login-error" role="alert">
+                    <div id="login-error-msg" className="login-error" role="alert">
                       <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
-                      <span>{error}</span>
+                      <span className="login-error-text">
+                        {friendlyError.split('\n').map((line, i) => (
+                          <span key={i} className={i === 0 ? 'login-error-title' : 'login-error-detail'}>
+                            {line}
+                          </span>
+                        ))}
+                      </span>
                     </div>
                   )}
 
                   <button
                     type="submit"
-                    disabled={!username.trim() || !password.trim() || isLoading || serverOk === false}
-                    className="login-btn login-row-enter"
-                    style={{ animationDelay: '0.15s', minHeight: '48px',}}
+                    disabled={!canSubmit}
+                    className="login-btn"
+                    aria-busy={isLoading || undefined}
                   >
                     {isLoading ? (
-                      <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true" />
+                      <>
+                        <span className="login-btn-spinner" aria-hidden="true" />
+                        <span>Signing in…</span>
+                      </>
                     ) : (
                       <>
-                        Sign In
+                        SIGN IN
                         <ArrowRight size={18} strokeWidth={2} aria-hidden="true" />
                       </>
                     )}
                   </button>
                 </form>
 
-                {/* ── DEV/testing only: choosable demo account (prefills the fields above) ── */}
-                {SHOW_DEMO_CREDENTIALS && (demoUsers !== null || DEMO_CREDENTIALS.length > 0) && (
-                  <div className="login-section">
-                    <div className="login-section-head">
-                      <span className="login-section-label">Demo account</span>
-                      <span className="login-dev-badge">DEV</span>
-                    </div>
+                {import.meta.env.DEV && <DemoAccountSelector />}
 
-                    <div className="login-demo-popover-wrap" ref={demoPopoverRef}>
-                      <button
-                        type="button"
-                        className="login-demo-trigger"
-                        aria-haspopup="dialog"
-                        aria-controls="login-demo-popover"
-                        onClick={() => setDemoOpen(v => !v)}
-                      >
-                        <span className="login-demo-trigger-text">Demo Accounts</span>
-                        <span className="login-demo-trigger-current">@{username}</span>
-                        <ChevronDown
-                          size={16}
-                          strokeWidth={2.2}
-                          className={`login-demo-trigger-caret ${demoOpen ? 'is-open' : ''}`}
-                          aria-hidden="true"
-                        />
-                      </button>
+                <p className="login-support-note login-support-note--secure">
+                  <ShieldCheck size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    Accounts are issued by the <strong>System Administrator</strong>. Contact your
+                    administrator for access or password reset.
+                  </span>
+                </p>
 
-                      {demoOpen && (
-                        <div id="login-demo-popover" className="login-demo-popover" role="dialog" aria-label="Select demo account">
-                          {demoUsers !== null ? (
-                            <DemoUserSelect
-                              users={demoUsers}
-                              onSelect={(value) => {
-                                fillDemoUser(value);
-                                setDemoOpen(false);
-                              }}
-                              currentUsername={username}
-                            />
-                          ) : (
-                            <DemoCredentialCards
-                              creds={DEMO_CREDENTIALS}
-                              currentUsername={username}
-                              onSelect={(idx) => {
-                                fillDemo(idx);
-                                setDemoOpen(false);
-                              }}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Fingerprint login — visible only when device has enrolled credential ── */}
                 {bioAvailable && bioEnrolled && (
                   <div className="login-section">
                     {bioError === 'not-enrolled' ? (
@@ -444,12 +391,12 @@ export default function LoginPage() {
                         )}
                         <button
                           type="button"
-                          onClick={() => { clearBioError(); loginWithBiometric(username.trim() || undefined); }}
+                          onClick={() => { clearBioError(); loginWithBiometric(username.trim() || undefined, returnToAfterLogin); }}
                           disabled={bioLoading}
                           className="login-bio-btn"
                         >
                           {bioLoading ? (
-                            <div className="w-5 h-5 rounded-full border-2 border-blue-300 border-t-blue-600 animate-spin" aria-hidden="true" />
+                            <span className="login-btn-spinner login-btn-spinner--accent" aria-hidden="true" />
                           ) : (
                             <>
                               <Fingerprint size={20} strokeWidth={1.5} aria-hidden="true" />
@@ -467,7 +414,7 @@ export default function LoginPage() {
           </div>
 
           <footer className="login-panel-footer">
-            <span className="login-panel-footer-text">v1.0 · Local Development</span>
+            <span className="login-panel-footer-text">DWES</span>
           </footer>
         </main>
       </div>
@@ -481,169 +428,5 @@ export default function LoginPage() {
         />
       )}
     </>
-  );
-}
-
-// ── Demo account cards ─────────────────────────────────────────────────────────
-
-interface RoleMeta { label: string; short: string; Icon: ComponentType<Omit<IconProps, 'name'>>; }
-
-const ROLE_META: Record<string, RoleMeta> = {
-  system_admin:      { label: 'System Admin',           short: 'Admin',      Icon: UserCog },
-  ops_director:      { label: 'Operations Director',     short: 'Director',   Icon: Star },
-  prod_supervisor:   { label: 'Production Supervisor',   short: 'Supervisor', Icon: ClipboardCheck },
-  qaqc_engineer:     { label: 'QA / QC Engineer',        short: 'QA / QC',    Icon: ShieldCheck },
-  wiring_technician: { label: 'Wiring Technician',       short: 'Technician', Icon: Wrench },
-};
-
-const ROLE_ORDER = ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'];
-
-// Map the legacy 5-slot fallback labels onto the same role visual system.
-const LABEL_ROLE: Record<string, string> = {
-  Admin: 'system_admin', Director: 'ops_director', Supervisor: 'prod_supervisor',
-  QA: 'qaqc_engineer', Technician: 'wiring_technician',
-};
-
-// Seed full names spell numbers out ("Director Two"); the UI shows digits ("Director 2").
-const NUMBER_WORDS: Record<string, string> = {
-  one: '1', two: '2', three: '3', four: '4', five: '5',
-  six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
-};
-
-const displayName = (name: string) =>
-  name.replace(
-    /\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
-    w => NUMBER_WORDS[w.toLowerCase()],
-  );
-
-/** Two-character avatar text: initials for real names, letter+number for seed usernames. */
-function avatarText(fullName: string, username: string): string {
-  if (fullName && fullName !== '[TBD]') {
-    const parts = fullName.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? '';
-    const second = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0]?.[1] ?? '');
-    return (first + second).toUpperCase();
-  }
-  const m = username.match(/^([a-zA-Z]+)(\d+)$/);
-  if (m) return (m[1][0] + m[2]).toUpperCase();
-  return username.slice(0, 2).toUpperCase();
-}
-
-function DemoAccountCard({
-  role, name, username, selected, chip, onSelect,
-}: {
-  role: string;
-  name: string;
-  username: string;
-  selected: boolean;
-  chip?: boolean;
-  onSelect: () => void;
-}) {
-  const meta = ROLE_META[role] ?? { label: role, short: role, Icon: User };
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="login-demo-card"
-      data-role={role}
-      data-selected={selected || undefined}
-    >
-      <span className="login-demo-avatar" data-role={role} aria-hidden="true">
-        {avatarText(name === username ? '' : name, username)}
-      </span>
-      <span className="login-demo-info">
-        <span className="login-demo-name">{name}</span>
-        <span className="login-demo-username">@{username}</span>
-      </span>
-      {chip && (
-        <span className="login-demo-role-chip" data-role={role}>
-          <meta.Icon size={11} strokeWidth={2} aria-hidden="true" />
-          {meta.short}
-        </span>
-      )}
-      <span className="login-demo-check" aria-hidden="true">
-        <Check size={14} strokeWidth={3} />
-      </span>
-    </button>
-  );
-}
-
-function DemoUserSelect({
-  users,
-  onSelect,
-  currentUsername,
-}: {
-  users: DemoUser[];
-  onSelect: (username: string) => void;
-  currentUsername: string;
-}) {
-  const grouped = ROLE_ORDER.reduce<Record<string, DemoUser[]>>((acc, role) => {
-    const group = users.filter(u => u.role === role);
-    if (group.length) acc[role] = group;
-    return acc;
-  }, {});
-
-  return (
-    <div className="login-demo-panel">
-      <div className="login-demo-scroll">
-        {Object.entries(grouped).map(([role, group]) => {
-          const meta = ROLE_META[role] ?? { label: role, short: role, Icon: User };
-          return (
-            <div key={role} className="login-demo-group">
-              <div className="login-demo-group-head">
-                <span className="login-demo-group-icon" data-role={role} aria-hidden="true">
-                  <meta.Icon size={12} strokeWidth={2} />
-                </span>
-                <span className="login-demo-group-label">{meta.label}</span>
-                <span className="login-demo-group-count">{group.length}</span>
-              </div>
-              {group.map(u => {
-                const name = u.full_name && u.full_name !== '[TBD]'
-                  ? displayName(u.full_name)
-                  : u.username;
-                return (
-                  <DemoAccountCard
-                    key={u.username}
-                    role={role}
-                    name={name}
-                    username={u.username}
-                    selected={u.username === currentUsername}
-                    onSelect={() => onSelect(u.username)}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function DemoCredentialCards({
-  creds,
-  currentUsername,
-  onSelect,
-}: {
-  creds: DemoCredential[];
-  currentUsername: string;
-  onSelect: (idx: number) => void;
-}) {
-  return (
-    <div className="login-demo-panel">
-      <div className="login-demo-scroll login-demo-scroll--compact">
-        {creds.map((c, i) => (
-          <DemoAccountCard
-            key={c.label}
-            role={LABEL_ROLE[c.label] ?? 'system_admin'}
-            name={c.label}
-            username={c.username}
-            selected={c.username === currentUsername}
-            chip
-            onSelect={() => onSelect(i)}
-          />
-        ))}
-      </div>
-    </div>
   );
 }

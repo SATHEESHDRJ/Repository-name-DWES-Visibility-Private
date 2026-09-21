@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Modal from '../Modal';
-import PdfDocumentViewer, { asPdfBlob } from '../ui/PdfDocumentViewer';
+import { asPdfBlob } from '../ui/FileViewer';
+import { lazy, Suspense } from 'react';
+const PdfDocumentViewer = lazy(() => import('../ui/PdfDocumentViewer'));
 import { projectsApi } from '../../services/api';
 import { sanitizeFilenameSegment } from '../../utils/reportFilename';
-import { Download } from '../ui/icons';
+import { Download, FileText } from '../ui/icons';
+import { DwesLoadingCenter } from '../ui/DwesLoadingIndicator';
 
 interface ProjectPdfPreviewModalProps {
   projectCode: string;
@@ -62,12 +65,13 @@ export default function ProjectPdfPreviewModal({
   return (
     <Modal
       title={title}
+      icon={<FileText />}
       onClose={onClose}
       size={modalFullscreen ? 'fullscreen' : 'team'}
       bodyClassName="modal-body-flush"
       footer={(
         <>
-          <button type="button" className="btn-secondary" onClick={download} disabled={!blob}>
+          <button type="button" className="btn-secondary dwes-report-action-btn dwes-report-export-btn" onClick={download} disabled={!blob}>
             <Download size={16} />
             <span>Download PDF</span>
           </button>
@@ -78,15 +82,21 @@ export default function ProjectPdfPreviewModal({
         </>
       )}
     >
-      <PdfDocumentViewer
-        blob={blob}
-        title={title}
-        loading={loading}
-        error={error}
-        onRetry={retry}
-        downloadFilename={downloadFilename}
-        className="pdf-viewer--modal"
-      />
+      <Suspense fallback={(
+        <div className="pdf-viewer--modal flex items-center justify-center p-8">
+          <DwesLoadingCenter label="Loading PDF viewer…" className="min-h-0" />
+        </div>
+      )}>
+        <PdfDocumentViewer
+          blob={blob}
+          title={title}
+          loading={loading}
+          error={error}
+          onRetry={retry}
+          downloadFilename={downloadFilename}
+          className="pdf-viewer--modal"
+        />
+      </Suspense>
     </Modal>
   );
 }

@@ -2,12 +2,16 @@ import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
+import { runPgDumpCustomFormat, pgDumpFailureDetail } from '../common/pg-dump.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { MockStore } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { WebAuthnStoreService } from '../auth/webauthn-store.service';
-import { CANONICAL_SEED_PROJECTS } from '../common/seed-projects';
 import { clearErrorRingBuffer } from '../admin/admin.service';
+import {
+  deleteProjectScopedDatabaseRows,
+  purgeProjectMemoryStores,
+} from '../common/project-delete.util';
 
 const HARD_RESET_PHRASE = 'HARD RESET DB';
 
@@ -21,7 +25,6 @@ export class DevService {
   async hardResetPrecheck() {
     const uploadBase = this._resolveUploadDir();
     const projects = await this.prisma.projects.findMany({ select: { code: true } });
-    const codes = projects.map(p => p.code);
 
     const [
       users,
@@ -83,7 +86,7 @@ export class DevService {
         mock_store_frames: MockStore.frames.length,
         mock_store_drawings: MockStore.drawings.length,
       },
-      reseed_projects: CANONICAL_SEED_PROJECTS.length,
+      reseed_projects: 0,
       backup_note:
         'Full project backup (Backup/YYYY-MM-DD_HH-mm) + pg_dump of WiringSchemeDB + uploads/<CODE>/ archive to uploads/backups/ before wipe. User accounts preserved; session log and WebAuthn credentials cleared.',
       confirm_phrase: HARD_RESET_PHRASE,
@@ -113,21 +116,9 @@ export class DevService {
     const dumpFile = path.join(backupDir, `HARD_RESET_DB_${ts}.dump`);
     const archiveDir = path.join(backupDir, `HARD_RESET_DB_${ts}`);
 
-    const pgDumpExe = process.env.PG_DUMP_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe';
-    const pgHost = process.env.PGHOST || 'localhost';
-    const pgPort = process.env.PGPORT || '5432';
-    const pgUser = process.env.PGUSER || 'postgres';
-    const pgPass = process.env.PGPASSWORD || 'postgres';
-    const pgDb = process.env.PGDATABASE || 'WiringSchemeDB';
-
-    const dumpResult = spawnSync(
-      pgDumpExe,
-      ['-h', pgHost, '-p', pgPort, '-U', pgUser, '-F', 'c', '-f', dumpFile, pgDb],
-      { env: { ...process.env, PGPASSWORD: pgPass }, timeout: 120_000 },
-    );
-    if (dumpResult.status !== 0) {
-      const errMsg = dumpResult.stderr?.toString() || dumpResult.error?.message || 'unknown';
-      return { error: `pg_dump failed — aborting reset. Details: ${errMsg.slice(0, 300)}` };
+    const dumpResult = runPgDumpCustomFormat(dumpFile);
+    if (!dumpResult.ok) {
+      return { error: `pg_dump failed — aborting reset. Details: ${pgDumpFailureDetail(dumpResult)}` };
     }
 
     const projects = await this.prisma.projects.findMany({ select: { code: true } });
@@ -146,24 +137,28 @@ export class DevService {
     }
 
     const fkWarnings: string[] = [];
-    let inspDel = { count: 0 };
-    let assnDel = { count: 0 };
-    let hashDel = { count: 0 };
-    let auditDel = { count: 0 };
-    let sessionDel = { count: 0 };
-    let projDel = { count: 0 };
+    let deleted = {
+      projects: 0,
+      panel_inspections: 0,
+      tech_assignments: 0,
+      file_hashes: 0,
+      tech_audit_log: 0,
+      session_log: 0,
+    };
     let usersReset = { count: 0 };
-    let projectsReseeded = 0;
 
     try {
-      [inspDel, assnDel, hashDel, auditDel, sessionDel, projDel] = await this.prisma.$transaction([
-        this.prisma.panel_inspections.deleteMany({}),
-        this.prisma.tech_assignments.deleteMany({}),
-        this.prisma.file_hashes.deleteMany({}),
-        this.prisma.tech_audit_log.deleteMany({}),
-        this.prisma.session_log.deleteMany({}),
-        this.prisma.projects.deleteMany({}),
-      ]);
+      const purgeCounts = await deleteProjectScopedDatabaseRows(this.prisma, {
+        includeProjectRow: true,
+      });
+      deleted = {
+        projects: purgeCounts.projects,
+        panel_inspections: purgeCounts.panel_inspections,
+        tech_assignments: purgeCounts.tech_assignments,
+        file_hashes: purgeCounts.file_hashes,
+        tech_audit_log: purgeCounts.tech_audit_log,
+        session_log: purgeCounts.session_log,
+      };
 
       const userResetResult = await this.prisma.users.updateMany({
         data: {
@@ -172,13 +167,6 @@ export class DevService {
         },
       });
       usersReset = { count: userResetResult.count };
-
-      for (const p of CANONICAL_SEED_PROJECTS) {
-        await this.prisma.projects.create({
-          data: { ...p, is_active: true },
-        });
-        projectsReseeded++;
-      }
     } catch (e: any) {
       fkWarnings.push(e?.message || 'Transaction failed — partial state possible');
       return {
@@ -187,9 +175,7 @@ export class DevService {
       };
     }
 
-    MockStore.frames = [];
-    MockStore.drawings = [];
-    MockStore.directorReports = [];
+    purgeProjectMemoryStores();
 
     const webauthnCleared = this.webauthnStore.clearAll();
     clearErrorRingBuffer();
@@ -209,24 +195,17 @@ export class DevService {
       success: true,
       backup: { dump: dumpFile, archive: archiveDir },
       deleted: {
-        projects: projDel.count,
-        inspections: inspDel.count,
-        assignments: assnDel.count,
-        file_hashes: hashDel.count,
-        audit_logs: auditDel.count,
-        session_logs: sessionDel.count,
+        ...deleted,
+        engineering_tables_cleared: true,
         upload_folders: foldersRemoved,
         webauthn_credentials: webauthnCleared,
         mock_store_cleared: true,
       },
-      reseeded: {
-        projects: projectsReseeded,
-        codes: CANONICAL_SEED_PROJECTS.map(p => p.code),
-      },
+      reseeded: { projects: 0, codes: [] as string[] },
       users_preserved: usersReset.count,
       fk_warnings: fkWarnings,
       message:
-        'DWES hard reset complete. All projects, wiring data, uploads, session log, and WebAuthn credentials cleared. Canonical seed projects restored.',
+        'DWES hard reset complete. All projects, wiring data, uploads, session log, and WebAuthn credentials cleared. No projects are reseeded — create new projects in the app.',
       ts: new Date().toISOString(),
       client_reload_required: true,
     };

@@ -5,7 +5,7 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal
 import { projectsApi, uploadApi } from '../../services/api';
 import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import {
-  FileText, SendHorizonal, Upload, Trash2, ExternalLink, CheckCircle, FileSpreadsheet,
+  FileText, SendHorizonal, Upload, Trash2, ExternalLink, CheckCircle, FileSpreadsheet, Check,
 } from '../ui/icons';
 
 type FileRecord = {
@@ -64,16 +64,16 @@ function UploadSection({
   };
 
   return (
-    <section className={`rounded-[12px] border ${accentBorder} bg-white overflow-hidden`}>
+    <section className={`rounded-[12px] border ${accentBorder} bg-[var(--t-surface-white)] overflow-hidden`}>
       <div className={`flex items-start gap-3 px-4 py-3.5 ${accentBg} border-b ${accentBorder}`}>
         <div className={`flex items-center justify-center w-10 h-10 rounded-[10px] shrink-0 ${accentIconBg}`}>
           {icon}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className={`text-[14px] font-bold ${accentText}`}>{title}</h3>
-          <p className="text-[12px] text-slate-600 mt-0.5 leading-snug">{subtitle}</p>
+          <p className="text-[12px] text-muted mt-0.5 leading-snug">{subtitle}</p>
         </div>
-        <span className="text-[11px] font-semibold text-slate-500 tabular-nums shrink-0 pt-1">
+        <span className="text-[11px] font-semibold text-muted tabular-nums shrink-0 pt-1">
           {files.length} file{files.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -103,10 +103,10 @@ function UploadSection({
               : <Upload size={20} strokeWidth={1.5} />
             }
           </div>
-          <span className="text-[13px] font-semibold text-slate-700">
+          <span className="text-[13px] font-semibold text-secondary">
             {uploading ? 'Uploading…' : 'Drop file or click to browse'}
           </span>
-          <span className="text-[11px] text-slate-500">{hint}</span>
+          <span className="text-[11px] text-muted">{hint}</span>
           <input
             ref={fileRef}
             type="file"
@@ -120,20 +120,20 @@ function UploadSection({
         {error && <div className="form-error text-[12px]">{error}</div>}
 
         {files.length === 0 ? (
-          <p className="text-center text-[12px] text-slate-500 py-1">No files uploaded yet.</p>
+          <p className="text-center text-[12px] text-muted py-1">No files uploaded yet.</p>
         ) : (
           <ul className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-0.5">
             {files.map(f => (
               <li
                 key={f.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-slate-200 transition-colors"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] border border-slate-100 bg-slate-50/60 hover:bg-[var(--t-surface-white)] hover:border-slate-200 transition-colors"
               >
                 <FileText size={18} className="text-red-500 shrink-0" strokeWidth={1.5} />
                 <div className="min-w-0 flex-1">
                   <div className="modal-filename" title={f.original_name}>
                     {f.original_name}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-muted">
                     {formatSize(f.size)} · {new Date(f.uploaded_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -143,7 +143,7 @@ function UploadSection({
                     title="View file"
                     disabled={viewingId === f.id}
                     onClick={() => onView(f)}
-                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-[var(--t-surface-white)] text-muted hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50"
                   >
                     {viewingId === f.id
                       ? <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin block" />
@@ -154,7 +154,7 @@ function UploadSection({
                     type="button"
                     title="Delete file"
                     onClick={() => onDelete(f)}
-                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-white text-slate-500 hover:text-red-600 hover:border-red-200 transition-colors"
+                    className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 bg-[var(--t-surface-white)] text-muted hover:text-red-600 hover:border-red-200 transition-colors"
                   >
                     <Trash2 size={16} strokeWidth={1.5} />
                   </button>
@@ -290,17 +290,19 @@ export default function UnifiedUploadModal({
   return (
     <Modal
       title="Upload Files"
+      icon={<Upload />}
       onClose={onClose}
       size="lg"
       footer={(
         <button type="button" onClick={onClose} className="pj-btn-primary">
+          <Check size={16} />
           Done
         </button>
       )}
     >
       <div className="flex flex-col gap-5">
-        <p className="text-[13px] text-slate-600 leading-relaxed">
-          Project <span className="font-mono font-semibold text-slate-800">{projectCode}</span>
+        <p className="text-[13px] text-muted leading-relaxed">
+          Project <span className="font-mono font-semibold text-primary">{projectCode}</span>
           {' '}— manage PDF documents and director reports independently.
         </p>
 

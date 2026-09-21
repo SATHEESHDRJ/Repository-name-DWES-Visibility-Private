@@ -1,0 +1,577 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as ExcelJS from 'exceljs';
+
+/** Technician Digital Wiring Schedule field corrections — file store only (no Prisma schema change). */
+
+export const CORRECTABLE_FIELDS = [
+  'color',
+  'size',
+  'length',
+  'source',
+  'destination',
+  'source_device',
+  'source_terminal',
+  'dest_device',
+  'dest_terminal',
+  'ferrule',
+  'dest_ferrule',
+  'ref',
+  'sign',
+  'remarks',
+  'path',
+  'rack',
+  'panel',
+] as const;
+
+export type CorrectableField = (typeof CORRECTABLE_FIELDS)[number];
+
+export const CORRECTABLE_FIELD_LABELS: Record<CorrectableField, string> = {
+  color: 'Cable colour',
+  size: 'Cable size',
+  length: 'Cable length',
+  source: 'Source (equipment:terminal)',
+  destination: 'Destination (equipment:terminal)',
+  source_device: 'Source equipment',
+  source_terminal: 'Source terminal',
+  dest_device: 'Destination equipment',
+  dest_terminal: 'Destination terminal',
+  ferrule: 'Source ferrule',
+  dest_ferrule: 'Destination ferrule',
+  ref: 'Reference',
+  sign: 'Sign mark',
+  remarks: 'Remarks',
+  path: 'Path',
+  rack: 'Rack',
+  panel: 'Panel',
+};
+
+export interface WireCorrectionRecord {
+  id: string;
+  project_code: string;
+  panel_name: string;
+  frame_id: string;
+  cable_index: number;
+  wire_number: string | number;
+  field: CorrectableField;
+  field_label: string;
+  original_value: string;
+  corrected_value: string;
+  reason: string;
+  technician_id: number;
+  technician_name: string;
+  corrected_at: string;
+}
+
+interface FrameCorrectionsFile {
+  project_code: string;
+  frame_id: string;
+  panel_name: string;
+  updated_at: string;
+  records: WireCorrectionRecord[];
+}
+
+function uploadDir() {
+  return process.env.UPLOAD_DIR
+    ? path.isAbsolute(process.env.UPLOAD_DIR)
+      ? process.env.UPLOAD_DIR
+      : path.join(process.cwd(), process.env.UPLOAD_DIR)
+    : path.join(process.cwd(), 'uploads');
+}
+
+function correctionsDir(projectCode: string) {
+  return path.join(uploadDir(), projectCode, 'Corrections');
+}
+
+function frameCorrectionsPath(projectCode: string, frameId: string) {
+  const safe = frameId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(correctionsDir(projectCode), `${safe}-corrections.json`);
+}
+
+function registerPath(projectCode: string) {
+  return path.join(correctionsDir(projectCode), 'correction-register.xlsx');
+}
+
+function correctedWorkbookPath(projectCode: string, frameId: string) {
+  const safe = frameId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(correctionsDir(projectCode), `${safe}_corrected.xlsx`);
+}
+
+function ensureDir(projectCode: string) {
+  const dir = correctionsDir(projectCode);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function readFrameFile(projectCode: string, frameId: string): FrameCorrectionsFile {
+  const p = frameCorrectionsPath(projectCode, frameId);
+  if (!fs.existsSync(p)) {
+    return {
+      project_code: projectCode,
+      frame_id: frameId,
+      panel_name: '',
+      updated_at: new Date().toISOString(),
+      records: [],
+    };
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf8')) as FrameCorrectionsFile;
+    if (!parsed || !Array.isArray(parsed.records)) {
+      return {
+        project_code: projectCode,
+        frame_id: frameId,
+        panel_name: '',
+        updated_at: new Date().toISOString(),
+        records: [],
+      };
+    }
+    return parsed;
+  } catch {
+    return {
+      project_code: projectCode,
+      frame_id: frameId,
+      panel_name: '',
+      updated_at: new Date().toISOString(),
+      records: [],
+    };
+  }
+}
+
+function writeFrameFile(data: FrameCorrectionsFile) {
+  ensureDir(data.project_code);
+  fs.writeFileSync(frameCorrectionsPath(data.project_code, data.frame_id), JSON.stringify(data, null, 2), 'utf8');
+}
+
+const REGISTER_HEADERS = [
+  'Project',
+  'Panel',
+  'Wire number',
+  'Field corrected',
+  'Original value',
+  'Corrected value',
+  'Technician comment',
+  'Technician name',
+  'Correction date and time',
+] as const;
+
+async function appendRegisterRow(record: WireCorrectionRecord) {
+  ensureDir(record.project_code);
+  const p = registerPath(record.project_code);
+  const wb = new ExcelJS.Workbook();
+  let sheet: ExcelJS.Worksheet;
+  if (fs.existsSync(p)) {
+    await wb.xlsx.readFile(p);
+    sheet = wb.worksheets[0] || wb.addWorksheet('Corrections');
+    if (sheet.rowCount === 0) {
+      sheet.addRow([...REGISTER_HEADERS]);
+      sheet.getRow(1).font = { bold: true };
+    }
+  } else {
+    sheet = wb.addWorksheet('Corrections');
+    sheet.addRow([...REGISTER_HEADERS]);
+    sheet.getRow(1).font = { bold: true };
+  }
+  sheet.addRow([
+    record.project_code,
+    record.panel_name,
+    record.wire_number,
+    record.field_label,
+    record.original_value,
+    record.corrected_value,
+    record.reason,
+    record.technician_name,
+    record.corrected_at,
+  ]);
+  await wb.xlsx.writeFile(p);
+}
+
+function normalizeHeaderKey(header: string): string {
+  return String(header ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function isDestFerruleHeader(header: string): boolean {
+  const key = normalizeHeaderKey(header);
+  return key === 'IECFERRB' || key === 'FERRB' || key.endsWith('FERRB');
+}
+
+function isSourceFerruleHeader(header: string): boolean {
+  const key = normalizeHeaderKey(header);
+  return key === 'IECFERRA' || key === 'FERRA' || key.endsWith('FERRA') || key === 'FERRULE';
+}
+
+/** Resolve current display value for a correctable field from a cable (+ optional mapping). */
+export function readCableFieldValue(
+  cable: Record<string, unknown>,
+  field: CorrectableField,
+  mapping: Record<string, string> = {},
+): string {
+  if (field === 'dest_ferrule') {
+    const raw = (cable._raw && typeof cable._raw === 'object')
+      ? (cable._raw as Record<string, string>)
+      : {};
+    for (const [header, value] of Object.entries(raw)) {
+      if (isDestFerruleHeader(header) && String(value ?? '').trim()) return String(value).trim();
+    }
+    if (typeof cable.dest_ferrule === 'string' && cable.dest_ferrule.trim()) {
+      return cable.dest_ferrule.trim();
+    }
+    return '';
+  }
+  if (field === 'ferrule') {
+    const mapped = mapping.ferrule;
+    const raw = (cable._raw && typeof cable._raw === 'object')
+      ? (cable._raw as Record<string, string>)
+      : {};
+    if (mapped && raw[mapped] != null && String(raw[mapped]).trim()) return String(raw[mapped]).trim();
+    for (const [header, value] of Object.entries(raw)) {
+      if (isSourceFerruleHeader(header) && String(value ?? '').trim()) return String(value).trim();
+    }
+  }
+  const direct = cable[field];
+  if (direct != null && String(direct).trim()) return String(direct).trim();
+  const mappedHeader = mapping[field];
+  if (mappedHeader && cable._raw && typeof cable._raw === 'object') {
+    const raw = cable._raw as Record<string, string>;
+    if (raw[mappedHeader] != null) return String(raw[mappedHeader]).trim();
+  }
+  return '';
+}
+
+/** Apply an ordered list of corrections onto a shallow-copied cable (technician overlay only). */
+export function applyCorrectionsToCable(
+  cable: Record<string, unknown>,
+  records: WireCorrectionRecord[],
+  mapping: Record<string, string> = {},
+): Record<string, unknown> {
+  if (!records.length) return cable;
+  const next: Record<string, unknown> = {
+    ...cable,
+    _raw: cable._raw && typeof cable._raw === 'object'
+      ? { ...(cable._raw as Record<string, string>) }
+      : {},
+  };
+  const correctedFields = new Set<string>();
+  for (const rec of records) {
+    const field = rec.field;
+    const value = rec.corrected_value;
+    correctedFields.add(field);
+    if (field === 'dest_ferrule') {
+      next.dest_ferrule = value;
+      const raw = next._raw as Record<string, string>;
+      let written = false;
+      for (const header of Object.keys(raw)) {
+        if (isDestFerruleHeader(header)) {
+          raw[header] = value;
+          written = true;
+        }
+      }
+      if (!written) raw.IEC_FERR_B = value;
+      continue;
+    }
+    next[field] = value;
+    const mappedHeader = mapping[field];
+    if (mappedHeader) {
+      (next._raw as Record<string, string>)[mappedHeader] = value;
+    }
+    if (field === 'source' && value.includes(':')) {
+      const parts = value.split(':');
+      next.source_terminal = parts[parts.length - 1];
+      next.source_device = parts.slice(0, -1).join(':');
+    }
+    if (field === 'destination' && value.includes(':')) {
+      const parts = value.split(':');
+      next.dest_terminal = parts[parts.length - 1];
+      next.dest_device = parts.slice(0, -1).join(':');
+    }
+  }
+  next._corrected_fields = [...correctedFields];
+  return next;
+}
+
+function correctedWorkbookRelativePath(projectCode: string, frameId: string) {
+  const safe = frameId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(projectCode, 'Corrections', `${safe}_corrected.xlsx`).replace(/\\/g, '/');
+}
+
+function correctedWorkbookDisplayPath(projectCode: string, frameId: string) {
+  return `uploads/${correctedWorkbookRelativePath(projectCode, frameId)}`;
+}
+
+function auditNoteText(rec: WireCorrectionRecord): string {
+  return [
+    `Parameter: ${rec.field_label}`,
+    `Original: ${rec.original_value}`,
+    `Corrected: ${rec.corrected_value}`,
+    `Technician: ${rec.technician_name}`,
+    `Project: ${rec.project_code}`,
+    `Panel: ${rec.panel_name}`,
+    `Wire: ${rec.wire_number}`,
+    `Reason: ${rec.reason}`,
+    `At: ${rec.corrected_at}`,
+  ].join('\n');
+}
+
+const YELLOW_FILL: ExcelJS.Fill = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FFFFF3CD' },
+};
+
+function findHeaderRow(sheet: ExcelJS.Worksheet): { rowNumber: number; headers: string[] } {
+  const maxScan = Math.min(sheet.rowCount || 1, 20);
+  for (let r = 1; r <= maxScan; r++) {
+    const row = sheet.getRow(r);
+    const headers: string[] = [];
+    let nonEmpty = 0;
+    row.eachCell({ includeEmpty: false }, (cell, col) => {
+      const text = String(cell.value ?? '').trim();
+      if (text) nonEmpty += 1;
+      headers[col - 1] = text;
+    });
+    if (nonEmpty >= 3) return { rowNumber: r, headers };
+  }
+  return { rowNumber: 1, headers: [] };
+}
+
+function columnIndexForField(
+  headers: string[],
+  field: CorrectableField,
+  mapping: Record<string, string>,
+): number | null {
+  const mapped = mapping[field];
+  if (mapped) {
+    const idx = headers.findIndex(h => String(h).trim() === mapped || normalizeHeaderKey(h) === normalizeHeaderKey(mapped));
+    if (idx >= 0) return idx + 1;
+  }
+  const aliases: Record<string, string[]> = {
+    color: ['COLOR', 'COLOUR', 'WIRECOLOR', 'CABLECOLOR'],
+    size: ['SIZE', 'WIRESIZE', 'CABLESIZE'],
+    length: ['LENGTH', 'LEN', 'CABLELENGTH'],
+    source: ['SOURCE', 'FROM'],
+    destination: ['DESTINATION', 'DEST', 'TO'],
+    source_device: ['DEVTBLKA', 'DEVA', 'SRCDEV', 'SOURCEDEVICE'],
+    source_terminal: ['TERMA', 'SRCTERM', 'TERMINALA'],
+    dest_device: ['DEVTBLKB', 'DEVB', 'DSTDEV', 'DESTDEVICE'],
+    dest_terminal: ['TERMB', 'DSTTERM', 'TERMINALB'],
+    ferrule: ['IECFERRA', 'FERRA', 'FERRULE'],
+    dest_ferrule: ['IECFERRB', 'FERRB'],
+    ref: ['REF', 'REFRNCE', 'REFRNCEA', 'REFERENCE'],
+    sign: ['SIGN', 'SIGNMARK'],
+    remarks: ['REMARKS', 'REMARK'],
+    panel: ['PNLNOA', 'PNLNO', 'PANEL'],
+    path: ['PATH'],
+    rack: ['RACK'],
+  };
+  const wanted = aliases[field] || [normalizeHeaderKey(field)];
+  for (let i = 0; i < headers.length; i++) {
+    const key = normalizeHeaderKey(headers[i] || '');
+    if (wanted.includes(key)) return i + 1;
+  }
+  return null;
+}
+
+function excelDataRowNumber(cable: Record<string, unknown>, cableIndex: number, headerRow: number): number {
+  const excelRow = Number((cable as any).excel_row);
+  if (Number.isFinite(excelRow) && excelRow > 0) return excelRow;
+  return headerRow + 1 + cableIndex;
+}
+
+function applyCorrectionToScheduleCell(
+  sheet: ExcelJS.Worksheet,
+  headers: string[],
+  headerRow: number,
+  cable: Record<string, unknown>,
+  cableIndex: number,
+  rec: WireCorrectionRecord,
+  mapping: Record<string, string>,
+) {
+  const col = columnIndexForField(headers, rec.field, mapping);
+  if (!col) return;
+  const rowNumber = excelDataRowNumber(cable, cableIndex, headerRow);
+  const cell = sheet.getRow(rowNumber).getCell(col);
+  cell.value = rec.corrected_value;
+  cell.fill = YELLOW_FILL;
+  cell.note = auditNoteText(rec);
+}
+
+async function writeCorrectedWorkbook(opts: {
+  projectCode: string;
+  frameId: string;
+  sourceBuffer: Buffer | null;
+  records: WireCorrectionRecord[];
+  cables: Array<Record<string, unknown>>;
+  mapping: Record<string, string>;
+  panelName: string;
+}) {
+  ensureDir(opts.projectCode);
+  const wb = new ExcelJS.Workbook();
+  const byIndex = new Map<number, WireCorrectionRecord[]>();
+  for (const rec of opts.records) {
+    const list = byIndex.get(rec.cable_index) || [];
+    list.push(rec);
+    byIndex.set(rec.cable_index, list);
+  }
+
+  if (opts.sourceBuffer && opts.sourceBuffer.length > 0) {
+    await wb.xlsx.load(opts.sourceBuffer as any);
+    const sheet = wb.worksheets[0];
+    if (sheet) {
+      const { rowNumber: headerRow, headers } = findHeaderRow(sheet);
+      for (const [cableIndex, recs] of byIndex.entries()) {
+        const cable = opts.cables[cableIndex] || {};
+        for (const rec of recs) {
+          applyCorrectionToScheduleCell(sheet, headers, headerRow, cable, cableIndex, rec, opts.mapping);
+        }
+      }
+
+      let summary = wb.getWorksheet('Technician Corrections');
+      if (summary) wb.removeWorksheet(summary.id);
+      summary = wb.addWorksheet('Technician Corrections');
+      summary.addRow([...REGISTER_HEADERS]);
+      summary.getRow(1).font = { bold: true };
+      for (const rec of opts.records) {
+        const row = summary.addRow([
+          rec.project_code,
+          rec.panel_name,
+          rec.wire_number,
+          rec.field_label,
+          rec.original_value,
+          rec.corrected_value,
+          rec.reason,
+          rec.technician_name,
+          rec.corrected_at,
+        ]);
+        row.getCell(6).fill = YELLOW_FILL;
+        row.getCell(6).note = auditNoteText(rec);
+      }
+    }
+  } else {
+    const sheet = wb.addWorksheet('Corrected Schedule');
+    const headers = [
+      'Wire #', 'Source', 'Destination', 'Source ferrule', 'Dest ferrule',
+      'Colour', 'Size', 'Length', 'Ref', 'Sign', 'Remarks', 'Corrected fields',
+    ];
+    sheet.addRow(headers);
+    sheet.getRow(1).font = { bold: true };
+    opts.cables.forEach((cable, index) => {
+      const cableRecs = byIndex.get(index) || [];
+      const overlaid = applyCorrectionsToCable(cable, cableRecs, opts.mapping);
+      const fieldToCol: Record<string, number> = {
+        source: 2, destination: 3, ferrule: 4, dest_ferrule: 5,
+        color: 6, size: 7, length: 8, ref: 9, sign: 10, remarks: 11,
+      };
+      const row = sheet.addRow([
+        overlaid.sno ?? index + 1,
+        overlaid.source ?? '',
+        overlaid.destination ?? '',
+        overlaid.ferrule ?? '',
+        overlaid.dest_ferrule ?? readCableFieldValue(overlaid, 'dest_ferrule', opts.mapping),
+        overlaid.color ?? '',
+        overlaid.size ?? '',
+        overlaid.length ?? '',
+        overlaid.ref ?? '',
+        overlaid.sign ?? '',
+        overlaid.remarks ?? '',
+        cableRecs.map(r => r.field_label).join('; '),
+      ]);
+      for (const rec of cableRecs) {
+        const col = fieldToCol[rec.field];
+        if (!col) continue;
+        const cell = row.getCell(col);
+        cell.fill = YELLOW_FILL;
+        cell.note = auditNoteText(rec);
+      }
+    });
+  }
+
+  await wb.xlsx.writeFile(correctedWorkbookPath(opts.projectCode, opts.frameId));
+}
+
+export const WireCorrectionsStore = {
+  correctionsDir,
+  correctedWorkbookPath,
+  correctedWorkbookDisplayPath,
+  correctedWorkbookRelativePath,
+
+  listForFrame(projectCode: string, frameId: string): WireCorrectionRecord[] {
+    return readFrameFile(projectCode, frameId).records;
+  },
+
+  listForCable(projectCode: string, frameId: string, cableIndex: number): WireCorrectionRecord[] {
+    return this.listForFrame(projectCode, frameId).filter(r => r.cable_index === cableIndex);
+  },
+
+  /** Latest corrected value per field for a cable (chronological apply). */
+  latestOverrides(
+    projectCode: string,
+    frameId: string,
+    cableIndex: number,
+  ): Record<string, string> {
+    const overrides: Record<string, string> = {};
+    for (const rec of this.listForCable(projectCode, frameId, cableIndex)) {
+      overrides[rec.field] = rec.corrected_value;
+    }
+    return overrides;
+  },
+
+  async append(record: WireCorrectionRecord, opts: {
+    sourceBuffer: Buffer | null;
+    cables: Array<Record<string, unknown>>;
+    mapping: Record<string, string>;
+  }): Promise<{
+    records: WireCorrectionRecord[];
+    corrected_excel_relative_path: string;
+    corrected_excel_display_path: string;
+  }> {
+    const file = readFrameFile(record.project_code, record.frame_id);
+    file.panel_name = record.panel_name;
+    file.updated_at = record.corrected_at;
+    file.records.push(record);
+    writeFrameFile(file);
+    await appendRegisterRow(record);
+    await writeCorrectedWorkbook({
+      projectCode: record.project_code,
+      frameId: record.frame_id,
+      sourceBuffer: opts.sourceBuffer,
+      records: file.records,
+      cables: opts.cables,
+      mapping: opts.mapping,
+      panelName: record.panel_name,
+    });
+    return {
+      records: file.records,
+      corrected_excel_relative_path: correctedWorkbookRelativePath(record.project_code, record.frame_id),
+      corrected_excel_display_path: correctedWorkbookDisplayPath(record.project_code, record.frame_id),
+    };
+  },
+
+  resolveCorrectedExcelAbsolutePath(projectCode: string, frameId: string): string | null {
+    const abs = correctedWorkbookPath(projectCode, frameId);
+    const root = path.resolve(correctionsDir(projectCode));
+    const resolved = path.resolve(abs);
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) return null;
+    if (!fs.existsSync(resolved)) return null;
+    return resolved;
+  },
+
+  overlayCables(
+    cables: Array<Record<string, unknown>>,
+    projectCode: string,
+    frameId: string,
+    mapping: Record<string, string> = {},
+  ): Array<Record<string, unknown>> {
+    const all = this.listForFrame(projectCode, frameId);
+    if (!all.length) return cables;
+    const byIndex = new Map<number, WireCorrectionRecord[]>();
+    for (const rec of all) {
+      const list = byIndex.get(rec.cable_index) || [];
+      list.push(rec);
+      byIndex.set(rec.cable_index, list);
+    }
+    return cables.map((cable, index) => {
+      const recs = byIndex.get(index);
+      if (!recs?.length) return cable;
+      return applyCorrectionsToCable(cable, recs, mapping);
+    });
+  },
+};

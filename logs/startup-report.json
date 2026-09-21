@@ -1,0 +1,37 @@
+{
+  "bootId": "2026-07-14T06-03-59-335Z",
+  "mode": "dev",
+  "startedAt": "2026-07-14T06:03:59.336Z",
+  "status": "ready",
+  "phases": [
+    {
+      "name": "preflight-ports",
+      "ok": true,
+      "ms": 4,
+      "postgresPort": true,
+      "backendPort": true,
+      "frontendPort": true,
+      "expectedPorts": [
+        5432,
+        3001,
+        5175
+      ]
+    },
+    {
+      "name": "postgres",
+      "ok": true,
+      "ms": 82,
+      "postgresOk": true,
+      "waitedSecs": 0,
+      "database": "WiringSchemeDB"
+    }
+  ],
+  "stack": {
+    "backendPort": 3001,
+    "frontendPort": 5175,
+    "frontendReady": true,
+    "backendReady": true,
+    "mode": "vite-hmr"
+  },
+  "finishedAt": "2026-07-14T06:03:59.507Z"
+}

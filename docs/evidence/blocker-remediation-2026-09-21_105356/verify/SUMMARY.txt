@@ -1,0 +1,7 @@
+BE tests: 426 pass / 0 fail
+FE typecheck: 0
+FE lint: 0
+FE build: 0
+API image: 1f02a8e63f8f (skipMiddie:true in dist/main.js)
+Health: ok
+Portfolio cut: 4

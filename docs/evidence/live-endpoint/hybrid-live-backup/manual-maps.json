@@ -1,0 +1,65 @@
+[
+  {
+    "id": "manual-seed-H74-2016E",
+    "project_code": "003",
+    "frame_id": "frame_1789793600080_0_hhkw7",
+    "page_number": 6,
+    "geometry": {
+      "x": 0.255,
+      "y": 0.118,
+      "width": 0.125,
+      "height": 0.060
+    },
+    "endpoint_kind": "EQUIPMENT_CONNECTOR",
+    "identity_tag": "H74",
+    "terminal": "4",
+    "connector": "X10",
+    "drawing_checksum": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "drawing_revision": null,
+    "created_by": 1,
+    "created_at": "2026-09-19T06:50:00.000Z",
+    "notes": "Wire 20.16:E Source — physical H74 footprint on INTERNAL VIEW-1 (page 6) REAR section. Legend/DEVICE REF rejected."
+  },
+  {
+    "id": "manual-seed-H74-2016E-front",
+    "project_code": "003",
+    "frame_id": "frame_1789793600080_0_hhkw7",
+    "page_number": 3,
+    "geometry": {
+      "x": 0.165,
+      "y": 0.125,
+      "width": 0.175,
+      "height": 0.055
+    },
+    "endpoint_kind": "EQUIPMENT_CONNECTOR",
+    "identity_tag": "H74",
+    "terminal": "4",
+    "connector": "X10",
+    "drawing_checksum": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "drawing_revision": null,
+    "created_by": 1,
+    "created_at": "2026-09-19T06:50:00.000Z",
+    "notes": "Wire 20.16:E Source alternate — physical H74 on FRONT VIEW (page 3)."
+  },
+  {
+    "id": "manual-seed-KF87L-2016E",
+    "project_code": "003",
+    "frame_id": "frame_1789793600080_0_hhkw7",
+    "page_number": 6,
+    "geometry": {
+      "x": 0.108,
+      "y": 0.358,
+      "width": 0.032,
+      "height": 0.042
+    },
+    "endpoint_kind": "EQUIPMENT_TERMINAL",
+    "identity_tag": "KF87L",
+    "terminal": "5",
+    "connector": null,
+    "drawing_checksum": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "drawing_revision": null,
+    "created_by": 1,
+    "created_at": "2026-09-19T07:10:00.000Z",
+    "notes": "Wire 20.16:E Destination — physical KF87L Finder aux relay module on INTERNAL VIEW-1 LHS DIN rail (row K74-1,K74-2,KF67,KF87L,…). Single device footprint — not whole bank, not directory REF text. Distinct from F87L protection relay."
+  }
+]

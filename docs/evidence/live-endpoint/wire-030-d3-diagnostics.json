@@ -1,0 +1,66 @@
+﻿{
+    "source_endpoint_kind":  "TB_TERMINAL",
+    "destination_endpoint_kind":  "TB_TERMINAL",
+    "source_resolution":  {
+                              "endpoint_type":  "TB_GROUP",
+                              "physical_identity":  null,
+                              "terminal_reference":  "17",
+                              "location_granularity":  "UNRESOLVED",
+                              "status":  "UNRESOLVED",
+                              "confidence":  "NONE"
+                          },
+    "destination_resolution":  {
+                                   "endpoint_type":  "TB_GROUP",
+                                   "physical_identity":  null,
+                                   "terminal_reference":  "40",
+                                   "location_granularity":  "UNRESOLVED",
+                                   "status":  "UNRESOLVED",
+                                   "confidence":  "NONE"
+                               },
+    "diagnostics":  {
+                        "source_rejected_reasons":  [
+                                                        "excluded_DEV_BASELINE_FIXTURE"
+                                                    ],
+                        "destination_rejected_reasons":  [
+                                                             "excluded_DEV_BASELINE_FIXTURE"
+                                                         ],
+                        "source_classification":  {
+                                                      "kind":  "TB_TERMINAL",
+                                                      "legacyType":  "TB_GROUP",
+                                                      "parentEquipment":  null,
+                                                      "connector":  null,
+                                                      "pin":  "17",
+                                                      "tbHeader":  "X321",
+                                                      "physicalLookupKey":  "X321",
+                                                      "terminalReference":  "17",
+                                                      "provenance":  {
+                                                                         "source":  "schedule_header",
+                                                                         "devTblk":  "X321",
+                                                                         "term":  "17",
+                                                                         "connector":  null,
+                                                                         "pin":  "17"
+                                                                     }
+                                                  },
+                        "destination_classification":  {
+                                                           "kind":  "TB_TERMINAL",
+                                                           "legacyType":  "TB_GROUP",
+                                                           "parentEquipment":  null,
+                                                           "connector":  null,
+                                                           "pin":  "40",
+                                                           "tbHeader":  "X9",
+                                                           "physicalLookupKey":  "X9",
+                                                           "terminalReference":  "40",
+                                                           "provenance":  {
+                                                                              "source":  "schedule_header",
+                                                                              "devTblk":  "X9",
+                                                                              "term":  "40",
+                                                                              "connector":  null,
+                                                                              "pin":  "40"
+                                                                          }
+                                                       }
+                    },
+    "source_match_reason":  "Header group not found: no marker for Source \"X321\".",
+    "destination_match_reason":  "Header group not found: no marker for Destination \"X9\".",
+    "source_candidate_count":  0,
+    "destination_candidate_count":  0
+}

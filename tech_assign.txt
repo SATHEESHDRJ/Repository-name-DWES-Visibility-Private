@@ -1,0 +1,2 @@
+﻿{"message":"Cannot GET /api/tech/my-assignments","error":"Not Found","statusCode":404}
+HTTP_STATUS:404

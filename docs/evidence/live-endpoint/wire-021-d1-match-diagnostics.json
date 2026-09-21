@@ -1,0 +1,179 @@
+{
+    "source_marker_candidates":  [
+                                     {
+                                         "id":  -9,
+                                         "tb_number":  "87STUB",
+                                         "terminal_group":  "X420",
+                                         "page_number":  1,
+                                         "view_name":  null,
+                                         "notes":  "Supervisor verified header group for LIVE ENDPOINT acceptance — not legend/BOM",
+                                         "geometry":  {
+                                                          "x":  0.14,
+                                                          "y":  0.28,
+                                                          "width":  0.065,
+                                                          "height":  0.11,
+                                                          "strip_bbox":  {
+                                                                             "x":  0.14,
+                                                                             "y":  0.28,
+                                                                             "width":  0.065,
+                                                                             "height":  0.11
+                                                                         },
+                                                          "paint_mode":  "header_group",
+                                                          "tb_header":  "87STUB",
+                                                          "target_terminal":  "X420:2"
+                                                      },
+                                         "matched_terminal":  "X420:2",
+                                         "view_classification":  "INTERNAL_VIEW",
+                                         "detection_method":  "MANUAL_MAP",
+                                         "marker_type":  "TB_GROUP",
+                                         "paint_mode":  "header_group"
+                                     }
+                                 ],
+    "destination_marker_candidates":  [
+                                          {
+                                              "id":  -10,
+                                              "tb_number":  "QDC1",
+                                              "terminal_group":  "",
+                                              "page_number":  1,
+                                              "view_name":  null,
+                                              "notes":  "Supervisor verified header group for LIVE ENDPOINT acceptance — not legend/BOM",
+                                              "geometry":  {
+                                                               "x":  0.36,
+                                                               "y":  0.42,
+                                                               "width":  0.055,
+                                                               "height":  0.09,
+                                                               "strip_bbox":  {
+                                                                                  "x":  0.36,
+                                                                                  "y":  0.42,
+                                                                                  "width":  0.055,
+                                                                                  "height":  0.09
+                                                                              },
+                                                               "paint_mode":  "header_group",
+                                                               "tb_header":  "QDC1",
+                                                               "target_terminal":  "4"
+                                                           },
+                                              "matched_terminal":  "4",
+                                              "view_classification":  "INTERNAL_VIEW",
+                                              "detection_method":  "MANUAL_MAP",
+                                              "marker_type":  "TB_GROUP",
+                                              "paint_mode":  "header_group"
+                                          }
+                                      ],
+    "best_source":  {
+                        "id":  -9,
+                        "tb_number":  "87STUB",
+                        "terminal_group":  "X420",
+                        "page_number":  1,
+                        "view_name":  null,
+                        "notes":  "Supervisor verified header group for LIVE ENDPOINT acceptance — not legend/BOM",
+                        "geometry":  {
+                                         "x":  0.14,
+                                         "y":  0.28,
+                                         "width":  0.065,
+                                         "height":  0.11,
+                                         "strip_bbox":  {
+                                                            "x":  0.14,
+                                                            "y":  0.28,
+                                                            "width":  0.065,
+                                                            "height":  0.11
+                                                        },
+                                         "paint_mode":  "header_group",
+                                         "tb_header":  "87STUB",
+                                         "target_terminal":  "X420:2"
+                                     },
+                        "matched_terminal":  "X420:2",
+                        "view_classification":  "INTERNAL_VIEW",
+                        "detection_method":  "MANUAL_MAP",
+                        "marker_type":  "TB_GROUP",
+                        "paint_mode":  "header_group"
+                    },
+    "best_destination":  {
+                             "id":  -10,
+                             "tb_number":  "QDC1",
+                             "terminal_group":  "",
+                             "page_number":  1,
+                             "view_name":  null,
+                             "notes":  "Supervisor verified header group for LIVE ENDPOINT acceptance — not legend/BOM",
+                             "geometry":  {
+                                              "x":  0.36,
+                                              "y":  0.42,
+                                              "width":  0.055,
+                                              "height":  0.09,
+                                              "strip_bbox":  {
+                                                                 "x":  0.36,
+                                                                 "y":  0.42,
+                                                                 "width":  0.055,
+                                                                 "height":  0.09
+                                                             },
+                                              "paint_mode":  "header_group",
+                                              "tb_header":  "QDC1",
+                                              "target_terminal":  "4"
+                                          },
+                             "matched_terminal":  "4",
+                             "view_classification":  "INTERNAL_VIEW",
+                             "detection_method":  "MANUAL_MAP",
+                             "marker_type":  "TB_GROUP",
+                             "paint_mode":  "header_group"
+                         },
+    "source_unmatched":  false,
+    "destination_unmatched":  false,
+    "source_match_reason":  "Matched Source header group 87STUB on INTERNAL_VIEW page 1.",
+    "destination_match_reason":  "Matched Destination header group QDC1 on INTERNAL_VIEW page 1.",
+    "source_candidate_count":  1,
+    "destination_candidate_count":  1,
+    "drawing_checksum_applied":  null,
+    "superseded_excluded":  21,
+    "source_rejection_reasons":  [
+
+                                 ],
+    "destination_rejection_reasons":  [
+
+                                      ],
+    "same_physical_group":  false,
+    "source_resolution":  {
+                              "endpoint_type":  "DEVICE_TERMINAL",
+                              "physical_identity":  null,
+                              "terminal_reference":  "X420 / 2",
+                              "location_granularity":  "UNRESOLVED",
+                              "status":  "UNRESOLVED",
+                              "confidence":  "NONE"
+                          },
+    "destination_resolution":  {
+                                   "endpoint_type":  "DEVICE_TERMINAL",
+                                   "physical_identity":  null,
+                                   "terminal_reference":  "4",
+                                   "location_granularity":  "UNRESOLVED",
+                                   "status":  "UNRESOLVED",
+                                   "confidence":  "NONE"
+                               },
+    "source_endpoint_kind":  "EQUIPMENT_CONNECTOR",
+    "destination_endpoint_kind":  "EQUIPMENT_TERMINAL",
+    "source_header_group_diagnostics":  {
+                                            "page":  1,
+                                            "matched_label":  "87STUB",
+                                            "group_bbox":  {
+                                                               "x":  0.14,
+                                                               "y":  0.28,
+                                                               "width":  0.065,
+                                                               "height":  0.11
+                                                           },
+                                            "confidence":  "HIGH",
+                                            "rejected_candidates":  [
+
+                                                                    ]
+                                        },
+    "destination_header_group_diagnostics":  {
+                                                 "page":  1,
+                                                 "matched_label":  "QDC1",
+                                                 "group_bbox":  {
+                                                                    "x":  0.36,
+                                                                    "y":  0.42,
+                                                                    "width":  0.055,
+                                                                    "height":  0.09
+                                                                },
+                                                 "confidence":  "HIGH",
+                                                 "rejected_candidates":  [
+
+                                                                         ]
+                                             }
+}

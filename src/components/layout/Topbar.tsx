@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { Fingerprint, FolderKanban, LogOut, Menu, X } from '../ui/icons';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { DashboardIcon } from '../ui/DashboardIcon';
+import { Icon } from '../ui/Icon';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import Avatar from './Avatar';
@@ -8,8 +9,10 @@ import BiometricSettings from '../biometric/BiometricSettings';
 import { useBiometricAvailable } from '../../hooks/useBiometric';
 import { adminApi } from '../../services/api';
 import MyProfileModal from '../profile/MyProfileModal';
+import TopbarProfileMenu from './TopbarProfileMenu';
+import { browserFullscreenSupported, useBrowserFullscreen } from '../../hooks/useBrowserFullscreen';
+import LiveConnectionIndicator from './LiveConnectionIndicator';
 import type { ActiveProjectContext } from '../../store/useProjectSelectionStore';
-import { useLiveWiringStore } from '../../store/useLiveWiringStore';
 
 const ROLE_LABELS: Record<string, string> = {
   system_admin:      'System Admin',
@@ -22,9 +25,19 @@ const ROLE_LABELS: Record<string, string> = {
 export interface NavItem {
   key: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
+  id?: string;
+  onSelect?: () => void;
   /** Short description shown in the app-wide section header for this tab. */
   description?: string;
+  /** When true on sideNavItems, shows secondary filter-applied indicator (`is-filter-applied`), not primary `is-active` selection. */
+  active?: boolean;
+  /** Optional compact subtitle/badge under the sidebar label (e.g. selected equipment). */
+  badge?: string;
+  /** When true, selecting this side-nav item does not close the mobile sidebar drawer. */
+  keepSidebarOpen?: boolean;
+  /** When set, render this control instead of a sidebar nav button (e.g. equipment filter). */
+  customControl?: ReactNode;
 }
 
 interface TopbarProps {
@@ -35,6 +48,8 @@ interface TopbarProps {
   showMenuButton?: boolean;
   activeProject?: ActiveProjectContext | null;
   projectSelectionRequired?: boolean;
+  projectContextLoading?: boolean;
+  noProjectAvailable?: boolean;
 }
 
 export default function Topbar({
@@ -43,18 +58,17 @@ export default function Topbar({
   onTabChange,
   onMenuClick,
   showMenuButton = false,
-  activeProject = null,
-  projectSelectionRequired = false,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const liveWiring = useLiveWiringStore();
-  const isTechLive = user?.role === 'wiring_technician' && liveWiring.live;
   const [clock, setClock] = useState(new Date());
   const [showBioPanel, setShowBioPanel] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [deployMode, setDeployMode] = useState<'intranet' | 'cloud' | null>(null);
-  const bioPanelRef = useRef<HTMLDivElement>(null);
+  const profileZoneRef = useRef<HTMLDivElement>(null);
+  const { active: fullscreenActive, standalone: fsStandalone, toggle: toggleFullscreen } = useBrowserFullscreen();
+  const showFullscreenControl = browserFullscreenSupported() && !fsStandalone;
 
   const { available: bioAvailable, checking: bioChecking, contextSupported } = useBiometricAvailable();
   const showBioSettings = !bioChecking && (bioAvailable || !contextSupported);
@@ -72,14 +86,16 @@ export default function Topbar({
   }, [user?.role]);
 
   useEffect(() => {
-    if (!showBioPanel) return;
+    if (!showBioPanel && !showProfileMenu) return;
     const handler = (e: MouseEvent) => {
-      if (bioPanelRef.current && !bioPanelRef.current.contains(e.target as Node))
+      if (profileZoneRef.current && !profileZoneRef.current.contains(e.target as Node)) {
         setShowBioPanel(false);
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showBioPanel]);
+  }, [showBioPanel, showProfileMenu]);
 
   const [hh, mm, ss] = clock
     .toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -100,12 +116,12 @@ export default function Topbar({
           {showMenuButton && (
             <button
               type="button"
-              className="topbar-menu-btn tablet-land:hidden"
+              className="topbar-menu-btn tablet-port:hidden"
               onClick={onMenuClick}
               title="Open navigation"
               aria-label="Open navigation menu"
             >
-              <Menu size={18} strokeWidth={1.75} />
+              <DashboardIcon name="menu" size={18} />
             </button>
           )}
           <CompanyLogo variant="icon" size="sm" className="topbar-logo-img-wrap" />
@@ -135,33 +151,6 @@ export default function Topbar({
         )}
 
         <div className="topbar-controls">
-          <div
-            className={`topbar-project-pill topbar-float topbar-float--light${projectSelectionRequired ? ' topbar-project-pill--required' : ''}${isTechLive ? ' topbar-project-pill--live' : ''}`}
-            aria-live="polite"
-            title={isTechLive
-              ? `Wiring in progress — ${liveWiring.projectName || liveWiring.projectCode || ''}`
-              : projectSelectionRequired
-                ? 'Project selection required before using the application'
-                : `Active Project: ${activeProject?.code ?? ''}`}
-          >
-            <div className="topbar-project-icon" aria-hidden="true">
-              <FolderKanban size={16} strokeWidth={1.75} />
-            </div>
-            <div className="topbar-project-meta min-w-0">
-              <span className="topbar-project-label">Project</span>
-              <span className="topbar-project-value">
-                {isTechLive
-                  ? (liveWiring.projectName || liveWiring.projectCode || 'In progress')
-                  : projectSelectionRequired
-                    ? 'Selection Required'
-                    : (activeProject?.code ?? 'Unassigned')}
-              </span>
-            </div>
-            {isTechLive && (
-              <span className="topbar-live-dot" aria-label="Wiring in progress" />
-            )}
-          </div>
-
           {user?.role === 'system_admin' && deployMode && (
             <span className={`topbar-env topbar-float-pill${deployMode === 'cloud' ? ' topbar-env--cloud' : ''}`}>
               {deployMode === 'cloud' ? 'Cloud Hosted' : 'Local Intranet'}
@@ -169,72 +158,112 @@ export default function Topbar({
           )}
 
           {user && (
-            <div
-              className={`topbar-user-card topbar-float topbar-float--light${user.role === 'wiring_technician' ? ' cursor-pointer hover:bg-white/90' : ''}`}
-              title={`${user.full_name} · @${user.username} · ${ROLE_LABELS[user.role] ?? user.role}`}
-              onClick={user.role === 'wiring_technician' ? () => setShowProfile(true) : undefined}
-              onKeyDown={user.role === 'wiring_technician' ? (e) => { if (e.key === 'Enter' || e.key === ' ') setShowProfile(true); } : undefined}
-              role={user.role === 'wiring_technician' ? 'button' : undefined}
-              tabIndex={user.role === 'wiring_technician' ? 0 : undefined}
-            >
-              <Avatar name={user.full_name} role={user.role} size={30} />
-              <div className="topbar-user-meta min-w-0 hidden xs:block">
-                <div className="topbar-user-name">{user.full_name}</div>
-                <div className="topbar-user-role">
-                  <span className="topbar-user-handle">@{user.username}</span>
-                  <span className="topbar-user-role-sep"> · </span>
-                  {ROLE_LABELS[user.role] ?? user.role}
+            <div className="topbar-profile-zone" ref={profileZoneRef}>
+              <div
+                className={`topbar-user-card topbar-float topbar-user-card--profile topbar-user-profile--expanded${user.role === 'wiring_technician' ? ' cursor-pointer' : ''}`}
+                title={`${user.full_name} · @${user.username} · ${ROLE_LABELS[user.role] ?? user.role}`}
+                onClick={user.role === 'wiring_technician' ? () => setShowProfile(true) : undefined}
+                onKeyDown={user.role === 'wiring_technician' ? (e) => { if (e.key === 'Enter' || e.key === ' ') setShowProfile(true); } : undefined}
+                role={user.role === 'wiring_technician' ? 'button' : undefined}
+                tabIndex={user.role === 'wiring_technician' ? 0 : undefined}
+              >
+                <Avatar name={user.full_name} role={user.role} size={30} />
+                <div className="topbar-user-meta topbar-user-meta--responsive min-w-0">
+                  <div className="topbar-user-name">{user.full_name}</div>
+                  <div className="topbar-user-details">
+                    <span className="topbar-user-handle">@{user.username}</span>
+                    <span className="topbar-user-role">{ROLE_LABELS[user.role] ?? user.role}</span>
+                  </div>
                 </div>
               </div>
+
+              <button
+                type="button"
+                className="topbar-user-card topbar-float topbar-user-card--profile topbar-user-profile--compact"
+                title="Account and settings"
+                aria-label={`Account menu for ${user.full_name}`}
+                aria-expanded={showProfileMenu}
+                aria-haspopup="menu"
+                onClick={() => setShowProfileMenu(v => !v)}
+              >
+                <Avatar name={user.full_name} role={user.role} size={30} />
+              </button>
+
+              {showProfileMenu && (
+                <TopbarProfileMenu
+                  user={user}
+                  roleLabel={ROLE_LABELS[user.role] ?? user.role}
+                  onClose={() => setShowProfileMenu(false)}
+                  onLogout={handleLogout}
+                  onOpenProfile={user.role === 'wiring_technician' ? () => setShowProfile(true) : undefined}
+                  onOpenBio={showBioSettings ? () => setShowBioPanel(true) : undefined}
+                  showBioSettings={showBioSettings}
+                  showFullscreen={showFullscreenControl}
+                  onToggleFullscreen={() => void toggleFullscreen()}
+                  fullscreenActive={fullscreenActive}
+                />
+              )}
+
+              {showBioPanel && (
+                <div className="bio-panel-dropdown topbar-profile-bio-panel" role="dialog" aria-label="Fingerprint sign-in settings">
+                  <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+                    <div>
+                      <p className="text-sm font-semibold">Fingerprint sign-in</p>
+                      <p className="text-xs mt-0.5">Enrolled devices on this server</p>
+                    </div>
+                    <button
+                      type="button"
+                      title="Close fingerprint settings"
+                      onClick={() => setShowBioPanel(false)}
+                      className="p-1.5 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg transition-colors"
+                    >
+                      <DashboardIcon name="close" size={16} />
+                    </button>
+                  </div>
+                  <div className="bio-panel-dropdown-body px-4 py-3">
+                    <BiometricSettings />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <div className="topbar-actions-capsule topbar-float topbar-float--dark" role="group" aria-label="Header actions">
+          <div className="topbar-actions-capsule topbar-float topbar-float--dark topbar-actions-capsule--desktop" role="group" aria-label="Header actions">
+            {showFullscreenControl && (
+              <button
+                type="button"
+                className={`topbar-capsule-btn topbar-capsule-btn--bio${fullscreenActive ? ' is-active' : ''}`}
+                onClick={() => void toggleFullscreen()}
+                title={fullscreenActive ? 'Exit browser full screen' : 'Browser full screen (hide address bar)'}
+                aria-label={fullscreenActive ? 'Exit browser full screen' : 'Enter browser full screen'}
+              >
+                <Icon name={fullscreenActive ? 'close_fullscreen' : 'fullscreen'} size={18} weight={600} />
+              </button>
+            )}
             {showBioSettings && (
-              <div className="topbar-bio-anchor" ref={bioPanelRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowBioPanel(v => !v)}
-                  title="Fingerprint sign-in settings"
-                  className={`topbar-capsule-btn topbar-capsule-btn--bio${showBioPanel ? ' is-active' : ''}`}
-                  aria-expanded={showBioPanel}
-                  aria-haspopup="dialog"
-                >
-                  <Fingerprint size={20} strokeWidth={1.75} />
-                </button>
-
-                {showBioPanel && (
-                  <div className="bio-panel-dropdown" role="dialog" aria-label="Fingerprint sign-in settings">
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
-                      <div>
-                        <p className="text-sm font-semibold">Fingerprint sign-in</p>
-                        <p className="text-xs mt-0.5">Enrolled devices on this server</p>
-                      </div>
-                      <button
-                        type="button"
-                        title="Close fingerprint settings"
-                        onClick={() => setShowBioPanel(false)}
-                        className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    <div className="bio-panel-dropdown-body px-5 py-4">
-                      <BiometricSettings />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowBioPanel(v => !v)}
+                title="Fingerprint sign-in settings"
+                className={`topbar-capsule-btn topbar-capsule-btn--bio topbar-bio-trigger--desktop${showBioPanel ? ' is-active' : ''}`}
+                aria-expanded={showBioPanel}
+                aria-haspopup="dialog"
+              >
+                <Icon name="fingerprint" size={20} weight={600} />
+              </button>
+            )}
+            {!showBioSettings && (
+              <span className="topbar-capsule-slot topbar-capsule-slot--desktop" aria-hidden="true" />
             )}
 
             <button
-              className="topbar-capsule-btn topbar-capsule-btn--logout"
+              className="topbar-capsule-btn topbar-capsule-btn--logout topbar-capsule-btn--icon-only"
               onClick={handleLogout}
               type="button"
               title="Logout"
               aria-label="Logout"
             >
-              <LogOut size={20} strokeWidth={1.75} />
+              <Icon name="logout" size={18} weight={600} />
             </button>
           </div>
 
@@ -242,12 +271,12 @@ export default function Topbar({
             className="topbar-clock-card topbar-float topbar-float--dark flex items-center gap-2.5 select-none shrink-0"
             aria-label={`Current time: ${hh}:${mm}:${ss}, ${dateStr}`}
           >
-            <span className="topbar-clock-live" aria-hidden="true" />
+            <LiveConnectionIndicator />
             <div className="flex flex-col items-end justify-center leading-none gap-[3px] min-w-0">
               <div className="topbar-clock-digits">
                 {hh}<span className="topbar-clock-sep">:</span>{mm}<span className="topbar-clock-sep">:</span><span className="topbar-clock-secs">{ss}</span>
               </div>
-              <div className="topbar-clock-date hidden xs:block">
+              <div className="topbar-clock-date hidden tablet-land:block">
                 {dateStr}
               </div>
             </div>

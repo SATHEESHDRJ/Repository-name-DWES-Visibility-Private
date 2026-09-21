@@ -1,0 +1,63 @@
+﻿{
+    "captured_at":  "2026-09-19T14:04:19.5209794+04:00",
+    "supervisor":  {
+                       "ui_kpis":  {
+                                       "Completed":  0,
+                                       "TotalProjects":  3,
+                                       "TotalPanels":  5,
+                                       "InProgress":  4,
+                                       "OverallProgress":  "8%"
+                                   },
+                       "all_panels_count":  10,
+                       "live_projects_count":  3,
+                       "projection_note":  "Status Total Panels=5 frame-universe; all-panels=10 assignment rows",
+                       "role":  "prod_supervisor"
+                   },
+    "technician":  {
+                       "panel":  "SOLAR WADI PV FEEDER-1",
+                       "cables_src_done":  15,
+                       "cables_total":  653,
+                       "assignment_id":  72,
+                       "role":  "wiring_technician",
+                       "status":  "in_progress"
+                   },
+    "director":  {
+                     "panels_completed":  2,
+                     "wiring_kpi":  22,
+                     "technicians_active":  29,
+                     "panels_in_progress":  4,
+                     "role":  "ops_director",
+                     "panels_total":  10,
+                     "projects_total":  3
+                 },
+    "admin":  {
+                  "projects":  3,
+                  "assignments":  10,
+                  "recent_errors":  0,
+                  "users":  36,
+                  "role":  "system_admin"
+              },
+    "permissions":  {
+                        "director_admin_diag":  403,
+                        "tech_director_stats":  403
+                    },
+    "sse":  {
+                "api_heartbeat":  "PASS",
+                "nginx_heartbeat":  "PASS",
+                "ui_admin_live":  "PASS",
+                "ui_technician_live":  "PASS",
+                "ui_supervisor_live":  "PASS",
+                "ui_director_live":  "PASS"
+            },
+    "build":  {
+                  "npm_run_build":  "exit 0 (prior slices)",
+                  "automated_test_script":  "none configured in package.json"
+              },
+    "workflow_smoke":  {
+                           "technician_mission_bar_present":  true,
+                           "director_no_assign_buttons":  true,
+                           "admin_no_invented_actions":  true,
+                           "note":  "No destructive workflow mutation executed in this pack; smoke is UI/permission/SSE only.",
+                           "technician_prep_gates_unchanged":  true
+                       }
+}

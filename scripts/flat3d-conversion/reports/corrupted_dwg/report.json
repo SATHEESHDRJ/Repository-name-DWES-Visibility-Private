@@ -1,0 +1,21 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "corrupted_dwg",
+  "drawing_revision": null,
+  "started_at": "2026-07-20T02:16:34.728339+00:00",
+  "stages": [
+    {
+      "stage": "INGEST",
+      "ok": true,
+      "detail": "source copied",
+      "checksum": "cc4e085a1e06524ef1fbd21a17e69db2971d48c0a7afd57bf64774926e9d04d9",
+      "source_name": "drawing.dwg"
+    },
+    {
+      "stage": "DWG_TO_DXF",
+      "ok": false,
+      "detail": "DWES_LIBREDWG_BIN_DIR not set — cannot convert DWG via LibreDWG CLI"
+    }
+  ],
+  "status": "FAILED"
+}

@@ -3,11 +3,16 @@
 import puppeteer from 'puppeteer-core';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const BASE = 'http://localhost:5175';
 const OUT = 'C:/Users/sathe/AppData/Local/Temp/claude/c--Users-sathe-OneDrive-Desktop-DWES/0c4b9e9a-a768-4ae1-ac54-95ad873292dd/scratchpad/shots';
 mkdirSync(OUT, { recursive: true });
+const supervisorAccount = accountForRole('prod_supervisor');
+const adminAccount = accountForRole('system_admin');
+const qaAccount = accountForRole('qaqc_engineer');
+const technicianAccount = accountForRole('wiring_technician');
 
 const shot = async (page, name) => {
   await new Promise(r => setTimeout(r, 450)); // let animations settle
@@ -59,7 +64,7 @@ const browser = await puppeteer.launch({
 });
 
 // ── Supervisor (landscape 13") ──
-await withRole(browser, { u: 'supervisor1', p: 'super123' }, '/supervisor', async page => {
+await withRole(browser, { u: supervisorAccount.username, p: supervisorAccount.password }, '/supervisor', async page => {
   await shot(page, '01-supervisor-projects-1280');
   if (await clickByText(page, 'New Project')) { await shot(page, '02-modal-new-project'); await esc(page); }
   if (await clickByText(page, 'Manage Team')) { await shot(page, '03-modal-manage-team'); await esc(page); }
@@ -73,24 +78,24 @@ await withRole(browser, { u: 'supervisor1', p: 'super123' }, '/supervisor', asyn
 });
 
 // ── Supervisor (portrait 10") ──
-await withRole(browser, { u: 'supervisor1', p: 'super123' }, '/supervisor', async page => {
+await withRole(browser, { u: supervisorAccount.username, p: supervisorAccount.password }, '/supervisor', async page => {
   await shot(page, '07-supervisor-portrait-768');
   if (await clickByText(page, 'New Project')) { await shot(page, '08-modal-new-project-portrait'); await esc(page); }
 }, { width: 768, height: 1024 });
 
 // ── Admin ──
-await withRole(browser, { u: 'admin1', p: 'admin1' }, '/admin', async page => {
+await withRole(browser, { u: adminAccount.username, p: adminAccount.password }, '/admin', async page => {
   await shot(page, '09-admin-users-1280');
   if (await clickByText(page, 'Add User')) { await shot(page, '10-modal-add-user'); await esc(page); }
 });
 
 // ── QAQC ──
-await withRole(browser, { u: 'qa1', p: 'qa1' }, '/qaqc', async page => {
+await withRole(browser, { u: qaAccount.username, p: qaAccount.password }, '/qaqc', async page => {
   await shot(page, '11-qaqc-1280');
 });
 
 // ── Technician ──
-await withRole(browser, { u: 'tech1', p: 'tech1' }, '/technician', async page => {
+await withRole(browser, { u: technicianAccount.username, p: technicianAccount.password }, '/technician', async page => {
   await shot(page, '12-technician-1280');
 });
 

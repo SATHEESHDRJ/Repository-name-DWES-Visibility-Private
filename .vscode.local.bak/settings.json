@@ -1,0 +1,69 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "javascript.validate.enable": true,
+  "eslint.enable": false,
+  "prettier.enable": false,
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "never"
+  },
+  "oxc.enable": true,
+  "oxc.enable.oxlint": true,
+  "oxc.enable.oxfmt": false,
+  "files.exclude": {
+    "**/dist": true,
+    "**/.dwes-port": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/backups": true,
+    "**/uploads": true,
+    "**/.prisma/client": true
+  },
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
+  },
+  "prisma.showPrismaDataPlatformNotification": false,
+  "prisma.enableDiagnostics": true,
+  "files.associations": {
+    "*.css": "tailwindcss",
+    ".env*": "dotenv",
+    "*.yml": "yaml",
+    "*.yaml": "yaml",
+    "docker-compose*.yml": "dockercompose",
+    "compose*.yml": "dockercompose",
+    "compose*.yaml": "dockercompose"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["class(?:Name)?\\s*=\\s*[\"'`]([^\"'`]*)[\"'`]", "([^\"'`]*)"],
+    ["@[\\w-]+\\s*\\(([^)]*)\\)", "([^\"'`]*)"]
+  ],
+  "tailwindCSS.validate": true,
+  "yaml.validate": true,
+  "yaml.schemaStore.enable": true,
+  "yaml.schemas": {},
+  "sqltools.connections": [
+    {
+      "name": "DWES Local Restore (WiringSchemeDB)",
+      "driver": "PostgreSQL",
+      "previewLimit": 50,
+      "server": "127.0.0.1",
+      "port": 55432,
+      "database": "WiringSchemeDB",
+      "username": "postgres",
+      "connectionTimeout": 15,
+      "askForPassword": true
+    }
+  ],
+  "sqltools.useNodeRuntime": true,
+  "sqltools.autoConnectTo": [],
+  "rest-client.environmentVariables": {
+    "$shared": {
+      "localApi": "http://127.0.0.1:3101"
+    }
+  },
+  "playwright.reuseBrowser": true,
+  "playwright.showTrace": false
+}

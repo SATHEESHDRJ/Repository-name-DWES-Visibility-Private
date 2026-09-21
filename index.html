@@ -5,18 +5,46 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/logo-full.png" as="image" type="image/png" />
+    <link rel="preload" href="/logo-icon.png" as="image" type="image/png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#1B2958" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DWES — Ingenious Network FZC</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>DWES — Digital Wiring Execution System | Ingenious Network FZC</title>
     <meta name="description" content="Digital Wiring Execution System — Ingenious Network FZC" />
+    <script>
+      (function () {
+        try {
+          var M = 'dwes-primary-ingenious-20260717';
+          if (!localStorage.getItem(M)) {
+            localStorage.setItem(M, '1');
+            localStorage.setItem('dwes-theme-reset-default-20260716', '1');
+            localStorage.setItem('dwes-app-theme', 'ingenious');
+            localStorage.setItem('theme-mode', 'light');
+          }
+          var t = localStorage.getItem('dwes-app-theme') || 'ingenious';
+          if (t === 'arctic' || t === 'harbor' || t === 'graphite') {
+            t = 'ingenious';
+            localStorage.setItem('dwes-app-theme', t);
+          }
+          if (t !== 'default' && t !== 'ingenious') t = 'ingenious';
+          var m = localStorage.getItem('theme-mode');
+          if (m !== 'light' && m !== 'dark') m = 'light';
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.setAttribute('data-mode', m);
+          document.documentElement.style.colorScheme = m;
+        } catch (e) { /* private mode */ }
+      })();
+    </script>
   </head>
   <body>
     <a href="#main-content" class="skip-link" style="position: absolute; top: -40px; left: 0; background: var(--color-primary); color: white; padding: 8px; z-index: 100; transition: top 0.3s;">Skip to main content</a>
-    <div id="root" id="main-content" role="main"></div>
+    <div id="root"></div>
     <div id="modal-root" role="dialog" aria-live="polite"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

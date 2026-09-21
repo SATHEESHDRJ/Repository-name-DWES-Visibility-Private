@@ -1,0 +1,44 @@
+{
+  "package_type": "dwes-engineering-package",
+  "spec_version": 1,
+  "project_code": "SAMPLE_PROJECT_DO_NOT_IMPORT",
+  "frame_id": "sample_frame_reference_only",
+  "model_revision": "SAMPLE-R1",
+  "units": "mm",
+  "drawing_number": "GA-SAMPLE-0001",
+  "drawing_revision": "Rev 0",
+  "panel": { "width": 800, "height": 2000, "depth": 600 },
+  "devices": [
+    {
+      "device_tag": "=S001+K1",
+      "device_type": "protection_relay",
+      "manufacturer": "SAMPLE",
+      "model": "DEMO-RELAY",
+      "x": 400, "y": 1500, "z": 300,
+      "width": 160, "height": 220, "depth": 150,
+      "terminals": [
+        { "terminal_number": "13", "terminal_block": "X1", "x": 360, "y": 1420, "z": 300 },
+        { "terminal_number": "14", "terminal_block": "X1", "x": 380, "y": 1420, "z": 300 }
+      ]
+    },
+    {
+      "device_tag": "=S001+X10",
+      "device_type": "terminal_block",
+      "x": 400, "y": 300, "z": 300,
+      "width": 400, "height": 80, "depth": 100,
+      "terminals": [
+        { "terminal_number": "1", "x": 220, "y": 300, "z": 300 },
+        { "terminal_number": "2", "x": 240, "y": 300, "z": 300 }
+      ]
+    }
+  ],
+  "duct_nodes": [
+    { "duct_identifier": "D1", "x": 100, "y": 1400, "z": 300 },
+    { "duct_identifier": "D2", "x": 100, "y": 400,  "z": 300 },
+    { "duct_identifier": "D3", "x": 400, "y": 400,  "z": 300 }
+  ],
+  "duct_segments": [
+    { "source": "D1", "destination": "D2", "width": 60, "height": 60 },
+    { "source": "D2", "destination": "D3", "width": 60, "height": 60 }
+  ]
+}

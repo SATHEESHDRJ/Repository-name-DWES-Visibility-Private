@@ -6,6 +6,10 @@ interface ModalProps {
   title: string;
   /** Optional muted context line under the title. */
   subtitle?: string;
+  /** Optional leading icon shown in a tinted chip beside the title. */
+  icon?: ReactNode;
+  /** Semantic colour of the title-icon chip. Defaults to primary (blue). */
+  iconTone?: 'primary' | 'danger' | 'warning' | 'success';
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
@@ -36,9 +40,20 @@ function getModalRoot(): HTMLElement | null {
   return root;
 }
 
+const FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 export default function Modal({
   title,
   subtitle,
+  icon,
+  iconTone = 'primary',
   onClose,
   children,
   footer,
@@ -53,6 +68,7 @@ export default function Modal({
   const onCloseRef = useRef(onClose);
   const closeOnBackdropRef = useRef(closeOnBackdrop);
   const closeOnEscapeRef = useRef(closeOnEscape);
+  const boxRef = useRef<HTMLDivElement | null>(null);
   const [stackLevel, setStackLevel] = useState(0);
 
   onCloseRef.current = onClose;
@@ -66,18 +82,56 @@ export default function Modal({
 
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const focusables = () => {
+      const el = boxRef.current;
+      if (!el) return [] as HTMLElement[];
+      return Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+        .filter(node => !node.hasAttribute('disabled') && node.getClientRects().length > 0);
+    };
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeOnEscapeRef.current) onCloseRef.current();
+      if (e.key === 'Escape' && closeOnEscapeRef.current) {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const nodes = focusables();
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
 
+    const focusTimer = window.setTimeout(() => {
+      const nodes = focusables();
+      const preferred = nodes.find(n =>
+        n.classList.contains('btn-primary')
+        || n.classList.contains('btn-danger')
+        || n.classList.contains('btn-warning')
+        || n.hasAttribute('autofocus'),
+      ) || nodes.find(n => n.tagName === 'INPUT' || n.tagName === 'TEXTAREA' || n.tagName === 'SELECT')
+        || nodes[0];
+      preferred?.focus();
+    }, 0);
+
     return () => {
+      window.clearTimeout(focusTimer);
       window.removeEventListener('keydown', onKey);
       modalStackDepth = Math.max(0, modalStackDepth - 1);
       if (modalStackDepth === 0) {
         document.body.style.overflow = prevOverflow;
       }
+      previouslyFocused?.focus?.();
+      void level;
     };
   }, []);
 
@@ -110,11 +164,22 @@ export default function Modal({
         if (e.target === e.currentTarget) handleOverlayClick();
       }}
     >
-      <div className={`${boxClass} glass-modal-shell modal-typography${typography === 'user-management' ? ' modal-typography--user-management' : ''}`} onClick={e => e.stopPropagation()}>
+      <div
+        ref={boxRef}
+        className={`${boxClass} glass-modal-shell modal-typography${typography === 'user-management' ? ' modal-typography--user-management' : ''}`}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="modal-header">
-          <div className="modal-header-text">
-            <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>
-            {subtitle ? <p className="modal-subtitle" title={subtitle}>{subtitle}</p> : null}
+          <div className="modal-header-lead">
+            {icon ? (
+              <span className={`modal-title-icon modal-title-icon--${iconTone}`} aria-hidden="true">
+                {icon}
+              </span>
+            ) : null}
+            <div className="modal-header-text">
+              <h2 id="modal-title" className="modal-title" title={title}>{title}</h2>
+              {subtitle ? <p className="modal-subtitle" title={subtitle}>{subtitle}</p> : null}
+            </div>
           </div>
           <div className="modal-header-actions">
             {headerAction}

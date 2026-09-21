@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '../Modal';
-import { Fingerprint } from '../ui/icons';
+import { Fingerprint, HardDrive } from '../ui/icons';
 
 interface Props {
   onEnroll:  (deviceLabel?: string) => Promise<boolean>;
@@ -16,6 +16,7 @@ export default function EnrollBiometricModal({ onEnroll, onSkip, enrolling, erro
     <Modal
       title="Enable fingerprint sign-in?"
       subtitle="Next time, sign in instantly with your fingerprint — no password needed on this device."
+      icon={<Fingerprint />}
       size="sm"
       onClose={onSkip}
       closeOnBackdrop={!enrolling}
@@ -53,14 +54,17 @@ export default function EnrollBiometricModal({ onEnroll, onSkip, enrolling, erro
           <Fingerprint size={32} className="text-blue-600" />
         </div>
 
-        <input
-          type="text"
-          value={label}
-          onChange={e => setLabel(e.target.value)}
-          placeholder="Device name (optional — e.g. Xiaomi Pad)"
-          className="form-input w-full"
-          aria-label="Device name"
-        />
+        <div className="field-with-icon w-full">
+          <span className="field-lead-icon"><HardDrive size={18} /></span>
+          <input
+            type="text"
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            placeholder="Device name (optional — e.g. Xiaomi Pad)"
+            className="form-input w-full"
+            aria-label="Device name"
+          />
+        </div>
 
         {error && (
           <p className="form-error w-full text-left" role="alert">

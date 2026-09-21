@@ -1,22 +1,28 @@
 const CANONICAL_LOGO_SRC = '/logo-full.png';
 
 type Variant = 'full' | 'icon' | 'white';
-type Size    = 'sm'   | 'md'  | 'lg';
+type Size    = 'sm'   | 'md'  | 'lg'  | 'xl'  | '2xl';
 
 // Fixed height per size; width is always auto so the image never distorts or clips
-const HEIGHT_CLS: Record<Size, string> = { sm: 'h-8', md: 'h-10', lg: 'h-12' };
+const HEIGHT_CLS: Record<Size, string> = {
+  sm: 'h-8', md: 'h-10', lg: 'h-12', xl: 'h-16', '2xl': 'h-20',
+};
 
 // Horizontal / vertical padding split — keeps the white pill snug around the logo
 const PAD_CLS: Record<Size, string> = {
   sm: 'px-2 py-1.5',
   md: 'px-3 py-2',
   lg: 'px-4 py-3',
+  xl: 'px-5 py-3.5',
+  '2xl': 'px-6 py-4',
 };
 
 const RADIUS_CLS: Record<Size, string> = {
   sm: 'rounded-lg',
   md: 'rounded-xl',
   lg: 'rounded-2xl',
+  xl: 'rounded-[1.25rem]',
+  '2xl': 'rounded-[1.35rem]',
 };
 
 interface Props {

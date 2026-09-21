@@ -1,4 +1,7 @@
 import axios from 'axios';
+import type { PanelModelSpecPatchRequest } from '../types/panelModel';
+import { DWES_CLIENT_ID, DWES_CLIENT_ID_HEADER } from '../utils/clientId';
+import { assertPdfBlob, looksLikePdfBytes, normalizeDrawingFileBlob, parseBlobApiError, readBlobPrefix } from '../utils/blobResponse';
 
 const api = axios.create({
   baseURL: '/api',
@@ -9,6 +12,8 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('dwes_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Tags the mutation with this tab, so the live stream can skip its own echo.
+  config.headers[DWES_CLIENT_ID_HEADER] = DWES_CLIENT_ID;
   return config;
 });
 
@@ -55,6 +60,75 @@ api.interceptors.response.use(
   },
 );
 
+async function fetchAuthorizedDrawingPdf(path: string, signal?: AbortSignal): Promise<Blob> {
+  try {
+    const response = await api.get(path, { responseType: 'blob', signal });
+    return normalizeDrawingFileBlob(response.data as Blob);
+  } catch (err: unknown) {
+    const responseData = (err as { response?: { data?: unknown; status?: number } })?.response?.data;
+    if (responseData !== undefined) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      const fallback = status === 404
+        ? 'Drawing file not found on disk — it may have been removed.'
+        : status === 403
+          ? 'You do not have permission to view this drawing.'
+          : 'Failed to load drawing file.';
+      throw new Error(await parseBlobApiError(responseData, fallback));
+    }
+    throw err;
+  }
+}
+
+function looksLikeImageBytes(prefix: Uint8Array): boolean {
+  if (prefix.length >= 3 && prefix[0] === 0xff && prefix[1] === 0xd8 && prefix[2] === 0xff) return true; // JPEG
+  if (prefix.length >= 8
+    && prefix[0] === 0x89 && prefix[1] === 0x50 && prefix[2] === 0x4e && prefix[3] === 0x47
+    && prefix[4] === 0x0d && prefix[5] === 0x0a && prefix[6] === 0x1a && prefix[7] === 0x0a) return true; // PNG
+  if (prefix.length >= 6) {
+    const header = String.fromCharCode(...prefix.subarray(0, 6));
+    if (header === 'GIF87a' || header === 'GIF89a') return true;
+  }
+  if (prefix.length >= 4) {
+    const riff = String.fromCharCode(...prefix.subarray(0, 4));
+    if (riff === 'RIFF') return true; // WebP container
+  }
+  return false;
+}
+
+async function fetchPanelDrawingSlotFile(
+  path: string,
+  slot: '2d' | '3d',
+  signal?: AbortSignal,
+): Promise<Blob> {
+  try {
+    const response = await api.get(path, { responseType: 'blob', signal });
+    const blob = response.data as Blob;
+    if (slot === '2d') {
+      if (blob.size === 0 || blob.type.includes('json')) {
+        throw new Error(await parseBlobApiError(blob, 'Drawing file is not available.'));
+      }
+      const prefix = await readBlobPrefix(blob, 8);
+      if (looksLikePdfBytes(prefix)) return assertPdfBlob(blob);
+      if (looksLikeImageBytes(prefix) || blob.type.startsWith('image/')) return blob;
+      // Non-PDF/non-image 200 bodies (HTML/JSON/garbage) must fail before PDF.js.
+      return normalizeDrawingFileBlob(blob);
+    }
+    return blob;
+  } catch (err: unknown) {
+    const responseData = (err as { response?: { data?: unknown; status?: number } })?.response?.data;
+    if (responseData !== undefined) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      const fallback = status === 404
+        ? 'Drawing not uploaded for this panel.'
+        : status === 403
+          ? 'You do not have permission to view this drawing.'
+          : 'Failed to load drawing file.';
+      throw new Error(await parseBlobApiError(responseData, fallback));
+    }
+    throw err;
+  }
+}
+
 export default api;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -75,7 +149,18 @@ export const authApi = {
 
   env: () => api.get('/env').then(r => r.data),
 
-  hints: () => api.get('/login-hints').then(r => r.data),
+  deferWebAuthnBootstrap: () =>
+    api.post('/auth/bootstrap/defer-webauthn').then(r => r.data as { bootstrap: import('../types').BootstrapStatus }),
+};
+
+/** Authenticated team installation link validation (JWT required). */
+export const installLinkApi = {
+  validate: (token: string) =>
+    api.post('/install/validate', { token }).then(r => r.data as {
+      campaignLabel: string;
+      organizationName: string;
+      linkId: number;
+    }),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -102,9 +187,14 @@ export const usersApi = {
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const projectsApi = {
-  list: () => api.get('/projects').then(r => r.data),
+  list: (signal?: AbortSignal) => api.get('/projects', { signal }).then(r => r.data),
 
   create: (dto: unknown) => api.post('/projects', dto).then(r => r.data),
+
+  /** Backend check that a project numbering is free (deleted numbering stays reserved). */
+  codeAvailable: (code: string, signal?: AbortSignal) =>
+    api.get(`/projects/code-available/${encodeURIComponent(code)}`, { signal })
+      .then(r => r.data as { code: string; available: boolean; reason?: string }),
 
   update: (code: string, dto: unknown) => api.put(`/projects/${code}`, dto).then(r => r.data),
 
@@ -119,8 +209,8 @@ export const projectsApi = {
   frameReportPdf: (code: string, frameId: string) =>
     api.get(`/projects/${code}/frames/${frameId}/report-pdf`, { responseType: 'blob' }).then(r => r.data),
 
-  panelCompletionReport: (code: string, frameId: string) =>
-    api.get(`/projects/${code}/frames/${frameId}/completion-report`).then(r => r.data),
+  panelCompletionReport: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/completion-report`, { signal }).then(r => r.data),
 
   reportPdf: (code: string, frameId?: string) =>
     frameId
@@ -130,18 +220,18 @@ export const projectsApi = {
   reportXlsx: (code: string) =>
     api.get(`/projects/${code}/report-xlsx`, { responseType: 'blob' }).then(r => r.data as Blob),
 
-  submitToDirector: (code: string) =>
-    api.post(`/projects/${code}/submit-to-director`).then(r => r.data),
+  submitToDirector: (code: string, payload?: { frameId?: string; assignmentId?: number }) =>
+    api.post(`/projects/${code}/submit-to-director`, payload ?? {}).then(r => r.data),
 
-  frames: (code: string) => api.get(`/projects/${code}/frames`).then(r => r.data),
+  frames: (code: string, signal?: AbortSignal) => api.get(`/projects/${code}/frames`, { signal }).then(r => r.data),
 
   createPanel: (
     code: string,
     dto: { name: string; type?: string; voltage_level: string; system_type?: string },
   ) => api.post(`/projects/${code}/frames`, dto).then(r => r.data),
 
-  frame: (code: string, frameId: string) =>
-    api.get(`/projects/${code}/frames/${frameId}`).then(r => r.data),
+  frame: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}`, { signal }).then(r => r.data),
 
   cables: (code: string) => api.get(`/projects/${code}/cables`).then(r => r.data),
 
@@ -185,10 +275,66 @@ export const projectsApi = {
 
   drawings: (code: string) => api.get(`/projects/${code}/drawings`).then(r => r.data),
 
+  panelDrawings: (code: string, frameId: string) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawings`).then(r => r.data),
+
+  panelDrawingFile: (code: string, frameId: string, drawingId: string) =>
+    fetchAuthorizedDrawingPdf(`/projects/${code}/frames/${frameId}/drawings/${drawingId}/file`),
+
+  panelDrawing: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/drawing`, { signal }).then(r => r.data),
+
+  panelDrawingSlotFile: (code: string, frameId: string, slot: '2d' | '3d', signal?: AbortSignal) =>
+    fetchPanelDrawingSlotFile(`/projects/${code}/frames/${frameId}/drawing/${slot}/file`, slot, signal),
+
+  panelDrawingSlotDownload: (code: string, frameId: string, slot: '2d' | '3d') =>
+    api.get(`/projects/${code}/frames/${frameId}/drawing/${slot}/download`, { responseType: 'blob' })
+      .then(r => r.data as Blob),
+
+  // ── Generated 3D panel model (2D drawing → 3D conversion), strictly panel-scoped ──
+  panelModel: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/model`, { signal }).then(r => r.data),
+
+  panelModelConvert: (code: string, frameId: string, packageRevision: number, signal?: AbortSignal) =>
+    api.post(`/projects/${code}/frames/${frameId}/model/convert`, { package_revision: packageRevision }, { signal }).then(r => r.data),
+
+  panelModelSpec: (code: string, frameId: string, modelId: string, patch: PanelModelSpecPatchRequest, signal?: AbortSignal) =>
+    api.post(`/projects/${code}/frames/${frameId}/model/${modelId}/spec`, patch, { signal }).then(r => r.data),
+
+  panelModelApprove: (
+    code: string,
+    frameId: string,
+    modelId: string,
+    packageRevision: number,
+    assumptionsAcknowledged: boolean,
+    verificationNotes?: string,
+    signal?: AbortSignal,
+  ) => api.post(`/projects/${code}/frames/${frameId}/model/${modelId}/approve`, {
+    package_revision: packageRevision,
+    assumptions_acknowledged: assumptionsAcknowledged,
+    ...(verificationNotes?.trim() ? { verification_notes: verificationNotes.trim() } : {}),
+  }, { signal }).then(r => r.data),
+
+  panelModelFile: (code: string, frameId: string, modelId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/model/${modelId}/file`, { responseType: 'blob', signal })
+      .then(r => r.data as Blob),
+
+  panelModelFlat3dLatest: (code: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${code}/frames/${frameId}/model/flat3d/latest`, { signal }).then(r => r.data),
+
+  panelModelFlat3dConvert: (code: string, frameId: string, packageRevision: number, signal?: AbortSignal) =>
+    api.post(`/projects/${code}/frames/${frameId}/model/flat3d/convert`, { package_revision: packageRevision }, { signal }).then(r => r.data),
+
+  panelModelAutoExtract: (code: string, frameId: string, packageRevision: number, regenerate: boolean, signal?: AbortSignal) =>
+    api.post(`/projects/${code}/frames/${frameId}/model/auto-extract`, { package_revision: packageRevision, regenerate }, { signal }).then(r => r.data as import('../types/panelModel').PanelAutoExtractResponse),
+
+  panelModelAutoFix: (code: string, frameId: string, packageRevision: number, signal?: AbortSignal) =>
+    api.post(`/projects/${code}/frames/${frameId}/model/auto-fix`, { package_revision: packageRevision }, { signal }).then(r => r.data as import('../types/panelModel').PanelAutoExtractResponse),
+
   // Fetch a drawing file as a Blob (auth header is attached by the axios interceptor;
   // a raw new-tab GET would not carry the JWT). Caller decides inline-open vs download.
   drawingFile: (code: string, id: string) =>
-    api.get(`/projects/${code}/drawings/${id}/file`, { responseType: 'blob' }).then(r => r.data as Blob),
+    fetchAuthorizedDrawingPdf(`/projects/${code}/drawings/${id}/file`),
 
   deleteFramePrecheck: (code: string, frameId: string) =>
     api.get(`/projects/${code}/frames/${frameId}/delete-precheck`).then(r => r.data),
@@ -253,6 +399,19 @@ export const uploadApi = {
         : undefined,
     }).then(r => r.data),
 
+  panelDrawingSlot: (
+    code: string,
+    frameId: string,
+    slot: '2d' | '3d',
+    formData: FormData,
+    onProgress?: (pct: number) => void,
+  ) => api.put(`/projects/${code}/frames/${frameId}/drawing/${slot}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress
+      ? e => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
+      : undefined,
+  }).then(r => r.data),
+
   directorReport: (code: string, formData: FormData) =>
     api.post(`/upload/director-report/${code}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -262,7 +421,7 @@ export const uploadApi = {
 // ─── Technician ───────────────────────────────────────────────────────────────
 
 export const techApi = {
-  myPanels: () => api.get('/tech/my-panels').then(r => r.data),
+  myPanels: (signal?: AbortSignal) => api.get('/tech/my-panels', { signal }).then(r => r.data),
 
   start: (id: number) => api.post(`/tech/start/${id}`).then(r => r.data),
 
@@ -279,8 +438,159 @@ export const techApi = {
   cableStatus: (assignmentId: number, cableIndex: number, field: 'src' | 'dst' | 'note' | 'issue', value: boolean | string) =>
     api.post('/tech/cable-status', { assignment_id: assignmentId, cable_index: cableIndex, field, value }).then(r => r.data),
 
-  cableAction: (assignmentId: number, cableIndex: number, action: 'complete' | 'src_only' | 'dst_only' | 'reset_all', note?: string) =>
+  cableAction: (
+    assignmentId: number,
+    cableIndex: number,
+    action: 'complete' | 'src_only' | 'dst_only' | 'reset_all' | 'skip' | 'flag_issue' | 'source_end_open' | 'destination_end_open',
+    note?: string,
+  ) =>
     api.post('/tech/cable-action', { assignment_id: assignmentId, cable_index: cableIndex, action, note }).then(r => r.data),
+
+  crimpingSummary: (assignmentId: number) =>
+    api.get(`/tech/crimping/${assignmentId}`).then(r => r.data),
+
+  crimpingReport: (assignmentId: number) =>
+    api.get(`/tech/crimping-report/${assignmentId}`).then(r => r.data),
+
+  crimpingAction: (
+    assignmentId: number,
+    cableIndex: number,
+    end: 'source' | 'destination',
+    operation: 'strip' | 'crimp' = 'crimp',
+    remarks?: string,
+  ) =>
+    api.post('/tech/crimping/action', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      end,
+      operation,
+      remarks,
+    }).then(r => r.data),
+
+  prepareWire: (
+    assignmentId: number,
+    cableIndex: number,
+    opts?: { remarks?: string; expected_sno?: string | number; expected_ferrule?: string },
+  ) =>
+    api.post('/tech/crimping/prepare-wire', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      remarks: opts?.remarks,
+      expected_sno: opts?.expected_sno,
+      expected_ferrule: opts?.expected_ferrule,
+    }).then(r => r.data),
+
+  cutWire: (
+    assignmentId: number,
+    cableIndex: number,
+    opts?: { planned_length?: string; actual_length?: string; remarks?: string; expected_sno?: string | number; expected_ferrule?: string },
+  ) =>
+    api.post('/tech/crimping/cut', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      planned_length: opts?.planned_length,
+      actual_length: opts?.actual_length,
+      remarks: opts?.remarks,
+      expected_sno: opts?.expected_sno,
+      expected_ferrule: opts?.expected_ferrule,
+    }).then(r => r.data),
+
+  stripWire: (
+    assignmentId: number,
+    cableIndex: number,
+    opts?: { remarks?: string; expected_sno?: string | number; expected_ferrule?: string },
+  ) =>
+    api.post('/tech/crimping/strip-wire', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      remarks: opts?.remarks,
+      expected_sno: opts?.expected_sno,
+      expected_ferrule: opts?.expected_ferrule,
+    }).then(r => r.data),
+
+  crimpWire: (
+    assignmentId: number,
+    cableIndex: number,
+    opts?: { remarks?: string; expected_sno?: string | number; expected_ferrule?: string },
+  ) =>
+    api.post('/tech/crimping/crimp-wire', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      remarks: opts?.remarks,
+      expected_sno: opts?.expected_sno,
+      expected_ferrule: opts?.expected_ferrule,
+    }).then(r => r.data),
+
+  crimpingBulkAction: (
+    assignmentId: number,
+    cableIndexes: number[],
+    end: 'source' | 'destination',
+    operation: 'strip' | 'crimp',
+  ) =>
+    api.post('/tech/crimping/bulk-action', {
+      assignment_id: assignmentId,
+      cable_indexes: cableIndexes,
+      end,
+      operation,
+    }).then(r => r.data),
+
+  correctCable: (
+    assignmentId: number,
+    cableIndex: number,
+    field: string,
+    correctedValue: string,
+    reason: string,
+  ) =>
+    api.post('/tech/cable-correction', {
+      assignment_id: assignmentId,
+      cable_index: cableIndex,
+      field,
+      corrected_value: correctedValue,
+      reason,
+    }).then(r => r.data),
+
+  cableCorrections: (assignmentId: number, cableIndex?: number) =>
+    api.get(
+      cableIndex == null
+        ? `/tech/cable-corrections/${assignmentId}`
+        : `/tech/cable-corrections/${assignmentId}/${cableIndex}`,
+    ).then(r => r.data),
+
+  downloadCorrectedExcel: async (assignmentId: number) => {
+    const response = await api.get(`/tech/cable-corrections/${assignmentId}/excel`, {
+      responseType: 'blob',
+    });
+    const blob = response.data as Blob;
+    const disposition = String(response.headers?.['content-disposition'] || '');
+    const pathHeader = String(response.headers?.['x-dwes-corrected-excel-path'] || '');
+    const matchStar = /filename\*=(?:UTF-8''|utf-8'')([^;]+)/i.exec(disposition);
+    const match = /filename="?([^";]+)"?/i.exec(disposition);
+    let filename = match?.[1] || `assignment-${assignmentId}_corrected.xlsx`;
+    if (matchStar?.[1]) {
+      try { filename = decodeURIComponent(matchStar[1].trim()); } catch { /* keep fallback */ }
+    }
+    return {
+      blob,
+      filename,
+      displayPath: pathHeader,
+    };
+  },
+
+  previewCorrectedExcel: (
+    assignmentId: number,
+    wireNumber?: string | number,
+    focusField?: string,
+  ) =>
+    api.get(`/tech/cable-corrections/${assignmentId}/excel-preview`, {
+      params: {
+        ...(wireNumber != null && String(wireNumber).trim()
+          ? { wireNumber: String(wireNumber) }
+          : {}),
+        ...(focusField != null && String(focusField).trim()
+          ? { focusField: String(focusField) }
+          : {}),
+      },
+    }).then(r => r.data),
 
   /** DEMO_MODE only — bulk dev helpers (404 when DEMO_MODE off). */
   devCableBulk: (assignmentId: number, action: 'mark_all_verified' | 'mark_all_with_issues' | 'reset_all') =>
@@ -295,7 +605,18 @@ export const techApi = {
 
   delete: (id: number) => api.delete(`/tech/assignment/${id}`).then(r => r.data),
 
-  myAssignmentDetail: (id: number) => api.get(`/tech/my-assignment/${id}`).then(r => r.data),
+  myAssignmentDetail: (id: number, signal?: AbortSignal) => api.get(`/tech/my-assignment/${id}`, { signal }).then(r => r.data),
+
+  midChangeTargets: () => api.get('/tech/mid-change/targets').then(r => r.data),
+
+  midChangeRequests: () => api.get('/tech/mid-change/requests').then(r => r.data),
+
+  executeMidChange: (sourceAssignmentId: number, targetTechnicianId: number, reason: string) =>
+    api.post('/tech/mid-change/execute', {
+      source_assignment_id: sourceAssignmentId,
+      target_technician_id: targetTechnicianId,
+      reason,
+    }).then(r => r.data),
 
   completionReport: (id: number) => api.get(`/tech/completion-report/${id}`).then(r => r.data),
 
@@ -312,14 +633,72 @@ export const techApi = {
   devOtpHint: (id: number) => api.get(`/tech/dev/otp-hint/${id}`).then(r => r.data),
 };
 
+export const jobsApi = {
+  list: (params?: { project_code?: string; frame_id?: string }) =>
+    api.get('/jobs', { params }).then(r => r.data),
+  get: (id: string) => api.get(`/jobs/${id}`).then(r => r.data),
+  retry: (id: string) => api.post(`/jobs/${id}/retry`).then(r => r.data),
+  cancel: (id: string) => api.post(`/jobs/${id}/cancel`).then(r => r.data),
+  enqueueBackupExport: (opts?: { dry_run?: boolean; pre_operation?: boolean }) =>
+    api.post('/jobs/backup-export', opts ?? {}).then(r => r.data),
+};
+
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 
 export const supervisorApi = {
-  allPanels: () => api.get('/supervisor/all-panels').then(r => r.data),
+  allPanels: (signal?: AbortSignal) => api.get('/supervisor/all-panels', { signal }).then(r => r.data),
+
+  projectLiveSummary: (signal?: AbortSignal) =>
+    api.get('/supervisor/project-live-summary', { signal }).then(r => r.data),
 
   reviewPanels: (code: string) => api.get(`/supervisor/review-panels/${code}`).then(r => r.data),
 
   panelDetail: (id: number) => api.get(`/supervisor/panel-detail/${id}`).then(r => r.data),
+
+  crimpingSummary: (assignmentId: number) =>
+    api.get(`/supervisor/crimping/${assignmentId}`).then(r => r.data),
+
+  /** Real Cut/Strip/Crimp portfolio from persisted cable_status (never invented). */
+  crimpingPortfolio: (projectCode?: string, signal?: AbortSignal) =>
+    api.get('/supervisor/crimping-portfolio', {
+      params: projectCode ? { project_code: projectCode } : undefined,
+      signal,
+    }).then(r => r.data),
+
+  crimpingReport: (assignmentId: number) =>
+    api.get(`/supervisor/crimping-report/${assignmentId}`).then(r => r.data),
+
+  crimpingReportPdf: async (assignmentId: number) => {
+    const response = await api.get(`/supervisor/crimping-report/${assignmentId}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
+  setCrimpingRequired: (assignmentId: number, cableIndexes: number[], required: boolean) =>
+    api.post(`/supervisor/crimping/${assignmentId}/required`, {
+      cable_indexes: cableIndexes,
+      required,
+    }).then(r => r.data),
+
+  setCrimpingRework: (
+    assignmentId: number,
+    cableIndex: number,
+    end: 'source' | 'destination',
+    operation: 'strip' | 'crimp',
+    reason: string,
+  ) =>
+    api.post(`/supervisor/crimping/${assignmentId}/rework`, {
+      cable_index: cableIndex,
+      end,
+      operation,
+      reason,
+    }).then(r => r.data),
+
+  resolveLegacyPartial: (assignmentId: number, cableIndex: number) =>
+    api.post(`/supervisor/crimping/${assignmentId}/resolve-legacy-partial`, {
+      cable_index: cableIndex,
+    }).then(r => r.data),
 
   review: (id: number, status: string, notes?: string) =>
     api.post(`/supervisor/review/${id}`, { review_status: status, review_notes: notes }).then(r => r.data),
@@ -351,8 +730,20 @@ export const supervisorApi = {
       reason_notes: reasonNotes,
     }).then(r => r.data),
 
+  reassignBeforeStart: (payload: {
+    assignment_id: number;
+    new_technician_id: number;
+    reason: string;
+  }) => api.post('/supervisor/reassign-before-start', payload).then(r => r.data),
+
   frameProgress: (projectCode: string, frameId: string) =>
     api.get(`/supervisor/frame-progress/${projectCode}/${frameId}`).then(r => r.data),
+
+  panelActivity: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(
+      `/supervisor/panel-activity/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { signal },
+    ).then(r => r.data),
 
   completionReport: (id: number) =>
     api.get(`/supervisor/completion-report/${id}`).then(r => r.data),
@@ -369,19 +760,174 @@ export const supervisorApi = {
     api.get(`/supervisor/wiring-schedule/${code}/${frameId}/xlsx`, { responseType: 'blob' }).then(r => r.data as Blob),
 };
 
+// ─── Engineering (Digital Twin geometry) ─────────────────────────────────────
+
+export const engineeringApi = {
+  /** Server-authoritative twin context: classification, modes, published geometry, route. */
+  twinContext: (projectCode: string, frameId: string, cableRef: string | number, signal?: AbortSignal) =>
+    api.get(
+      `/engineering/twin-context/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}/${encodeURIComponent(String(cableRef))}`,
+      { signal },
+    ).then(r => r.data),
+
+  /**
+   * Operational 2D Twin — Mode A GEOMETRY when published, else Mode B Excel schematic.
+   * Always safe for technician wiring; never blocks on missing CAD.
+   */
+  operationalTwin: (
+    projectCode: string,
+    frameId: string,
+    cableRef?: string | number,
+    signal?: AbortSignal,
+  ) =>
+    api.get(
+      `/engineering/operational-twin/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { params: cableRef != null ? { cableRef: String(cableRef) } : undefined, signal },
+    ).then(r => r.data),
+
+  /** Dry-run validation of a Chennai engineering package (supervisor/admin). */
+  validatePackage: (projectCode: string, frameId: string, pkg: unknown) =>
+    api.post(`/engineering/validate/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`, pkg).then(r => r.data),
+
+  /** Import a validated package as a DRAFT model revision (supervisor/admin). */
+  importPackage: (projectCode: string, frameId: string, pkg: unknown) =>
+    api.post(`/engineering/import/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`, pkg).then(r => r.data),
+
+  /** Mapping-review summary for a model revision. */
+  reviewModel: (modelId: number) => api.get(`/engineering/review/${modelId}`).then(r => r.data),
+
+  /** Approve + publish a reviewed revision (supervisor/admin). */
+  approveModel: (modelId: number) => api.post(`/engineering/approve/${modelId}`).then(r => r.data),
+
+  /** List draft/published engineering revisions for a panel. */
+  listModels: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(
+      `/engineering/models/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { signal },
+    ).then(r => r.data),
+
+  /**
+   * Live 3D Operational Twin payload.
+   * Returns GA-foundation-backed procedural panel geometry + active-wire state.
+   * Technicians require a released panel.
+   */
+  operationalTwin3d: (
+    projectCode: string,
+    frameId: string,
+    cableRef?: string | number,
+    signal?: AbortSignal,
+  ) =>
+    api.get(
+      `/engineering/operational-twin-3d/${encodeURIComponent(projectCode)}/${encodeURIComponent(frameId)}`,
+      { params: cableRef != null ? { cableRef: String(cableRef) } : undefined, signal },
+    ).then(r => r.data),
+};
+
+// ─── GA foundation (panel-scoped supervisor workflow) ────────────────────────
+
+const gaPath = (projectCode: string, frameId: string) =>
+  `/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/ga`;
+
+export const gaApi = {
+  status: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(gaPath(projectCode, frameId), { signal }).then(r => r.data),
+
+  sources: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`${gaPath(projectCode, frameId)}/sources`, { signal }).then(r => r.data),
+
+  uploadSource: (
+    projectCode: string,
+    frameId: string,
+    face: 'front' | 'internal' | 'rear' | 'custom',
+    formData: FormData,
+    onProgress?: (pct: number) => void,
+  ) => api.post(`${gaPath(projectCode, frameId)}/sources/${face}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress
+      ? event => onProgress(event.total ? Math.round((event.loaded / event.total) * 100) : 0)
+      : undefined,
+  }).then(r => r.data),
+
+  sourceFile: (projectCode: string, frameId: string, assetId: number) =>
+    api.get(`${gaPath(projectCode, frameId)}/sources/${assetId}/file`, { responseType: 'blob' })
+      .then(r => r.data as Blob),
+
+  retryConversion: (projectCode: string, frameId: string, assetId: number) =>
+    api.post(`${gaPath(projectCode, frameId)}/sources/${assetId}/retry-conversion`).then(r => r.data),
+
+  saveFace: (
+    projectCode: string,
+    frameId: string,
+    face: 'front' | 'internal' | 'rear' | 'custom',
+    formData: FormData,
+  ) => api.post(`${gaPath(projectCode, frameId)}/faces/${face}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data),
+
+  faceImage: (projectCode: string, frameId: string, faceId: string) =>
+    api.get(`${gaPath(projectCode, frameId)}/faces/${encodeURIComponent(faceId)}/image`, { responseType: 'blob' })
+      .then(r => r.data as Blob),
+
+  updateDimensions: (projectCode: string, frameId: string, dimensions: { height: number; width: number; depth: number }) =>
+    api.patch(`${gaPath(projectCode, frameId)}/asset-set/dimensions`, dimensions).then(r => r.data),
+
+  confirmAssetSet: (projectCode: string, frameId: string) =>
+    api.post(`${gaPath(projectCode, frameId)}/asset-set/confirm`).then(r => r.data),
+
+  mapping: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`${gaPath(projectCode, frameId)}/mapping`, { signal }).then(r => r.data),
+
+  saveMapping: (projectCode: string, frameId: string, payload: unknown) =>
+    api.post(`${gaPath(projectCode, frameId)}/mapping/draft`, payload).then(r => r.data),
+
+  confirmMapping: (projectCode: string, frameId: string, modelId: number) =>
+    api.post(`${gaPath(projectCode, frameId)}/mapping/${modelId}/confirm`).then(r => r.data),
+
+  correlate: (projectCode: string, frameId: string) =>
+    api.post(`${gaPath(projectCode, frameId)}/correlation`).then(r => r.data),
+
+  correlationMap: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`${gaPath(projectCode, frameId)}/correlation-map`, { signal }).then(r => r.data),
+
+  finalization: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`${gaPath(projectCode, frameId)}/finalization`, { signal }).then(r => r.data),
+
+  decideFinalization: (
+    projectCode: string,
+    frameId: string,
+    resultId: string,
+    payload: {
+      decision: 'confirm_suggestion' | 'link_existing' | 'exception_hold';
+      target_terminal_id?: number;
+      reason?: string;
+    },
+  ) => api.post(`${gaPath(projectCode, frameId)}/finalization/${encodeURIComponent(resultId)}`, payload).then(r => r.data),
+
+  release: (projectCode: string, frameId: string) =>
+    api.post(`${gaPath(projectCode, frameId)}/release`).then(r => r.data),
+
+  job: (projectCode: string, frameId: string, jobId: string, signal?: AbortSignal) =>
+    api.get(`${gaPath(projectCode, frameId)}/jobs/${encodeURIComponent(jobId)}`, { signal }).then(r => r.data),
+
+  cancelJob: (projectCode: string, frameId: string, jobId: string) =>
+    api.post(`${gaPath(projectCode, frameId)}/jobs/${encodeURIComponent(jobId)}/cancel`).then(r => r.data),
+};
+
 // ─── Director ─────────────────────────────────────────────────────────────────
 
 export const directorApi = {
-  stats: () => api.get('/director/stats').then(r => r.data),
+  stats: (signal?: AbortSignal) => api.get('/director/stats', { signal }).then(r => r.data),
 
   projects: () => api.get('/director/projects').then(r => r.data),
 
-  workforce: () => api.get('/director/workforce').then(r => r.data),
+  workforce: (signal?: AbortSignal) => api.get('/director/workforce', { signal }).then(r => r.data),
 
-  activity: (limit?: number) =>
-    api.get('/director/activity', { params: limit ? { limit } : {} }).then(r => r.data),
+  monitoring: (signal?: AbortSignal) => api.get('/director/monitoring', { signal }).then(r => r.data),
 
-  projectsSummary: () => api.get('/director/projects-summary').then(r => r.data),
+  activity: (limit?: number, signal?: AbortSignal) =>
+    api.get('/director/activity', { params: limit ? { limit } : {}, signal }).then(r => r.data),
+
+  projectsSummary: (signal?: AbortSignal) => api.get('/director/projects-summary', { signal }).then(r => r.data),
 
   export: (format: 'csv' | 'xlsx' | 'pdf') =>
     api.get(`/director/export?format=${format}`, { responseType: 'blob' }).then(r => r.data),
@@ -390,7 +936,7 @@ export const directorApi = {
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 export const adminApi = {
-  diagnostics: () => api.get('/admin/diagnostics').then(r => r.data),
+  diagnostics: (signal?: AbortSignal) => api.get('/admin/diagnostics', { signal }).then(r => r.data),
 
   clearCache: () => api.post('/admin/diagnostics/clear-cache').then(r => r.data),
 
@@ -447,14 +993,249 @@ export const adminApi = {
   hardDeletePrecheck: (code: string) =>
     api.get(`/admin/projects/${code}/hard-delete`).then(r => r.data),
 
-  hardDelete: (code: string, confirmedCode = code) =>
-    api.post(`/admin/projects/${code}/hard-delete`, { confirmed_code: confirmedCode }).then(r => r.data),
+  hardDelete: (code: string) =>
+    api.post(`/admin/projects/${code}/hard-delete`).then(r => r.data),
 
   resetAllPrecheck: () =>
     api.get('/admin/reset-all-projects').then(r => r.data),
 
   resetAllProjects: (confirmedPhrase: string) =>
     api.post('/admin/reset-all-projects', { confirmed_phrase: confirmedPhrase }).then(r => r.data),
+
+  teamInstallLinkStatus: () =>
+    api.get('/admin/team-install-link').then(r => r.data),
+
+  teamInstallLinkRegenerate: (body?: { expiryDays?: number; campaignLabel?: string; organizationName?: string }) =>
+    api.post('/admin/team-install-link/regenerate', body ?? {}).then(r => r.data as {
+      shareUrl: string;
+      expiresAt: string | null;
+      createdAt: string;
+    }),
+
+  teamInstallLinkDisable: () =>
+    api.post('/admin/team-install-link/disable').then(r => r.data),
+};
+
+/** Panel Workflow Phase W1 — planning foundation (no Supervisor UI yet). */
+export const panelWorkflowApi = {
+  byPanel: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get('/panel-workflow/by-panel', {
+      params: { project_code: projectCode, frame_id: frameId },
+      signal,
+    }).then(r => r.data),
+
+  ensure: (body: {
+    project_code: string;
+    frame_id: string;
+    panel_name?: string;
+    notes?: string;
+    efficiency_factor?: number | null;
+    target_completion_at?: string | null;
+  }) => api.post('/panel-workflow/ensure', body).then(r => r.data),
+
+  estimate: (params: {
+    project_code?: string;
+    frame_id?: string;
+    total_wires?: number;
+    technician_count?: number;
+    efficiency_factor?: number;
+    target_wires_per_hour?: number;
+    productive_hours_per_day?: number;
+  }, signal?: AbortSignal) =>
+    api.get('/panel-workflow/estimate', { params, signal }).then(r => r.data),
+
+  get: (id: number, signal?: AbortSignal) =>
+    api.get(`/panel-workflow/${id}`, { signal }).then(r => r.data),
+
+  create: (body: {
+    project_code: string;
+    frame_id: string;
+    panel_name?: string;
+    notes?: string;
+    efficiency_factor?: number | null;
+    target_completion_at?: string | null;
+  }) => api.post('/panel-workflow', body).then(r => r.data),
+
+  update: (id: number, body: Record<string, unknown>) =>
+    api.put(`/panel-workflow/${id}`, body).then(r => r.data),
+
+  archive: (id: number) => api.delete(`/panel-workflow/${id}`).then(r => r.data),
+
+  history: (id: number, signal?: AbortSignal) =>
+    api.get(`/panel-workflow/${id}/history`, { signal }).then(r => r.data),
+
+  applyTemplate: (workflowId: number, body: { template_id: number; mode?: 'replace' | 'merge' }) =>
+    api.post(`/panel-workflow/${workflowId}/apply-template`, body).then(r => r.data),
+
+  directorUpgradePreview: (workflowId: number, signal?: AbortSignal) =>
+    api.get(`/panel-workflow/${workflowId}/director-upgrade-preview`, { signal }).then(r => r.data),
+
+  directorUpgrade: (workflowId: number, body?: { archive_unused_legacy_keys?: string[] }) =>
+    api.post(`/panel-workflow/${workflowId}/director-upgrade`, body || {}).then(r => r.data),
+
+  addStage: (workflowId: number, body: Record<string, unknown>) =>
+    api.post(`/panel-workflow/${workflowId}/stages`, body).then(r => r.data),
+
+  updateStage: (stageId: number, body: Record<string, unknown>) =>
+    api.put(`/panel-workflow/stages/${stageId}`, body).then(r => r.data),
+
+  removeStage: (stageId: number) =>
+    api.delete(`/panel-workflow/stages/${stageId}`).then(r => r.data),
+
+  addDependency: (workflowId: number, body: { stage_id: number; prerequisite_stage_id: number }) =>
+    api.post(`/panel-workflow/${workflowId}/dependencies`, body).then(r => r.data),
+
+  removeDependency: (depId: number) =>
+    api.delete(`/panel-workflow/dependencies/${depId}`).then(r => r.data),
+
+  assignStage: (stageId: number, body: { user_id: number; role_hint?: string | null }) =>
+    api.post(`/panel-workflow/stages/${stageId}/assignees`, body).then(r => r.data),
+
+  removeAssignee: (assigneeId: number) =>
+    api.delete(`/panel-workflow/assignees/${assigneeId}`).then(r => r.data),
+
+  listTemplates: (signal?: AbortSignal) =>
+    api.get('/panel-workflow/templates', { signal }).then(r => r.data),
+
+  createTemplate: (body: Record<string, unknown>) =>
+    api.post('/panel-workflow/templates', body).then(r => r.data),
+
+  deleteTemplate: (id: number) =>
+    api.delete(`/panel-workflow/templates/${id}`).then(r => r.data),
+
+  productivityDefaults: (projectCode?: string, signal?: AbortSignal) =>
+    api.get('/panel-workflow/productivity-defaults', {
+      params: projectCode ? { project_code: projectCode } : undefined,
+      signal,
+    }).then(r => r.data),
+
+  putProductivityDefaults: (body: Record<string, unknown>) =>
+    api.put('/panel-workflow/productivity-defaults', body).then(r => r.data),
+};
+
+// ─── TB Markers (Phase TB1 foundation) ───────────────────────────────────────
+export const tbMarkersApi = {
+  list: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get('/tb-markers', {
+      params: { project_code: projectCode, frame_id: frameId },
+      signal,
+    }).then(r => r.data),
+
+  create: (body: unknown) =>
+    api.post('/tb-markers', body).then(r => r.data),
+
+  update: (id: number, body: unknown) =>
+    api.put(`/tb-markers/${id}`, body).then(r => r.data),
+
+  remove: (id: number) =>
+    api.delete(`/tb-markers/${id}`).then(r => r.data),
+
+  match: (params: {
+    projectCode: string;
+    frameId: string;
+    source_device: string;
+    source_terminal: string;
+    dest_device: string;
+    dest_terminal: string;
+    drawing_checksum?: string | null;
+    signal?: AbortSignal;
+  }) =>
+    api.get('/tb-markers/match', {
+      params: {
+        project_code: params.projectCode,
+        frame_id: params.frameId,
+        source_device: params.source_device,
+        source_terminal: params.source_terminal,
+        dest_device: params.dest_device,
+        dest_terminal: params.dest_terminal,
+        ...(params.drawing_checksum
+          ? { drawing_checksum: params.drawing_checksum }
+          : {}),
+      },
+      signal: params.signal,
+    }).then(r => r.data),
+
+  /** 2E: Supervisor-facing match diagnostics endpoint. */
+  matchDiagnostics: (params: {
+    projectCode: string;
+    frameId: string;
+    source_device: string;
+    source_terminal: string;
+    dest_device: string;
+    dest_terminal: string;
+    drawing_checksum?: string | null;
+    signal?: AbortSignal;
+  }) =>
+    api.get('/tb-markers/match/diagnostics', {
+      params: {
+        project_code: params.projectCode,
+        frame_id: params.frameId,
+        source_device: params.source_device,
+        source_terminal: params.source_terminal,
+        dest_device: params.dest_device,
+        dest_terminal: params.dest_terminal,
+        ...(params.drawing_checksum
+          ? { drawing_checksum: params.drawing_checksum }
+          : {}),
+      },
+      signal: params.signal,
+    }).then(r => r.data),
+
+  /** 2D: Manual endpoint mappings. */
+  listManualMappings: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get('/tb-markers/manual-mappings', {
+      params: { project_code: projectCode, frame_id: frameId },
+      signal,
+    }).then(r => r.data),
+
+  createManualMapping: (body: unknown) =>
+    api.post('/tb-markers/manual-mappings', body).then(r => r.data),
+};
+
+export const liveTbAnalysisApi = {
+  status: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/status`, { signal }).then(r => r.data),
+
+  panelStatus: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/panel-status`, { signal }).then(r => r.data),
+
+  gates: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/gates`, { signal }).then(r => r.data),
+
+  run: (projectCode: string, frameId: string) =>
+    api.post(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/run`).then(r => r.data),
+
+  verify: (projectCode: string, frameId: string, body: Record<string, unknown>) =>
+    api.post(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/verify`, body).then(r => r.data),
+
+  debugExport: async (projectCode: string, frameId: string) => {
+    const r = await api.get(
+      `/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/debug-export`,
+      { responseType: 'blob' },
+    );
+    return r.data as Blob;
+  },
+
+  seedDevBaseline: (projectCode: string, frameId: string) =>
+    api.post(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-analysis/dev-baseline`).then(r => r.data),
+
+  groups: (projectCode: string, frameId: string, checksum?: string, signal?: AbortSignal) =>
+    api.get(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-groups`, {
+      params: checksum ? { checksum } : undefined,
+      signal,
+    }).then(r => r.data),
+
+  completionOverview: (projectCode: string, frameId: string, signal?: AbortSignal) =>
+    api.get(`/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-completion-overview`, { signal }).then(r => r.data),
+
+  downloadCompletionReport: async (projectCode: string, frameId: string) => {
+    const r = await api.post(
+      `/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/tb-completion-report`,
+      null,
+      { responseType: 'blob' },
+    );
+    return r.data as Blob;
+  },
 };
 
 // ─── Dev (DEMO_MODE / ALLOW_DEV_HARD_RESET only) ─────────────────────────────
@@ -469,20 +1250,20 @@ export const devApi = {
 // ─── QA/QC ────────────────────────────────────────────────────────────────────
 
 export const qaqcApi = {
-  stats: () => api.get('/qaqc/stats').then(r => r.data),
+  stats: (signal?: AbortSignal) => api.get('/qaqc/stats', { signal }).then(r => r.data),
 
-  readyPanels: () => api.get('/qaqc/ready-panels').then(r => r.data),
+  readyPanels: (signal?: AbortSignal) => api.get('/qaqc/ready-panels', { signal }).then(r => r.data),
 
-  allCompleted: () => api.get('/qaqc/all-completed').then(r => r.data),
+  allCompleted: (signal?: AbortSignal) => api.get('/qaqc/all-completed', { signal }).then(r => r.data),
 
-  panelDetail: (id: number) => api.get(`/qaqc/panel-detail/${id}`).then(r => r.data),
+  panelDetail: (id: number, signal?: AbortSignal) => api.get(`/qaqc/panel-detail/${id}`, { signal }).then(r => r.data),
 
   inspect: (assignmentId: number, dto: unknown) =>
     api.post(`/qaqc/inspect-panel/${assignmentId}`, dto).then(r => r.data),
 
-  getInspection: (id: number) => api.get(`/qaqc/inspection/${id}`).then(r => r.data),
+  getInspection: (id: number, signal?: AbortSignal) => api.get(`/qaqc/inspection/${id}`, { signal }).then(r => r.data),
 
-  allInspections: () => api.get('/qaqc/inspections').then(r => r.data),
+  allInspections: (signal?: AbortSignal) => api.get('/qaqc/inspections', { signal }).then(r => r.data),
 
   myInspections: () => api.get('/qaqc/my-inspections').then(r => r.data),
 };

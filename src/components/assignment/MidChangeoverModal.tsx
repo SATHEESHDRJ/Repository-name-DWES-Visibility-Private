@@ -4,7 +4,8 @@ import { supervisorApi, usersApi } from '../../services/api';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
 import type { Project } from '../../types';
 import ProjectPanelSelect, { type FramePanel } from './ProjectPanelSelect';
-import { ArrowRight, CheckCircle, Info, TriangleAlert } from '../ui/icons';
+import { ArrowRight, ArrowLeftRight, CheckCircle, Check, Info, TriangleAlert, User, Tag, MessageCircle } from '../ui/icons';
+import { DwesLoadingIndicator } from '../ui/DwesLoadingIndicator';
 
 export const CHANGEOVER_REASONS = [
   'Shift Change',
@@ -168,6 +169,7 @@ export default function MidChangeoverModal({
   return (
     <Modal
       title="Mid-Changeover Technician"
+      icon={<ArrowLeftRight />}
       onClose={onClose}
       footer={!result ? (
         <>
@@ -178,11 +180,15 @@ export default function MidChangeoverModal({
             className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             type="button"
           >
+            <ArrowLeftRight size={16} />
             {saving ? 'Processing…' : 'Confirm Changeover'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button">
+          <Check size={16} />
+          Done
+        </button>
       )}
     >
       {!result ? (
@@ -207,7 +213,9 @@ export default function MidChangeoverModal({
           )}
 
           {loadingAssignment && (
-            <p className="text-[12px] text-slate-500 mb-4">Loading assignment…</p>
+            <div className="mb-4 flex justify-center py-2">
+              <DwesLoadingIndicator label="Loading assignment…" size="sm" />
+            </div>
           )}
 
           {!loadingAssignment && projectCode && panelId && !assignment && (
@@ -222,20 +230,20 @@ export default function MidChangeoverModal({
           {assignment && (
             <>
               <div className="mb-4 p-3 bg-slate-50 border border-[#E2E8F0] rounded-[10px]">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Current Technician</div>
-                <div className="text-[14px] font-semibold text-slate-900">{assignment.technician_name}</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-muted mb-2">Current Technician</div>
+                <div className="text-[14px] font-semibold text-primary">{assignment.technician_name}</div>
                 {assignment.pause_reason && (
                   <div className="text-[11px] text-red-600 mt-1">Paused: {assignment.pause_reason}</div>
                 )}
               </div>
 
               <div className="mb-4 grid grid-cols-2 gap-3">
-                <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Completed Cables</div>
+                <div className="p-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px]">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted">Completed Cables</div>
                   <div className="text-[20px] font-bold text-emerald-600 mt-1">{assignment.completed_cables ?? 0}</div>
                 </div>
-                <div className="p-3 bg-white border border-[#E2E8F0] rounded-[10px]">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Remaining Cables</div>
+                <div className="p-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px]">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted">Remaining Cables</div>
                   <div className="text-[20px] font-bold text-amber-600 mt-1">{assignment.remaining_cables ?? 0}</div>
                 </div>
               </div>
@@ -244,33 +252,39 @@ export default function MidChangeoverModal({
                 className={`mb-4 transition-opacity duration-200 ${canSelectTech ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}
               >
                 <label className="form-label mb-1">New Technician</label>
-                <select
-                  value={selTech}
-                  onChange={e => { setSelTech(e.target.value); setError(''); }}
-                  disabled={!canSelectTech}
-                  className="form-select disabled:cursor-not-allowed"
-                  aria-label="Select replacement technician"
-                >
-                  <option value="">Select replacement technician…</option>
-                  {availableTechs.map(t => (
-                    <option key={t.id} value={t.id}>{t.full_name} ({t.employee_id})</option>
-                  ))}
-                </select>
+                <div className="field-with-icon">
+                  <span className="field-lead-icon"><User size={18} /></span>
+                  <select
+                    value={selTech}
+                    onChange={e => { setSelTech(e.target.value); setError(''); }}
+                    disabled={!canSelectTech}
+                    className="form-select disabled:cursor-not-allowed"
+                    aria-label="Select replacement technician"
+                  >
+                    <option value="">Select replacement technician…</option>
+                    {availableTechs.map(t => (
+                      <option key={t.id} value={t.id}>{t.full_name} ({t.employee_id})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="mb-4">
                 <label className="form-label mb-1">Changeover Reason <span className="text-red-500">*</span></label>
-                <select
-                  value={reason}
-                  onChange={e => { setReason(e.target.value as ChangeoverReason | ''); setError(''); }}
-                  className="form-select"
-                  aria-label="Changeover reason"
-                >
-                  <option value="">Select reason…</option>
-                  {CHANGEOVER_REASONS.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                <div className="field-with-icon">
+                  <span className="field-lead-icon"><Tag size={18} /></span>
+                  <select
+                    value={reason}
+                    onChange={e => { setReason(e.target.value as ChangeoverReason | ''); setError(''); }}
+                    className="form-select"
+                    aria-label="Changeover reason"
+                  >
+                    <option value="">Select reason…</option>
+                    {CHANGEOVER_REASONS.map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {(reason === 'Other' || reasonNotes) && (
@@ -278,13 +292,16 @@ export default function MidChangeoverModal({
                   <label className="form-label mb-1">
                     Additional Details {reason === 'Other' && <span className="text-red-500">*</span>}
                   </label>
-                  <textarea
-                    value={reasonNotes}
-                    onChange={e => { setReasonNotes(e.target.value); setError(''); }}
-                    rows={2}
-                    placeholder={reason === 'Other' ? 'Describe the changeover reason…' : 'Optional notes…'}
-                    className="form-input w-full min-h-[88px] resize-y"
-                  />
+                  <div className="field-with-icon field-with-icon--top">
+                    <span className="field-lead-icon"><MessageCircle size={18} /></span>
+                    <textarea
+                      value={reasonNotes}
+                      onChange={e => { setReasonNotes(e.target.value); setError(''); }}
+                      rows={2}
+                      placeholder={reason === 'Other' ? 'Describe the changeover reason…' : 'Optional notes…'}
+                      className="form-input w-full min-h-[88px] resize-y"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -303,7 +320,7 @@ export default function MidChangeoverModal({
           <div className="assignment-success-title">Changeover complete!</div>
           <div className="assignment-success-copy mt-3 flex items-center justify-center gap-1 flex-wrap break-words">
             <span title={result.old_tech}>{result.old_tech}</span>
-            <ArrowRight size={14} className="text-slate-500 shrink-0" aria-hidden="true" />
+            <ArrowRight size={14} className="text-muted shrink-0" aria-hidden="true" />
             <span title={result.new_tech}>{result.new_tech}</span>
           </div>
           <div className="assignment-success-note mt-2">

@@ -1,13 +1,14 @@
 {
-  "name": "DWES — Digital Wiring Execution System",
+  "name": "DWES — Digital Wiring Execution System | Ingenious Network FZC",
   "short_name": "DWES",
   "description": "Digital Wiring Execution System — Ingenious Network FZC. Paperless. Precise. Real-Time.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
-  "background_color": "#FFFFFF",
+  "background_color": "#F7F6F2",
   "theme_color": "#1B2958",
   "icons": [
     {

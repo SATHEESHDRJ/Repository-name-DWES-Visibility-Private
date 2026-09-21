@@ -1,0 +1,66 @@
+{
+    "r15":  {
+                "audits":  [
+                               "wire_cut",
+                               "WIRE_CUT",
+                               "wire_stripped",
+                               "SRC_STRIPPED",
+                               "source_crimped",
+                               "SRC_CRIMPED",
+                               "CRIMP_SOURCE_COMPLETED",
+                               "SRC_CRIMPED",
+                               "destination_crimped",
+                               "DST_CRIMPED",
+                               "CRIMP_DESTINATION_COMPLETED",
+                               "DST_CRIMPED",
+                               "WIRING_FINISHED"
+                           ],
+                "wiring":  "True/True",
+                "ready":  true
+            },
+    "r10_no_backfill":  {
+                            "wiring":  "True/True",
+                            "strip":  "NOT_STARTED",
+                            "cut":  null
+                        },
+    "r16":  {
+                "wireId":  "wire_e73aea458738fc10ce015e84",
+                "crimp":  {
+                              "status":  "COMPLETED",
+                              "by":  41,
+                              "at":  "2026-09-19T07:32:50.640Z",
+                              "byName":  "Vineesh Mon Vijayan"
+                          },
+                "ready":  true,
+                "wiringFinished":  "True/True",
+                "strip":  {
+                              "status":  "COMPLETED",
+                              "by":  41,
+                              "at":  "2026-09-19T07:32:50.495Z",
+                              "byName":  "Vineesh Mon Vijayan"
+                          },
+                "auditTypes":  [
+                                   "wire_cut",
+                                   "WIRE_CUT",
+                                   "wire_stripped",
+                                   "SRC_STRIPPED",
+                                   "source_crimped",
+                                   "SRC_CRIMPED",
+                                   "CRIMP_SOURCE_COMPLETED",
+                                   "SRC_CRIMPED",
+                                   "destination_crimped",
+                                   "DST_CRIMPED",
+                                   "CRIMP_DESTINATION_COMPLETED",
+                                   "DST_CRIMPED",
+                                   "WIRING_FINISHED"
+                               ],
+                "cut":  {
+                            "status":  "COMPLETED",
+                            "plannedLength":  "3",
+                            "actualLength":  "3",
+                            "by":  41,
+                            "at":  "2026-09-19T07:32:50.449Z",
+                            "byName":  "Vineesh Mon Vijayan"
+                        }
+            }
+}

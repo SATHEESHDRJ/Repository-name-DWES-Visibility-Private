@@ -33,25 +33,26 @@ test('statusForUser inactive in demo mode', () => {
   process.env.DEMO_MODE = 'false';
 });
 
-test('statusForUser requires password and webauthn for admin in production', () => {
+test('statusForUser requires password only for admin in production (webauthn deferred)', () => {
   const svc = createService();
   const status = svc.statusForUser(42, 'system_admin', false);
   assert.equal(status.required, true);
   assert.equal(status.needs_password_rotation, true);
-  assert.equal(status.needs_webauthn_enrollment, true);
+  assert.equal(status.needs_webauthn_enrollment, false);
 });
 
-test('recordPasswordRotation clears password requirement', () => {
+test('recordPasswordRotation clears bootstrap when webauthn deferred', () => {
   const svc = createService();
   const userId = 7;
   svc.recordPasswordRotation(userId);
+  // ops_director is password-only (not in BOOTSTRAP_ROLES) until fingerprint is re-enabled
   const status = svc.statusForUser(userId, 'ops_director', false);
   assert.equal(status.needs_password_rotation, false);
-  assert.equal(status.needs_webauthn_enrollment, true);
-  assert.equal(status.required, true);
+  assert.equal(status.needs_webauthn_enrollment, false);
+  assert.equal(status.required, false);
 });
 
-test('recordWebAuthnEnrollment clears webauthn requirement', () => {
+test('recordWebAuthnEnrollment remains compatible', () => {
   const svc = createService();
   const userId = 8;
   svc.recordPasswordRotation(userId);
@@ -63,5 +64,23 @@ test('recordWebAuthnEnrollment clears webauthn requirement', () => {
 test('technician role never requires bootstrap', () => {
   const svc = createService();
   const status = svc.statusForUser(1, 'wiring_technician', false);
+  assert.equal(status.required, false);
+});
+
+test('ops_director never requires bootstrap while fingerprint is deferred', () => {
+  const svc = createService();
+  const status = svc.statusForUser(55, 'ops_director', false);
+  assert.equal(status.required, false);
+  assert.equal(status.needs_password_rotation, false);
+  assert.equal(status.needs_webauthn_enrollment, false);
+});
+
+test('deferWebAuthnEnrollment clears webauthn requirement without credentials', () => {
+  const svc = createService();
+  const userId = 99;
+  svc.recordPasswordRotation(userId);
+  svc.deferWebAuthnEnrollment(userId);
+  const status = svc.statusForUser(userId, 'system_admin', false);
+  assert.equal(status.needs_webauthn_enrollment, false);
   assert.equal(status.required, false);
 });

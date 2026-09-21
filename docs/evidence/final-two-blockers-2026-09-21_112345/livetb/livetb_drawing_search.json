@@ -1,0 +1,917 @@
+{
+  "has_fitz": true,
+  "drawings": {
+    "H00_backup_latest": {
+      "path": "/app/uploads/backups/DRAWING_REPLACE_33kV_BUSBAR_PROTECTION_PANEL___H00_R_.pd_2026-07-21T12-35-32/drw_cced3212-3e5d-4512-a5e8-01c8951914dc_33kV BUSBAR PROTECTION PANEL (_H00+R).pdf",
+      "bytes": 14946980,
+      "page_count": 37,
+      "total_text_chars": 0,
+      "scanned_or_empty_text": true,
+      "pages": [
+        {
+          "page": 1,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 2,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 3,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 4,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 5,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 6,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 7,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 8,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 9,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 10,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 11,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 12,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 13,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 14,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 15,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 16,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 17,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 18,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 19,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 20,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 21,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 22,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 23,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 24,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 25,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 26,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 27,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 28,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 29,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 30,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 31,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 32,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 33,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 34,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 35,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 36,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 37,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        }
+      ]
+    },
+    "H00_backup_oldest": {
+      "path": "/app/uploads/backups/DRAWING_REPLACE_33kV_BUSBAR_PROTECTION_PANEL___H00_R_.pd_2026-07-21T05-39-28/drw_cbd71b92-890a-4b6d-a0f5-ddde0ca2445d_33kV BUSBAR PROTECTION PANEL (_H00+R).pdf",
+      "bytes": 14946980,
+      "page_count": 37,
+      "total_text_chars": 0,
+      "scanned_or_empty_text": true,
+      "pages": [
+        {
+          "page": 1,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 2,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 3,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 4,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 5,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 6,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 7,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 8,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 9,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 10,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 11,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 12,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 13,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 14,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 15,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 16,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 17,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 18,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 19,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 20,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 21,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 22,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 23,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 24,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 25,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 26,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 27,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 28,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 29,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 30,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 31,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 32,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 33,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 34,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 35,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 36,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 37,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        }
+      ]
+    },
+    "E01_R1": {
+      "path": "/app/uploads/001/drawings/drw_73b1fd8e-be16-448f-b46c-593dee54b0ef_E01_R1.pdf",
+      "bytes": 1686609,
+      "page_count": 2,
+      "total_text_chars": 7693,
+      "scanned_or_empty_text": false,
+      "pages": [
+        {
+          "page": 1,
+          "chars": 3988,
+          "view_keywords": [
+            "INTERNAL",
+            "FRONT"
+          ],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": true,
+          "front_without_eligible": false,
+          "sample_device_tokens": [
+            "E01",
+            "HO1",
+            "K01",
+            "PPRN8",
+            "R1",
+            "REB650",
+            "RJ45",
+            "RTXP18",
+            "TS1"
+          ],
+          "preview": "   |    |    |    |    |    |    |    |    |    |    |    |     |    |    |    |    |   |   |   |   |    |   |   |   |   |   |   |    |    |   |    |    |    |    |      |   |   |   |   |    |    |   |   |    |    |   |   |    |    |    |    |    |    |    |   |   |    |   |   |   |    |   |   |    |   |   |    |    |    |    |      |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |   |    |    |   |    |    |    |    |    |    |   |   |   |    |   |    |    |   |   |   |   |   |   |   |    |    |   |   |    |    |   |    |    |    |    |   |    |    |   |    |   |   |    |    |    |   |   |    |    |   |   |    |    |    |      |   |   |   |   |    |    |    |    |    |   |   |    |   |   |   |    |   |   |    |   |   |    |    |    |    |    |    |    |    |   |   |   |   |   |    | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | 10  | F"
+        },
+        {
+          "page": 2,
+          "chars": 3705,
+          "view_keywords": [
+            "INTERNAL",
+            "REAR",
+            "TERMINAL"
+          ],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": true,
+          "front_without_eligible": false,
+          "sample_device_tokens": [
+            "A3",
+            "AA0",
+            "ACH100",
+            "C60H",
+            "D5000",
+            "E01",
+            "ETUH22",
+            "M01",
+            "PE180H",
+            "QDC1",
+            "QDC2",
+            "QDC3",
+            "QFAC1",
+            "QFAC2",
+            "R1",
+            "S1195",
+            "S3",
+            "X1A",
+            "X1B",
+            "X3",
+            "X4",
+            "X5A",
+            "X5B",
+            "X6",
+            "X7",
+            "X9",
+            "XD1",
+            "XD2"
+          ],
+          "preview": "   |    |    |    |    |    |    |    |    |    |   |    |    |    |    |    |   |     |   |   |   |    |    |   |    |    |    |    |    |    |    |    |    |    |    |   |   |   |   |    |   |   |    |    |    |    |    |    |    |    |   |   |   |   |   |   |   |   |    |    |    |    |   |   |   |   |    |   |   |    |   |   |   |   |    |   |   |   |    |    |    |    |   |   |    |   |    |   |   |    |    |   |    |     |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |   |   |   |   |    |    |    |    |    |    |    |    |   |   |   |   |   |    | |  | |  | 2  | |  | 3  | |  | 4  | 5  | 6  | |  | 7  | 8  | 9  | 10  | O  | LEFT SIDE  | \u00a9  | REAR PLAN  | O  | RIGHT SIDE  | O  | I  | LH  | |  | La __]  | |  | a"
+        }
+      ]
+    },
+    "SIET4_GA": {
+      "path": "/app/uploads/003/drawings/drw_b2c17e4b-8605-465a-8480-fe3750cc5e72_SIET-4 SOLAR WADI PV FEEDER-1_GA.pdf",
+      "bytes": 2965945,
+      "page_count": 7,
+      "total_text_chars": 0,
+      "scanned_or_empty_text": true,
+      "pages": [
+        {
+          "page": 1,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 2,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 3,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 4,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 5,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 6,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        },
+        {
+          "page": 7,
+          "chars": 0,
+          "view_keywords": [],
+          "legend_or_directory": false,
+          "eligible_view_keywords_present": false,
+          "front_without_eligible": false,
+          "sample_device_tokens": [],
+          "preview": ""
+        }
+      ]
+    }
+  }
+}

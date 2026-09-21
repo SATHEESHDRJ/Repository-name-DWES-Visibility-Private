@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-07-16T11:28:10.082Z",
+  "base": "http://localhost:5175",
+  "api": "http://localhost:3001",
+  "twinRequestCount": 4,
+  "twinStatuses": [
+    200
+  ],
+  "checks": [
+    {
+      "id": "login-technician",
+      "status": "PASS",
+      "detail": "url=http://localhost:5175/technician"
+    },
+    {
+      "id": "open-digital-wiring-schedule",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "operational-twin-api",
+      "status": "PASS",
+      "detail": "requests=1 failures=none"
+    },
+    {
+      "id": "one-excel-active-row",
+      "status": "PASS",
+      "detail": "tbodyRows=1"
+    },
+    {
+      "id": "cable-visual-path",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "inline-operational-twin-2d",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "mode-b-schematic",
+      "status": "PASS",
+      "detail": "expected SCHEMATIC when no published geometry"
+    },
+    {
+      "id": "mode-a-geometry",
+      "status": "SKIP",
+      "detail": "No published panel_models/device+terminal geometry in env; Mode A not exercisable (documented)"
+    },
+    {
+      "id": "zoom",
+      "status": "PASS",
+      "detail": "before=translate(669.2 -717.5999999999999) scale(0.35) after=translate(669.2 -717.5999999999999) scale(0.42)"
+    },
+    {
+      "id": "fit-panel",
+      "status": "PASS",
+      "detail": "clicked Fit panel"
+    },
+    {
+      "id": "fit-active-wire",
+      "status": "PASS",
+      "detail": "clicked Fit active wire"
+    },
+    {
+      "id": "focus-source-dest",
+      "status": "PASS",
+      "detail": "clicked focus source/destination"
+    },
+    {
+      "id": "pan",
+      "status": "PASS",
+      "detail": "pointer drag on svg"
+    },
+    {
+      "id": "fullscreen",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "twin-update-previous",
+      "status": "PASS",
+      "detail": "twinReqs 1->2; meta \"Cable 7 of 400\" -> \"Cable 6 of 400\""
+    },
+    {
+      "id": "twin-update-skip",
+      "status": "PASS",
+      "detail": "already-complete navigated without prompt; twinReqs 2->3; meta \"Cable 6 of 400\" -> \"Cable 7 of 400\""
+    },
+    {
+      "id": "twin-update-previous-after-skip",
+      "status": "PASS",
+      "detail": "twinReqs 3->4"
+    },
+    {
+      "id": "twin-update-complete-cable",
+      "status": "SKIP",
+      "detail": "Complete Cable disabled"
+    },
+    {
+      "id": "start-pause-resume",
+      "status": "PASS",
+      "detail": "Pause available (in_progress); Start/Resume not shown"
+    },
+    {
+      "id": "no-horizontal-overflow-1920x1080",
+      "status": "PASS",
+      "detail": "scrollWidth=1920 clientWidth=1920"
+    },
+    {
+      "id": "viewport-1024x768",
+      "status": "PASS",
+      "detail": "overflow=false twinVisible=true"
+    },
+    {
+      "id": "viewport-768x1024",
+      "status": "PASS",
+      "detail": "scrollWidth=768 clientWidth=768"
+    },
+    {
+      "id": "viewport-820x1180",
+      "status": "PASS",
+      "detail": "scrollWidth=820 clientWidth=820"
+    },
+    {
+      "id": "light-dark-theme",
+      "status": "SKIP",
+      "detail": "No theme toggle found in chrome"
+    },
+    {
+      "id": "no-console-errors",
+      "status": "PASS",
+      "detail": "console=none; page=none"
+    },
+    {
+      "id": "auth-operational-twin-reachable",
+      "status": "PASS",
+      "detail": "Authenticated GET /api/engineering/operational-twin/... returned 200 during session"
+    }
+  ],
+  "pass": 23,
+  "fail": 0,
+  "skip": 3,
+  "warnings": 0
+}

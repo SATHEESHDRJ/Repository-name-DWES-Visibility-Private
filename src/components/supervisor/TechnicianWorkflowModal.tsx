@@ -1,10 +1,11 @@
 /**
- * Technician Workflow entry point — delegates to the compact Panel Assignment modal.
- * Preserves existing import paths and prop types for SupervisorDashboard / ProjectsTab.
+ * Technician Workflow entry point — opens the panel workflow planning workspace (W2).
+ * Assign Technician remains available as the Assignments tab (embedded PanelAssignmentModal).
  */
 export type {
   TechnicianWorkflowSection,
-  TechnicianWorkflowModalProps,
 } from './PanelAssignmentModal';
 
-export { default } from './PanelAssignmentModal';
+export type { PanelWorkflowWorkspaceModalProps as TechnicianWorkflowModalProps } from './PanelWorkflowWorkspaceModal';
+
+export { default } from './PanelWorkflowWorkspaceModal';

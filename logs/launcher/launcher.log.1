@@ -1,0 +1,167 @@
+[2026-07-14T06:24:33.723Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-24-33-721Z ==========
+[2026-07-14T06:24:33.723Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:24:33.724Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:24:33.726Z] [dev] [INFO] PHASE preflight-ports — ok (2ms)
+[2026-07-14T06:24:33.727Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:24:33.728Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:24:33.823Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:24:33.823Z] [dev] [INFO] PHASE postgres — ok (96ms)
+[2026-07-14T06:24:33.827Z] [dev] [INFO] PHASE recover-partial — begin
+[2026-07-14T06:24:33.831Z] [dev] [INFO] PHASE recover-partial — ok (3ms)
+[2026-07-14T06:24:33.831Z] [dev] [INFO] PHASE backend-start — begin
+[2026-07-14T06:24:33.832Z] [dev] [INFO] checking ports: 3001
+[2026-07-14T06:24:38.168Z] [dev] [INFO] backend spawn attempt 1/8
+[2026-07-14T06:24:38.169Z] [dev] [INFO] starting backend (dev watch supervisor: scripts/backend-dev-runner.mjs)
+[2026-07-14T06:24:39.015Z] [dev] [INFO] PHASE backend-start — ok (5184ms)
+[2026-07-14T06:24:39.018Z] [dev] [INFO] PHASE backend-health — begin
+[2026-07-14T06:24:39.019Z] [dev] [INFO] waiting for backend health — before frontend (up to 120s)
+[2026-07-14T06:24:47.159Z] [dev] [INFO] backend healthy after 8s
+[2026-07-14T06:24:47.160Z] [dev] [INFO] PHASE backend-health — ok (8143ms)
+[2026-07-14T06:24:47.162Z] [dev] [INFO] PHASE frontend-start — begin
+[2026-07-14T06:24:47.165Z] [dev] [INFO] starting frontend (vite :5175)
+[2026-07-14T06:24:48.059Z] [dev] [INFO] PHASE frontend-start — ok (897ms)
+[2026-07-14T06:24:48.062Z] [dev] [INFO] PHASE stack-ready — begin
+[2026-07-14T06:24:48.063Z] [dev] [INFO] waiting for full stack (up to 180s)
+[2026-07-14T06:24:51.101Z] [dev] [INFO] full stack ready after 2s
+[2026-07-14T06:24:51.103Z] [dev] [INFO] PHASE stack-ready — ok (3041ms)
+[2026-07-14T06:24:51.110Z] [dev] [INFO] BOOT SUCCESS — total 17388ms
+[2026-07-14T06:24:51.111Z] [dev] [INFO] ready — opening http://localhost:5175/?dwes_dev=1784010291111
+[2026-07-14T06:24:51.113Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010291112
+[2026-07-14T06:25:09.582Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-25-09-573Z ==========
+[2026-07-14T06:25:09.585Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:25:09.589Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:25:09.595Z] [dev] [INFO] PHASE preflight-ports — ok (5ms)
+[2026-07-14T06:25:09.600Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:25:09.604Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:25:09.881Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:25:09.886Z] [dev] [INFO] PHASE postgres — ok (286ms)
+[2026-07-14T06:25:09.932Z] [dev] [INFO] full stack already running — opening browser
+[2026-07-14T06:25:09.938Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010309938
+[2026-07-14T06:25:47.741Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-25-47-739Z ==========
+[2026-07-14T06:25:47.741Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:25:47.742Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:25:47.746Z] [dev] [INFO] PHASE preflight-ports — ok (4ms)
+[2026-07-14T06:25:47.746Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:25:47.747Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=127.0.0.1 port=55432 db=WiringSchemeDB (up to 2s)
+[2026-07-14T06:25:47.748Z] [dev] [INFO] postgres: PostgreSQL TCP :55432 not open yet (0s)
+[2026-07-14T06:25:49.773Z] [dev] [INFO] postgres: PostgreSQL NOT ready after 2s — Nest will likely fail
+[2026-07-14T06:25:49.774Z] [dev] [ERROR] PHASE postgres — FAILED (2028ms): PostgreSQL is not reachable on port 5432 (WiringSchemeDB). Start PostgreSQL and try again.
+[2026-07-14T06:25:49.777Z] [dev] [ERROR] BOOT FAILED: PostgreSQL is not reachable on port 5432 (WiringSchemeDB). Start PostgreSQL and try again.
+[2026-07-14T06:25:49.777Z] [dev] [ERROR] see logs/launcher/backend.log logs/launcher/frontend.log logs/launcher/startup-report.json
+[2026-07-14T06:26:21.360Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-26-21-358Z ==========
+[2026-07-14T06:26:21.360Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:26:21.361Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:26:21.365Z] [dev] [INFO] PHASE preflight-ports — ok (4ms)
+[2026-07-14T06:26:21.366Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:26:21.367Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 5s)
+[2026-07-14T06:26:21.454Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:26:21.454Z] [dev] [INFO] PHASE postgres — ok (88ms)
+[2026-07-14T06:26:21.467Z] [dev] [INFO] PHASE recover-partial — begin
+[2026-07-14T06:26:21.472Z] [dev] [WARN] RECOVERY: stale listener on frontend port — freeing
+[2026-07-14T06:26:21.473Z] [dev] [INFO] checking ports: 5175
+[2026-07-14T06:26:24.430Z] [dev] [ERROR] PHASE recover-partial — FAILED (2962ms): port(s) already occupied by non-DWES processes: 5175 (node PID 6008)
+[2026-07-14T06:26:24.434Z] [dev] [ERROR] BOOT FAILED: port(s) already occupied by non-DWES processes: 5175 (node PID 6008)
+[2026-07-14T06:26:24.435Z] [dev] [ERROR] see logs/launcher/backend.log logs/launcher/frontend.log logs/launcher/startup-report.json
+[2026-07-14T06:26:57.363Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-26-57-361Z ==========
+[2026-07-14T06:26:57.364Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:26:57.365Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:26:57.371Z] [dev] [INFO] PHASE preflight-ports — ok (6ms)
+[2026-07-14T06:26:57.372Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:26:57.373Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:26:57.461Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:26:57.461Z] [dev] [INFO] PHASE postgres — ok (89ms)
+[2026-07-14T06:26:57.471Z] [dev] [INFO] PHASE recover-partial — begin
+[2026-07-14T06:26:57.475Z] [dev] [WARN] RECOVERY: stale listener on backend port without health — freeing
+[2026-07-14T06:26:57.476Z] [dev] [INFO] checking ports: 3001
+[2026-07-14T06:27:04.170Z] [dev] [WARN] cleared DWES-owned listener on 3001 (PID 880) -> stopped
+[2026-07-14T06:27:04.573Z] [dev] [INFO] PHASE recover-partial — ok (7102ms)
+[2026-07-14T06:27:04.576Z] [dev] [INFO] PHASE backend-start — begin
+[2026-07-14T06:27:04.580Z] [dev] [INFO] checking ports: 3001
+[2026-07-14T06:27:09.338Z] [dev] [INFO] backend spawn attempt 1/8
+[2026-07-14T06:27:09.339Z] [dev] [INFO] starting backend (dev watch supervisor: scripts/backend-dev-runner.mjs)
+[2026-07-14T06:27:10.255Z] [dev] [INFO] PHASE backend-start — ok (5679ms)
+[2026-07-14T06:27:10.257Z] [dev] [INFO] PHASE backend-health — begin
+[2026-07-14T06:27:10.258Z] [dev] [INFO] waiting for backend health — before frontend (up to 120s)
+[2026-07-14T06:27:14.363Z] [dev] [INFO] backend healthy after 4s
+[2026-07-14T06:27:14.365Z] [dev] [INFO] PHASE backend-health — ok (4108ms)
+[2026-07-14T06:27:14.368Z] [dev] [INFO] PHASE frontend-start — begin
+[2026-07-14T06:27:14.373Z] [dev] [INFO] starting frontend (vite :5175)
+[2026-07-14T06:27:15.280Z] [dev] [INFO] PHASE frontend-start — ok (912ms)
+[2026-07-14T06:27:15.282Z] [dev] [INFO] PHASE stack-ready — begin
+[2026-07-14T06:27:15.283Z] [dev] [INFO] waiting for full stack (up to 240s)
+[2026-07-14T06:27:16.362Z] [dev] [INFO] full stack ready after 1s
+[2026-07-14T06:27:16.364Z] [dev] [INFO] PHASE stack-ready — ok (1081ms)
+[2026-07-14T06:27:16.369Z] [dev] [INFO] BOOT SUCCESS — total 19007ms
+[2026-07-14T06:27:16.371Z] [dev] [INFO] ready — opening http://localhost:5175/?dwes_dev=1784010436370
+[2026-07-14T06:27:16.372Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010436372
+[2026-07-14T06:27:43.843Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-27-43-841Z ==========
+[2026-07-14T06:27:43.844Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:27:43.845Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:27:43.849Z] [dev] [INFO] PHASE preflight-ports — ok (4ms)
+[2026-07-14T06:27:43.850Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:27:43.852Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:27:43.952Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:27:43.953Z] [dev] [INFO] PHASE postgres — ok (102ms)
+[2026-07-14T06:27:44.145Z] [dev] [INFO] PHASE recover-partial — begin
+[2026-07-14T06:27:44.166Z] [dev] [WARN] RECOVERY: partial stack — frontend up, backend down; stopping orphan frontend
+[2026-07-14T06:27:44.166Z] [dev] [INFO] checking ports: 5175
+[2026-07-14T06:27:50.391Z] [dev] [WARN] cleared DWES-owned listener on 5175 (PID 15492) -> stopped
+[2026-07-14T06:27:51.000Z] [dev] [INFO] PHASE recover-partial — ok (6855ms)
+[2026-07-14T06:27:51.002Z] [dev] [INFO] PHASE backend-start — begin
+[2026-07-14T06:27:51.006Z] [dev] [INFO] checking ports: 3001
+[2026-07-14T06:27:54.827Z] [dev] [INFO] backend spawn attempt 1/8
+[2026-07-14T06:27:54.828Z] [dev] [INFO] starting backend (dev watch supervisor: scripts/backend-dev-runner.mjs)
+[2026-07-14T06:27:55.712Z] [dev] [INFO] PHASE backend-start — ok (4710ms)
+[2026-07-14T06:27:55.714Z] [dev] [INFO] PHASE backend-health — begin
+[2026-07-14T06:27:55.715Z] [dev] [INFO] waiting for backend health — before frontend (up to 120s)
+[2026-07-14T06:27:59.795Z] [dev] [INFO] backend healthy after 4s
+[2026-07-14T06:27:59.795Z] [dev] [INFO] PHASE backend-health — ok (4082ms)
+[2026-07-14T06:27:59.798Z] [dev] [INFO] PHASE frontend-start — begin
+[2026-07-14T06:27:59.801Z] [dev] [INFO] starting frontend (vite :5175)
+[2026-07-14T06:28:00.646Z] [dev] [INFO] PHASE frontend-start — ok (849ms)
+[2026-07-14T06:28:00.649Z] [dev] [INFO] PHASE stack-ready — begin
+[2026-07-14T06:28:00.650Z] [dev] [INFO] waiting for full stack (up to 240s)
+[2026-07-14T06:28:01.876Z] [dev] [INFO] full stack ready after 1s
+[2026-07-14T06:28:01.877Z] [dev] [INFO] PHASE stack-ready — ok (1229ms)
+[2026-07-14T06:28:01.881Z] [dev] [INFO] BOOT SUCCESS — total 18039ms
+[2026-07-14T06:28:01.882Z] [dev] [INFO] ready — opening http://localhost:5175/?dwes_dev=1784010481882
+[2026-07-14T06:28:01.883Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010481883
+[2026-07-14T06:29:06.840Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-29-06-838Z ==========
+[2026-07-14T06:29:06.841Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:29:06.842Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:29:06.846Z] [dev] [INFO] PHASE preflight-ports — ok (4ms)
+[2026-07-14T06:29:06.847Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:29:06.848Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:29:06.947Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:29:06.947Z] [dev] [INFO] PHASE postgres — ok (100ms)
+[2026-07-14T06:29:07.017Z] [dev] [INFO] full stack already running — opening browser
+[2026-07-14T06:29:07.019Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010547019
+[2026-07-14T06:29:44.110Z] [dev] [INFO] ========== DWES BOOT 2026-07-14T06-29-44-108Z ==========
+[2026-07-14T06:29:44.110Z] [dev] [INFO] launch start mode=dev FE:5175 BE:3001 PG:5432
+[2026-07-14T06:29:44.111Z] [dev] [INFO] PHASE preflight-ports — begin
+[2026-07-14T06:29:44.115Z] [dev] [INFO] PHASE preflight-ports — ok (4ms)
+[2026-07-14T06:29:44.116Z] [dev] [INFO] PHASE postgres — begin
+[2026-07-14T06:29:44.118Z] [dev] [INFO] postgres: PostgreSQL wait begin — host=localhost port=5432 db=WiringSchemeDB (up to 120s)
+[2026-07-14T06:29:44.343Z] [dev] [INFO] postgres: PostgreSQL ready — accepting queries on WiringSchemeDB (after 0s)
+[2026-07-14T06:29:44.344Z] [dev] [INFO] PHASE postgres — ok (227ms)
+[2026-07-14T06:29:44.354Z] [dev] [INFO] PHASE recover-partial — begin
+[2026-07-14T06:29:44.360Z] [dev] [INFO] PHASE recover-partial — ok (6ms)
+[2026-07-14T06:29:44.361Z] [dev] [INFO] PHASE backend-start — begin
+[2026-07-14T06:29:44.363Z] [dev] [INFO] checking ports: 3001
+[2026-07-14T06:29:48.831Z] [dev] [INFO] backend spawn attempt 1/8
+[2026-07-14T06:29:48.833Z] [dev] [INFO] starting backend (dev watch supervisor: scripts/backend-dev-runner.mjs)
+[2026-07-14T06:29:49.688Z] [dev] [INFO] PHASE backend-start — ok (5327ms)
+[2026-07-14T06:29:49.689Z] [dev] [INFO] PHASE backend-health — begin
+[2026-07-14T06:29:49.691Z] [dev] [INFO] waiting for backend health — before frontend (up to 120s)
+[2026-07-14T06:29:53.797Z] [dev] [INFO] backend healthy after 4s
+[2026-07-14T06:29:53.800Z] [dev] [INFO] PHASE backend-health — ok (4109ms)
+[2026-07-14T06:29:53.803Z] [dev] [INFO] PHASE frontend-start — begin
+[2026-07-14T06:29:53.807Z] [dev] [INFO] starting frontend (vite :5175)
+[2026-07-14T06:29:54.708Z] [dev] [INFO] PHASE frontend-start — ok (905ms)
+[2026-07-14T06:29:54.710Z] [dev] [INFO] PHASE stack-ready — begin
+[2026-07-14T06:29:54.712Z] [dev] [INFO] waiting for full stack (up to 240s)
+[2026-07-14T06:29:55.844Z] [dev] [INFO] full stack ready after 1s
+[2026-07-14T06:29:55.846Z] [dev] [INFO] PHASE stack-ready — ok (1135ms)
+[2026-07-14T06:29:55.851Z] [dev] [INFO] BOOT SUCCESS — total 11743ms
+[2026-07-14T06:29:55.852Z] [dev] [INFO] ready — opening http://localhost:5175/?dwes_dev=1784010595852
+[2026-07-14T06:29:55.853Z] [dev] [INFO] browser open suppressed for watchdog recovery → http://localhost:5175/?dwes_dev=1784010595853

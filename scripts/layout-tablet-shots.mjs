@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FE, CHROME, resolveApiBase } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(path.resolve(__dirname, '..'), '.smoke-shots', `layout-tablet-${process.argv[2]||'before'}-${Date.now()}`);
@@ -10,7 +11,8 @@ mkdirSync(OUT, { recursive: true });
 const API = resolveApiBase();
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-const sup = await (await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:'supervisor1',password:'super123'})})).json();
+const supervisorAccount = accountForRole('prod_supervisor');
+const sup = await (await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:supervisorAccount.username,password:supervisorAccount.password})})).json();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless:'new', args:['--no-sandbox','--disable-gpu'] });
 try {
   const page = await browser.newPage();

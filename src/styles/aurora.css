@@ -156,6 +156,7 @@
 
 [data-theme="aurora"] .topbar-actions-capsule.topbar-float--dark,
 [data-theme="aurora"] .topbar-clock-card.topbar-float--dark,
+[data-theme="aurora"] .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile),
 [data-theme="aurora"] .topbar-nav-card.topbar-float--dark {
   background: rgba(255, 255, 255, 0.10);
   border-color: rgba(255, 255, 255, 0.20);
@@ -167,7 +168,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 [data-theme="aurora"] .topbar-project-pill.topbar-float--light,
-[data-theme="aurora"] .topbar-user-card.topbar-float--light {
+[data-theme="aurora"] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile) {
   background: rgba(255, 255, 255, 0.94);
   border-color: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(14px) saturate(160%);
@@ -177,7 +178,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 [data-theme="aurora"] .topbar-project-pill.topbar-float--light:hover,
-[data-theme="aurora"] .topbar-user-card.topbar-float--light:hover {
+[data-theme="aurora"] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile):hover {
   border-color: rgba(255, 255, 255, 0.72);
   box-shadow:
     0 4px 12px rgba(7, 11, 30, 0.22),

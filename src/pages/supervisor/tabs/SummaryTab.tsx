@@ -3,6 +3,8 @@ import { Search, RefreshCw } from '../../../components/ui/icons';
 import { projectsApi, supervisorApi } from '../../../services/api';
 import type { Project } from '../../../types';
 import { useDwesRefresh } from '../../../hooks/useDwesRefresh';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
+import OperationsCentreSection from '../../../components/supervisor/OperationsCentreSection';
 
 /* Granular per-panel status (maps real columns → display state). */
 type PanelState = 'completed' | 'ready_for_qc' | 'in_progress' | 'paused' | 'assigned' | 'unassigned';
@@ -18,14 +20,14 @@ const BUCKET_META: Record<StatusBucket, {
   completed:      { label: 'Completed',      short: 'Done',    chip: 'bg-green-100 text-green-700 border-green-200' },
   in_progress:    { label: 'In Progress',    short: 'Active',  chip: 'bg-amber-100 text-amber-800 border-amber-200' },
   pending_review: { label: 'Pending Review', short: 'Review',  chip: 'bg-blue-100 text-blue-700 border-blue-200' },
-  not_started:    { label: 'Not Started',    short: 'Waiting', chip: 'bg-slate-100 text-slate-600 border-slate-200' },
+  not_started:    { label: 'Not Started',    short: 'Waiting', chip: 'bg-slate-100 text-muted border-slate-200' },
 };
 
 const STATE_META: Record<PanelState, { label: string; pill: string }> = {
   completed:    { label: 'Completed',    pill: 'bg-green-100 text-green-700 border border-green-200' },
   in_progress:  { label: 'In Progress',  pill: 'bg-yellow-100 text-yellow-800 border border-yellow-200' },
   ready_for_qc: { label: 'QA/QC Review', pill: 'bg-amber-100 text-amber-700 border border-amber-200' },
-  paused:       { label: 'Paused',       pill: 'bg-slate-100 text-slate-600 border border-slate-200' },
+  paused:       { label: 'Paused',       pill: 'bg-slate-100 text-muted border border-slate-200' },
   assigned:     { label: 'Assigned',     pill: 'bg-blue-100 text-blue-700 border border-blue-200' },
   unassigned:   { label: 'Not Assigned', pill: 'bg-red-100 text-red-700 border border-red-200' },
 };
@@ -230,15 +232,13 @@ export default function SummaryTab({
   const visiblePanels = projectGroups.reduce((n, g) => n + g.panels.length, 0);
 
   if (loading) {
-    return (
-      <div className="empty-state">
-        <p className="empty-text">Loading panel status…</p>
-      </div>
-    );
+    return <DwesLoadingState label="Loading panel status…" />;
   }
 
   return (
     <div className="flex flex-col gap-4 min-w-0">
+      <OperationsCentreSection />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
@@ -258,7 +258,7 @@ export default function SummaryTab({
         >
           <RefreshCw size={16} />
         </button>
-        <span className="text-[13px] text-slate-500 shrink-0">
+        <span className="text-[13px] text-muted shrink-0">
           {visiblePanels} of {totalPanels} panel{totalPanels !== 1 ? 's' : ''}
           {projectGroups.length > 0 && ` · ${projectGroups.length} project${projectGroups.length !== 1 ? 's' : ''}`}
         </span>
@@ -267,8 +267,8 @@ export default function SummaryTab({
       {/* Context + bucket filter chips */}
       <div className="flex flex-wrap items-center gap-2">
         {selectedTechName && (
-          <span className="text-[13px] text-slate-600 mr-1">
-            For <span className="font-semibold text-slate-800">{selectedTechName}</span>
+          <span className="text-[13px] text-muted mr-1">
+            For <span className="font-semibold text-primary">{selectedTechName}</span>
           </span>
         )}
         {projectCode && !panelId && (

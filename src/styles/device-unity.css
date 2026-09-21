@@ -1,0 +1,27 @@
+/* DWES device unity - one visual identity on every viewport. */
+/* Colors/fonts come from html[data-theme][data-mode] tokens only. */
+/* Media queries may change layout/density, never palette tokens. */
+
+html { color-scheme: light; }
+html[data-mode="dark"] { color-scheme: dark; }
+html[data-mode="light"] { color-scheme: light; }
+
+html,
+body,
+#root {
+  background-color: var(--t-bg, var(--color-background, #f8fafc));
+  color: var(--t-text, var(--color-on-surface, #0f172a));
+}
+
+body {
+  font-family: var(--font-family-sans, "Inter", "Roboto", "Roboto Flex", system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+textarea,
+select,
+button {
+  color-scheme: inherit;
+}

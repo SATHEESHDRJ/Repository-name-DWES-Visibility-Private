@@ -1,0 +1,24 @@
+Re-verified: 2026-09-21T14:23+04:00 (HEAD 1daddc54, Nest11 restore stack; VERIFY_RESTORE_PASS + BROWSER_SMOKE_PASS re-run)
+
+BE tests: 426 pass / 0 fail (re-run 2026-09-21T14:27+04:00 on HEAD 1daddc54, ~14.1s)
+BE build: 0 (re-run 2026-09-21T14:29+04:00 nest build + prisma generate)
+FE typecheck: 0 (re-run 2026-09-21T14:28+04:00)
+FE lint: 0 (re-run 2026-09-21T14:28+04:00)
+FE build: 0 (re-run 2026-09-21T14:28+04:00, vite ~12.8s)
+API image: dwes-api:oci-restore-20260725-nest11
+Health: 200 db:ok (degraded redis unset)
+Middie in container: ABSENT
+DB workflows (read-only): verify/restore-db-workflows-nest11.json PASS
+  - projects=3, tech my-panels=1, crimping-portfolio cut=4, pending-approvals
+PG counts: verify/pg-readonly-counts.txt
+UI routes 200: uiux-recovery-smoke-nest11.json
+Browser smoke: verify/browser-smoke-nest11.txt PASS (/login + tech3 /technician #root; 2026-09-21 re-run after smoke wait fix)
+Audit backend omit-dev: 0 critical / 0 high (4 moderate residual)
+Audit root omit-dev: 0 critical / 0 high (1 moderate)
+Scripts: verify-final-two-blockers-restore.mjs, verify-browser-restore-smoke.mjs
+CI local parity (FE+BE incl. root build): verify/ci-local-parity-nest11.txt PASS (re-run 2026-09-21T14:20:52+04:00; run-ci-local-parity.ps1 writes UTF-8 no BOM — open log as UTF-8 if an editor shows mojibake)
+CI audit --audit-level=high: backend+root exit 0 (moderate only) → npm-audit-*-high-gate.txt
+CI container-api job parity: docker build Dockerfile.api → dwes-api:ci-local-parity-nest11 OK (verify/docker-api-build-nest11.log)
+
+Product Final PASS: NO-GO (LIVE TB drawing, Satheesh UI, remote CI, prod authority)
+Two-blocker remediation: CLOSED WITH EVIDENCE

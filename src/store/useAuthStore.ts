@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { AuthUser, BootstrapStatus } from '../types';
 import { authApi } from '../services/api';
-import { PROJECT_SELECTION_STORAGE_KEY } from './useProjectSelectionStore';
+import { PROJECT_SELECTION_STORAGE_KEY, useProjectSelectionStore } from './useProjectSelectionStore';
+import { useLiveWiringStore } from './useLiveWiringStore';
 
 const BOOTSTRAP_KEY = 'dwes_bootstrap';
 
@@ -23,14 +24,17 @@ interface AuthState {
   user: AuthUser | null;
   token: string | null;
   bootstrap: BootstrapStatus | null;
+  authHydrated: boolean;
   isLoading: boolean;
   error: string | null;
+  isLoggedIn: boolean; // Add this line
 
   login: (username: string, password: string, projectCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   hydrateFromStorage: () => void;
   patchBootstrap: (patch: Partial<BootstrapStatus>) => void;
+  applyBootstrap: (bootstrap: BootstrapStatus) => void;
   clearBootstrap: () => void;
 }
 
@@ -38,8 +42,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   bootstrap: null,
+  authHydrated: false,
   isLoading: false,
   error: null,
+  isLoggedIn: false,
 
   hydrateFromStorage: () => {
     try {
@@ -47,13 +53,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userRaw = localStorage.getItem('dwes_user');
       const bootstrap = readBootstrap();
       if (token && userRaw) {
-        set({ token, user: JSON.parse(userRaw), bootstrap });
+        set({ token, user: JSON.parse(userRaw), bootstrap, authHydrated: true, isLoggedIn: true });
+      } else {
+        set({ authHydrated: true });
       }
     } catch {
       localStorage.removeItem('dwes_token');
       localStorage.removeItem('dwes_refresh_token');
       localStorage.removeItem('dwes_user');
       localStorage.removeItem(BOOTSTRAP_KEY);
+      set({ authHydrated: true });
     }
   },
 
@@ -61,6 +70,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await authApi.login(username, password, projectCode);
+      sessionStorage.removeItem(PROJECT_SELECTION_STORAGE_KEY);
+      useProjectSelectionStore.getState().clearSelection();
+      useLiveWiringStore.getState().clear();
       localStorage.setItem('dwes_token', data.access_token);
       if (data.refresh_token) localStorage.setItem('dwes_refresh_token', data.refresh_token);
       localStorage.setItem('dwes_user', JSON.stringify(data.user));
@@ -110,7 +122,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('dwes_user');
     localStorage.removeItem(BOOTSTRAP_KEY);
     sessionStorage.removeItem(PROJECT_SELECTION_STORAGE_KEY);
-    set({ user: null, token: null, bootstrap: null, error: null });
+    useProjectSelectionStore.getState().clearSelection();
+    useLiveWiringStore.getState().clear();
+      set({ user: null, token: null, bootstrap: null, error: null, isLoggedIn: false });
   },
 
   clearError: () => set({ error: null }),
@@ -132,6 +146,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     persistBootstrap(next);
     set({ bootstrap: next });
+  },
+
+  applyBootstrap: (bootstrap) => {
+    if (!bootstrap.required) {
+      persistBootstrap(null);
+      set({ bootstrap: null });
+      return;
+    }
+    persistBootstrap(bootstrap);
+    set({ bootstrap });
   },
 
   clearBootstrap: () => {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, EyeOff, Pin, Search } from '../../ui/icons';
+import { Eye, EyeOff, Pin, Search, Columns3 } from '../../ui/icons';
 import Modal from '../../Modal';
 import type { ColumnPrefs } from './column-prefs';
 
@@ -42,12 +42,12 @@ export default function ColumnPrefsModal({ excelHeaders, prefs, onSave, onClose 
   };
 
   return (
-    <Modal title="Schedule columns" onClose={onClose}>
-      <p className="text-[13px] text-slate-500 mb-3">
+    <Modal title="Schedule columns" icon={<Columns3 />} onClose={onClose}>
+      <p className="text-[13px] text-muted mb-3">
         Pin fields on the cable card, or hide columns from the main grid — all Excel data stays available in the details drawer.
       </p>
       <div className="ws-col-search-wrap mb-3">
-        <Search size={14} className="text-slate-500 shrink-0" aria-hidden="true" />
+        <Search size={14} className="text-muted shrink-0" aria-hidden="true" />
         <input
           className="ws-col-search"
           placeholder="Filter columns…"
@@ -82,7 +82,7 @@ export default function ColumnPrefsModal({ excelHeaders, prefs, onSave, onClose 
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-[13px] text-slate-500 py-4 text-center">No columns match.</p>
+          <p className="text-[13px] text-muted py-4 text-center">No columns match.</p>
         )}
       </div>
       <div className="flex gap-2 justify-end">

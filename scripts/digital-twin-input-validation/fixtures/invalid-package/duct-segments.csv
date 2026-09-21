@@ -1,0 +1,1 @@
+project_code,panel_id,model_revision,drawing_revision,schedule_revision,segment_id,source_node_id,destination_node_id,length_mm\nDEMO,DEMO-001,M01,R01,S01,S1,N1,N2,100\nDEMO,DEMO-001,M01,R01,S01,S2,N3,N4,100\n

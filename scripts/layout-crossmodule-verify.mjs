@@ -10,6 +10,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FE, CHROME, resolveApiBase } from './smoke-utils.mjs';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(path.resolve(__dirname, '..'), '.smoke-shots', `layout-crossmod-${process.argv[2]||'after'}-${Date.now()}`);
@@ -17,12 +18,17 @@ mkdirSync(OUT, { recursive: true });
 const API = resolveApiBase();
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+function roleLogin(role) {
+  const { username: user, password: pass } = accountForRole(role);
+  return { user, pass };
+}
+
 const ROLES = [
-  { role: 'admin', user: 'sysadmin', pass: 'admin123', path: '/admin' },
-  { role: 'director', user: 'director1', pass: 'dir123', path: '/director' },
-  { role: 'supervisor', user: 'supervisor1', pass: 'super123', path: '/supervisor' },
-  { role: 'technician', user: 'tech1', pass: 'tech1', path: '/technician' },
-  { role: 'qaqc', user: 'qa1', pass: 'qa1', path: '/qaqc' },
+  { role: 'admin', ...roleLogin('system_admin'), path: '/admin' },
+  { role: 'director', ...roleLogin('ops_director'), path: '/director' },
+  { role: 'supervisor', ...roleLogin('prod_supervisor'), path: '/supervisor' },
+  { role: 'technician', ...roleLogin('wiring_technician'), path: '/technician' },
+  { role: 'qaqc', ...roleLogin('qaqc_engineer'), path: '/qaqc' },
 ];
 
 const CLS_INIT = () => {

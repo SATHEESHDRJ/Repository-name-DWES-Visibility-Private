@@ -1,0 +1,6 @@
+staged-bundle-validation — 2026-09-21
+script: stage-for-remote-ci.ps1 -Apply
+git diff --cached --stat: 289 files changed, 62041 insertions(+), 7488 deletions(-)
+npm run typecheck: exit 0
+npm --prefix backend test: 426 pass / 0 fail
+note: working tree still contained unstaged files during run; true CI isolation requires push + Actions. Index then reset (no commit).

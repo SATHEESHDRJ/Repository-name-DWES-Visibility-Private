@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-07-16T11:25:06.347Z",
+  "roles": {
+    "technician": {
+      "status": "PASS",
+      "login": {
+        "url": "http://localhost:5175/technician",
+        "rootChildren": 1,
+        "title": "DWES — Ingenious Network FZC"
+      },
+      "username": "tech1"
+    },
+    "supervisor": {
+      "status": "PASS",
+      "login": {
+        "url": "http://localhost:5175/supervisor",
+        "rootChildren": 1,
+        "title": "DWES — Ingenious Network FZC"
+      },
+      "username": "supervisor1"
+    },
+    "qaqc": {
+      "status": "PASS",
+      "login": {
+        "url": "http://localhost:5175/qaqc",
+        "rootChildren": 1,
+        "title": "DWES — Ingenious Network FZC"
+      },
+      "username": "qa1"
+    },
+    "director": {
+      "status": "FAIL",
+      "login": {
+        "url": "http://localhost:5175/",
+        "rootChildren": 1,
+        "title": "DWES — Ingenious Network FZC"
+      },
+      "username": "director1"
+    },
+    "admin": {
+      "status": "PASS",
+      "login": {
+        "url": "http://localhost:5175/admin/settings",
+        "rootChildren": 1,
+        "title": "DWES — Ingenious Network FZC"
+      },
+      "username": "sysadmin"
+    }
+  },
+  "technicianWiring": {
+    "dom": {
+      "url": "http://localhost:5175/technician",
+      "hasDwfShell": true,
+      "emptyText": null,
+      "execCount": "Cable 7 of 400",
+      "excelRows": 1,
+      "activeRows": 1,
+      "ot2dRoot": true,
+      "ot2dSvg": true,
+      "ot2dLoading": false,
+      "ot2dError": null,
+      "twinHeading": true,
+      "cvp": true,
+      "bodySnippet": "Skip to main content\nDWES\nDigital Wiring Execution System\nVV\nViju Vijayan\n@tech1 · Technician\nfingerprint\nlogout\n15:25:27\nThu, 16 Jul 2026\nWORKSPACE\nleft_panel_close\nbolt\nPanels\nTechnician\nWiring Technician\n\nViju Vijayan · EMP-T001\n\narrow_back\nPanels\nDIGITAL WIRING EXECUTION\n=H001\nENOWA MOBILE SS – SEC – RIYADH / KSA – 001 · SEC\n6/400 complete\n2% progress\n25:27:00\ndeployed_code\nCable Digital Twin\nfullscreen\nTablet View\nview_column\nFull Wiring View\nCable 7 of 400\nNot Started\nS.NO\tPNLNO_A\tDEV_TBLK_A\tTERM_A\tTERMSIDE_A\tTERMSIDE_B\tIEC_FERR_A\tIEC_FERR_B\tREFRNCE_A\tWIRE COLOR\tWIRE SIZE\tSIGN MARK\tREMARKS\tLENGTH(M)\n7\tH00+R\t74IO-1\t4\t—\t—\t74IO-1:4/QDC5:11\tQDC5:11/74IO-1:4\t021/B5\tGREY\t1.5SQ.mm\t+VE\t+VE IN RED FERRULE WITH WHITE TEXT\t3.5\nCABLE VISUAL PATH\nDrawing Reference Only\nSOURCE DEVICE\n74IO-1\narrow_forward\nSOURCE TERMINAL\n4\narrow_forward\nCABLE / WIRE\ncable\n7\nGREY\n1.5SQ.mm\narrow_forward\nROUTE STATU"
+    },
+    "apiHits": [
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/tech/my-assignment/72?_dwes_ts=1784201124039"
+      },
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/tech/my-assignment/72?_dwes_ts=1784201124039"
+      },
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/engineering/twin-context/001/frame_1784094769900_0_9p11p/1?_dwes_ts=1784201124308"
+      },
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/engineering/twin-context/001/frame_1784094769900_0_9p11p/7?_dwes_ts=1784201124403"
+      },
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/engineering/operational-twin/001/frame_1784094769900_0_9p11p?cableRef=7&_dwes_ts=1784201124403"
+      }
+    ],
+    "twinApi": [
+      {
+        "status": 200,
+        "url": "http://localhost:5175/api/engineering/operational-twin/001/frame_1784094769900_0_9p11p?cableRef=7&_dwes_ts=1784201124403"
+      }
+    ]
+  },
+  "salesDirector": {
+    "directorRouteWithoutAuth": {
+      "url": "http://localhost:5175/",
+      "rootChildren": 1,
+      "hasSalesLabel": false
+    },
+    "loginAttempt": {
+      "url": "http://localhost:5175/",
+      "stillOnLogin": true,
+      "bodyHasSales": false
+    }
+  }
+}

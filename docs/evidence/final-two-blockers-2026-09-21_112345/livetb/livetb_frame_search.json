@@ -1,0 +1,200 @@
+{
+  "frames": {
+    "001_E01": {
+      "path": "/app/uploads/001/frames/frame_1785319116166_0_wcplt.xlsx",
+      "sheets": [
+        {
+          "name": "COVER SHEET",
+          "headers": [
+            "c0",
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "data_rows": 7,
+          "row_count": 58
+        },
+        {
+          "name": "WIRING SCHEDULE",
+          "headers": [
+            "S.NO",
+            "PNLNO_A",
+            "DEV_TBLK_A",
+            "TERM_A",
+            "TERMSIDE_A",
+            "TERMSIDE_B",
+            "IEC_FERR_A",
+            "IEC_FERR_B",
+            "REFRNCE_A",
+            "WIRE COLOR",
+            "WIRE SIZE",
+            "SIGN MARK",
+            "REMARKS",
+            "LENGTH(m)"
+          ],
+          "data_rows": 365,
+          "row_count": 366
+        },
+        {
+          "name": "1.5sq mm White",
+          "headers": [
+            "c0",
+            "c1"
+          ],
+          "data_rows": 211,
+          "row_count": 219
+        }
+      ],
+      "candidate_count": 0,
+      "sample_candidates": [],
+      "known_targets": []
+    },
+    "002_a": {
+      "path": "/app/uploads/002/frames/frame_1784977437763_0_ahv74.xlsx",
+      "sheets": [
+        {
+          "name": "COVER SHEET",
+          "headers": [
+            "c0",
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "data_rows": 6,
+          "row_count": 58
+        },
+        {
+          "name": "WIRING SCHEDULE",
+          "headers": [
+            "S.NO",
+            "PNLNO_A",
+            "DEV_TBLK_A",
+            "TERM_A",
+            "TERMSIDE_A",
+            "TERMSIDE_B",
+            "IEC_FERR_A",
+            "IEC_FERR_B",
+            "REFRNCE_A",
+            "WIRE COLOR",
+            "WIRE SIZE",
+            "SIGN MARK",
+            "REMARKS",
+            "LENGTH(m)"
+          ],
+          "data_rows": 150,
+          "row_count": 151
+        },
+        {
+          "name": "2.5sq mm White",
+          "headers": [
+            "c0",
+            "c1"
+          ],
+          "data_rows": 29,
+          "row_count": 37
+        }
+      ],
+      "candidate_count": 0,
+      "sample_candidates": [],
+      "known_targets": []
+    },
+    "002_b": {
+      "path": "/app/uploads/002/frames/frame_1785154448804_0_zn8m6.xlsx",
+      "sheets": [
+        {
+          "name": "COVER SHEET",
+          "headers": [
+            "c0",
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "data_rows": 7,
+          "row_count": 58
+        },
+        {
+          "name": "WIRING SCHEDULE",
+          "headers": [
+            "S.NO",
+            "PNLNO_A",
+            "DEV_TBLK_A",
+            "TERM_A",
+            "TERMSIDE_A",
+            "TERMSIDE_B",
+            "IEC_FERR_A",
+            "IEC_FERR_B",
+            "REFRNCE_A",
+            "WIRE COLOR",
+            "WIRE SIZE",
+            "SIGN MARK",
+            "REMARKS",
+            "LENGTH(m)"
+          ],
+          "data_rows": 935,
+          "row_count": 936
+        },
+        {
+          "name": "1.5sq mm White",
+          "headers": [
+            "c0",
+            "c1"
+          ],
+          "data_rows": 778,
+          "row_count": 786
+        }
+      ],
+      "candidate_count": 0,
+      "sample_candidates": [],
+      "known_targets": []
+    },
+    "003_SIET": {
+      "path": "/app/uploads/003/frames/frame_1789793600080_0_hhkw7.xlsx",
+      "sheets": [
+        {
+          "name": "COVER SHEET",
+          "headers": [
+            "c0",
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "data_rows": 6,
+          "row_count": 58
+        },
+        {
+          "name": "WIRING SCHEDULE",
+          "headers": [
+            "S.NO",
+            "PNLNO_A",
+            "DEV_TBLK_A",
+            "TERM_A",
+            "TERMSIDE_A",
+            "TERMSIDE_B",
+            "IEC_FERR_A",
+            "IEC_FERR_B",
+            "REFRNCE_A",
+            "WIRE COLOR",
+            "WIRE SIZE",
+            "SIGN MARK",
+            "REMARKS",
+            "LENGTH(m)"
+          ],
+          "data_rows": 653,
+          "row_count": 654
+        },
+        {
+          "name": "2.5sq mm White",
+          "headers": [
+            "c0",
+            "c1"
+          ],
+          "data_rows": 551,
+          "row_count": 559
+        }
+      ],
+      "candidate_count": 0,
+      "sample_candidates": [],
+      "known_targets": []
+    }
+  }
+}

@@ -1,0 +1,4 @@
+dwes-backend@1.0.0 C:\dev\DWES-OCI-RESTORES\2026-07-25_115805_OCI-PRODUCTION-EXACT\02_GIT_PRODUCTION_SOURCE\DWES\backend
+`-- @nestjs/platform-fastify@10.4.22 invalid: "^11.1.29" from the root project
+  `-- @fastify/middie@8.3.3
+

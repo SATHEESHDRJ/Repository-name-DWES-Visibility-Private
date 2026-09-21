@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../../services/api';
 import { CheckCircle, XCircle } from '../../../components/ui/icons';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 type Strategy = 'push_all' | 'pull_all' | 'merge' | 'dry_run';
 
@@ -63,7 +64,7 @@ export default function SyncTab() {
     }
   };
 
-  if (loading) return <div className="empty-state"><p className="empty-text">Loading sync status...</p></div>;
+  if (loading) return <DwesLoadingState label="Loading sync status…" />;
 
   const TONE_ACTIVE: Record<string, string> = {
     progress:  'border-blue-500 bg-blue-50',
@@ -94,13 +95,13 @@ export default function SyncTab() {
 
       {storage && (
         <div className="card p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-3">
             Local Store — {storage.total_rows} rows · ~{storage.estimated_size_kb} KB
           </div>
           <div className="grid grid-cols-2 tablet-land:grid-cols-3 gap-1">
             {storage.tables.map((table: any) => (
               <div key={table.name} className="flex items-center justify-between py-1.5 border-b border-slate-100">
-                <span className="text-sm text-slate-600">{table.name.replace(/_/g, ' ')}</span>
+                <span className="text-sm text-muted">{table.name.replace(/_/g, ' ')}</span>
                 <span className={`text-sm font-bold ${table.rows > 0 ? 'text-blue-700' : 'text-slate-400'}`}>{table.rows}</span>
               </div>
             ))}
@@ -109,7 +110,7 @@ export default function SyncTab() {
       )}
 
       <div className="card p-4">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">Sync Strategy</div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-3">Sync Strategy</div>
         <div className="grid grid-cols-2 tablet-land:grid-cols-4 gap-3 mb-4">
           {STRATEGIES.map(item => (
             <button
@@ -119,8 +120,8 @@ export default function SyncTab() {
               className={`flex flex-col gap-1 p-3 border-2 rounded-xl text-left transition-all
                 ${strategy === item.val ? (TONE_ACTIVE[item.tone] ?? 'border-blue-500 bg-blue-50') : (TONE_IDLE[item.tone] ?? 'border-slate-200')}`}
             >
-              <div className="text-sm font-semibold text-slate-800">{item.label}</div>
-              <div className="text-xs text-slate-500">{item.desc}</div>
+              <div className="text-sm font-semibold text-primary">{item.label}</div>
+              <div className="text-xs text-muted">{item.desc}</div>
             </button>
           ))}
         </div>
@@ -136,24 +137,24 @@ export default function SyncTab() {
 
       {inspectResult && (
         <div className="card p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-3">
             Sync Plan — {inspectResult.total_to_push} rows to push
           </div>
           <div className="flex flex-col">
             {inspectResult.plan?.map((plan: any) => (
               <div key={plan.table} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                <span className="text-sm font-medium text-slate-700 flex-1">{plan.table.replace(/_/g, ' ')}</span>
-                <span className="text-xs text-slate-500">{plan.local_rows} local</span>
+                <span className="text-sm font-medium text-secondary flex-1">{plan.table.replace(/_/g, ' ')}</span>
+                <span className="text-xs text-muted">{plan.local_rows} local</span>
                 <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${
                   plan.action === 'push' ? 'bg-blue-100 text-blue-700' :
-                  plan.action === 'skip' ? 'bg-slate-100 text-slate-600' :
+                  plan.action === 'skip' ? 'bg-slate-100 text-muted' :
                   'bg-amber-100 text-amber-700'}`}>
                   {plan.action}
                 </span>
               </div>
             ))}
           </div>
-          {inspectResult.note && <div className="text-xs text-slate-500 mt-2">{inspectResult.note}</div>}
+          {inspectResult.note && <div className="text-xs text-muted mt-2">{inspectResult.note}</div>}
         </div>
       )}
 
@@ -172,7 +173,7 @@ export default function SyncTab() {
 
       {syncStatus?.history?.length > 0 && (
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3 pb-2 border-b border-slate-200">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-3 pb-2 border-b border-slate-200">
             Sync History
           </div>
           <div className="table-wrapper">
@@ -189,7 +190,7 @@ export default function SyncTab() {
                   <tr key={index}>
                     <td className="font-bold uppercase tracking-wide text-xs">{item.strategy.replace('_', ' ')}</td>
                     <td>{item.records} rows</td>
-                    <td className="text-right text-slate-500 whitespace-nowrap">{new Date(item.ts).toLocaleString()}</td>
+                    <td className="text-right text-muted whitespace-nowrap">{new Date(item.ts).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

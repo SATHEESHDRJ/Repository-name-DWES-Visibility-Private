@@ -1,421 +1,675 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Modal from '../Modal';
-import { supervisorApi, techApi, usersApi } from '../../services/api';
-import { emitFramesChanged } from '../../utils/projectFramesEvents';
+import { projectsApi, supervisorApi, usersApi } from '../../services/api';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
-import Toast, { type ToastTone } from '../ui/Toast';
-import {
-  CHANGEOVER_REASONS,
-  type ChangeoverReason,
-} from '../assignment/MidChangeoverModal';
-import {
-  buildTechResources,
-  isActiveAssignment,
-  type AssignmentRow,
-  type TechResource,
-  type TechResourceStatus,
-  type TechUser,
-} from '../../utils/assignmentCenterUtils';
-import {
-  ArrowLeftRight,
-  Info,
-  TriangleAlert,
-  UserPlus,
-  Users,
-} from '../ui/icons';
+import type { FramePanel } from '../assignment/ProjectPanelSelect';
+import TechnicianSelect from '../assignment/TechnicianSelect';
+import type { AssignmentRow, TechUser } from '../../utils/assignmentCenterUtils';
+import type { PanelActivityData } from '../../types';
+import { ArrowLeftRight, CheckCircle, TriangleAlert, UserPlus, User } from '../ui/icons';
+import { DwesLoadingCenter } from '../ui/DwesLoadingIndicator';
+import LiveTbPanelStatusStrip from './LiveTbPanelStatusStrip';
+import { useAppDialog } from '../AppDialogProvider';
 
-/** Kept for drop-in compatibility with the previous Smart Assignment Center entry point. */
+/** Kept for compatibility with callers; supervisor workflow now performs initial assignment only. */
 export type TechnicianWorkflowSection = 'assign' | 'deassign' | 'changeover';
 
 export interface TechnicianWorkflowModalProps {
   onClose: () => void;
-  /** Accepted for backward compatibility; the compact modal has no tabs. */
   initialSection?: TechnicianWorkflowSection;
   projectCode: string;
   panelId: string;
   projectName: string;
   panelName: string;
   cableCount?: number;
+  /** When true, render assign UI without its own Modal shell (Workflow Assignments tab). */
+  embedded?: boolean;
+  /** Called after a successful assign in embedded mode so the parent can refresh. */
+  onAssigned?: () => void;
+  /** Optional panelActivity / lifecycle projection from parent (prefer when available). */
+  activity?: PanelActivityData | null;
+  /** Open a specific confirmation flow from the parent (e.g. Assignments tab CTA). */
+  forceConfirm?: 'reassign' | 'midchange' | null;
+  onForceConfirmConsumed?: () => void;
 }
 
-type PanelState = 'unassigned' | 'assigned' | 'started';
-
-const STATUS_DOT: Record<TechResourceStatus, string> = {
-  available: 'bg-emerald-500',
-  working: 'bg-blue-500',
-  on_break: 'bg-amber-500',
-  material_delay: 'bg-orange-500',
-  qa_qc: 'bg-violet-500',
-  offline: 'bg-slate-400',
+type TechnicianOption = TechUser & {
+  availability_status?: 'AVAILABLE' | 'ASSIGNED';
 };
 
-function techEngagementLabel(assigned: number, active: number): string {
-  const total = assigned + active;
-  if (total === 0) return 'Free — no active panels';
-  const base = `${total} active panel${total > 1 ? 's' : ''}`;
-  return active > 0 ? `${base} · ${active} in progress` : base;
+function messageFrom(error: unknown): string {
+  return (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+    || 'The technician could not be assigned. Please refresh and try again.';
+}
+
+function formatAssignmentTime(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(d);
+}
+
+function statusDisplayLabel(status: string | null | undefined): { label: string; tone: string } {
+  switch (status) {
+    case 'in_progress': return { label: 'In Progress', tone: 'progress' };
+    case 'paused': return { label: 'Paused', tone: 'paused' };
+    case 'assigned': return { label: 'Assigned', tone: 'assigned' };
+    case 'completed': return { label: 'Completed', tone: 'done' };
+    default: return { label: String(status || 'Unknown').replace(/_/g, ' '), tone: 'idle' };
+  }
 }
 
 export default function PanelAssignmentModal({
   onClose,
   projectCode,
   panelId,
+  projectName,
   panelName,
-  cableCount,
+  cableCount = 0,
+  embedded = false,
+  onAssigned,
+  activity: activityProp = null,
+  forceConfirm = null,
+  onForceConfirmConsumed,
 }: TechnicianWorkflowModalProps) {
-  const [techUsers, setTechUsers] = useState<TechUser[]>([]);
-  const [allAssignments, setAllAssignments] = useState<AssignmentRow[]>([]);
+  const dialog = useAppDialog();
+  const [technicians, setTechnicians] = useState<TechnicianOption[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [panel, setPanel] = useState<FramePanel | null>(null);
+  const [activityLocal, setActivityLocal] = useState<PanelActivityData | null>(null);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [selectedTechId, setSelectedTechId] = useState<number | null>(null);
-  const [changeoverReason, setChangeoverReason] = useState<ChangeoverReason | ''>('');
-  const [changeoverNotes, setChangeoverNotes] = useState('');
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const [assignedName, setAssignedName] = useState('');
+  const confirmOpenRef = useRef(false);
 
-  const loadContext = useCallback(async () => {
-    const [techs, panels] = await Promise.all([
-      usersApi.technicians().catch(() => []),
-      supervisorApi.allPanels().catch(() => []),
+  const reload = useCallback(async () => {
+    const [techRows, assignmentRows, panels, act] = await Promise.all([
+      usersApi.technicians(),
+      supervisorApi.allPanels(),
+      projectsApi.frames(projectCode),
+      supervisorApi.panelActivity(projectCode, panelId).catch(() => null),
     ]);
-    setTechUsers(Array.isArray(techs) ? (techs as TechUser[]) : []);
-    setAllAssignments(Array.isArray(panels) ? (panels as AssignmentRow[]) : []);
-  }, []);
+    setTechnicians(Array.isArray(techRows) ? techRows : []);
+    setAssignments(Array.isArray(assignmentRows) ? assignmentRows : []);
+    const panelRows = Array.isArray(panels) ? panels as FramePanel[] : [];
+    setPanel(panelRows.find(item => item.id === panelId) ?? null);
+    setActivityLocal((act && typeof act === 'object') ? act as PanelActivityData : null);
+  }, [panelId, projectCode]);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
     setLoading(true);
-    loadContext().finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [loadContext]);
+    reload().catch(loadError => {
+      if (active) setError(messageFrom(loadError));
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [reload]);
 
-  useDwesRefresh(loadContext, { pollMs: 12_000, listenFrames: true, listenWorkflow: true });
+  const activity = activityProp ?? activityLocal;
 
-  const techResources = useMemo(
-    () => buildTechResources(techUsers, allAssignments, projectCode),
-    [techUsers, allAssignments, projectCode],
+  const activeAssignments = useMemo(
+    () => assignments.filter(assignment => (
+      ['assigned', 'in_progress', 'paused'].includes(String(assignment.status || ''))
+      && !assignment.changeover_locked
+    )),
+    [assignments],
+  );
+  const panelAssignment = activeAssignments.find(assignment => (
+    assignment.project_code === projectCode && assignment.frame_id === panelId
+  ));
+  const assignedTechnicianIds = useMemo(
+    () => new Set(activeAssignments.map(assignment => assignment.technician_id)),
+    [activeAssignments],
+  );
+  const selectedTechnician = technicians.find(technician => String(technician.id) === selectedTechnicianId);
+  const availableTechnicianCount = technicians.filter(technician => (
+    !assignedTechnicianIds.has(technician.id) && technician.availability_status !== 'ASSIGNED'
+  )).length;
+  const assignedTechnicianCount = technicians.length - availableTechnicianCount;
+  const resolvedPanelName = panel?.panel_name || panelName || panelId;
+  const resolvedCableCount = Number(panel?.cable_count ?? cableCount ?? activity?.cables_total ?? 0);
+  const scheduleReady = resolvedCableCount > 0;
+  const canAssign = Boolean(
+    selectedTechnician
+    && !assignedTechnicianIds.has(selectedTechnician.id)
+    && !panelAssignment
+    && scheduleReady,
   );
 
-  const engagementByTech = useMemo(() => {
-    const map = new Map<number, { assigned: number; active: number }>();
-    for (const a of allAssignments) {
-      if (!isActiveAssignment(a)) continue;
-      const e = map.get(a.technician_id) ?? { assigned: 0, active: 0 };
-      if (String(a.status) === 'assigned') e.assigned += 1;
-      else e.active += 1;
-      map.set(a.technician_id, e);
-    }
-    return map;
-  }, [allAssignments]);
+  const assignedTech = panelAssignment
+    ? technicians.find(t => t.id === panelAssignment.technician_id) ?? null
+    : null;
+  const assignedTechName = activity?.technician?.name
+    || assignedTech?.full_name
+    || panelAssignment?.technician_name
+    || (panelAssignment ? `Tech #${panelAssignment.technician_id}` : '—');
+  const assignedTechUsername = activity?.technician?.username || assignedTech?.username || '';
+  const assignmentStatus = statusDisplayLabel(panelAssignment?.status || activity?.status);
+  const statusRaw = String(panelAssignment?.status || activity?.status || '').toLowerCase();
+  const startedAt = panelAssignment?.started_at ?? activity?.wiring_started_at ?? null;
 
-  const currentAssignment = useMemo(() => {
-    const rows = allAssignments.filter(
-      a => a.project_code === projectCode
-        && a.frame_id === panelId
-        && !a.changeover_locked
-        && isActiveAssignment(a),
+  const canReassign = Boolean(
+    activity?.can_reassign
+    ?? (statusRaw === 'assigned' && !startedAt),
+  );
+  const canMidChange = Boolean(
+    activity?.can_mid_change
+    ?? (['in_progress', 'paused'].includes(statusRaw) || Boolean(startedAt)),
+  );
+  const notStarted = canReassign || (statusRaw === 'assigned' && !startedAt);
+  const inProgress = canMidChange
+    || ['in_progress', 'paused'].includes(statusRaw)
+    || Boolean(startedAt);
+
+  const progressPct = activity?.completion_percentage;
+
+  const techOptions = useMemo(() => {
+    const candidates = technicians.filter(t => (
+      t.id !== panelAssignment?.technician_id
+      && t.availability_status !== 'ASSIGNED'
+      && !assignedTechnicianIds.has(t.id)
+    ));
+    const list = candidates.length
+      ? candidates
+      : technicians.filter(t => t.id !== panelAssignment?.technician_id);
+    return list.map(t => ({
+      value: String(t.id),
+      label: t.full_name || t.username || `Tech #${t.id}`,
+    }));
+  }, [assignedTechnicianIds, panelAssignment?.technician_id, technicians]);
+
+  const openAssignConfirm = async () => {
+    if (!canAssign || !selectedTechnician) return;
+    setError('');
+    const techName = selectedTechnician.full_name || selectedTechnician.username || `Tech #${selectedTechnician.id}`;
+    const ok = await dialog.confirmAsync(
+      {
+        title: 'Confirm Technician Assignment',
+        message: 'Assign the selected technician to this panel for wiring execution.',
+        tone: 'warning',
+        confirmText: 'Confirm Assignment',
+        consequence: 'The technician will receive this panel as their authorised assignment. Wiring can start after acknowledgement.',
+        actionSummary: `Assign ${techName} to ${resolvedPanelName}.`,
+        comparison: {
+          current: [
+            { label: 'Technician', value: 'Unassigned' },
+            { label: 'Panel', value: resolvedPanelName },
+            { label: 'Project', value: projectName || projectCode },
+          ],
+          proposed: [
+            { label: 'Technician', value: techName },
+            { label: 'Panel', value: resolvedPanelName },
+            { label: 'Wire count', value: String(resolvedCableCount) },
+          ],
+        },
+        entity: [
+          { label: 'Project', value: projectName || projectCode, kind: 'project' },
+          { label: 'Panel', value: resolvedPanelName, kind: 'panel' },
+          { label: 'Technician', value: techName, kind: 'user' },
+        ],
+      },
+      async () => {
+        await supervisorApi.assignFrame({
+          project_code: projectCode,
+          frame_id: panelId,
+          technician_id: selectedTechnician.id,
+        });
+        setAssignedName(techName);
+        emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
+        await reload().catch(() => {});
+        onAssigned?.();
+      },
     );
-    if (!rows.length) return null;
-    for (const s of ['in_progress', 'assigned', 'paused']) {
-      const match = rows.find(a => String(a.status) === s);
-      if (match) return match;
-    }
-    return rows[0];
-  }, [allAssignments, projectCode, panelId]);
+    if (!ok) return;
+  };
 
-  const started = currentAssignment
-    ? (currentAssignment.started_at != null || String(currentAssignment.status) !== 'assigned')
-    : false;
-
-  const panelState: PanelState = !currentAssignment
-    ? 'unassigned'
-    : started ? 'started' : 'assigned';
-
-  const scheduleReady = (cableCount ?? 0) > 0;
-  const currentTechName = currentAssignment?.technician_name
-    || techUsers.find(t => t.id === currentAssignment?.technician_id)?.full_name
-    || 'Technician';
-  const currentKpi = Number(currentAssignment?.kpi ?? 0);
-
-  // The technician the current panel is assigned to (hidden from the pick list when relevant).
-  const currentTechId = currentAssignment?.technician_id ?? null;
-
-  const reasonValid = changeoverReason !== ''
-    && (changeoverReason !== 'Other' || changeoverNotes.trim().length > 0);
-  const canAssign = panelState === 'unassigned' && scheduleReady && selectedTechId != null;
-  const canChangeover = panelState === 'started' && selectedTechId != null && reasonValid;
-
-  const showToast = (message: string, tone: ToastTone = 'success') => setToast({ message, tone });
-
-  const runAction = async (fn: () => Promise<void>, successMsg: string) => {
-    setBusy(true);
+  const openReassignConfirm = useCallback(async () => {
+    if (!panelAssignment || confirmOpenRef.current) return;
+    confirmOpenRef.current = true;
     setError('');
     try {
-      await fn();
-      emitFramesChanged({ projectCode, frameId: panelId, action: 'updated' });
-      emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
-      await loadContext();
-      setSelectedTechId(null);
-      setConfirmRemove(false);
-      showToast(successMsg, 'success');
-    } catch (e) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-        || 'Action failed. Please try again.';
-      setError(msg);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleAssign = () => {
-    if (selectedTechId == null) return;
-    const tech = techResources.find(t => t.id === selectedTechId);
-    void runAction(
-      () => supervisorApi.assignFrame({ project_code: projectCode, frame_id: panelId, technician_id: selectedTechId }),
-      `Panel assigned to ${tech?.full_name ?? 'technician'}`,
-    );
-  };
-
-  const handleRemove = () => {
-    if (!currentAssignment) return;
-    void runAction(
-      () => techApi.delete(currentAssignment.id),
-      'Assignment removed',
-    );
-  };
-
-  const handleChangeover = () => {
-    if (!currentAssignment || selectedTechId == null || !reasonValid) return;
-    const tech = techResources.find(t => t.id === selectedTechId);
-    void runAction(
-      () => supervisorApi.midChangeover({
-        old_assignment_id: currentAssignment.id,
-        new_technician_id: selectedTechId,
-        changeover_reason: changeoverReason,
-        reason_notes: changeoverNotes.trim() || undefined,
-      }),
-      `Changed over to ${tech?.full_name ?? 'new technician'}`,
-    );
-  };
-
-  // Which techs are selectable in the list: everyone when unassigned; everyone except the
-  // current tech when doing a changeover; none when simply assigned-not-started.
-  const selectable = panelState === 'unassigned'
-    || (panelState === 'started');
-  const rowIsSelectable = (t: TechResource) =>
-    selectable && !(panelState === 'started' && t.id === currentTechId);
-
-  const banner = (() => {
-    if (panelState === 'unassigned') {
-      return (
-        <div className="flex items-start gap-2 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <UserPlus size={16} className="mt-0.5 shrink-0 text-slate-500" />
-          <div className="text-[13px] text-slate-700">
-            <span className="font-semibold">Unassigned.</span> Select a technician below to assign this panel.
-          </div>
-        </div>
+      await dialog.confirmAsync(
+        {
+          title: 'Confirm Panel Reassignment',
+          message: 'Reassign this panel to another technician before wiring starts.',
+          tone: 'warning',
+          confirmText: 'Confirm Reassignment',
+          consequence: 'The current technician loses this panel. The receiving technician becomes the authorised assignee. Wiring history remains empty because work has not started.',
+          actionSummary: `Reassign ${resolvedPanelName} from ${assignedTechName}.`,
+          comparison: {
+            current: [
+              { label: 'Technician', value: assignedTechName },
+              { label: 'Panel', value: resolvedPanelName },
+              { label: 'Status', value: 'Wiring Not Started' },
+              { label: 'Wire count', value: String(resolvedCableCount) },
+            ],
+            proposed: [
+              { label: 'Technician', value: 'Selected below' },
+              { label: 'Panel', value: resolvedPanelName },
+              { label: 'Status', value: 'Assigned' },
+            ],
+          },
+          entity: [
+            { label: 'Project', value: projectName || projectCode, kind: 'project' },
+            { label: 'Panel', value: resolvedPanelName, kind: 'panel' },
+            { label: 'Current technician', value: assignedTechName, kind: 'user' },
+          ],
+          formFields: [
+            {
+              name: 'technicianId',
+              type: 'select',
+              label: 'Receiving technician',
+              required: true,
+              placeholder: 'Select technician…',
+              options: techOptions,
+            },
+            {
+              name: 'reason',
+              type: 'textarea',
+              label: 'Reason',
+              required: true,
+              placeholder: 'Why is this panel being reassigned?',
+              rows: 3,
+            },
+          ],
+        },
+        async (values) => {
+          const newTechId = Number(values?.technicianId);
+          const reason = (values?.reason || '').trim();
+          if (!newTechId || !reason) {
+            throw new Error('Receiving technician and reason are required.');
+          }
+          await supervisorApi.reassignBeforeStart({
+            assignment_id: panelAssignment.id,
+            new_technician_id: newTechId,
+            reason,
+          });
+          emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
+          await reload().catch(() => {});
+          onAssigned?.();
+        },
       );
+    } finally {
+      confirmOpenRef.current = false;
     }
-    if (panelState === 'assigned') {
+  }, [
+    assignedTechName,
+    dialog,
+    onAssigned,
+    panelAssignment,
+    panelId,
+    projectCode,
+    projectName,
+    reload,
+    resolvedCableCount,
+    resolvedPanelName,
+    techOptions,
+  ]);
+
+  const openMidChangeConfirm = useCallback(async () => {
+    if (!panelAssignment || confirmOpenRef.current) return;
+    confirmOpenRef.current = true;
+    setError('');
+    const completed = activity?.cables_completed ?? 0;
+    const remaining = activity?.cables_remaining ?? Math.max(0, resolvedCableCount - completed);
+    try {
+      await dialog.confirmAsync(
+        {
+          title: 'Confirm Mid Change',
+          message: 'Transfer active wiring work to another technician while preserving completed wires and audit history.',
+          tone: 'warning',
+          confirmText: 'Confirm Mid Change',
+          consequence: 'This closes the current technician\'s active work on this panel and opens a Mid Change transfer. Completed wires and audit history are preserved.',
+          actionSummary: `Mid Change ${resolvedPanelName} from ${assignedTechName}.`,
+          comparison: {
+            current: [
+              { label: 'Technician', value: assignedTechName },
+              { label: 'Panel', value: resolvedPanelName },
+              { label: 'Completed / remaining', value: `${completed} / ${remaining} wires` },
+              { label: 'Progress', value: progressPct != null ? `${progressPct}%` : assignmentStatus.label },
+              { label: 'Wiring status', value: assignmentStatus.label },
+            ],
+            proposed: [
+              { label: 'Technician', value: 'Selected below' },
+              { label: 'Panel', value: resolvedPanelName },
+              { label: 'Preserved work', value: `${completed} completed wires` },
+            ],
+          },
+          entity: [
+            { label: 'Project', value: projectName || projectCode, kind: 'project' },
+            { label: 'Panel', value: resolvedPanelName, kind: 'panel' },
+            { label: 'Current technician', value: assignedTechName, kind: 'user' },
+          ],
+          formFields: [
+            {
+              name: 'technicianId',
+              type: 'select',
+              label: 'Receiving technician',
+              required: true,
+              placeholder: 'Select technician…',
+              options: techOptions,
+            },
+            {
+              name: 'reason',
+              type: 'textarea',
+              label: 'Reason',
+              required: true,
+              placeholder: 'Why is Mid Change required?',
+              rows: 3,
+            },
+          ],
+        },
+        async (values) => {
+          const newTechId = Number(values?.technicianId);
+          const reason = (values?.reason || '').trim();
+          if (!newTechId || !reason) {
+            throw new Error('Receiving technician and reason are required.');
+          }
+          await supervisorApi.midChangeover({
+            old_assignment_id: panelAssignment.id,
+            new_technician_id: newTechId,
+            changeover_reason: 'Other',
+            reason_notes: reason,
+          });
+          emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
+          await reload().catch(() => {});
+          onAssigned?.();
+        },
+      );
+    } finally {
+      confirmOpenRef.current = false;
+    }
+  }, [
+    activity?.cables_completed,
+    activity?.cables_remaining,
+    assignedTechName,
+    assignmentStatus.label,
+    dialog,
+    onAssigned,
+    panelAssignment,
+    panelId,
+    progressPct,
+    projectCode,
+    projectName,
+    reload,
+    resolvedCableCount,
+    resolvedPanelName,
+    techOptions,
+  ]);
+
+  useEffect(() => {
+    if (!forceConfirm || loading || !panelAssignment || confirmOpenRef.current) return;
+    onForceConfirmConsumed?.();
+    if (forceConfirm === 'reassign') void openReassignConfirm();
+    if (forceConfirm === 'midchange') void openMidChangeConfirm();
+  }, [
+    forceConfirm,
+    loading,
+    onForceConfirmConsumed,
+    openMidChangeConfirm,
+    openReassignConfirm,
+    panelAssignment,
+  ]);
+
+  const wrap = (title: string, body: ReactNode, footer: ReactNode, size: 'form' | 'lg' = 'lg') => {
+    if (embedded) {
       return (
-        <div className="flex items-start gap-2 rounded-[10px] border border-blue-200 bg-blue-50 px-3 py-2.5">
-          <Users size={16} className="mt-0.5 shrink-0 text-blue-600" />
-          <div className="text-[13px] text-blue-900">
-            Assigned to <span className="font-semibold">{currentTechName}</span> — not started yet.
-            You can remove this assignment until work begins.
+        <div className="pw-embed-assign">
+          <div className="pw-embed-assign__head">
+            <h3>{title}</h3>
+            <p>{projectName || projectCode} · {resolvedPanelName}</p>
           </div>
+          {body}
+          <div className="pw-embed-assign__footer">{footer}</div>
         </div>
       );
     }
     return (
-      <div className="flex items-start gap-2 rounded-[10px] border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-        <ArrowLeftRight size={16} className="mt-0.5 shrink-0 text-emerald-600" />
-        <div className="text-[13px] text-emerald-900">
-          In progress with <span className="font-semibold">{currentTechName}</span> ({currentKpi}% wired).
-          Work has started — you can only hand over to another technician.
-        </div>
-      </div>
+      <Modal
+        title={title}
+        subtitle={`${projectName || projectCode} · ${resolvedPanelName}`}
+        icon={panelAssignment ? <User /> : <UserPlus />}
+        onClose={onClose}
+        size={size}
+        bodyClassName={panelAssignment ? undefined : 'assign-technician-modal-body'}
+        footer={footer}
+      >
+        {body}
+      </Modal>
     );
-  })();
+  };
 
-  return (
-    <Modal
-      title="Panel Assignment"
-      subtitle={`${projectCode} · ${panelName}${scheduleReady ? ` · ${cableCount} cables` : ''}`}
-      onClose={onClose}
-      size="lg"
-      footer={
-        panelState === 'unassigned' ? (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            <button
-              onClick={handleAssign}
-              disabled={busy || !canAssign}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              type="button"
-            >
-              {busy ? 'Assigning…' : 'Assign panel'}
-            </button>
-          </>
-        ) : panelState === 'assigned' ? (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            {confirmRemove ? (
-              <button
-                onClick={handleRemove}
-                disabled={busy}
-                className="btn-danger disabled:opacity-40 disabled:cursor-not-allowed"
-                type="button"
-              >
-                {busy ? 'Removing…' : 'Confirm remove'}
-              </button>
-            ) : (
-              <button onClick={() => setConfirmRemove(true)} className="btn-danger" type="button">
-                Remove assignment
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button onClick={onClose} className="btn-secondary" type="button">Close</button>
-            <button
-              onClick={handleChangeover}
-              disabled={busy || !canChangeover}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              type="button"
-            >
-              {busy ? 'Processing…' : 'Confirm changeover'}
-            </button>
-          </>
-        )
-      }
-    >
-      <div className="flex flex-col gap-4">
-        {banner}
-
-        {!scheduleReady && panelState === 'unassigned' && (
-          <div className="flex items-start gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
-            <div className="text-[13px] text-amber-800">
-              This panel has no imported cables yet — complete the wiring upload before assigning.
+  if (!loading && panelAssignment) {
+    return wrap(
+      'Panel Already Assigned',
+      (
+        <div className="assign-already-shell">
+          <section className="assign-technician-context" aria-label="Selected project and panel">
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Project Name</span>
+              <strong className="assign-technician-context-value" title={projectName || projectCode}>
+                {projectName || projectCode}
+              </strong>
+              <span className="assign-technician-context-meta" title={projectCode}>{projectCode}</span>
             </div>
-          </div>
-        )}
-
-        {panelState === 'started' && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="form-label mb-1">Changeover reason <span className="text-red-500">*</span></label>
-              <select
-                value={changeoverReason}
-                onChange={e => { setChangeoverReason(e.target.value as ChangeoverReason | ''); setError(''); }}
-                className="form-select"
-                aria-label="Changeover reason"
-              >
-                <option value="">Select reason…</option>
-                {CHANGEOVER_REASONS.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Panel Name</span>
+              <strong className="assign-technician-context-value" title={resolvedPanelName}>
+                {resolvedPanelName}
+              </strong>
+              <span className="assign-technician-context-meta">{resolvedCableCount} assigned cables</span>
             </div>
-            {(changeoverReason === 'Other' || changeoverNotes) && (
-              <div>
-                <label className="form-label mb-1">
-                  Details {changeoverReason === 'Other' && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={changeoverNotes}
-                  onChange={e => { setChangeoverNotes(e.target.value); setError(''); }}
-                  placeholder={changeoverReason === 'Other' ? 'Describe the reason…' : 'Optional notes…'}
-                  className="form-input w-full"
-                />
+          </section>
+
+          <div className="assign-already-card">
+            <div className="assign-already-card-header">
+              <div className="assign-already-card-heading">
+                <span className="assign-already-pulse-wrap">
+                  <span className="assign-already-pulse" data-tone={assignmentStatus.tone} />
+                </span>
+                <span className="assign-already-status-badge" data-tone={assignmentStatus.tone}>
+                  {assignmentStatus.label}
+                </span>
               </div>
-            )}
-          </div>
-        )}
+              <span className="assign-already-panel-badge">{resolvedPanelName}</span>
+            </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              {panelState === 'started' ? 'Hand over to' : 'Technicians'}
-            </span>
-            {selectable && (
-              <span className="text-[11px] text-slate-400">
-                {panelState === 'started' ? 'Pick a replacement' : 'Pick one to assign'}
-              </span>
-            )}
+            <div className="assign-already-tech-row">
+              <div className="assign-already-avatar" aria-hidden="true">
+                <User size={22} />
+              </div>
+              <div className="assign-already-tech-info">
+                <strong className="assign-already-tech-name">{assignedTechName}</strong>
+                {assignedTechUsername && (
+                  <span className="assign-already-tech-username">@{assignedTechUsername}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="assign-already-meta-grid">
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Assigned</span>
+                <strong>{formatAssignmentTime(panelAssignment.assigned_at || activity?.assigned_at)}</strong>
+              </div>
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Wiring started</span>
+                <strong>{startedAt ? formatAssignmentTime(startedAt) : 'Not Started'}</strong>
+              </div>
+              <div className="assign-already-meta">
+                <span className="assign-already-meta-label">Work status</span>
+                <strong>
+                  {assignmentStatus.label}
+                  {panelAssignment.pause_reason || activity?.pause_reason
+                    ? ` — ${panelAssignment.pause_reason || activity?.pause_reason}`
+                    : ''}
+                </strong>
+              </div>
+              {progressPct != null && (
+                <div className="assign-already-meta">
+                  <span className="assign-already-meta-label">Progress</span>
+                  <strong>{progressPct}%</strong>
+                </div>
+              )}
+            </div>
           </div>
 
-          {loading ? (
-            <p className="py-6 text-center text-[13px] text-slate-400">Loading technicians…</p>
-          ) : techResources.length === 0 ? (
-            <p className="py-6 text-center text-[13px] text-slate-400">No active technicians found.</p>
-          ) : (
-            <ul className="flex max-h-[46vh] flex-col gap-1.5 overflow-y-auto pr-1">
-              {techResources.map(t => {
-                const eng = engagementByTech.get(t.id) ?? { assigned: 0, active: 0 };
-                const isCurrent = t.id === currentTechId;
-                const canPick = rowIsSelectable(t);
-                const isSelected = selectedTechId === t.id;
-                return (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      disabled={!canPick}
-                      onClick={() => canPick && setSelectedTechId(isSelected ? null : t.id)}
-                      className={[
-                        'flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition-colors',
-                        isSelected
-                          ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'
-                          : 'border-slate-200 bg-white',
-                        canPick ? 'hover:border-slate-300 hover:bg-slate-50 cursor-pointer' : 'cursor-default',
-                        !canPick && !isCurrent ? 'opacity-70' : '',
-                      ].join(' ')}
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600">
-                        {t.initials}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-[13px] font-semibold text-slate-900">{t.full_name}</span>
-                          {isCurrent && (
-                            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                              Current
-                            </span>
-                          )}
-                        </span>
-                        <span className="truncate text-[11px] text-slate-500">
-                          {techEngagementLabel(eng.assigned, eng.active)}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[t.status]}`} aria-hidden />
-                        <span className="text-[11px] font-medium text-slate-600">{t.statusLabel}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+          {(notStarted || inProgress) && (
+            <div className="assign-already-midchange-notice" role="note">
+              <ArrowLeftRight size={18} className="shrink-0" />
+              <div>
+                <strong>{notStarted ? 'Reassign before wiring starts' : 'Transfer active wiring work'}</strong>
+                <p>
+                  {notStarted
+                    ? 'This panel has not started. You can reassign to another technician without Mid Change.'
+                    : 'Wiring has started. Use Mid Change to transfer the panel while preserving completed work and audit history.'}
+                </p>
+              </div>
+            </div>
           )}
         </div>
+      ),
+      (
+        <>
+          {!embedded && (
+            <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+          )}
+          {notStarted && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => { void openReassignConfirm(); }}
+            >
+              <User size={17} />
+              Reassign Technician
+            </button>
+          )}
+          {inProgress && !notStarted && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => { void openMidChangeConfirm(); }}
+            >
+              <ArrowLeftRight size={17} />
+              Start Mid Change
+            </button>
+          )}
+          {embedded && !notStarted && !inProgress && (
+            <span className="pw-embed-assign__hint">Assignment is locked for this panel state.</span>
+          )}
+        </>
+      ),
+      'form',
+    );
+  }
 
-        {panelState === 'started' && (
-          <div className="assignment-info-callout flex items-start gap-1.5">
-            <Info size={15} className="mt-0.5 shrink-0" />
-            <span>The previous technician&apos;s completed cables and history are preserved and transferred to the new technician.</span>
+  return wrap(
+    'Assign Technician',
+    (
+      <div className="assign-technician-shell">
+        {!embedded && (
+          <section className="assign-technician-context" aria-label="Selected project and panel">
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Project Name</span>
+              <strong className="assign-technician-context-value" title={projectName || projectCode}>
+                {projectName || projectCode}
+              </strong>
+              <span className="assign-technician-context-meta" title={projectCode}>{projectCode}</span>
+            </div>
+            <div className="assign-technician-context-item">
+              <span className="assign-technician-context-label">Panel Name</span>
+              <strong className="assign-technician-context-value" title={resolvedPanelName}>
+                {resolvedPanelName}
+              </strong>
+              <span className="assign-technician-context-meta">{resolvedCableCount} assigned cables</span>
+            </div>
+          </section>
+        )}
+
+        {loading && (
+          <DwesLoadingCenter label="Loading technician availability…" className="assign-technician-loading" size="sm" />
+        )}
+
+        {!loading && (
+          <LiveTbPanelStatusStrip
+            projectCode={projectCode}
+            frameId={panelId}
+            className="assign-live-tb-status"
+          />
+        )}
+
+        {!loading && !scheduleReady && (
+          <div className="assign-technician-notice" role="status">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            <span>Upload the panel wiring schedule before assigning a technician.</span>
+          </div>
+        )}
+
+        {!assignedName && (
+          <section className="assign-technician-picker" aria-labelledby="assign-technician-list-heading">
+            <div className="assign-technician-picker-header">
+              <div>
+                <h3 id="assign-technician-list-heading">Technicians</h3>
+                <p>Select one available technician for this panel.</p>
+              </div>
+              <div className="assign-technician-counts" aria-label="Technician availability summary">
+                <span className="is-available"><i aria-hidden="true" />{availableTechnicianCount} available</span>
+                <span className="is-assigned"><i aria-hidden="true" />{assignedTechnicianCount} assigned</span>
+              </div>
+            </div>
+            <TechnicianSelect
+              options={technicians.map(technician => ({
+                id: technician.id,
+                name: technician.full_name || technician.username || `Tech #${technician.id}`,
+                username: technician.username,
+                assigned: assignedTechnicianIds.has(technician.id)
+                  || technician.availability_status === 'ASSIGNED',
+              }))}
+              value={selectedTechnicianId}
+              onChange={id => { setSelectedTechnicianId(id); setError(''); }}
+              disabled={loading || !scheduleReady}
+              inlineList
+            />
+          </section>
+        )}
+
+        {assignedName && (
+          <div className="assign-technician-success">
+            <CheckCircle size={18} className="mt-0.5 shrink-0" />
+            <div>
+              <strong>{assignedName}</strong>
+              <span>was assigned to {resolvedPanelName}. The panel is now available on the technician dashboard.</span>
+            </div>
           </div>
         )}
 
         {error && <div className="form-error">{error}</div>}
       </div>
-
-      {toast && (
-        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
-      )}
-    </Modal>
+    ),
+    assignedName ? (
+      embedded
+        ? <span className="pw-embed-assign__hint">Assignment saved.</span>
+        : <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+    ) : (
+      <>
+        {!embedded && (
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+        )}
+        <button
+          type="button"
+          className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={openAssignConfirm}
+          disabled={!canAssign}
+        >
+          <UserPlus size={17} />
+          Assign Technician
+        </button>
+      </>
+    ),
   );
 }

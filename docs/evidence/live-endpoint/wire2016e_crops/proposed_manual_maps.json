@@ -1,0 +1,159 @@
+{
+  "project_code": "003",
+  "frame_id": "frame_1789793600080_0_hhkw7",
+  "wire_ref": "20.16:E",
+  "source": {
+    "identity_tag": "H74",
+    "endpoint_kind": "EQUIPMENT_CONNECTOR",
+    "connector": "X10",
+    "terminal": "4",
+    "page_number": 4,
+    "geometry": {
+      "x": 0.36,
+      "y": 0.115,
+      "width": 0.11,
+      "height": 0.09
+    },
+    "notes": "OCR+geometry: ALARM ANNUNCIATOR physical device (LAYOUT). Directory rejected."
+  },
+  "destination": {
+    "identity_tag": "KF87L",
+    "endpoint_kind": "EQUIPMENT_TERMINAL",
+    "connector": null,
+    "terminal": "5",
+    "page_number": 4,
+    "geometry": {
+      "x": 0.35,
+      "y": 0.5,
+      "width": 0.16,
+      "height": 0.12
+    },
+    "notes": "OCR: F87L LINE DIFFERENTIAL physical device (K prefix OCR-weak). Directory/list rejected."
+  },
+  "crop_ocr": {
+    "H74_annunciator": {
+      "text": "LEGEND:\nREF | DESCRIPTION\nH74 | ALARM ANNUNCIATOR (24 WAY)\nMFM | MULTIFUNCTION METER\nH1 | INDICATION LAMP - WHITE - TRI\nH2 | INDICATION LAMP - WHITE - TRI\nLe l OINKICATIAN TL AMID ANIDED FA",
+      "hits": [
+        {
+          "tok": "H74",
+          "nx": 0.4069,
+          "ny": 0.152,
+          "nw": 0.0111,
+          "nh": 0.007
+        },
+        {
+          "tok": "ALARM",
+          "nx": 0.4495,
+          "ny": 0.152,
+          "nw": 0.0218,
+          "nh": 0.007
+        }
+      ]
+    },
+    "KF87L_line_diff": {
+      "text": "Qo CIRCUIT BREAKER DISCREPANCY CONTE\nH266 INDICATION LAMP - WHITE - HEATER ON\nBOMOM BALE $266 HEATER ON-OFF SWITCH\n__| COMPARTMENT QCE1 SEMAPHORE INDICATOR - EARTH SWITCI\nF87L LINE DIFFERENTIAL RELAY\nX87L-1 TEST BLOCK FOR F87L\n+ X87L-2 TEST BLOCK FOR F87L\n2 F67/67N OVER CURRENT & EARTH FAULT RELAY\no X67/67N-1 TEST BLOCK FOR F67/67N\nX67/67N-2 TEST BLOCK FOR F67/67N\nXMFM TEST BLOCK FOR MFM",
+      "hits": [
+        {
+          "tok": "F87L",
+          "nx": 0.4055,
+          "ny": 0.5481,
+          "nw": 0.0141,
+          "nh": 0.007
+        },
+        {
+          "tok": "LINE",
+          "nx": 0.4499,
+          "ny": 0.5481,
+          "nw": 0.0137,
+          "nh": 0.007
+        },
+        {
+          "tok": "DIFFERENTIAL",
+          "nx": 0.4662,
+          "ny": 0.5481,
+          "nw": 0.0456,
+          "nh": 0.007
+        },
+        {
+          "tok": "X87L-1",
+          "nx": 0.402,
+          "ny": 0.5638,
+          "nw": 0.0197,
+          "nh": 0.007
+        },
+        {
+          "tok": "F87L",
+          "nx": 0.5077,
+          "ny": 0.5641,
+          "nw": 0.0141,
+          "nh": 0.0067
+        },
+        {
+          "tok": "X87L-2",
+          "nx": 0.402,
+          "ny": 0.5798,
+          "nw": 0.0205,
+          "nh": 0.007
+        },
+        {
+          "tok": "F87L",
+          "nx": 0.5094,
+          "ny": 0.5798,
+          "nw": 0.0141,
+          "nh": 0.007
+        }
+      ]
+    },
+    "page4_left_mid": {
+      "text": "poe = : 4 P3 | PUSH BUTTON E\n\u2014 i P86BB _ PUSH BUTTON E\n=m = Qo _ CIRCUIT BREAK\n== F87L SS F67I67NI H266 | INDICATION LAN\n\u00a9 \u00a9 QB \u00ae \u00ae \u00ae Qe GLAZED DOOR\nx <> | aaa tertge $266 _ HEATER ON-OFI\naraae Fae | ; COMPARTMENT QCE1 _ SEMAPHORE IN\n_\u2014\u2014 F87L __LINE DIFFEREN\u2019\noo \\/ X87L-1 \u00abTEST BLOCK FO\nJalal E/2)e i < X87L-2 __ TEST BLOCK F\u00a2\no/S/R/R) Ee] . \u2018\n'B/B S$ S/2 Bo 4) 2 F67/67N | OVER CURRENT\n| oan | co) X67/67N-1_ TEST BLOCK FC\nSSeS X67/67N-2 TEST BLOCK FO\nela le Cal el, XMEM | TEST BLOCK EC",
+      "hits": [
+        {
+          "tok": "F87L",
+          "nx": 0.1998,
+          "ny": 0.5014,
+          "nw": 0.0107,
+          "nh": 0.0051
+        },
+        {
+          "tok": "F87L",
+          "nx": 0.4054,
+          "ny": 0.548,
+          "nw": 0.0141,
+          "nh": 0.007
+        },
+        {
+          "tok": "__LINE",
+          "nx": 0.4439,
+          "ny": 0.5432,
+          "nw": 0.0197,
+          "nh": 0.0148
+        },
+        {
+          "tok": "DIFFEREN\u2019",
+          "nx": 0.4662,
+          "ny": 0.548,
+          "nw": 0.0338,
+          "nh": 0.007
+        },
+        {
+          "tok": "X87L-1",
+          "nx": 0.402,
+          "ny": 0.5638,
+          "nw": 0.0197,
+          "nh": 0.007
+        },
+        {
+          "tok": "X87L-2",
+          "nx": 0.402,
+          "ny": 0.5759,
+          "nw": 0.0205,
+          "nh": 0.0148
+        }
+      ]
+    },
+    "dir_right_sample": {
+      "text": "Y _ PPRN8 + PL004002+PL004001\nY | __ PPRN8 + PL004002+PL004001\nLY _DR20-D/4 DR110-AED04 39(2-2)-0010\nY PLML5L230 F\nY PSLB8DO |\n| Pi29\nYY 7SL86_P1C1015461\n| 4M200-01\n| 4M200-01 |\nY 7$J85_ P1J295857\n| 4M200-01\n| 4M200-01 |\nAM200-01",
+      "hits": []
+    }
+  }
+}

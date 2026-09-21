@@ -33,9 +33,11 @@ export default function NavBar({ tabs = [], activeTab, onTabChange }: NavBarProp
   const handleLogout = async () => {
     const ok = await dialog.confirm({
       title: 'Logout',
-      message: 'Do you want to sign out from DWES?',
+      message: 'You will be signed out of DWES on this device. Unsaved work in other tabs may be lost.',
       tone: 'logout',
       confirmText: 'Logout',
+      actionSummary: 'End the current session and return to the login screen.',
+      entity: user ? { label: 'User', value: user.full_name, meta: user.username, kind: 'user' } : undefined,
     });
     if (!ok) return;
     setLogoutLoading(true);

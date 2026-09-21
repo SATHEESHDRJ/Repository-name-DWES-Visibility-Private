@@ -1,0 +1,9 @@
+{
+  "namespace": "DWES",
+  "source": "dwes@0.0.0",
+  "shape": "package",
+  "provider": "ThemeProvider",
+  "componentCount": 31,
+  "skippedStoryIds": [],
+  "runtimeFontPrefixes": []
+}

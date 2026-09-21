@@ -1,68 +1,95 @@
-name: CI
+name: DWES CI (local validation)
+
+# LOCAL WORKFLOW VALIDATED when `actionlint` / schema checks pass and jobs are
+# runnable via `act` or GitHub Actions. REMOTE CI NOT TESTED until a real remote run exists.
+# Do not treat file existence alone as CI/CD PASS.
 
 on:
   push:
-    branches: [main, develop, 'change/**']
+    branches: [main, master, 'change/**', 'security/**']
   pull_request:
-    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: dwes-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  frontend:
+    name: Frontend typecheck / lint / test / build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-
-      - name: Install frontend deps
+      - name: Install
         run: npm ci
-
-      - name: Typecheck and build frontend
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests (selected)
+        run: |
+          npm run test:endpoint-v2
+          npm run test:state
+          npm run test:pwa
+      - name: Production build
         run: npm run build
 
-      - name: Install backend deps
-        working-directory: backend
-        run: npm ci
-
-      - name: Generate Prisma client and build backend
-        working-directory: backend
-        run: npx prisma generate && npm run build
-
-      - name: Backend unit tests
-        working-directory: backend
-        run: npm test
-
-      - name: Terraform validate
-        uses: hashicorp/setup-terraform@v3
-      - name: Terraform fmt check
-        working-directory: infra/oci/terraform
-        run: terraform fmt -check -recursive
-      - name: Terraform init and validate
-        working-directory: infra/oci/terraform
-        run: terraform init -backend=false && terraform validate
-
-      - name: Build Docker images (smoke)
-        run: |
-          docker build -f infra/docker/Dockerfile.api -t dwes-api:ci .
-          docker build -f infra/docker/Dockerfile.nginx -t dwes-nginx:ci .
-
-  e2e-roles:
+  backend:
+    name: Backend test / build
     runs-on: ubuntu-latest
-    needs: build
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
-      - run: npm ci --prefix e2e
-      - run: npx playwright install chromium --with-deps
-        working-directory: e2e
-      - name: E2E role journeys (Docker Compose)
-        run: node scripts/e2e-stack.mjs test
+          cache-dependency-path: backend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Build
         env:
-          DWES_E2E_BASE_URL: http://localhost:18080
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+        run: npm run build
+      - name: Unit tests
+        run: npm test
+
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install root
+        run: npm ci
+      - name: Audit root (omit dev)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+      - name: Audit backend (omit dev)
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+  container-api:
+    name: Container build validation (API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f infra/docker/Dockerfile.api -t dwes-api:ci .

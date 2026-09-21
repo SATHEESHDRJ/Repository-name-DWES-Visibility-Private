@@ -1,0 +1,20 @@
+{
+  "wire": "20.16:E",
+  "project": "003",
+  "frame_id": "frame_1789793600080_0_hhkw7",
+  "hybrid": {
+    "drw_id": "drw_matrix_hybrid_292db173c11b",
+    "sha": "292db173c11ba5d4fc93ef622c170c234d0dbee3140204b77e774eddaaa9093b",
+    "pages": 2,
+    "classification": "HYBRID",
+    "browser_evidence": "hybrid-live-browser-both-boxes.png",
+    "result": "PASS",
+    "notes": "Page 1 searchable E01 sample; page 2 scanned INTERNAL (orig page 6). SRC H74 red + DST KF87L blue on physical layout; directory/legend not boxed."
+  },
+  "restored": {
+    "drw_id": "drw_b2c17e4b-8605-465a-8480-fe3750cc5e72",
+    "sha": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "revision": 12,
+    "page6_maps": 2
+  }
+}

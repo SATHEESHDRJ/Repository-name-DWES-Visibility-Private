@@ -1,0 +1,75 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "exploded_lines",
+  "drawing_revision": null,
+  "source": {
+    "name": "drawing.dxf",
+    "sha256": "e51022cc8da3e55edabba2786d82ec0209f6a42e586a1025e0b362c68cdd9d4a",
+    "format": ".dxf"
+  },
+  "normalized": {
+    "entities": 3,
+    "texts": 2,
+    "layers": 2,
+    "blocks": 0
+  },
+  "objects": [
+    {
+      "kind": "panel_envelope",
+      "confidence": "HIGH_CONFIDENCE",
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "footprint": {
+        "cx": 300.0,
+        "cy": 200.0,
+        "width": 600.0,
+        "height": 400.0
+      },
+      "rotation_deg": 0.0,
+      "evidence": [
+        "largest_closed_polyline"
+      ],
+      "device_tag": null
+    }
+  ],
+  "schedule_match": {
+    "schedule_tag_count": 2,
+    "matched": [],
+    "matched_count": 0,
+    "unmatched_schedule_tags": [
+      "=Q1+F1",
+      "=Q2+K1"
+    ],
+    "duplicate_tags": {}
+  },
+  "flat3d": {
+    "authoritative_part_count": 1,
+    "suggested_part_count": 0,
+    "warnings": [],
+    "rejected_count": 0
+  },
+  "overlay": {
+    "panel_bounds_mm": {
+      "width": 600.0,
+      "height": 400.0
+    },
+    "drawing_insert_count": 0,
+    "flat3d_part_count": 0,
+    "matched_device_pct": 0.0,
+    "missing_device_pct": 0.0,
+    "positional_deviation_mm": {
+      "mean": null,
+      "max": null
+    },
+    "size_deviation_mm": {
+      "mean": null,
+      "max": null
+    },
+    "unresolved_object_count": 0
+  },
+  "glb": {
+    "path": "model.glb",
+    "bytes": 2112
+  },
+  "publication": "READY_FOR_REVIEW — supervisor must approve; never auto-published"
+}

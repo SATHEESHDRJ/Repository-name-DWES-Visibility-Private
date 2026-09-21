@@ -122,3 +122,10 @@ export function assertRoleChangeAllowed(caller: UserLike, newRole?: string): voi
 export function isPrivilegedRole(role: string | null | undefined): boolean {
   return PRIVILEGED_ROLES.includes(role as UserRole);
 }
+
+/** Reject the removed sales_director role on auth and user-management paths. */
+export function assertRoleSupported(role: string | null | undefined): void {
+  if (role === 'sales_director') {
+    throw new ForbiddenException('The Sales Director role has been removed. Use Operations Director.');
+  }
+}

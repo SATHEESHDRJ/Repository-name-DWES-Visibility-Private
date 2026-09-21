@@ -1,0 +1,4 @@
+{
+  "description": "Vector PDF: BT (vector) Tj ET text stream; pipeline returns APPROVED_2D_ONLY",
+  "expected_fallback": "APPROVED_2D_ONLY"
+}

@@ -7,8 +7,9 @@ import CompletionReport, { type CompletionReportData } from '../../../components
 import AssignTechnicianModal from '../../../components/assignment/AssignTechnicianModal';
 import Toast from '../../../components/ui/Toast';
 import OverflowActionMenu from '../../../components/ui/OverflowActionMenu';
-import { TriangleAlert, CheckCircle, CheckCheck, RotateCcw, RefreshCw } from '../../../components/ui/icons';
+import { TriangleAlert, CheckCircle, CheckCheck, RotateCcw, RefreshCw, ClipboardCheck, FileText, Check } from '../../../components/ui/icons';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 type AssignmentView = 'assignments' | 'changeover';
 
@@ -182,7 +183,7 @@ export default function AssignmentTab({
             </div>
           )}
 
-          {loading && <div className="empty-state"><p className="empty-text">Loading...</p></div>}
+          {loading && <DwesLoadingState label="Loading…" />}
 
           {assignments.length === 0 && !loading && projectCode && hasFrames && (
             <div className="empty-state">
@@ -206,6 +207,9 @@ export default function AssignmentTab({
                     }
                   : null,
                 a.status === 'assigned'
+                  && a.started_at == null
+                  && a.handover_from_id == null
+                  && !a.changeover_locked
                   ? {
                       id: 'remove',
                       label: 'Remove Assignment',
@@ -258,7 +262,7 @@ export default function AssignmentTab({
                   </div>
 
                   <div className="ops-assignment-actions">
-                    <div className="text-[11px] text-slate-500 font-medium">
+                    <div className="text-[11px] text-muted font-medium">
                       {a.changeover_locked ? 'Changeover locked' : 'Changeover available in queue'}
                     </div>
 
@@ -383,11 +387,13 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
   return (
     <Modal
       title={`Review: ${assignment.panel_display_name || assignment.panel_name}`}
+      icon={<ClipboardCheck />}
       onClose={onClose}
       footer={!done ? (
         <>
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="btn-primary" type="button">
+            <Check size={16} />
             {saving ? 'Submitting…' : 'Submit Review'}
           </button>
         </>
@@ -411,8 +417,8 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
             </div>
           ) : (
             <div className="mb-4 p-3 bg-slate-50 border border-[#E2E8F0] rounded-[8px] text-[13px]">
-              <div className="font-medium text-slate-700">{assignment.technician_name}</div>
-              <div className="text-slate-500 mt-0.5">KPI: {assignment.kpi ?? 0}% · {assignment.cables_total ?? 0} cables</div>
+              <div className="font-medium text-secondary">{assignment.technician_name}</div>
+              <div className="text-muted mt-0.5">KPI: {assignment.kpi ?? 0}% · {assignment.cables_total ?? 0} cables</div>
             </div>
           )}
 
@@ -423,10 +429,10 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
                 <label key={s} className={`flex items-center gap-3 p-3 rounded-[8px] border cursor-pointer transition-colors ${
                   status === s
                     ? s === 'approved' ? 'bg-green-50 border-green-400' : s === 'rework' ? 'bg-red-50 border-red-400' : 'bg-blue-50 border-blue-400'
-                    : 'bg-white border-[#E2E8F0] hover:bg-slate-50'
+                    : 'bg-[var(--t-surface-white)] border-[#E2E8F0] hover:bg-slate-50'
                 }`}>
                   <input type="radio" name="review_status" value={s} checked={status === s} onChange={() => setStatus(s)} className="accent-blue-600" />
-                  <span className="text-[13px] font-medium text-slate-800 capitalize">
+                  <span className="text-[13px] font-medium text-primary capitalize">
                     {s === 'ready_for_qc' ? 'Send to QA/QC' : s === 'rework' ? 'Request Rework' : 'Approve'}
                   </span>
                   {s === 'approved' && <CheckCheck size={14} className="ml-auto text-green-600" />}
@@ -438,13 +444,16 @@ function ReviewModal({ assignment, onClose }: { assignment: any; onClose: () => 
 
           <div className="mb-2">
             <label className="form-label mb-1">Notes (optional)</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              placeholder={status === 'rework' ? 'Describe the rework required…' : 'Add review notes…'}
-              className="w-full text-[14px] border border-[#E2E8F0] rounded-[10px] bg-slate-50 focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-3 resize-none"
-            />
+            <div className="field-with-icon field-with-icon--top">
+              <span className="field-lead-icon"><FileText size={18} /></span>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={3}
+                placeholder={status === 'rework' ? 'Describe the rework required…' : 'Add review notes…'}
+                className="w-full text-[14px] border border-[#E2E8F0] rounded-[10px] bg-slate-50 focus:bg-[var(--t-surface-white)] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-3 resize-none"
+              />
+            </div>
           </div>
 
           {error && <div className="form-error mt-2">{error}</div>}

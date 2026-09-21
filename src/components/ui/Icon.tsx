@@ -35,10 +35,10 @@ function resolveSize(size: IconSize | number | undefined): number {
 
 function resolveWeight(strokeWidth: number | undefined, weight: number | undefined): number {
   if (weight !== undefined) return weight;
-  if (strokeWidth === undefined) return 400;
-  if (strokeWidth <= 1.5) return 300;
-  if (strokeWidth <= 2) return 400;
-  return 500;
+  if (strokeWidth === undefined) return 500;
+  if (strokeWidth <= 1.5) return 400;
+  if (strokeWidth <= 2) return 500;
+  return 600;
 }
 
 export const Icon = forwardRef<HTMLSpanElement, IconProps>(function Icon(

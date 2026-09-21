@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal from '../Modal';
 import { useAppDialog } from '../AppDialogProvider';
+import ActionStatusPanel from '../ui/ActionStatusPanel';
 import { projectsApi, uploadApi } from '../../services/api';
 import { emitDocumentsChanged } from '../../utils/projectDocumentsEvents';
 import { FileText, Upload, X, CheckCircle, TriangleAlert } from '../ui/icons';
@@ -18,7 +19,7 @@ import {
 
 const MAX_SIZE_MB = 50;
 
-type DrawingFileType = 'pdf' | 'dwg';
+type DrawingFileType = 'pdf' | 'dwg' | 'model3d';
 
 interface ProjectDrawing {
   id: string;
@@ -45,6 +46,12 @@ const DRAWING_FILE_CONFIG: Record<DrawingFileType, {
     accept: '.dwg,application/acad,application/x-acad',
     hint: '.dwg only',
     test: /\.dwg$/i,
+  },
+  model3d: {
+    label: '3D GA',
+    accept: '.glb,.gltf,.obj,.stl,model/gltf-binary,model/gltf+json',
+    hint: '.glb, .gltf, .obj, or .stl',
+    test: /\.(glb|gltf|obj|stl)$/i,
   },
 };
 
@@ -128,7 +135,13 @@ export default function PdfDrawingUploadModal({
     setMode('loading');
     setError('');
     try {
-      const drawings: ProjectDrawing[] = await projectsApi.drawings(projectCode);
+      if (!panelId) {
+        setExistingDrawing(null);
+        setMetadata(null);
+        setMode('empty');
+        return;
+      }
+      const drawings: ProjectDrawing[] = await projectsApi.panelDrawings(projectCode, panelId);
       const match = findDrawingByType(drawings, fileType);
       setExistingDrawing(match);
       if (match) {
@@ -143,7 +156,7 @@ export default function PdfDrawingUploadModal({
       setMetadata(null);
       setMode('empty');
     }
-  }, [projectCode, fileType]);
+  }, [projectCode, panelId, fileType]);
 
   useEffect(() => {
     void resolveExisting();
@@ -155,14 +168,15 @@ export default function PdfDrawingUploadModal({
     setViewError('');
     setViewBlob(null);
     try {
-      const raw = await projectsApi.drawingFile(projectCode, existingDrawing.id);
+      if (!panelId) throw new Error('Select a panel first');
+      const raw = await projectsApi.panelDrawingFile(projectCode, panelId, existingDrawing.id);
       setViewBlob(raw);
     } catch {
       setViewError('Failed to load drawing file.');
     } finally {
       setViewLoading(false);
     }
-  }, [projectCode, existingDrawing]);
+  }, [projectCode, panelId, existingDrawing]);
 
   useEffect(() => {
     if (mode !== 'populated' || !existingDrawing || duplicateBlocked) return;
@@ -173,11 +187,17 @@ export default function PdfDrawingUploadModal({
     const name = existingDrawing?.original_name || `${cfg.label} drawing`;
     const panelLabel = panelName || projectName || projectCode;
     return dialog.confirm({
-      title: `Replace ${cfg.label} drawing?`,
-      message:
-        `This will replace the current drawing for panel ${panelLabel}. The current file ("${name}") will be archived to uploads/backups/ before overwrite.`,
+      title: `Replace ${cfg.label} drawing`,
+      message: `This replaces the current drawing for this panel. The current file will be archived to uploads/backups/ before overwrite.`,
       tone: 'warning',
       confirmText: 'Replace Upload',
+      actionSummary: `Archive “${name}”, then upload the new ${cfg.label} drawing.`,
+      entity: [
+        { label: 'Project', value: projectName || projectCode, meta: projectCode, kind: 'project' },
+        { label: 'Panel', value: panelLabel, kind: 'panel' },
+        { label: 'Current file', value: name, kind: 'file' },
+      ],
+      removalItems: [`Current ${cfg.label} drawing file (archived before overwrite)`],
     });
   };
 
@@ -244,7 +264,8 @@ export default function PdfDrawingUploadModal({
   const downloadExisting = async () => {
     if (!existingDrawing) return;
     try {
-      const blob = await projectsApi.drawingFile(projectCode, existingDrawing.id);
+      if (!panelId) throw new Error('Select a panel first');
+      const blob = await projectsApi.panelDrawingFile(projectCode, panelId, existingDrawing.id);
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = href;
@@ -272,7 +293,7 @@ export default function PdfDrawingUploadModal({
   const uploadControls = (
     <div className="panel-file-upload-section flex flex-col gap-4">
       {mode === 'replacing' && (
-        <p className="text-[13px] text-slate-600">
+        <p className="text-[13px] text-muted">
           Select a new {cfg.label} file to replace the current drawing.
         </p>
       )}
@@ -306,10 +327,10 @@ export default function PdfDrawingUploadModal({
         <div className="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 group-hover:scale-105 transition-transform">
           <FileText size={20} strokeWidth={1.5} />
         </div>
-        <span className="text-[13.5px] font-semibold text-slate-700">
+        <span className="text-[13.5px] font-semibold text-secondary">
           Drop a {cfg.label} here or click to browse
         </span>
-        <span className="text-[11.5px] text-slate-500">{cfg.hint} · max {MAX_SIZE_MB} MB</span>
+        <span className="text-[11.5px] text-muted">{cfg.hint} · max {MAX_SIZE_MB} MB</span>
         <input
           ref={fileRef}
           type="file"
@@ -324,8 +345,8 @@ export default function PdfDrawingUploadModal({
         <div className="flex items-center gap-3 px-3.5 py-3 rounded-[10px] border border-slate-200 bg-slate-50/70">
           <FileText size={20} className="text-red-500 shrink-0" strokeWidth={1.5} />
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-slate-800 modal-filename" title={file.name}>{file.name}</div>
-            <div className="text-[11px] text-slate-500">{formatSize(file.size)}</div>
+            <div className="text-[13px] font-semibold text-primary modal-filename" title={file.name}>{file.name}</div>
+            <div className="text-[11px] text-muted">{formatSize(file.size)}</div>
           </div>
           {done ? (
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-green-700 shrink-0">
@@ -336,7 +357,7 @@ export default function PdfDrawingUploadModal({
               type="button"
               title="Remove file"
               onClick={() => { setFile(null); setError(''); }}
-              className="flex items-center justify-center w-9 h-9 rounded-[8px] text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+              className="flex items-center justify-center w-9 h-9 rounded-[8px] text-muted hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
             >
               <X size={16} strokeWidth={1.5} />
             </button>
@@ -344,12 +365,39 @@ export default function PdfDrawingUploadModal({
         </div>
       )}
 
+      {uploading || error || done || file ? (
+        <ActionStatusPanel
+          message={
+            done
+              ? `${cfg.label} drawing uploaded successfully.`
+              : error
+                ? error
+                : uploading
+                  ? `Uploading ${file?.name || cfg.label}…`
+                  : `Ready to upload ${file?.name || 'selected file'}.`
+          }
+          status={done ? 'completed' : error ? 'failed' : uploading ? 'uploading' : 'idle'}
+          statusDetail={uploading ? `${progress}%` : undefined}
+          progress={uploading ? progress : null}
+          actionSummary={
+            existingDrawing
+              ? `Replace the current ${cfg.label} drawing for this panel.`
+              : `Upload a new ${cfg.label} drawing for this panel.`
+          }
+          entity={[
+            { label: 'Project', value: projectName || projectCode, meta: projectCode, kind: 'project' },
+            { label: 'Panel', value: panelName || projectName || projectCode, kind: 'panel' },
+            ...(file ? [{ label: 'File', value: file.name, kind: 'file' as const }] : []),
+          ]}
+        />
+      ) : null}
+
       {uploading && (
         <div className="flex flex-col gap-1.5">
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
             <div className="h-full rounded-full bg-blue-500 transition-[width] duration-200" style={{ width: `${progress}%` }} />
           </div>
-          <span className="text-[11.5px] text-slate-500 tabular-nums">{progress}% uploaded</span>
+          <span className="text-[11.5px] text-muted tabular-nums">{progress}% uploaded</span>
         </div>
       )}
 
@@ -372,6 +420,7 @@ export default function PdfDrawingUploadModal({
   return (
     <Modal
       title={modalTitle}
+      icon={showViewer ? <FileText /> : <Upload />}
       onClose={onClose}
       size={showViewer && fileType === 'pdf' ? 'fullscreen' : undefined}
       bodyClassName={showViewer && fileType === 'pdf' ? 'modal-body-flush' : undefined}
@@ -417,11 +466,11 @@ export default function PdfDrawingUploadModal({
       )}
     >
       {mode === 'loading' ? (
-        <div className="flex items-center justify-center py-12 text-slate-500 text-[13px]">
+        <div className="flex items-center justify-center py-12 text-muted text-[13px]">
           Checking for existing drawing…
         </div>
       ) : !panelId && !panelName ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500 text-[13px]">
+        <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted text-[13px]">
           <TriangleAlert size={24} className="text-amber-500" />
           <p>Select a panel before uploading a drawing.</p>
         </div>

@@ -1,11 +1,18 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { qaqcApi } from '../../../services/api';
+import { useCallback } from 'react';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
-import { AlertTriangle, Check, X, Search, Plus } from '../../../components/ui/icons';
+import { AlertTriangle, Check, X, Search, Plus, PanelTop } from '../../../components/ui/icons';
+import { useLatestRequest } from '../../../hooks/useLatestRequest';
+import { useDwesRefresh, type RefreshOptions } from '../../../hooks/useDwesRefresh';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
+import { WorkspaceInfoMatrix, WorkspaceInfoCell } from '../../../components/ui/WorkspaceInfoMatrix';
+import SupervisorCrimpingDataView from '../../../components/supervisor/SupervisorCrimpingDataView';
 
 interface InspectionFormTabProps {
   panel: any | null;
   onInspectionDone: () => void;
+  onUnavailable: () => void;
 }
 
 type CheckVal = 'pass' | 'fail';
@@ -34,9 +41,9 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-5 bg-white border border-[#E2E8F0] rounded-[12px] shadow-sm mb-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="text-[14px] font-bold text-slate-800">{label}</div>
+    <div className="flex flex-col gap-2 p-3 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-lg shadow-sm mb-2.5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div className="text-[13px] font-bold text-primary">{label}</div>
         <div className="flex items-center gap-2 shrink-0">
           {(['pass', 'fail'] as CheckVal[]).map(v => (
             <button
@@ -46,7 +53,7 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
               className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                 value === v 
                   ? v === 'pass' ? 'bg-green-600 border-green-600 text-white' : 'bg-red-600 border-red-600 text-white'
-                  : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                  : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-muted hover:bg-slate-50'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="button"
             >
@@ -66,7 +73,7 @@ function CheckRow({ label, value, onChange, note, onNoteChange, disabled }: {
   );
 }
 
-export default function InspectionFormTab({ panel, onInspectionDone }: InspectionFormTabProps) {
+export default function InspectionFormTab({ panel, onInspectionDone, onUnavailable }: InspectionFormTabProps) {
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -91,17 +98,29 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
   const [issueSev, setIssueSev] = useState<Issue['severity']>('minor');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueLoc, setIssueLoc] = useState('');
+  const [showCrimpingData, setShowCrimpingData] = useState(false);
+  const requests = useLatestRequest();
 
-  useEffect(() => {
+  const loadDetail = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
     if (!panel) {
-      setDetail(null);
+      if (!silent) setDetail(null);
       return;
     }
-    setLoading(true);
-    setSaved(false);
-    setError('');
-    qaqcApi.panelDetail(panel.id).then(d => {
+    const request = requests.begin();
+    if (!silent) {
+      setLoading(true);
+      setDetail(null);
+      setSaved(false);
+      setError('');
+    }
+    try {
+      const d = await qaqcApi.panelDetail(panel.id, request.signal);
+      if (!requests.isLatest(request.id)) return;
       setDetail(d);
+      // A background refresh updates the read-only panel detail only. Re-seeding the
+      // check/note/issue fields here would discard an inspection the engineer is typing.
+      if (silent) return;
       if (d.existing_inspection) {
         const i = d.existing_inspection;
         setVisual(i.visual_check || 'pass');
@@ -130,11 +149,19 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
         setComplianceNote('');
         setInspNotes('');
         setResult('PASS');
-        setIssues([]);
+        if (!silent) setIssues([]);
       }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [panel, panel?.id]);
+    } catch (requestError: any) {
+      if (requestError?.code === 'ERR_CANCELED' || !requests.isLatest(request.id)) return;
+      if (!silent) setDetail(null);
+      if (requestError?.response?.status === 404) onUnavailable();
+    } finally {
+      if (requests.isLatest(request.id) && !silent) setLoading(false);
+    }
+  }, [onUnavailable, panel, requests]);
+
+  useEffect(() => { void loadDetail(); }, [loadDetail]);
+  useDwesRefresh(loadDetail);
 
   const addIssue = () => {
     if (!issueDesc.trim()) return;
@@ -197,16 +224,9 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
     );
   }
 
-  if (loading) return <div className="empty-state"><p className="empty-text">Loading panel details...</p></div>;
+  if (loading) return <DwesLoadingState label="Loading panel details…" />;
 
   const isReInspect = !!detail?.existing_inspection;
-
-  const stats = [
-    { label: 'KPI', val: `${panel.kpi}%`, tone: 'progress' },
-    { label: 'Cables', val: panel.cables_total, tone: 'muted' },
-    { label: 'Src Done', val: `${panel.cables_src_done}/${panel.cables_total}`, tone: 'completed' },
-    { label: 'Dst Done', val: `${panel.cables_dst_done}/${panel.cables_total}`, tone: 'progress' },
-  ];
 
   const resultOptions: { val: Result; label: string; tone: 'completed' | 'warning' | 'danger'; desc: string }[] = [
     { val: 'PASS', label: 'PASS', tone: 'completed', desc: 'All checks passed, no issues' },
@@ -224,18 +244,30 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
       <div className="qaqc-head-card mb-6">
         <div className="qaqc-head-row">
           <div>
-            <div className="qaqc-head-title">{panel.panel_display_name || panel.panel_name}</div>
-            <div className="qaqc-head-sub mt-1">{panel.project_code} · Technician: {panel.technician_name}</div>
+            <div className="qaqc-head-title dw-wim-title-secondary">
+              <PanelTop size={14} aria-hidden /> {panel.panel_display_name || panel.panel_name}
+            </div>
+            <div className="qaqc-head-sub mt-1 dw-wim-value dw-wim-value--meta">
+              {panel.project_code}
+              {panel.technician_name ? ` · Technician: ${panel.technician_name}` : ''}
+            </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => setShowCrimpingData(true)}
+              >
+                Crimping Data
+              </button>
+            </div>
           </div>
 
-          <div className="qaqc-head-stats">
-            {stats.map(item => (
-              <div key={item.label} className="qaqc-head-stat">
-                <div className="qaqc-head-stat-value" data-tone={item.tone}>{item.val}</div>
-                <div className="qaqc-head-stat-label">{item.label}</div>
-              </div>
-            ))}
-          </div>
+          <WorkspaceInfoMatrix columns={4} className="qaqc-head-stats" aria-label="Inspection panel summary">
+            <WorkspaceInfoCell label="KPI" emphasis="primary">{`${panel.kpi}%`}</WorkspaceInfoCell>
+            <WorkspaceInfoCell label="Total cables">{panel.cables_total}</WorkspaceInfoCell>
+            <WorkspaceInfoCell label="Source done">{`${panel.cables_src_done}/${panel.cables_total}`}</WorkspaceInfoCell>
+            <WorkspaceInfoCell label="Destination done">{`${panel.cables_dst_done}/${panel.cables_total}`}</WorkspaceInfoCell>
+          </WorkspaceInfoMatrix>
         </div>
 
         {isReInspect && (
@@ -244,6 +276,17 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
           </div>
         )}
       </div>
+
+      {showCrimpingData ? (
+        <SupervisorCrimpingDataView
+          assignmentId={Number(panel.id)}
+          projectCode={String(panel.project_code || '')}
+          panelName={String(panel.panel_display_name || panel.panel_name || '')}
+          technicianName={panel.technician_name || undefined}
+          allowSetRequired={false}
+          onClose={() => setShowCrimpingData(false)}
+        />
+      ) : null}
 
       <div className="mb-6">
         <div className="qaqc-section-label">Visual Inspection Checks</div>
@@ -254,8 +297,8 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
       </div>
 
       <div className="mb-8">
-        <div className="text-[14px] font-bold text-slate-800 uppercase tracking-wider mb-4">Red Markup / Corrections Required</div>
-        <div className="bg-white border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm">
+        <div className="text-[14px] font-bold text-primary uppercase tracking-wider mb-4">Red Markup / Corrections Required</div>
+        <div className="bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm">
           <div className="flex flex-wrap gap-3 mb-4">
             {(['none', 'minor', 'major'] as MarkupVal[]).map(v => (
               <button
@@ -264,7 +307,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                 className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                   markup === v
                     ? v === 'none' ? 'bg-green-600 border-green-600 text-white' : v === 'minor' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-red-600 border-red-600 text-white'
-                    : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                    : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-muted hover:bg-slate-50'
                 }`}
                 type="button"
               >
@@ -278,7 +321,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[14px] font-bold text-slate-800 uppercase tracking-wider m-0">Issues Found ({issues.length})</div>
+          <div className="text-[14px] font-bold text-primary uppercase tracking-wider m-0">Issues Found ({issues.length})</div>
           <button onClick={() => setShowIssueForm(v => !v)} className="btn-sm" type="button">
             <Plus size={16} strokeWidth={2} />
             <span>Add Issue</span>
@@ -286,7 +329,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
         </div>
 
         {showIssueForm && (
-          <div className="bg-white border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm mb-4">
+          <div className="bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-5 shadow-sm mb-4">
             <div className="flex flex-wrap gap-3 mb-4">
               {(['critical', 'major', 'minor'] as const).map(s => (
                 <button
@@ -295,7 +338,7 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                   className={`flex items-center justify-center h-[44px] px-6 rounded-[10px] text-[13px] font-bold transition-colors border ${
                     issueSev === s
                       ? s === 'critical' ? 'bg-red-600 border-red-600 text-white' : s === 'major' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-slate-600 border-slate-600 text-white'
-                      : 'bg-white border-[#E2E8F0] text-slate-600 hover:bg-slate-50'
+                      : 'bg-[var(--t-surface-white)] border-[#E2E8F0] text-muted hover:bg-slate-50'
                   }`}
                   type="button"
                 >
@@ -312,19 +355,19 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
           </div>
         )}
 
-        {issues.length === 0 && !showIssueForm && <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-[12px] text-center text-slate-500 text-[14px] font-medium">No issues recorded</div>}
+        {issues.length === 0 && !showIssueForm && <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-[12px] text-center text-muted text-[14px] font-medium">No issues recorded</div>}
 
         <div className="flex flex-col gap-3">
           {issues.map(iss => (
-            <div key={iss.id} className="flex items-start gap-4 p-4 bg-white border border-[#E2E8F0] rounded-[10px] shadow-sm">
+            <div key={iss.id} className="flex items-start gap-4 p-4 bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[10px] shadow-sm">
               <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-[6px] text-[11px] font-bold uppercase tracking-wider border shrink-0 ${
                 iss.severity === 'critical' ? 'bg-red-50 text-red-600 border-red-200' :
                 iss.severity === 'major' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                'bg-slate-50 text-slate-600 border-slate-200'
+                'bg-slate-50 text-muted border-slate-200'
               }`}>{iss.severity.toUpperCase()}</span>
               <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-medium text-slate-800">{iss.description}</div>
-                {iss.location && <div className="text-[13px] text-slate-500 mt-1">Location: {iss.location}</div>}
+                <div className="text-[14px] font-medium text-primary">{iss.description}</div>
+                {iss.location && <div className="text-[13px] text-muted mt-1">Location: {iss.location}</div>}
               </div>
               <button onClick={() => removeIssue(iss.id)} className="btn-icon hover:text-red-500 hover:bg-red-50" type="button" aria-label="Remove issue">
                 <X size={18} strokeWidth={2} />
@@ -335,18 +378,18 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
       </div>
 
       <div className="mb-8">
-        <div className="text-[14px] font-bold text-slate-800 uppercase tracking-wider mb-4">General Inspection Notes</div>
+        <div className="text-[14px] font-bold text-primary uppercase tracking-wider mb-4">General Inspection Notes</div>
         <textarea
           value={inspNotes}
           onChange={e => setInspNotes(e.target.value)}
           rows={3}
           placeholder="Overall observations, recommendations, or additional comments..."
-          className="w-full text-[14px] border border-[#E2E8F0] rounded-[12px] bg-slate-50 focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-4"
+          className="w-full text-[14px] border border-[#E2E8F0] rounded-[12px] bg-slate-50 focus:bg-[var(--t-surface-white)] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/12 outline-none transition-all placeholder-slate-400 p-4"
         />
       </div>
 
       <div className="mb-8">
-        <div className="text-[14px] font-bold text-slate-800 uppercase tracking-wider mb-4">Overall Inspection Result</div>
+        <div className="text-[14px] font-bold text-primary uppercase tracking-wider mb-4">Overall Inspection Result</div>
         <div className="grid grid-cols-1 tablet-port:grid-cols-2 tablet-land:grid-cols-3 gap-4">
           {resultOptions.map(r => (
             <button
@@ -357,16 +400,16 @@ export default function InspectionFormTab({ panel, onInspectionDone }: Inspectio
                   ? r.tone === 'completed' ? 'bg-green-50 border-green-500 shadow-[0_4px_12px_rgba(34,197,94,0.15)]' :
                     r.tone === 'warning' ? 'bg-amber-50 border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.15)]' :
                     'bg-red-50 border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.15)]'
-                  : 'bg-white border-[#E2E8F0] hover:border-slate-300'
+                  : 'bg-[var(--t-surface-white)] border-[#E2E8F0] hover:border-slate-300'
               }`}
               type="button"
             >
               <div className={`text-[16px] font-bold mb-1 ${
                 result === r.val
                   ? r.tone === 'completed' ? 'text-green-700' : r.tone === 'warning' ? 'text-amber-700' : 'text-red-700'
-                  : 'text-slate-800'
+                  : 'text-primary'
               }`}>{r.label}</div>
-              <div className="text-[13px] text-slate-500 font-medium">{r.desc}</div>
+              <div className="text-[13px] text-muted font-medium">{r.desc}</div>
             </button>
           ))}
         </div>

@@ -1,0 +1,35 @@
+﻿{
+  "slice": 6,
+  "role": "system_admin",
+  "username": "sysadmin",
+  "verdict": "PARTIAL",
+  "organised_sections": [
+    "System health",
+    "Users and roles",
+    "Application / service status",
+    "Configuration",
+    "Synchronization",
+    "Danger Zone"
+  ],
+  "health_strip": {
+    "Total users": 36,
+    "Active": 35,
+    "Disabled": 1,
+    "Technicians": 29,
+    "Projects": 3,
+    "Frames": 5,
+    "Assignments": 10,
+    "Failed / errors": 0,
+    "SSE": "Live"
+  },
+  "api_reconcile": {
+    "diagnostics_users": 36,
+    "diagnostics_projects": 3,
+    "diagnostics_assignments": 10,
+    "matches": true
+  },
+  "no_invented_actions": true,
+  "manage_users_present": true,
+  "screenshots": ["after-admin-health-desktop.png"],
+  "build": "npm run build exit 0; dist deployed"
+}

@@ -1,0 +1,197 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> dwes-backend@1.0.0 test
+> node ../scripts/run-windowless.mjs node --test "test/**/*.test.cjs"
+
+Γ£ö AuthService.login rejects unknown users (1.2902ms)
+Γ£ö AuthService.login rejects password mismatch (130.1549ms)
+Γ£ö AuthService.login rejects disabled accounts (58.2131ms)
+Γ£ö AuthService.login issues token, updates login timestamp, and writes session log (122.0754ms)
+[FrameStore] Loaded 1 frames, 0 drawing packages and 0 generated panel models from disk
+Γ£ö permanent project deletion removes the database row and purges every memory store (2.4811ms)
+Γ£ö panel list excludes database tombstones even if stale memory still contains the panel (0.5635ms)
+Γ£û permanent panel deletion atomically cascades assignments and writes a database tombstone (0.6846ms)
+Γ£û panel delete removes the panel-scoped model directory and leaves other panels intact (5.0128ms)
+Γ£ö application restart loads only active database projects and non-deleted panels from JSON (5.7463ms)
+Γ£ö loads and validates a private demo account manifest (4.5053ms)
+Γ£ö rejects example placeholders and duplicate usernames (3.8231ms)
+Γ£ö panel drawing package keeps a stable id and preserves the other slot (15.0744ms)
+Γ£ö legacy replacement rejects cross-panel and cross-slot drawing ids (8.1589ms)
+Γ£ö slot validation rejects mismatched file signatures (1.228ms)
+Γ£ö panel SVG drawings are accepted only when they contain no executable content (8.8795ms)
+Γ£ö browser-incompatible engineering source is preserved and reports no fake preview (9.6421ms)
+Γ£ö unconfigured DWG conversion remains explicitly failed and preserves its source (12.1214ms)
+Γ£ö configured CAD adapter stores a validated preview while source/download bytes remain exact (2324.9064ms)
+Γ£ö controller keeps inline preview and supervisor original download paths distinct (0.574ms)
+[Nest] 20424  - 17/07/2026, 16:31:13     LOG [EngineeringImportService] Engineering package imported as DRAFT model 901 (rev R1) for PRJ/frame_eng by user 5
+[Nest] 20424  - 17/07/2026, 16:31:13     LOG [EngineeringImportService] Engineering model 4 (rev R2) approved+published for PRJ/frame_eng by user 2
+Γ£ö validatePackage accepts a well-formed package (1.2899ms)
+Γ£ö validatePackage rejects wrong units ΓÇö no silent conversion (0.2739ms)
+Γ£ö validatePackage rejects duplicate device tags and terminals (0.1965ms)
+Γ£ö validatePackage rejects duct segments referencing unknown nodes (0.1833ms)
+Γ£ö validatePackage warns (not errors) on a disconnected duct graph (0.2094ms)
+Γ£ö normalization preserves engineering symbols while matching case/space-insensitively (0.7993ms)
+Γ£ö importPackage rejects an invalid package with zero writes (1.0024ms)
+Γ£ö importPackage rejects a package targeting a different project/panel (0.2736ms)
+Γ£ö importPackage rejects a duplicate model revision (0.3043ms)
+Γ£ö importPackage creates a DRAFT: pending review, never published (1.8129ms)
+Γ£ö approveAndPublish rejects non-supervisor roles (0.3624ms)
+Γ£ö approveAndPublish refuses to publish a model without geometry (0.5545ms)
+Γ£ö approveAndPublish publishes and supersedes the previously published revision (0.4854ms)
+Γ£ö SSE stream emits a body heartbeat immediately after authentication (3.6489ms)
+Γ£ö Excel Parser Regression - One header and six cables (E2E format) (29.3574ms)
+Γ£ö Excel Parser Regression - Data begins immediately after header row (5.5648ms)
+Γ£ö Excel Parser Regression - Empty and blank rows ignored (4.3078ms)
+Γ£ö Excel Parser Regression - Actual DWES schedule format (WIRE NO pairs, LENGTH(m), leading-space colours) (5.1521ms)
+Γ£ö Excel Parser Regression - Digit-free first data row is NOT skipped as a sub-header (3.7479ms)
+Γ£ö Excel Parser Regression - Genuine wire-spec sub-header row is still skipped (3.7731ms)
+Γ£ö Excel Parser Regression - Alternative header positions (Metadata at top) (10.5026ms)
+Γ£ö collects the file and text fields arriving BEFORE the file part (1.6551ms)
+Γ£ö collects text fields arriving AFTER the file part (wire order varies) (0.2647ms)
+Γ£ö non-multipart request passes through with request.file undefined (0.1467ms)
+Γ£ö the @fastify/multipart request.file helper FUNCTION is reset to undefined (0.1318ms)
+Γ£ö oversize file maps to 413 "File too large" exactly like Multer (0.6587ms)
+Γ£ö file under a different field name is rejected as "Unexpected field" (0.2947ms)
+Γ£ö a second file part is rejected as "Unexpected field" (0.2297ms)
+Γ£ö prototype-polluting field names are dropped (0.2061ms)
+Γ£ö FramesService.technicianAssignedToProject returns true when assignment exists (1.7331ms)
+Γ£ö FramesService.technicianAssignedToFrame requires matching frame_id (0.178ms)
+Γ£ö FramesService drawing access excludes hidden former assignments (0.1315ms)
+Γ£ö FramesService.technicianAssignedFrameIds deduplicates frame ids (0.2004ms)
+Γ£ö FramesService.getPanelDrawings never returns another panel drawing (0.233ms)
+Γ£ö FramesService.getPanelDrawingFile refuses a drawing id owned by another panel (0.1689ms)
+Γ£ö GA normalization is deterministic and preserves meaningful engineering characters (1.6646ms)
+Γ£ö terminal point generation is deterministic for horizontal and reversed vertical blocks (0.5025ms)
+Γ£ö mapping validation rejects out-of-bounds geometry, excess pitch, and ambiguous tags (0.6955ms)
+Γ£ö correlation classifies exact, alias, suggested, unmatched, and ambiguous endpoints without auto-approving fuzzy results (1.1012ms)
+Γ£ö a correlation worker rejects stale GA, mapping, or schedule revision payloads before writes (0.6356ms)
+Γ£ö persistent background queue claims and completes a registered job once (1.0997ms)
+Γ£ö LibreDWG provider fails closed when unconfigured and keeps command placeholders as shell-free argv (0.6171ms)
+Γ£ö LibreDWG external-process adapter validates output, crash, timeout, size bound, and temp cleanup (17600.6559ms)
+Γ£ö panel GA upload preserves validated bytes, SHA/revisions, fallback formats, and panel isolation (61.6801ms)
+Γ£ö release gate preserves legacy panels and blocks enrolled stale revisions (7.0786ms)
+Γû╢ normalizedFaceToMm
+  Γ£ö front face: x=0,y=0 maps to left-top (mm top=height) (0.8835ms)
+  Γ£ö front face: x=1,y=1 maps to right-bottom (0.1455ms)
+  Γ£ö rear face: x is mirrored (0.1608ms)
+  Γ£ö internal face: z offset is non-zero (0.0946ms)
+  Γ£ö custom face behaves like front (0.1279ms)
+  Γ£ö SCENE_SCALE equals 0.001 (0.0793ms)
+  Γ£ö centre of front face is at half-width, half-height, z=0 (0.0829ms)
+  Γ£ö rear x mirroring: normalizedX=0 maps to W, normalizedX=1 maps to 0 (0.1194ms)
+Γ£ö normalizedFaceToMm (2.8855ms)
+Γû╢ payload shape validation
+  Γ£ö normalizedFaceToMm output has xMm, yMm, zMm fields (0.1449ms)
+  Γ£ö all mm values are finite numbers (0.1359ms)
+Γ£ö payload shape validation (0.4174ms)
+Γ£ö glb-builder produces a valid, deterministic GLB with no placeholders for a fully manual spec (4.9917ms)
+Γ£ö glb-builder refuses a missing or placeholder enclosure axis instead of using sample dimensions (1.2056ms)
+Γ£ö glb-builder geometry uses the exact entered enclosure dimensions (1.2178ms)
+Γ£ö extractDimensions reads labeled and triple dimensions, ignores implausible values (1.3301ms)
+Γ£ö extractComponents finds apparatus keywords and device tags on list lines (1.8236ms)
+Γ£ö classifyDrawingRole uses filename first, then text (1.5012ms)
+Γ£ö extractPdfText harvests text from an uncompressed PDF content stream (2.0767ms)
+Γ£ö extractPdfText rejects binary subset-font glyph bytes as a false text layer (0.967ms)
+Γ£ö convert ΓåÆ verification_required ΓåÆ approve lifecycle with technician approved-only access (35.2265ms)
+Γ£ö insufficient drawing information fails honestly, manual correction recovers (23.257ms)
+Γ£ö partial automatic dimensions fail without generating a fallback-sized GLB (7.2468ms)
+Γ£ö service mutations enforce Production Supervisor role in depth (8.0917ms)
+Γ£ö panel-model controller allows only the technician assigned to the exact panel (0.8024ms)
+Γ£ö correction rejects a model tied to an older source package revision (15.5394ms)
+Γ£ö a new 2D drawing revision supersedes active models (store-level hook) (13.8142ms)
+Γ£ö models are strictly panel-scoped ΓÇö same panel name in another project stays independent (9.8234ms)
+[Nest] 35576  - 17/07/2026, 16:31:21     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-HL8mb1\data\dwes_auth.sqlite
+[Nest] 35576  - 17/07/2026, 16:31:21     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-HL8mb1\data\dwes_auth.sqlite
+[Nest] 35576  - 17/07/2026, 16:31:21     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-HL8mb1\data\dwes_auth.sqlite
+[Nest] 35576  - 17/07/2026, 16:31:21     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-HL8mb1\data\dwes_auth.sqlite
+[Nest] 35576  - 17/07/2026, 16:31:21     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-HL8mb1\data\dwes_auth.sqlite
+Γ£ö statusForUser inactive in demo mode (40.5727ms)
+Γ£ö statusForUser requires password and webauthn for admin in production (1.125ms)
+Γ£ö recordPasswordRotation clears password requirement (4.0139ms)
+Γ£ö recordWebAuthnEnrollment clears webauthn requirement (9.4598ms)
+Γ£ö technician role never requires bootstrap (1.1119ms)
+Γ£ö ProjectsService.findAll always requests active database projects only (1.3257ms)
+Γ£ö ProjectsService.create rejects empty panel list (0.699ms)
+Γ£ö ProjectsService.create rejects duplicate project numbering (0.2476ms)
+Γ£ö ProjectsService.codeAvailability checks normalized project numbering (0.2405ms)
+Γ£ö ProjectsService.create rejects route-unsafe project numbering (0.1723ms)
+Γ£ö ProjectsService.create persists initial panel metadata (0.4825ms)
+Γ£ö ProjectsService.create converts a concurrent unique constraint race into a numbering conflict (0.2624ms)
+Γ£ö ProjectsService.submitToDirector rejects unknown project (0.2554ms)
+Γ£ö ProjectsService.submitToDirector rejects when no completed panels exist (0.2286ms)
+Γ£ö ProjectsService.submitToDirector rejects when QC is pending (0.3168ms)
+Γ£ö ProjectsService.submitToDirector rejects when completed panels are not approved (0.2156ms)
+Γ£ö ProjectsService.submitToDirector updates state when all completed panels are approved (0.2478ms)
+Γ£ö auth dev demo endpoints return 404 when DEMO_MODE is disabled (1.3657ms)
+Γ£ö TechService.assignFrame rejects a deactivated technician before any write (0.6772ms)
+Γ£ö sales_director role is rejected by assertRoleSupported (1.5423ms)
+Γ£ö director endpoints allow ops_director only (no sales_director) (0.2905ms)
+Γ£ö sales_director is excluded from personnel-identity and audit endpoints (0.1762ms)
+[WHATSAPP] Changeover: New Tech (undefined) assigned to continue panel "=H001"
+[WHATSAPP] Changeover OTP: 175538 | QR: WS-J6T7MN
+Γ£ö TechService.assignFrame rejects a panel that already has an active assignment (1.5219ms)
+Γ£ö TechService.assignFrame rejects a technician who already has an active panel (0.3539ms)
+Γ£ö TechService.deleteAssignment only removes an original assigned-before-start row (0.9602ms)
+Γ£ö TechService.deleteAssignment rejects protected in_progress workflow state (0.2674ms)
+Γ£ö TechService.deleteAssignment rejects protected paused workflow state (0.1711ms)
+Γ£ö TechService.deleteAssignment rejects protected assigned workflow state (0.1037ms)
+Γ£ö TechService.deleteAssignment rejects an assigned row after the first cable update (0.2145ms)
+Γ£ö TechService.updateCableStatus auto-starts an assigned panel on its first cable update (0.4244ms)
+Γ£ö TechService.changeover validates the replacement before pausing current work (0.4597ms)
+Γ£ö TechService.changeover carries wiring progress and links immutable history (1.4163ms)
+Γ£ö TechService.executeMidChange direct transfer closes the source and creates a waiting-for-resume continuation (0.9145ms)
+Γ£ö TechService.executeMidChange rejects a missing reason before any assignment writes (0.2316ms)
+Γ£ö TechService.executeMidChange rejects an invalid receiving technician before any writes (0.2025ms)
+Γ£ö TechService.executeMidChange rejects interchange with a technician who has not started their panel (0.2011ms)
+Γ£ö TechService.executeMidChange interchange atomically closes both segments and creates two continuations (0.3803ms)
+Γ£ö TechService.updateCableStatus blocks un-checking a cable completed by the previous technician (0.3077ms)
+Γ£ö TechService.cableAction skip records audit + note without completing the cable (0.5044ms)
+Γ£ö TechService.cableAction skip requires a reason of at least 3 characters (0.1648ms)
+Γ£ö TechService.cableAction skip rejects another technician's assignment (0.1254ms)
+Γ£ö TechService.cableAction skip rejects an out-of-range cable index (0.0957ms)
+Γ£ö TechService.cableAction flag_issue sets the issue flag without completing (0.2032ms)
+Γ£ö UsersService.remove rejects unknown user (0.9179ms)
+Γ£ö UsersService.remove blocks non-admin/supervisor deletion (0.2244ms)
+Γ£ö UsersService.remove deactivates user when linked records exist (0.6187ms)
+Γ£ö UsersService.remove hard-deletes user with no dependencies (0.1796ms)
+Γä╣ tests 137
+Γä╣ suites 2
+Γä╣ pass 135
+Γä╣ fail 2
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 28571.7948
+
+Γ£û failing tests:
+
+test at test\deletion-consistency.test.cjs:119:1
+Γ£û permanent panel deletion atomically cascades assignments and writes a database tombstone (0.6846ms)
+  TypeError: function is not iterable (cannot read property Symbol(Symbol.iterator))
+      at Promise.all (<anonymous>)
+      at Object.$transaction (C:\Users\sathe\OneDrive\Desktop\DWES\backend\test\deletion-consistency.test.cjs:144:47)
+      at deletePanelScopedDatabaseRows (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\common\project-delete.util.js:196:19)
+      at permanentlyDeletePanel (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\common\project-delete.util.js:293:42)
+      at FramesService.remove (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\frames\frames.service.js:196:79)
+      at async TestContext.<anonymous> (C:\Users\sathe\OneDrive\Desktop\DWES\backend\test\deletion-consistency.test.cjs:148:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at test\deletion-consistency.test.cjs:161:1
+Γ£û panel delete removes the panel-scoped model directory and leaves other panels intact (5.0128ms)
+  TypeError: function is not iterable (cannot read property Symbol(Symbol.iterator))
+      at Promise.all (<anonymous>)
+      at Object.$transaction (C:\Users\sathe\OneDrive\Desktop\DWES\backend\test\deletion-consistency.test.cjs:191:49)
+      at deletePanelScopedDatabaseRows (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\common\project-delete.util.js:196:19)
+      at permanentlyDeletePanel (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\common\project-delete.util.js:293:42)
+      at FramesService.remove (C:\Users\sathe\OneDrive\Desktop\DWES\backend\dist\frames\frames.service.js:196:79)
+      at async TestContext.<anonymous> (C:\Users\sathe\OneDrive\Desktop\DWES\backend\test\deletion-consistency.test.cjs:194:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

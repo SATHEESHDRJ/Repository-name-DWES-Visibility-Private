@@ -11,6 +11,7 @@
  * "Page X of Y", approval/sign-off page. See the synthesized design spec.
  */
 import * as PDFDocument from 'pdfkit';
+import { assignedCableKpiPercent } from './kpi.constants';
 import {
   resolveReportLogoPath,
   REPORT_COMPANY,
@@ -42,6 +43,7 @@ export interface ReportCable {
 }
 
 export interface ReportPanel {
+  frameId?: string;
   panelName: string;
   technicianName: string;
   technicianUsername?: string;
@@ -54,6 +56,18 @@ export interface ReportPanel {
   kpi: number;               // percent, already rounded to 1 decimal
   wiringSeconds: number;
   assignedAt?: string | Date | null;
+  startedAt?: string | Date | null;
+  pausedAt?: string | Date | null;
+  completedAt?: string | Date | null;
+  reviewedAt?: string | Date | null;
+  approvedAt?: string | Date | null;
+  reportSubmittedAt?: string | Date | null;
+  reviewerName?: string;
+  approverName?: string;
+  inspectionResult?: string;
+  inspectorName?: string;
+  pauseReason?: string;
+  supervisorApproved?: boolean;
   cables: ReportCable[] | null;  // null = frame/schedule unavailable; [] = none recorded
 }
 
@@ -63,6 +77,7 @@ export interface ReportProject {
   name?: string | null;
   description?: string | null;
   projectState?: string | null;
+  createdAt?: string | Date | null;
 }
 
 export interface ReportData {
@@ -196,9 +211,7 @@ export function buildProjectReportPdf(data: ReportData): Promise<Buffer> {
       pendingCables += p.cablesTotal || 0; // unresolved schedule → counted pending
     }
   }
-  const overallKpi = totalCables > 0
-    ? Math.round(((sumSrc + sumDst) / (totalCables * 2)) * 1000) / 10
-    : 0;
+  const overallKpi = assignedCableKpiPercent(doneCables, totalCables);
 
   const docNo = `DWES-PCR-${project.code.replace(/[^A-Za-z0-9]/g, '').toUpperCase()}-${generatedAt.toISOString().slice(0, 10).replace(/-/g, '')}`;
   const issueDate = fmtDate(generatedAt);
@@ -632,9 +645,9 @@ export function buildProjectReportPdf(data: ReportData): Promise<Buffer> {
     // 3-column meta strip
     const colGap = 16, mcW = (CW - 2 * colGap) / 3;
     const meta: [string, string][][] = [
-      [['Technician', p.technicianName || '—'], ['Assigned', fmtDate(p.assignedAt)]],
-      [['Status', statusChip(p.status).label], ['Review', qaChip(p.reviewStatus).label]],
-      [['Terminations', `Src ${p.cablesSrcDone || 0}/${p.cablesTotal || 0} · Dst ${p.cablesDstDone || 0}/${p.cablesTotal || 0}`], ['Wiring Time', formatDuration(p.wiringSeconds)]],
+      [['Technician', p.technicianName || 'Unassigned'], ['Assigned', fmtDate(p.assignedAt)]],
+      [['Execution start', fmtDate(p.startedAt)], ['Completed', fmtDate(p.completedAt)]],
+      [['Review / QC', `${qaChip(p.reviewStatus).label}${p.inspectionResult ? ` · ${titleize(p.inspectionResult)}` : ''}`], ['Approval', p.supervisorApproved ? `Approved ${fmtDate(p.approvedAt)}` : 'Pending']],
     ];
     meta.forEach((colPairs, ci) => {
       const mx = CL + ci * (mcW + colGap);
@@ -645,6 +658,21 @@ export function buildProjectReportPdf(data: ReportData): Promise<Buffer> {
       });
     });
     py += 2 * 22 + 8;
+
+    const executionDetail = `Status: ${statusChip(p.status).label}  ·  Terminations: Src ${p.cablesSrcDone || 0}/${p.cablesTotal || 0}, Dst ${p.cablesDstDone || 0}/${p.cablesTotal || 0}  ·  Recorded wiring time: ${formatDuration(p.wiringSeconds)}`;
+    drawText(doc, executionDetail, CL, py, { font: F.reg, size: 8, color: C.slate500 }, { width: CW, lineBreak: false, ellipsis: true });
+    py += 18;
+
+    if (p.pauseReason || p.reviewerName || p.approverName || p.inspectorName) {
+      const assurance = [
+        p.pauseReason ? `Pause reason: ${p.pauseReason}` : '',
+        p.inspectorName ? `QC inspector: ${p.inspectorName}` : '',
+        p.reviewerName ? `Reviewer: ${p.reviewerName}` : '',
+        p.approverName ? `Supervisor approver: ${p.approverName}` : '',
+      ].filter(Boolean).join('  ·  ');
+      drawText(doc, assurance, CL, py, { font: F.reg, size: 7.5, color: C.slate500 }, { width: CW, lineBreak: false, ellipsis: true });
+      py += 18;
+    }
 
     // Review-note callout
     if (p.reviewNotes && p.reviewNotes.trim()) {

@@ -1,0 +1,43 @@
+{
+  "capturedAt": "2026-09-21T09:18:47.880Z",
+  "api": "http://127.0.0.1:3101",
+  "ui": "http://127.0.0.1:5275",
+  "results": [
+    {
+      "check": "supervisor1 /api/projects",
+      "status": 200
+    },
+    {
+      "check": "tech2 /api/tech/my-panels",
+      "status": 200
+    },
+    {
+      "check": "ops_director1 /api/director/stats",
+      "status": 200
+    },
+    {
+      "check": "sysadmin /api/admin/diagnostics",
+      "status": 200
+    },
+    {
+      "check": "UI /",
+      "status": 200
+    },
+    {
+      "check": "UI /supervisor",
+      "status": 200
+    },
+    {
+      "check": "UI /technician",
+      "status": 200
+    },
+    {
+      "check": "UI /director",
+      "status": 200
+    },
+    {
+      "check": "UI /admin/settings",
+      "status": 200
+    }
+  ]
+}

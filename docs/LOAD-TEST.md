@@ -1,22 +1,35 @@
 # DWES load test (k6)
 
-## Target
+## Targets
 
-- **120 concurrent virtual users** for 2 minutes
-- **p95 latency < 800 ms** on `/healthz` and `/api/health`
+| Scenario | Script | Concurrent VUs | Duration | Notes |
+|----------|--------|----------------|----------|-------|
+| Health smoke | `infra/load/k6/smoke-120vus.js` | 120 | 2m | `/healthz` + `/api/health` |
+| **Technician sessions (≥70)** | `infra/load/k6/tech-70vus.js` | **70** | 3m | Login + panels + twin peek (local only) |
+
+- Health smoke: **p95 latency < 800 ms**
+- Tech 70: **p95 < 1200 ms**, `http_req_failed < 5%` (auth optional via `DWES_TECH_PASS`)
+
+**Do not run against production** unless `DWES_ALLOW_PROD_LOAD=1` is explicitly set. Prefer `localhost` / E2E stack.
 
 ## One command
 
 ```bash
-# Local E2E stack (HTTP)
+# Local E2E stack (HTTP) — health smoke
 npm run load:smoke
 
-# Production (HTTPS)
-npm run load:smoke -- https://dwes.ingeniousnetwork.com
+# ≥70 concurrent technician-like sessions (localhost API default :3001)
+npm run load:tech70
+npm run load:tech70 -- http://localhost:18080
+# With demo tech credentials (local DEMO_MODE only):
+#   set DWES_TECH_USER=tech1
+#   set DWES_TECH_PASS=<local-demo-password>
+#   npm run load:tech70
 
 # Or directly:
 bash scripts/k6-smoke.sh https://your-domain.example
-k6 run -e DWES_BASE_URL=https://your-domain.example infra/load/k6/smoke-120vus.js
+k6 run -e DWES_BASE_URL=http://localhost:3001 infra/load/k6/smoke-120vus.js
+k6 run -e DWES_BASE_URL=http://localhost:3001 infra/load/k6/tech-70vus.js
 ```
 
 ## Prerequisites

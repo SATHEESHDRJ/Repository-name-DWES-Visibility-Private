@@ -1,0 +1,101 @@
+{
+    "source_marker_candidates":  [
+
+                                 ],
+    "destination_marker_candidates":  [
+
+                                      ],
+    "best_source":  null,
+    "best_destination":  null,
+    "source_unmatched":  true,
+    "destination_unmatched":  true,
+    "source_match_reason":  "Header group not found: no marker for Source \"H74\".",
+    "destination_match_reason":  "Header group not found: no marker for Destination \"KF87L\".",
+    "source_candidate_count":  0,
+    "destination_candidate_count":  0,
+    "drawing_checksum_applied":  null,
+    "superseded_excluded":  0,
+    "source_rejection_reasons":  [
+                                     "equipment/device"
+                                 ],
+    "destination_rejection_reasons":  [
+                                          "equipment/device"
+                                      ],
+    "same_physical_group":  false,
+    "source_resolution":  {
+                              "endpoint_type":  "DEVICE_TERMINAL",
+                              "physical_identity":  null,
+                              "terminal_reference":  "X10 / 4",
+                              "location_granularity":  "UNRESOLVED",
+                              "status":  "UNRESOLVED",
+                              "confidence":  "NONE"
+                          },
+    "destination_resolution":  {
+                                   "endpoint_type":  "DEVICE_TERMINAL",
+                                   "physical_identity":  null,
+                                   "terminal_reference":  "5",
+                                   "location_granularity":  "UNRESOLVED",
+                                   "status":  "UNRESOLVED",
+                                   "confidence":  "NONE"
+                               },
+    "source_endpoint_kind":  "EQUIPMENT_CONNECTOR",
+    "destination_endpoint_kind":  "EQUIPMENT_TERMINAL",
+    "source_header_group_diagnostics":  {
+                                            "matched_label":  null,
+                                            "group_bbox":  null,
+                                            "confidence":  "NONE",
+                                            "rejected_candidates":  [
+
+                                                                    ]
+                                        },
+    "destination_header_group_diagnostics":  {
+                                                 "matched_label":  null,
+                                                 "group_bbox":  null,
+                                                 "confidence":  "NONE",
+                                                 "rejected_candidates":  [
+
+                                                                         ]
+                                             },
+    "diagnostics":  {
+                        "source_rejected_reasons":  [
+                                                        "equipment/device"
+                                                    ],
+                        "destination_rejected_reasons":  [
+                                                             "equipment/device"
+                                                         ],
+                        "source_classification":  {
+                                                      "kind":  "EQUIPMENT_CONNECTOR",
+                                                      "legacyType":  "DEVICE_TERMINAL",
+                                                      "parentEquipment":  "H74",
+                                                      "connector":  "X10",
+                                                      "pin":  "4",
+                                                      "tbHeader":  null,
+                                                      "physicalLookupKey":  "H74",
+                                                      "terminalReference":  "X10 / 4",
+                                                      "provenance":  {
+                                                                         "source":  "schedule_header",
+                                                                         "devTblk":  "H74",
+                                                                         "term":  "X10:4",
+                                                                         "connector":  "X10",
+                                                                         "pin":  "4"
+                                                                     }
+                                                  },
+                        "destination_classification":  {
+                                                           "kind":  "EQUIPMENT_TERMINAL",
+                                                           "legacyType":  "DEVICE_TERMINAL",
+                                                           "parentEquipment":  "KF87L",
+                                                           "connector":  null,
+                                                           "pin":  "5",
+                                                           "tbHeader":  null,
+                                                           "physicalLookupKey":  "KF87L",
+                                                           "terminalReference":  "5",
+                                                           "provenance":  {
+                                                                              "source":  "schedule_header",
+                                                                              "devTblk":  "KF87L",
+                                                                              "term":  "5",
+                                                                              "connector":  null,
+                                                                              "pin":  "5"
+                                                                          }
+                                                       }
+                    }
+}

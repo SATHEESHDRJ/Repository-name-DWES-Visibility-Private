@@ -1,0 +1,38 @@
+﻿{
+  "slice": 1,
+  "status": "COMPLETE",
+  "date": "2026-09-19",
+  "roles": {
+    "technician": {
+      "screenshot": "baseline-technician-desktop.png",
+      "kpi": "baseline-technician-kpi.json",
+      "verdict": "BASELINE_CAPTURED"
+    },
+    "supervisor": {
+      "screenshots": ["baseline-supervisor-projects-desktop.png", "baseline-supervisor-status-desktop.png"],
+      "kpi": "baseline-supervisor-kpi.json",
+      "five_primary_cards": ["Total Projects", "Total Panels", "In Progress", "Completed", "Overall Progress"],
+      "ui_kpis": {"Total Projects":"3","Total Panels":"5","In Progress":"4","Completed":"0","Overall Progress":"8%"},
+      "verdict": "BASELINE_CAPTURED"
+    },
+    "director": {
+      "screenshot": "baseline-director-desktop.png",
+      "kpi": "baseline-director-kpi.json",
+      "read_only": true,
+      "verdict": "BASELINE_CAPTURED"
+    },
+    "system_admin": {
+      "screenshot": "baseline-admin-desktop.png",
+      "route": "/admin/settings",
+      "diagnostics": {"users":36,"projects":3,"frames":5,"assignments":10,"db":"connected"},
+      "verdict": "BASELINE_CAPTURED"
+    }
+  },
+  "kpi_reconciliation_findings": [
+    "Supervisor Status UI Total Panels=5 (frame universe) vs director/admin assignment-oriented panels_total=10 — redesign must bind each KPI to one named canonical projection.",
+    "Supervisor all-panels API returns historical assignment rows including mid_changed; Status KPIs must not mix Assigned and Not Assigned for the same panel.",
+    "Technician my-panels assignment 72 in_progress on 003 FEEDER-1: cables 15/653 src+dst."
+  ],
+  "existing_shell": ["AppShell.tsx", "DashboardShell.tsx", "design-system.css", "DeleteConfirmModal.tsx"],
+  "next_slice": "Shared design tokens + application shell enhancements (SSE indicator, Last updated, breadcrumbs, semantic status tokens) without role page rewrites yet"
+}

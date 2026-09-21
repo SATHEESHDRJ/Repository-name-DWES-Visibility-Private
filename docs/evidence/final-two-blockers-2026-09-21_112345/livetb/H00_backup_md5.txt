@@ -1,0 +1,8 @@
+# H00+R backup PDFs — content identity (restore container, 2026-09-21)
+# All 7 backup copies share one MD5 (byte-identical file content):
+
+141aa9abff72ef22df1c5f272767ce7c
+
+Paths: see uploads_pdf_inventory_2026-09-21.txt (H00 backup section).
+
+Implication: OCR/search on oldest + latest H00 covers all backup timestamps; no separate eligible drawing hidden in intermediate backups.

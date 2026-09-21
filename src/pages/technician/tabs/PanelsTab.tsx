@@ -1,10 +1,18 @@
-import { useMemo, useState, type CSSProperties } from 'react';
-import { Cable, ClipboardCheck, FileText, LayoutGrid, Trash2 } from '../../../components/ui/icons';
-import GaDrawingViewModal from '../../../components/technician/GaDrawingViewModal';
+import { useEffect, useMemo, useState } from 'react';
+import { DashboardIcon } from '../../../components/ui/DashboardIcon';
+import WorkspaceSectionHeading from '../../../components/ui/WorkspaceSectionHeading';
+import FieldGrid from '../../../components/ui/FieldGrid';
+import type { WorkspaceInfoEmphasis } from '../../../components/ui/WorkspaceInfoMatrix';
 import SubmitReportConfirmModal from '../../../components/technician/SubmitReportConfirmModal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/DeleteConfirmModal';
 import { techApi } from '../../../services/api';
 import { emitWorkflowChanged } from '../../../utils/dwesRefreshEvents';
+import { onFramesChanged } from '../../../utils/projectFramesEvents';
+import { assignmentMatchesDeletion } from '../../../utils/entityConsistency';
+import {
+  NO_PANEL_WORK_ASSIGNED_COPY,
+  NO_PANEL_WORK_ASSIGNED_TITLE,
+} from '../../../constants/twinMessaging';
 
 interface PanelsTabProps {
   panels: any[];
@@ -12,17 +20,95 @@ interface PanelsTabProps {
   onRefresh: () => void;
   selectedPanel: any | null;
   onSelectPanel: (panel: any) => void;
-  onOpenDigitalWiring: (panel: any) => void;
 }
 
-const AWAITING_ASSIGNMENT = 'Awaiting supervisor assignment.';
+/** Active assignment row from live `myPanels` data (same rules as the dashboard). */
+export function resolveActiveAssignment(panels: any[], selectedPanel: any | null) {
+  if (!panels.length) return null;
+  const isWorkable = (p: any) => {
+    const st = String(p?.status ?? '').toLowerCase().replace(/[\s_-]+/g, '');
+    return st === 'assigned' || st === 'inprogress' || st === 'paused' || st === 'started';
+  };
+  if (selectedPanel && isWorkable(selectedPanel)) {
+    const match = panels.find(panel => panel.id === selectedPanel.id);
+    if (match && isWorkable(match)) return match;
+  }
+  const active = panels.find(isWorkable);
+  if (active) return active;
+  return selectedPanel ?? panels[0] ?? null;
+}
 
-function statusLabel(st: string): { label: string; tone: 'done' | 'progress' | 'idle' } {
-  if (st === 'completed') return { label: 'Completed', tone: 'done' };
-  if (st === 'in_progress') return { label: 'In Progress', tone: 'progress' };
-  if (st === 'paused') return { label: 'Paused', tone: 'progress' };
-  if (st === 'assigned') return { label: 'Not Started', tone: 'idle' };
-  return { label: st.replace(/_/g, ' '), tone: 'idle' };
+/** Embed Digital Wiring Schedule automatically for workable assignment states. */
+export function shouldEmbedDigitalWiringSchedule(panel: any | null): boolean {
+  if (!panel) return false;
+  const st = String(panel.status ?? '').toLowerCase().replace(/[\s_-]+/g, '');
+  return st === 'assigned' || st === 'inprogress' || st === 'paused' || st === 'started';
+}
+
+export function TechnicianMidChangeBanner({
+  saving,
+  onResume,
+}: {
+  saving: boolean;
+  onResume: (assignmentId: number) => void;
+}) {
+  const [midChangeRequests, setMidChangeRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    const refresh = () => {
+      techApi.midChangeRequests()
+        .then(rows => setMidChangeRequests(Array.isArray(rows) ? rows : []))
+        .catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 12_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const incomingMidChange = midChangeRequests.find(request => request.direction === 'incoming');
+  if (!incomingMidChange) return null;
+
+  return (
+    <div className="tech-midchange-notice mb-4" role="status">
+      <DashboardIcon name="mid_change" size={16} className="shrink-0" />
+      <span className="min-w-0 flex-1">
+        <strong>Mid Change panel assigned</strong> — {incomingMidChange.initiator_name} transferred{' '}
+        <strong>{incomingMidChange.target?.panel_name || 'a panel'}</strong> to you.
+      </span>
+      <button
+        type="button"
+        className="btn-primary shrink-0"
+        disabled={saving}
+        onClick={() => onResume(incomingMidChange.target.id)}
+      >
+        {saving ? 'Resuming…' : 'Resume Wiring'}
+      </button>
+    </div>
+  );
+}
+
+
+const NO_PANEL_WORK_TITLE = NO_PANEL_WORK_ASSIGNED_TITLE;
+const NO_PANEL_WORK_COPY = NO_PANEL_WORK_ASSIGNED_COPY;
+
+function statusLabel(st: string): { label: string; tone: 'done' | 'progress' | 'idle'; chip: string } {
+  if (st === 'completed') {
+    return { label: 'Completed', tone: 'done', chip: 'dwes-status-chip dwes-status-chip--completed' };
+  }
+  if (st === 'in_progress') {
+    return { label: 'In Progress', tone: 'progress', chip: 'dwes-status-chip dwes-status-chip--active' };
+  }
+  if (st === 'paused') {
+    return { label: 'Paused', tone: 'progress', chip: 'dwes-status-chip dwes-status-chip--paused' };
+  }
+  if (st === 'assigned') {
+    return { label: 'Not Started', tone: 'idle', chip: 'dwes-status-chip dwes-status-chip--planned' };
+  }
+  return {
+    label: st.replace(/_/g, ' '),
+    tone: 'idle',
+    chip: 'dwes-status-chip dwes-status-chip--planned',
+  };
 }
 
 function panelProgress(panel: any) {
@@ -30,10 +116,177 @@ function panelProgress(panel: any) {
   const pairsDone = total > 0
     ? Math.min(total, Math.floor(((panel.cables_src_done || 0) + (panel.cables_dst_done || 0)) / 2))
     : 0;
-  const srcPct = total > 0 ? Math.round((panel.cables_src_done / total) * 100) : 0;
-  const dstPct = total > 0 ? Math.round((panel.cables_dst_done / total) * 100) : 0;
   const kpiPct = panel.kpi ?? (total > 0 ? Math.round((pairsDone / total) * 100) : 0);
-  return { srcPct, dstPct, kpiPct, pairsDone, total };
+  return { kpiPct, pairsDone, total };
+}
+
+function formatAssignDateTime(value?: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Current Assignment — single authoritative card for the active panel.
+ * Project + panel names are the primary hierarchy; essential details follow.
+ */
+function CurrentAssignmentCard({
+  panel,
+  saving,
+  onComplete,
+  onSubmitReport,
+  onHideCompleted,
+}: {
+  panel: any;
+  saving: boolean;
+  onComplete: (panel: any) => void;
+  onSubmitReport: (panel: any) => void;
+  onHideCompleted: (panel: any) => void;
+}) {
+  const status = statusLabel(panel.status ?? '');
+  const { kpiPct, pairsDone, total } = panelProgress(panel);
+  const remaining = Math.max(0, total - pairsDone);
+  const isMidChange = Boolean(panel.handover_from_id);
+  const allCablesDone = total > 0
+    && (panel.cables_src_done || 0) >= total
+    && (panel.cables_dst_done || 0) >= total;
+  const st = panel.status;
+  const projectName = panel.project_name || panel.project_code || '—';
+  const panelName = panel.panel_name || '—';
+
+  const metaFields: Array<{
+    label: string;
+    value: string | number;
+    emphasis?: WorkspaceInfoEmphasis;
+    hide?: boolean;
+  }> = [
+    { label: 'Panel type', value: panel.panel_type || '', hide: !panel.panel_type },
+    { label: 'Voltage', value: panel.voltage_level || '', hide: !panel.voltage_level },
+    { label: 'Client', value: panel.project_client || '', hide: !panel.project_client },
+    { label: 'Assigned', value: formatAssignDateTime(panel.assigned_at), emphasis: 'meta' as const },
+    { label: 'State', value: status.label },
+  ].filter(f => !f.hide);
+
+  const progressFields = total > 0
+    ? [
+        { label: 'Completed', value: String(pairsDone) },
+        { label: 'Total', value: String(total) },
+        { label: 'Remaining', value: String(remaining) },
+        { label: 'Progress', value: `${kpiPct}%`, emphasis: 'primary' as const },
+      ]
+    : [];
+
+  return (
+    <section className="tech-assignment-card mb-4" aria-label="Current assignment">
+      <WorkspaceSectionHeading
+        variant="secondary"
+        title="Current Assignment"
+        subtitle="Active panel details and live progress."
+        icon={<DashboardIcon name="assignment" size={16} />}
+        actions={(
+          <div className="tech-assignment-badges">
+            {isMidChange && (
+              <span className="tech-assignment-midchange" title="This panel was transferred to you via Mid Change">
+                <DashboardIcon name="mid_change" size={12} /> Mid Change
+              </span>
+            )}
+            <span className={status.chip}>{status.label}</span>
+          </div>
+        )}
+      />
+
+      <div className="tech-assignment-hero">
+        <p className="tech-assignment-hero-project dw-wim-title-primary" title={projectName}>{projectName}</p>
+        <p className="tech-assignment-hero-panel dw-wim-title-secondary" title={panelName}>{panelName}</p>
+      </div>
+
+      {/* Single progress surface — do not also chip-strip or re-list the same KPIs in meta. */}
+      {progressFields.length > 0 && (
+        <div className="tech-assignment-progress-block" aria-label="Cable progress">
+          <FieldGrid
+            columns={4}
+            fields={progressFields.map(f => ({
+              label: f.label,
+              value: f.value,
+              emphasis: f.emphasis,
+              title: String(f.value ?? ''),
+            }))}
+          />
+          <div className="tech-assignment-progress-row">
+            <div className="tech-panel-card-bar">
+              <div
+                className={`tech-panel-card-bar-fill${allCablesDone ? ' is-done' : ''}`}
+                style={{ width: `${kpiPct}%` }}
+              />
+            </div>
+            <span className="tech-panel-card-pct tabular-nums dw-wim-value dw-wim-value--primary">{kpiPct}%</span>
+          </div>
+        </div>
+      )}
+
+      <FieldGrid
+        columns={4}
+        fields={metaFields.map(f => ({
+          label: f.label,
+          value: f.value,
+          emphasis: f.emphasis,
+          title: String(f.value ?? ''),
+        }))}
+      />
+
+      {panel.status === 'paused' && panel.pause_reason && (
+        <p className="tech-assignment-pause">Paused — {panel.pause_reason}</p>
+      )}
+
+      {(st === 'in_progress' || st === 'completed') && (
+        <div className="tech-assignment-actions">
+          {st === 'in_progress' && (
+            <button
+              type="button"
+              className="btn-secondary tech-panel-entry-btn"
+              onClick={() => onComplete(panel)}
+              disabled={saving || !allCablesDone}
+              title={allCablesDone ? 'Submit completion report' : 'Complete all cables first'}
+            >
+              <DashboardIcon name="complete" size={16} />
+              Complete project
+            </button>
+          )}
+          {st === 'completed' && (
+            <>
+              {panel.report_submitted ? (
+                <span className="tech-panel-report-sent">
+                  <DashboardIcon name="complete" size={14} /> Report sent
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-secondary tech-panel-entry-btn dwes-report-action-btn"
+                  onClick={() => onSubmitReport(panel)}
+                  disabled={saving}
+                >
+                  <DashboardIcon name="history" size={16} />
+                  View Report
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-secondary tech-panel-entry-btn text-red-700 border-red-200"
+                onClick={() => onHideCompleted(panel)}
+                disabled={saving}
+              >
+                <DashboardIcon name="delete" size={14} />
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function PanelsTab({
@@ -41,22 +294,27 @@ export default function PanelsTab({
   loading = false,
   onRefresh,
   selectedPanel,
-  onSelectPanel,
-  onOpenDigitalWiring,
 }: PanelsTabProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [submitPanel, setSubmitPanel] = useState<any | null>(null);
   const [hideTarget, setHideTarget] = useState<any | null>(null);
-  const [gaOpen, setGaOpen] = useState(false);
 
-  const hasAssignment = panels.length > 0;
-  const headerPanel = selectedPanel;
+  /** Active assignment only — must exist in the current server-backed panels list. */
+  const activeAssignment = useMemo(
+    () => resolveActiveAssignment(panels, selectedPanel),
+    [panels, selectedPanel],
+  );
+  const hasAssignment = Boolean(activeAssignment);
 
-  const gaTarget = useMemo(() => {
-    if (!headerPanel || headerPanel.status === 'completed') return null;
-    return headerPanel;
-  }, [headerPanel]);
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    const target = activeAssignment;
+    if (target && assignmentMatchesDeletion(target, detail)) {
+      setSubmitPanel(null);
+      setHideTarget(null);
+    }
+  }), [activeAssignment]);
 
   const confirmComplete = async (panel: any) => {
     setSaving(true);
@@ -70,6 +328,19 @@ export default function PanelsTab({
       setSubmitPanel({ ...panel, status: 'completed' });
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not complete panel');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResumeMidChange = async (assignmentId: number) => {
+    setSaving(true);
+    setError('');
+    try {
+      await techApi.start(assignmentId);
+      onRefresh();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not resume mid change assignment');
     } finally {
       setSaving(false);
     }
@@ -91,10 +362,6 @@ export default function PanelsTab({
     }
   };
 
-  const handleDeleteCompleted = (panel: any) => {
-    setHideTarget(panel);
-  };
-
   const confirmHideCompleted = async (_scope: DeleteScopeId) => {
     if (!hideTarget) return;
     setSaving(true);
@@ -111,150 +378,35 @@ export default function PanelsTab({
   };
 
   if (loading && panels.length === 0) {
-    return <div className="empty-state"><p className="empty-text">Loading panels…</p></div>;
+    return (
+      <div className="tech-no-assignment" role="status" aria-busy="true">
+        <p className="tech-no-assignment-title">{NO_PANEL_WORK_TITLE}</p>
+        <p className="tech-no-assignment-copy">Checking for active assignments…</p>
+      </div>
+    );
   }
 
   return (
     <div>
       {error && <div className="form-error mb-2">{error}</div>}
 
-      <div className="tech-dash-actions mb-4" role="group" aria-label="Panel actions">
-        <button
-          type="button"
-          className="btn-primary tech-dash-action-btn"
-          disabled={!hasAssignment}
-          title={hasAssignment ? 'Open digital wiring for the selected panel' : AWAITING_ASSIGNMENT}
-          aria-label={hasAssignment ? 'Digital Wiring View' : AWAITING_ASSIGNMENT}
-          onClick={() => {
-            const panel = headerPanel ?? panels[0];
-            if (panel) onOpenDigitalWiring(panel);
-          }}
-        >
-          <Cable size={16} />
-          Digital Wiring View
-        </button>
-        <button
-          type="button"
-          className="btn-secondary tech-dash-action-btn"
-          disabled={!hasAssignment || !gaTarget}
-          title={!hasAssignment ? AWAITING_ASSIGNMENT : !gaTarget ? 'Not available for completed panels' : 'Open GA drawing viewer'}
-          aria-label={!hasAssignment ? AWAITING_ASSIGNMENT : 'GA 3D/2D Drawing View'}
-          onClick={() => gaTarget && setGaOpen(true)}
-        >
-          <FileText size={16} />
-          GA 3D/2D Drawing View
-        </button>
-      </div>
+      {/* Mid Change is initiated from the Pause popup inside the wiring workstation.
+          This strip surfaces incoming Mid Change transfers so the receiving technician can resume. */}
+      <TechnicianMidChangeBanner saving={saving} onResume={handleResumeMidChange} />
 
-      {!hasAssignment && (
-        <div className="empty-state mb-4">
-          <p className="text-base font-semibold text-slate-700">No panels assigned</p>
-          <p className="empty-text">A supervisor must assign a panel before you can start wiring.</p>
+      {hasAssignment && activeAssignment ? (
+        <CurrentAssignmentCard
+          panel={activeAssignment}
+          saving={saving}
+          onComplete={confirmComplete}
+          onSubmitReport={setSubmitPanel}
+          onHideCompleted={setHideTarget}
+        />
+      ) : (
+        <div className="tech-no-assignment" role="status">
+          <p className="tech-no-assignment-title">{NO_PANEL_WORK_TITLE}</p>
+          <p className="tech-no-assignment-copy">{NO_PANEL_WORK_COPY}</p>
         </div>
-      )}
-
-      {hasAssignment && (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <LayoutGrid size={18} className="text-orange-500" />
-            <h2 className="text-[15px] font-bold text-slate-800">My Assigned Panels</h2>
-          </div>
-
-          <ul className="tech-panel-list" role="list">
-            {panels.map(panel => {
-              const { kpiPct, pairsDone, total } = panelProgress(panel);
-              const isSelected = selectedPanel?.id === panel.id;
-              const st = panel.status;
-              const projectLabel = panel.project_name || panel.project_code;
-              const status = statusLabel(st);
-              const allCablesDone = total > 0
-                && (panel.cables_src_done || 0) >= total
-                && (panel.cables_dst_done || 0) >= total;
-
-              return (
-                <li
-                  key={panel.id}
-                  className={`tech-panel-card${isSelected ? ' tech-panel-card--active' : ''} tech-panel-card--${status.tone}`}
-                  style={{ '--panel-progress': `${kpiPct}%` } as CSSProperties}
-                >
-                  <button
-                    type="button"
-                    className="tech-panel-card-select"
-                    onClick={() => onSelectPanel(panel)}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="tech-panel-card-main min-w-0 text-left w-full">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span className="tech-panel-card-name">{panel.panel_name}</span>
-                        <span className={`tech-panel-status tech-panel-status--${status.tone}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="tech-panel-card-project truncate">{projectLabel}</p>
-                      <div className="tech-panel-card-progress-row">
-                        <div className="tech-panel-card-bar">
-                          <div
-                            className={`tech-panel-card-bar-fill${allCablesDone ? ' is-done' : ''}`}
-                            style={{ width: `${kpiPct}%` }}
-                          />
-                        </div>
-                        <span className="tech-panel-card-pct tabular-nums">{kpiPct}%</span>
-                      </div>
-                      <p className="tech-panel-card-counts">
-                        {pairsDone}/{total} cables complete
-                        {' · '}
-                        {panel.cables_src_done}/{total} src · {panel.cables_dst_done}/{total} dst
-                      </p>
-                    </div>
-                  </button>
-
-                  <div className="tech-panel-card-actions">
-                    {st === 'in_progress' && (
-                      <button
-                        type="button"
-                        className="btn-secondary tech-panel-entry-btn"
-                        onClick={() => confirmComplete(panel)}
-                        disabled={saving || !allCablesDone}
-                        title={allCablesDone ? 'Submit completion report' : 'Complete all cables first'}
-                      >
-                        <ClipboardCheck size={16} />
-                        Complete project
-                      </button>
-                    )}
-                    {st === 'completed' && (
-                      <>
-                        {panel.report_submitted ? (
-                          <span className="tech-panel-report-sent">
-                            <ClipboardCheck size={14} /> Report sent
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-secondary tech-panel-entry-btn"
-                            onClick={() => setSubmitPanel(panel)}
-                            disabled={saving}
-                          >
-                            <FileText size={16} />
-                            Report
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn-secondary tech-panel-entry-btn text-red-700 border-red-200"
-                          onClick={() => handleDeleteCompleted(panel)}
-                          disabled={saving}
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
       )}
 
       {submitPanel && (
@@ -263,14 +415,6 @@ export default function PanelsTab({
           onClose={() => !saving && setSubmitPanel(null)}
           onSubmit={confirmSubmitReport}
           submitting={saving}
-        />
-      )}
-
-      {gaOpen && gaTarget && (
-        <GaDrawingViewModal
-          panelName={gaTarget.panel_name}
-          projectLabel={gaTarget.project_name || gaTarget.project_code}
-          onClose={() => setGaOpen(false)}
         />
       )}
 

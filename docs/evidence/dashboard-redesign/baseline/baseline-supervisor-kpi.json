@@ -1,0 +1,22 @@
+﻿{
+  "role": "prod_supervisor",
+  "username": "supervisor1",
+  "ui_kpis": {
+    "Total Projects": "3",
+    "Total Panels": "5",
+    "In Progress": "4",
+    "Completed": "0",
+    "Overall Progress": "8%"
+  },
+  "api": {
+    "project_live_summary": "/api/supervisor/project-live-summary",
+    "all_panels": "/api/supervisor/all-panels",
+    "all_panels_count": 10,
+    "note": "UI KPIs derive from CompactStatusWorkspace over live summary / frame universe; all-panels includes historical assignment rows (mid_changed etc.) so counts differ by projection — redesign must use one canonical projection per metric."
+  },
+  "five_primary_cards_present": true,
+  "screenshots": [
+    "baseline-supervisor-projects-desktop.png",
+    "baseline-supervisor-status-desktop.png"
+  ]
+}

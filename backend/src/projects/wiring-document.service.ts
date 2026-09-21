@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit, Optional, Logger } from '@nestjs/common';
 import * as fs from 'fs';
-import * as path from 'path';
 import * as PDFDocument from 'pdfkit';
 import { PDFDocument as PDFLibDocument, StandardFonts, rgb } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
+import { isPanelDeleted } from '../common/deleted-resource.util';
 import { MockStore, Cable, Drawing } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
 import { parseCableStatus, cableStatusCounts } from '../common/cable-status.util';
@@ -13,6 +13,8 @@ import { buildPanelCompletionReportPdf } from '../common/panel-completion-report
 import { buildPanelReportFilename } from '../common/report-filename';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
 import { drawEnterpriseFooter, drawEnterpriseHeader, pageBox } from '../common/pdf-report-layout';
+import { JobsService, type BackgroundJobDto } from '../jobs/jobs.service';
+import { asyncReportGenerationEnabled } from '../common/feature-flags';
 
 const COMPANY = 'Ingenious Network FZC';
 const DOC_TITLE = 'Digital Wiring Execution System';
@@ -69,11 +71,6 @@ const COLOR_SWATCH: Record<string, string> = {
   purple: '#9333ea',
 };
 
-function uploadRoot(): string {
-  const raw = process.env.UPLOAD_DIR || 'uploads';
-  return path.isAbsolute(raw) ? raw : path.join(process.cwd(), raw);
-}
-
 function clip(text: string, max: number): string {
   const s = String(text ?? '').replace(/\s+/g, ' ').trim();
   if (s.length <= max) return s;
@@ -89,40 +86,64 @@ function colorHex(name: string): string | null {
   return null;
 }
 
-function parseProjectSegments(code: string): { region: string; location: string; voltage: string } {
+function parseProjectSegments(
+  code: string,
+  description?: string | null,
+  panelVoltage?: string | null,
+): { region: string; location: string; voltage: string } {
   const parts = code.split('_');
-  // Legacy: PANELTYPE_VOLTAGE_REGION_LOCATION_YEAR_SEQ; current: VOLTAGE_REGION_LOCATION_YEAR_SEQ
+  // Legacy fallback: PANELTYPE_VOLTAGE_REGION_LOCATION_YEAR_SEQ or
+  // VOLTAGE_REGION_LOCATION_YEAR_SEQ. Current projects keep these values in metadata
+  // because code is now the supervisor-entered Project Numbering.
+  let legacy: { region: string; location: string; voltage: string };
   if (parts.length >= 6) {
-    return { voltage: parts[1] || '', region: parts[2] || '', location: parts[3] || '' };
+    legacy = { voltage: parts[1] || '', region: parts[2] || '', location: parts[3] || '' };
+  } else if (parts.length >= 5) {
+    legacy = { voltage: parts[0] || '', region: parts[1] || '', location: parts[2] || '' };
+  } else {
+    legacy = { voltage: '', region: '', location: '' };
   }
-  return { voltage: parts[0] || '', region: parts[1] || '', location: parts[2] || '' };
-}
 
-function findGaDrawing(projectCode: string): Drawing | null {
-  const drawings = MockStore.findDrawingsByProject(projectCode);
-  if (drawings.length) {
-    const gaNamed = drawings.find(d => /ga|general.?arrangement/i.test(d.original_name));
-    if (gaNamed) return gaNamed;
-    const pdf = drawings.find(d => /\.pdf$/i.test(d.original_name) || d.content_type === 'application/pdf');
-    if (pdf) return pdf;
-    return drawings.find(d => /^image\//.test(d.content_type) || /\.(png|jpe?g|webp)$/i.test(d.original_name)) || null;
-  }
-  const dir = path.join(uploadRoot(), projectCode, 'drawings');
-  if (!fs.existsSync(dir)) return null;
-  for (const file of fs.readdirSync(dir)) {
-    if (/ga|general.?arrangement/i.test(file)) {
+  try {
+    const raw = String(description || '').trim();
+    if (raw.startsWith('@dwes-meta:')) {
+      const meta = JSON.parse(raw.slice('@dwes-meta:'.length)) as {
+        location?: string;
+        region?: string;
+        locationRegion?: string;
+      };
+      const locationRegion = String(meta.locationRegion || '')
+        .split(/\s*\/\s*/)
+        .map(value => value.trim());
       return {
-        id: file.split('_')[0] || file,
-        project_code: projectCode,
-        filename: file,
-        original_name: file.includes('_') ? file.slice(file.indexOf('_') + 1) : file,
-        content_type: file.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream',
-        uploaded_at: '',
-        size: 0,
+        voltage: String(panelVoltage || '').trim() || legacy.voltage,
+        location: String(meta.location || locationRegion[0] || '').trim() || legacy.location,
+        region: String(meta.region || locationRegion[1] || '').trim() || legacy.region,
       };
     }
+  } catch {
+    // Malformed legacy descriptions fall back to the legacy code parser.
   }
-  return null;
+  return { ...legacy, voltage: String(panelVoltage || '').trim() || legacy.voltage };
+}
+
+function findGaDrawing(projectCode: string, frameId: string): Drawing | null {
+  const asset = FrameStore.getDrawingPackage(projectCode, frameId)?.drawing_2d;
+  if (!asset) return null;
+  return {
+    id: asset.id,
+    project_code: projectCode,
+    frame_id: frameId,
+    package_id: FrameStore.drawingPackageId(projectCode, frameId),
+    kind: '2d',
+    sha256: asset.sha256,
+    uploaded_by: asset.uploaded_by,
+    filename: asset.filename,
+    original_name: asset.original_name,
+    content_type: asset.content_type,
+    uploaded_at: asset.uploaded_at,
+    size: asset.size,
+  };
 }
 
 function readDrawingBuffer(projectCode: string, drawing: Drawing): Buffer | null {
@@ -163,8 +184,62 @@ function cableRowCells(
 }
 
 @Injectable()
-export class WiringDocumentService {
-  constructor(private prisma: PrismaService) {}
+export class WiringDocumentService implements OnModuleInit {
+  private readonly logger = new Logger(WiringDocumentService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly jobsService?: JobsService,
+  ) {}
+
+  onModuleInit(): void {
+    if (!asyncReportGenerationEnabled() || !this.jobsService) return;
+    // Reuses generatePanelCompletionReport exactly — no report-generation logic is
+    // duplicated here. The PDF bytes themselves are not stored in the job result (a
+    // Postgres JSON column); the job just confirms the report can be built without
+    // error. Delivery is the existing, unchanged synchronous report-pdf endpoint,
+    // which regenerates the (deterministic) PDF on demand — cheap relative to the
+    // cost of storing a binary blob in Redis/Postgres.
+    this.jobsService.registerHandler('pdf_report', async payload => {
+      const { projectCode, frameId, generatedBy } = payload as {
+        projectCode: string; frameId: string; generatedBy?: string;
+      };
+      const { buffer, filename } = await this.generatePanelCompletionReport(projectCode, frameId, generatedBy);
+      return {
+        ready: true,
+        filename,
+        size_bytes: buffer.length,
+        download_url: `/api/projects/${encodeURIComponent(projectCode)}/frames/${encodeURIComponent(frameId)}/report-pdf`,
+      };
+    });
+    this.logger.log('Async report generation enabled: pdf_report job handler registered');
+  }
+
+  /**
+   * Asynchronous variant of generatePanelCompletionReport, gated by
+   * DWES_ASYNC_REPORT_GENERATION. Enqueues a real `pdf_report` BullMQ job whose
+   * handler (registered in onModuleInit above) calls the exact same report-building
+   * path as the synchronous endpoint. Falls back to JobsService's existing in-memory
+   * worker automatically when Redis is unavailable.
+   */
+  async enqueuePanelCompletionReport(
+    projectCode: string,
+    frameId: string,
+    requestedBy: number,
+    generatedBy = '',
+  ): Promise<BackgroundJobDto> {
+    if (!asyncReportGenerationEnabled()) throw new NotFoundException('Async report generation is not enabled');
+    if (!this.jobsService) throw new BadRequestException('Background job processing is unavailable');
+    assertPanelNameUniqueForWrite(projectCode, frameId);
+    return this.jobsService.createJob({
+      jobType: 'pdf_report',
+      projectCode,
+      frameId,
+      requestedBy,
+      payload: { projectCode, frameId, generatedBy },
+      maxAttempts: 2,
+    });
+  }
 
   async generatePanelCompletionReport(
     projectCode: string,
@@ -209,8 +284,13 @@ export class WiringDocumentService {
     frameId: string,
     generatedBy = '',
   ): Promise<{ buffer: Buffer; filename: string }> {
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
     if (!project) throw new NotFoundException(`Project ${projectCode} not found`);
+
+    if (await isPanelDeleted(this.prisma, projectCode, frameId)) {
+      FrameStore.blockPanel(projectCode, frameId);
+      throw new NotFoundException(`Frame ${frameId} not found`);
+    }
 
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
       ?? FrameStore.getFrameFromDisk(projectCode, frameId);
@@ -251,7 +331,7 @@ export class WiringDocumentService {
       cableStatus,
       generatedBy,
       techName,
-      segs: parseProjectSegments(projectCode),
+      segs: parseProjectSegments(projectCode, project.description, frame.voltage_level),
       wiringKpi,
       composite,
       qcPassRate,
@@ -261,8 +341,8 @@ export class WiringDocumentService {
       dwgNo: frame.original_filename || '',
     });
 
-    const finalBuffer = await this.appendGaSection(mainBuffer, projectCode, findGaDrawing(projectCode));
-    const safePanel = (frame.panel_name || frameId).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+    const finalBuffer = await this.appendGaSection(mainBuffer, projectCode, findGaDrawing(projectCode, frameId));
+    const safePanel = (frame.panel_name || frameId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
     return { buffer: finalBuffer, filename: `${projectCode}_${safePanel}_wiring_document.pdf` };
   }
 

@@ -1,0 +1,481 @@
+{
+    "status":  "TECHNICAL_FAILURE",
+    "panel_status":  "TECHNICAL_FAILURE",
+    "failed_stage":  "ocr",
+    "drawing_revision":  "1",
+    "drawing_checksum":  "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "result_summary":  {
+                           "high":  0,
+                           "notes":  [
+                                         "local_pdf_text_fallback",
+                                         "pdfjs_text_layout",
+                                         "no_pdf_text_glyphs",
+                                         "ocr_worker_required_for_scanned_or_outlined_labels",
+                                         "enrichment_pass_text_layout",
+                                         "schedule_drawing_mismatch_no_physical_tb_headers_in_drawing",
+                                         "ocr_worker_unavailable",
+                                         "ocr_stage_failed",
+                                         "evidence_fusion_applied"
+                                     ],
+                           "saved":  0,
+                           "engine":  "pdfjs-text-layout",
+                           "medium":  0,
+                           "expected":  19,
+                           "ambiguous":  0,
+                           "readiness":  {
+                                             "type":  "VECTOR_PDF_WITH_OUTLINED_TEXT",
+                                             "notes":  [
+                                                           "may_be_outlined_or_scanned"
+                                                       ],
+                                             "page_count":  7,
+                                             "searchable":  false,
+                                             "supervisor_verification_required":  false
+                                         },
+                           "last_error":  "local_pdf_text_fallback|pdfjs_text_layout|no_pdf_text_glyphs",
+                           "page_types":  [
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT",
+                                              "VECTOR_PDF_WITHOUT_TEXT"
+                                          ],
+                           "stages_run":  [
+
+                                          ],
+                           "retry_count":  2,
+                           "failed_stage":  "ocr",
+                           "panel_status":  "TECHNICAL_FAILURE",
+                           "headers_found":  [
+
+                                             ],
+                           "locate_status":  "GROUNDING_UNAVAILABLE",
+                           "worker_health":  {
+                                                 "gpu":  "unavailable",
+                                                 "cuda":  false,
+                                                 "notes":  [
+                                                               "ocr_tesseract_probe_ok",
+                                                               "locate:future_cloud_no_local_gpu",
+                                                               "locate:no_invented_boxes"
+                                                           ],
+                                                 "pdfjs":  "ok",
+                                                 "queue":  "inline_fallback",
+                                                 "opencv":  "ok",
+                                                 "paddleocr":  "missing",
+                                                 "ocr_python":  "ok",
+                                                 "locate_mode":  "hybrid",
+                                                 "locate_status":  "GROUNDING_UNAVAILABLE",
+                                                 "locate_anything":  "unavailable",
+                                                 "locate_model_loaded":  false,
+                                                 "locate_execution_mode":  "future_cloud",
+                                                 "locate_anything_provider":  {
+                                                                                  "status":  "GROUNDING_UNAVAILABLE",
+                                                                                  "required":  true,
+                                                                                  "available":  false,
+                                                                                  "model_loaded":  false,
+                                                                                  "execution_mode":  "future_cloud",
+                                                                                  "inference_ready":  false
+                                                                              }
+                                             },
+                           "pipeline_stage":  "COMPLETE",
+                           "headers_missing":  [
+                                                   "X10",
+                                                   "X10-1",
+                                                   "X11",
+                                                   "X13",
+                                                   "X14",
+                                                   "X15",
+                                                   "X5",
+                                                   "X67",
+                                                   "X7",
+                                                   "X8",
+                                                   "X87L-1",
+                                                   "X87L-2",
+                                                   "X9",
+                                                   "X9-1",
+                                                   "XA1",
+                                                   "XA3",
+                                                   "XA4",
+                                                   "XE1",
+                                                   "XE2"
+                                               ],
+                           "device_ambiguous":  0,
+                           "pipeline_version":  "max-accuracy-evidence-fusion-v1",
+                           "device_candidates":  0,
+                           "device_unresolved":  105,
+                           "evidence_by_header":  {
+
+                                                  },
+                           "headers_unresolved":  [
+
+                                                  ],
+                           "pending_candidates":  [
+
+                                                  ],
+                           "headers_legend_only":  [
+
+                                                   ],
+                           "device_targets_found":  0,
+                           "grounding_unavailable":  false,
+                           "analyse_once_cache_key":  "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa|no-locate|tesseract|dpi400|max-accuracy-evidence-fusion-v1",
+                           "expected_tb_dictionary":  [
+                                                          {
+                                                              "raw_header":  "X10",
+                                                              "schedule_count":  14,
+                                                              "canonical_header":  "X10",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "11",
+                                                                                        "8",
+                                                                                        "1",
+                                                                                        "10",
+                                                                                        "9",
+                                                                                        "12",
+                                                                                        "21",
+                                                                                        "20"
+                                                                                    ],
+                                                              "source_usage_count":  1,
+                                                              "destination_usage_count":  19
+                                                          },
+                                                          {
+                                                              "raw_header":  "X10-1",
+                                                              "schedule_count":  2,
+                                                              "canonical_header":  "X10-1",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "4",
+                                                                                        "5"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  2
+                                                          },
+                                                          {
+                                                              "raw_header":  "X11",
+                                                              "schedule_count":  13,
+                                                              "canonical_header":  "X11",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "4",
+                                                                                        "5",
+                                                                                        "13",
+                                                                                        "14",
+                                                                                        "15",
+                                                                                        "16",
+                                                                                        "17",
+                                                                                        "18"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  15
+                                                          },
+                                                          {
+                                                              "raw_header":  "X13",
+                                                              "schedule_count":  14,
+                                                              "canonical_header":  "X13",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "13",
+                                                                                        "14",
+                                                                                        "9",
+                                                                                        "10",
+                                                                                        "16",
+                                                                                        "17",
+                                                                                        "18",
+                                                                                        "19"
+                                                                                    ],
+                                                              "source_usage_count":  1,
+                                                              "destination_usage_count":  15
+                                                          },
+                                                          {
+                                                              "raw_header":  "X14",
+                                                              "schedule_count":  49,
+                                                              "canonical_header":  "X14",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "17",
+                                                                                        "18",
+                                                                                        "19",
+                                                                                        "2",
+                                                                                        "1",
+                                                                                        "4",
+                                                                                        "7",
+                                                                                        "8"
+                                                                                    ],
+                                                              "source_usage_count":  7,
+                                                              "destination_usage_count":  47
+                                                          },
+                                                          {
+                                                              "raw_header":  "X15",
+                                                              "schedule_count":  44,
+                                                              "canonical_header":  "X15",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "37",
+                                                                                        "38",
+                                                                                        "39",
+                                                                                        "40",
+                                                                                        "41",
+                                                                                        "42",
+                                                                                        "43",
+                                                                                        "44"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  44
+                                                          },
+                                                          {
+                                                              "raw_header":  "X5",
+                                                              "schedule_count":  6,
+                                                              "canonical_header":  "X5",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "6",
+                                                                                        "5",
+                                                                                        "3",
+                                                                                        "4",
+                                                                                        "1",
+                                                                                        "2"
+                                                                                    ],
+                                                              "source_usage_count":  1,
+                                                              "destination_usage_count":  5
+                                                          },
+                                                          {
+                                                              "raw_header":  "X67",
+                                                              "schedule_count":  0,
+                                                              "canonical_header":  "X67",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  32
+                                                          },
+                                                          {
+                                                              "raw_header":  "X7",
+                                                              "schedule_count":  11,
+                                                              "canonical_header":  "X7",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "2",
+                                                                                        "1",
+                                                                                        "9",
+                                                                                        "5",
+                                                                                        "3",
+                                                                                        "11",
+                                                                                        "13",
+                                                                                        "12"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  13
+                                                          },
+                                                          {
+                                                              "raw_header":  "X8",
+                                                              "schedule_count":  11,
+                                                              "canonical_header":  "X8",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "2",
+                                                                                        "1",
+                                                                                        "9",
+                                                                                        "5",
+                                                                                        "3",
+                                                                                        "11",
+                                                                                        "13",
+                                                                                        "12"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  13
+                                                          },
+                                                          {
+                                                              "raw_header":  "X87L-1",
+                                                              "schedule_count":  21,
+                                                              "canonical_header":  "X87L-1",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "22",
+                                                                                        "24",
+                                                                                        "26",
+                                                                                        "28",
+                                                                                        "2",
+                                                                                        "4",
+                                                                                        "6",
+                                                                                        "8"
+                                                                                    ],
+                                                              "source_usage_count":  13,
+                                                              "destination_usage_count":  9
+                                                          },
+                                                          {
+                                                              "raw_header":  "X87L-2",
+                                                              "schedule_count":  19,
+                                                              "canonical_header":  "X87L-2",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "10",
+                                                                                        "8",
+                                                                                        "6",
+                                                                                        "2",
+                                                                                        "4",
+                                                                                        "12",
+                                                                                        "18"
+                                                                                    ],
+                                                              "source_usage_count":  12,
+                                                              "destination_usage_count":  12
+                                                          },
+                                                          {
+                                                              "raw_header":  "X9",
+                                                              "schedule_count":  8,
+                                                              "canonical_header":  "X9",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "10",
+                                                                                        "11",
+                                                                                        "12",
+                                                                                        "3",
+                                                                                        "9",
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  2,
+                                                              "destination_usage_count":  7
+                                                          },
+                                                          {
+                                                              "raw_header":  "X9-1",
+                                                              "schedule_count":  5,
+                                                              "canonical_header":  "X9-1",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "5",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  5
+                                                          },
+                                                          {
+                                                              "raw_header":  "XA1",
+                                                              "schedule_count":  4,
+                                                              "canonical_header":  "XA1",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  4
+                                                          },
+                                                          {
+                                                              "raw_header":  "XA3",
+                                                              "schedule_count":  8,
+                                                              "canonical_header":  "XA3",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "7",
+                                                                                        "8",
+                                                                                        "9",
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "4",
+                                                                                        "10"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  8
+                                                          },
+                                                          {
+                                                              "raw_header":  "XA4",
+                                                              "schedule_count":  4,
+                                                              "canonical_header":  "XA4",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  4
+                                                          },
+                                                          {
+                                                              "raw_header":  "XE1",
+                                                              "schedule_count":  4,
+                                                              "canonical_header":  "XE1",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  4
+                                                          },
+                                                          {
+                                                              "raw_header":  "XE2",
+                                                              "schedule_count":  4,
+                                                              "canonical_header":  "XE2",
+                                                              "equipment_context":  [
+
+                                                                                    ],
+                                                              "example_terminals":  [
+                                                                                        "1",
+                                                                                        "2",
+                                                                                        "3",
+                                                                                        "4"
+                                                                                    ],
+                                                              "source_usage_count":  0,
+                                                              "destination_usage_count":  4
+                                                          }
+                                                      ],
+                           "device_blocked_grounding":  0,
+                           "device_targets_requested":  105,
+                           "schedule_drawing_mismatch":  false,
+                           "device_locations_persisted":  0,
+                           "device_persistence_contract":  "service_with_repository_boundary",
+                           "device_locations_ready_for_persistence":  0,
+                           "real_postgresql_ga_device_locations_write_verified":  false
+                       },
+    "failure_reason":  "TECHNICAL_FAILURE: stage=ocr; retries=2; local_pdf_text_fallback|pdfjs_text_layout|no_pdf_text_glyphs",
+    "updated_at":  "2026-09-19T06:44:52.216Z",
+    "usable_tb_groups":  0
+}

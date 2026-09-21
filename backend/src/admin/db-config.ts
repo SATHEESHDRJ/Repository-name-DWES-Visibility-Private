@@ -35,6 +35,6 @@ export const DbConfigStore = {
   },
 
   maskUrl(url: string): string {
-    return url.replace(/:([^@:\/?#]+)@/, ':****@');
+    return url.replace(/:([^@:/?#]+)@/, ':****@');
   },
 };

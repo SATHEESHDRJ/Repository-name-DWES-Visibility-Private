@@ -4,6 +4,7 @@ import {
   DollarSign, Zap, AlertTriangle, ExternalLink, Lock,
 } from '../../../components/ui/icons';
 import { adminApi } from '../../../services/api';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 type DeploymentMode = 'intranet' | 'cloud';
 type CloudTier = 'standard' | 'performance' | 'enterprise';
@@ -114,7 +115,7 @@ export default function DeploymentModeTab() {
   const previewPricing = config?.pricing?.[previewTier];
 
   if (loading) {
-    return <div className="empty-state"><p className="empty-text">Loading deployment configuration...</p></div>;
+    return <DwesLoadingState label="Loading deployment configuration…" />;
   }
 
   return (
@@ -133,7 +134,7 @@ export default function DeploymentModeTab() {
           }`}>
             Active: {config?.mode === 'cloud' ? 'Cloud Hosting' : 'Local Intranet'}
           </div>
-          <div className="text-[12px] text-slate-600 mt-0.5 truncate select-none">
+          <div className="text-[12px] text-muted mt-0.5 truncate select-none">
             {config?.mode === 'cloud'
               ? (config.cloudAppUrl || 'Cloud URL not configured')
               : 'Devices on the same Wi-Fi / LAN access this PC via HTTPS'}
@@ -148,10 +149,10 @@ export default function DeploymentModeTab() {
       </div>
 
       {/* Mode selection */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <div className="text-[14px] font-bold text-slate-800 select-none">Deployment Mode</div>
-          <div className="text-[12px] text-slate-500 mt-0.5 select-none">
+          <div className="text-[14px] font-bold text-primary select-none">Deployment Mode</div>
+          <div className="text-[12px] text-muted mt-0.5 select-none">
             Switch between on-premises LAN access and cloud-hosted deployment.
           </div>
         </div>
@@ -163,23 +164,23 @@ export default function DeploymentModeTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'intranet'
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 selectedMode === 'intranet' ? 'bg-emerald-100' : 'bg-slate-100'
               }`}>
-                <HardDrive size={16} className={selectedMode === 'intranet' ? 'text-emerald-700' : 'text-slate-500'} />
+                <HardDrive size={16} className={selectedMode === 'intranet' ? 'text-emerald-700' : 'text-muted'} />
               </div>
               <span className={`text-[14px] font-bold select-none ${
-                selectedMode === 'intranet' ? 'text-emerald-800' : 'text-slate-700'
+                selectedMode === 'intranet' ? 'text-emerald-800' : 'text-secondary'
               }`}>Local Intranet</span>
               {selectedMode === 'intranet' && (
                 <span className="ml-auto text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full select-none">SELECTED</span>
               )}
             </div>
-            <div className="text-[12px] text-slate-500 select-none">
+            <div className="text-[12px] text-muted select-none">
               PCs, tablets, and phones on the same Wi-Fi reach this server. Best for shop-floor use with no cloud fees.
             </div>
             <div className="text-[11px] font-semibold text-emerald-700 mt-2 select-none">{fmtUsd(0)} infrastructure</div>
@@ -191,23 +192,23 @@ export default function DeploymentModeTab() {
             className={`flex-1 rounded-xl border-2 p-4 text-left transition-all ${
               selectedMode === 'cloud'
                 ? 'border-indigo-500 bg-indigo-50'
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                : 'border-slate-200 bg-[var(--t-surface-white)] hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 selectedMode === 'cloud' ? 'bg-indigo-100' : 'bg-slate-100'
               }`}>
-                <Globe size={16} className={selectedMode === 'cloud' ? 'text-indigo-700' : 'text-slate-500'} />
+                <Globe size={16} className={selectedMode === 'cloud' ? 'text-indigo-700' : 'text-muted'} />
               </div>
               <span className={`text-[14px] font-bold select-none ${
-                selectedMode === 'cloud' ? 'text-indigo-800' : 'text-slate-700'
+                selectedMode === 'cloud' ? 'text-indigo-800' : 'text-secondary'
               }`}>Cloud Hosting</span>
               {selectedMode === 'cloud' && (
                 <span className="ml-auto text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full select-none">SELECTED</span>
               )}
             </div>
-            <div className="text-[12px] text-slate-500 select-none">
+            <div className="text-[12px] text-muted select-none">
               Fast, secure, managed hosting with TLS, backups, and high availability — accessible from anywhere.
             </div>
             <div className="text-[11px] font-semibold text-indigo-700 mt-2 select-none">From {fmtUsd(149)}</div>
@@ -218,7 +219,7 @@ export default function DeploymentModeTab() {
         {selectedMode === 'cloud' && (
           <div className="px-5 pb-4 flex flex-col gap-4 border-t border-slate-100 pt-4">
             <div>
-              <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">Cloud App URL</label>
+              <label className="text-[12px] font-bold text-muted select-none block mb-1.5">Cloud App URL</label>
               <input
                 type="url"
                 value={cloudAppUrl}
@@ -230,7 +231,7 @@ export default function DeploymentModeTab() {
             </div>
             <div className="grid grid-cols-1 tablet-land:grid-cols-2 gap-3">
               <div>
-                <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">Service Tier</label>
+                <label className="text-[12px] font-bold text-muted select-none block mb-1.5">Service Tier</label>
                 <select
                   value={cloudTier}
                   onChange={e => setCloudTier(e.target.value as CloudTier)}
@@ -244,7 +245,7 @@ export default function DeploymentModeTab() {
                 </select>
               </div>
               <div>
-                <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">Region</label>
+                <label className="text-[12px] font-bold text-muted select-none block mb-1.5">Region</label>
                 <select
                   value={cloudRegion}
                   onChange={e => setCloudRegion(e.target.value)}
@@ -262,12 +263,12 @@ export default function DeploymentModeTab() {
         {/* Intranet URLs */}
         {selectedMode === 'intranet' && config?.intranet && (
           <div className="px-5 pb-4 border-t border-slate-100 pt-4">
-            <div className="text-[12px] font-bold text-slate-700 select-none mb-2 flex items-center gap-2">
+            <div className="text-[12px] font-bold text-secondary select-none mb-2 flex items-center gap-2">
               <Lock size={14} /> LAN Access URLs (HTTPS)
             </div>
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 flex flex-col gap-1.5">
-              <div className="text-[11px] font-mono text-slate-600">{config.intranet.localHttps}</div>
-              <div className="text-[11px] text-slate-500 select-none">
+              <div className="text-[11px] font-mono text-muted">{config.intranet.localHttps}</div>
+              <div className="text-[11px] text-muted select-none">
                 {config.intranet.localHttpRedirect} → auto-redirects to HTTPS
               </div>
               {config.intranet.lanUrls.map(u => (
@@ -284,7 +285,7 @@ export default function DeploymentModeTab() {
         )}
 
         <div className="px-5 pb-4">
-          <label className="text-[12px] font-bold text-slate-600 select-none block mb-1.5">Notes (optional)</label>
+          <label className="text-[12px] font-bold text-muted select-none block mb-1.5">Notes (optional)</label>
           <input
             type="text"
             value={notes}
@@ -309,12 +310,12 @@ export default function DeploymentModeTab() {
 
       {/* Pricing comparison */}
       {previewPricing && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-            <DollarSign size={18} className="text-slate-500 shrink-0" />
+            <DollarSign size={18} className="text-muted shrink-0" />
             <div>
-              <div className="text-[14px] font-bold text-slate-800 select-none">Cost & Service Comparison</div>
-              <div className="text-[12px] text-slate-500 select-none">Selected: {previewPricing.label}</div>
+              <div className="text-[14px] font-bold text-primary select-none">Cost & Service Comparison</div>
+              <div className="text-[12px] text-muted select-none">Selected: {previewPricing.label}</div>
             </div>
           </div>
 
@@ -330,18 +331,18 @@ export default function DeploymentModeTab() {
                     active ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-slate-50/50'
                   }`}
                 >
-                  <div className="text-[12px] font-bold text-slate-700 select-none">{p.label}</div>
-                  <div className={`text-[20px] font-bold mt-1 select-none ${active ? 'text-indigo-700' : 'text-slate-800'}`}>
+                  <div className="text-[12px] font-bold text-secondary select-none">{p.label}</div>
+                  <div className={`text-[20px] font-bold mt-1 select-none ${active ? 'text-indigo-700' : 'text-primary'}`}>
                     {fmtUsd(p.monthlyUsd)}
                   </div>
                   {p.setupUsd > 0 && (
-                    <div className="text-[10px] text-slate-500 select-none">+ ${p.setupUsd} setup</div>
+                    <div className="text-[10px] text-muted select-none">+ ${p.setupUsd} setup</div>
                   )}
-                  <div className="text-[11px] text-slate-500 mt-2 select-none">{p.summary}</div>
+                  <div className="text-[11px] text-muted mt-2 select-none">{p.summary}</div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-3 select-none">SLA</div>
-                  <div className="text-[11px] text-slate-600 select-none">{p.sla}</div>
+                  <div className="text-[11px] text-muted select-none">{p.sla}</div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 select-none">Latency</div>
-                  <div className="text-[11px] text-slate-600 select-none">{p.latency}</div>
+                  <div className="text-[11px] text-muted select-none">{p.latency}</div>
                 </div>
               );
             })}
@@ -349,12 +350,12 @@ export default function DeploymentModeTab() {
 
           {previewPricing.features && (
             <div className="px-5 pb-5">
-              <div className="text-[12px] font-bold text-slate-700 select-none mb-2 flex items-center gap-2">
+              <div className="text-[12px] font-bold text-secondary select-none mb-2 flex items-center gap-2">
                 <Shield size={14} /> Included with {previewPricing.label}
               </div>
               <ul className="grid grid-cols-1 tablet-land:grid-cols-2 gap-2">
                 {previewPricing.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-[12px] text-slate-600 select-none">
+                  <li key={f} className="flex items-start gap-2 text-[12px] text-muted select-none">
                     <CheckCircle size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     {f}
                   </li>

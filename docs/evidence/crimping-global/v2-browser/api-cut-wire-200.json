@@ -1,0 +1,75 @@
+{
+    "assignment_id":  66,
+    "cable_index":  200,
+    "changed":  true,
+    "crimping":  {
+                     "required":  true,
+                     "source":  {
+                                    "strippingStatus":  "NOT_STARTED",
+                                    "crimpingStatus":  "NOT_STARTED"
+                                },
+                     "destination":  {
+                                         "strippingStatus":  "NOT_STARTED",
+                                         "crimpingStatus":  "NOT_STARTED"
+                                     },
+                     "overall":  "NOT_STARTED",
+                     "revision":  2,
+                     "updatedAt":  "2026-09-18T12:58:25.756Z",
+                     "updatedBy":  42,
+                     "cut":  {
+                                 "status":  "COMPLETED",
+                                 "plannedLength":  "1.2",
+                                 "actualLength":  "1.2",
+                                 "by":  42,
+                                 "at":  "2026-09-18T12:58:25.756Z"
+                             }
+                 },
+    "wiring_locked":  true,
+    "wire":  {
+                 "cable_index":  200,
+                 "required":  true,
+                 "overall":  "NOT_STARTED",
+                 "wiring_locked":  true,
+                 "readyForWiring":  false,
+                 "openEnd":  null,
+                 "wiring_src":  false,
+                 "wiring_dst":  false,
+                 "legacyWiringCompleted":  false,
+                 "legacyCrimpWithoutStrip":  false,
+                 "legacyPartial":  false,
+                 "qaHold":  false,
+                 "cut":  {
+                             "status":  "COMPLETED",
+                             "plannedLength":  "1.2",
+                             "actualLength":  "1.2",
+                             "by":  42,
+                             "at":  "2026-09-18T12:58:25.756Z"
+                         },
+                 "wireStrip":  null,
+                 "wireCrimp":  null,
+                 "source":  {
+                                "strippingStatus":  "NOT_STARTED",
+                                "crimpingStatus":  "NOT_STARTED",
+                                "strippedBy":  null,
+                                "strippedAt":  null,
+                                "crimpedBy":  null,
+                                "crimpedAt":  null
+                            },
+                 "destination":  {
+                                     "strippingStatus":  "NOT_STARTED",
+                                     "crimpingStatus":  "NOT_STARTED",
+                                     "strippedBy":  null,
+                                     "strippedAt":  null,
+                                     "crimpedBy":  null,
+                                     "crimpedAt":  null
+                                 },
+                 "source_strip":  "NOT_STARTED",
+                 "source_crimp":  "NOT_STARTED",
+                 "destination_strip":  "NOT_STARTED",
+                 "destination_crimp":  "NOT_STARTED",
+                 "sourceBy":  null,
+                 "destinationBy":  null,
+                 "sourceAt":  null,
+                 "destinationAt":  null
+             }
+}

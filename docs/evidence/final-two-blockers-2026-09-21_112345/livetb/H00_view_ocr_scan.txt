@@ -1,0 +1,81 @@
+---
+pid: 11288
+cwd: "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES"
+command: "# OCR H00 pages looking for REAR / INTERNAL VIEW / arrangement (physical)\ndocker exec dwes_oci_restore_api_20260725_082028 python3 -c \"\nimport fitz,subprocess,tempfile,os,json,re\npdf='/app/uploads/backups/DRAWING_REPLACE_33kV_BUSBAR_PROTECTION_PANEL___H00_R_.pd_2026-07-21T12-35-32/drw_cced3212-3e5d-4512-a5e8-01c8951914dc_33kV BUSBAR PROTECTION PANEL (_H00+R).pdf'\ndoc=fitz.open(pdf)\nhits=[]\nfor pno in range(1, doc.page_count+1):\n page=doc[pno-1]\n pix=page.get_pixmap(dpi=100)\n td=tempfile.mkdtemp(); png=os.path.join(td,'p.png'); pix.save(png)\n r=subprocess.run(['tesseract',png,'stdout'],capture_output=True,text=True,timeout=90)\n text=(r.stdout or '').upper()\n keys=[k for k in ['INTERNAL VIEW','REAR VIEW','FRONT VIEW','PHYSICAL','DIN RAIL','TERMINAL BLOCK ARRANGEMENT','GENERAL ARRANGEMENT'] if k in text]\n if keys or 'REAR' in text or 'INTERNAL' in text:\n  hits.append({'page':pno,'keys':keys,'has_rear':'REAR' in text,'has_internal':'INTERNAL' in text,'preview':(r.stdout or '')[:350].replace(chr(10),' | ')})\nprint(json.dumps({'pages':doc.page_count,'view_hits':hits},indent=2)[:20000])\ndoc.close()\n\" 2>&1 | Select-Object -Last 120"
+title: "Scan all H00 pages for physical view OCR"
+status: succeeded
+started_at: 2026-09-21T07:27:07.250Z
+running_for_ms: 95095    
+---
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+{
+  "pages": 37,
+  "view_hits": [
+    {
+      "page": 2,
+      "keys": [
+        "INTERNAL VIEW",
+        "FRONT VIEW"
+      ],
+      "has_rear": false,
+      "has_internal": true,
+      "preview": "SHEET NO. DISCRIPTION REVISION SHEET NO. DISCRIPTION REVISION | 000 COVER SHEET 02 023 86B1,86B2 RELAY CKT. & DC SUPVN. RELAY CKT. 02 | 001 INDEX SHEET 02 024 IN/OUT RELAY CKT & IND. CKT. 02 | 002 ELECTRICAL SYMBOLS 02 025 CONTACT DISTRIBUTION TO H01 INCOMER PROTN. PANEL 02 | 003 ELECTRICAL SYMBOLS: 02 026 CONTACT DISTRIBUTION TO H03 O/G-1 PROTN. PANEL 02 | "
+    },
+    {
+      "page": 6,
+      "keys": [],
+      "has_rear": false,
+      "has_internal": true,
+      "preview": "BREAKER FAILURE PROTECTION | 50BF | +R2 +R2 | 006-A1 020-01 | o06-a1 \u201cR2 \u201c2. 920-D1 | \u2018CODE IDENTIFICATION FUNCTION NAME | OF FUNCTION NAME OF RELAY SHOWN BELOW | INTERNAL CROSS REFERENCE | \"006-A1\" REFERS TO NAME | OF SHEET 006 AND GRID | REFERENCE At IN WHICH TO PANEL CODE | FIND CONTINUITY OF THE SHEET REFERENGE FOR THE LOCATION REFERENCE | INTERRUPTED CONNECTION \u2018SCHE"
+    },
+    {
+      "page": 7,
+      "keys": [
+        "REAR VIEW",
+        "FRONT VIEW"
+      ],
+      "has_rear": true,
+      "has_internal": false,
+      "preview": "se\" concern HN | sronrsocane sve | witibnb Loca ne | acute | 0 | ahs app | oy | | 1 | BASE FRAME 10 t BASE FRAME 40. | a <a L ow | | L eo a L eo a | FRONT VIEW REAR VIEW SIDE VIEW NOTE: ALL DIMENSIONS ARE IN mm | \u2018PROJECT NAME: \u2018PURPOSE OF ISSUE: \u2018CLIENT: PMC: CONSULTANT (s): CONTRACTOR (s): | STAGE: | DESIGN CONSULTANT / CONTRACTOR: NEOM. | ENOWA MOBILE FOR APPROVAL HITACH"
+    },
+    {
+      "page": 8,
+      "keys": [],
+      "has_rear": true,
+      "has_internal": false,
+      "preview": "PANEL SPECIFICATION |  | REAR COVER 1 DIMENSIONS 2200 (INCLUDING BASE FRAME OF 7mm + ANTI VIBRATION PAD OF 10mm) X 800 X 800 me (HX W XD). | 2 FRNBH POWDER COAT ExTzROR ALI POWDER COMTED | ENON ALS | \\ + vane vanes son eres | \u2018OTE BACKGROUNO | q \u2014 4 PANEL ENCLOSURE FRAME & GLAND PLATES - 3m, FRONT DOOR & 19\u00b0 SWING FRAME - 2.5mm | Sra Se | 5 cance or orEcTION =: | & we"
+    },
+    {
+      "page": 9,
+      "keys": [],
+      "has_rear": true,
+      "has_internal": false,
+      "preview": "FERRULING SYSTEM | FERRULES ORIENTATION : | 86.4 WIRE 86.2 8 | 3 FERRULES | 1 3 -antane2 coz) 1 3 : | wire | RED FERRULES (WITH WHITE TEXT) | 87L 86.1:3/86.2:1 86.1:3/86.2:1 | Q01(MCB) WIRE | 1 2 se co z0rne} \u201cove TL MBO M2 M1 5 | 3 TERMINAL | WHITE FERRULES (WITH BLACK TEXT) 8 | RED FERRULES (WITH WHITE TEXT) MAIN LABEL 3 | 26.1 FRONT OF CUBICLE | , , 62, MATERIAL -TRAFOLITE"
+    },
+    {
+      "page": 10,
+      "keys": [
+        "INTERNAL VIEW",
+        "FRONT VIEW"
+      ],
+      "has_rear": false,
+      "has_internal": true,
+      "preview": "FRONT VIEW INTERNAL VIEW | 1 1 =HOOR 33-13.8kV BUSBAR PROTECTION PANEL | DEVICE | \u00b0 vo w 1U SPACER 41U SPACER REF DESCRIPTION TYPE | : ur 740-4 DC SUPPLY SUPERVISION RELAY FOR IN/OUT RELAY RUT 4+F-EMP TR OP | 2 \u00ab sosonoen wssncen TRI DGSUPPLY SUPERVISION RELAY FORB7B8 RUT 4F-EMP TROP | 3 7AIND DC SUPPLY SUPERVISION RELAY FOR IND. CKT. RUT 4+F-EMP TR OP | tous 87"
+    },
+    {
+      "page": 11,
+      "keys": [
+        "INTERNAL VIEW"
+      ],
+      "has_rear": true,
+      "has_internal": true,
+      "preview": "LEFT SIDE REAR PLAN RIGHT SIDE | a 7 x | - = =HOO+R 33-13.8kV BUSBAR PROTECTION PANEL | 2 DEVICE | we rob wonton a DESCRIPTION TYPE | *s QFAC1 AC MCB (PANEL ILLUMINATION & HEATER CKT) iC6ON + iOF | po QFAC2 AC MCB (POWER SOCKET) iC6ON + iOF | {QDC1 DC MCB (INCOMING Dc SUPPLY-1) C\u00e90H-D\u00a2 + OF | g ie apc2 DC MCB (INCOMING DC SUPPLY-2) C60H-DC + OF | i Qpc3 DC MCB (87"
+    }
+  ]
+}
+
+---
+exit_code: 0
+elapsed_ms: 95095
+ended_at: 2026-09-21T07:28:42.345Z
+---

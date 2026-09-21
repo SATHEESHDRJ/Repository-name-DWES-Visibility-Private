@@ -37,7 +37,7 @@ function panelMeta(value: string | null | undefined, fallback?: string): string 
 function panelVoltage(panel: FramePanel, projectCode: string): string {
   return panelMeta(
     panel.voltage_level as string | null | undefined,
-    projectCode.split('_')[0]?.replace(/_/g, ' ') || undefined,
+    projectCode.match(/^([0-9.]+KV)(?:_|$)/i)?.[1],
   );
 }
 
@@ -165,6 +165,8 @@ export default function DeletePanelConfirmModal({
             'Panel / frame row for this panel',
             `Cable progress (${precheck.cable_count})`,
             `Technician assignments (${precheck.assignment_count})`,
+            'QA/QC inspections, Mid Change / pause / S/D audit history for this panel',
+            'Digital Twin / GA mappings, route mappings, and background jobs for this panel',
           ],
         },
         {
@@ -176,7 +178,7 @@ export default function DeletePanelConfirmModal({
             precheck.original_filename
               ? `Wiring schedule: ${precheck.original_filename}`
               : 'Digital wiring frame / schedule files for this panel',
-            'Generated panel artifacts tied to this frame (if present)',
+            'Approved drawings, 3D models, GA face images, and CAD derivatives for this panel',
           ],
         },
         {
@@ -188,6 +190,7 @@ export default function DeletePanelConfirmModal({
           items: [
             `Parent project ${project.code}`,
             'Other panels, drawings, and assignments in the project',
+            'Users, roles, authentication, and system settings',
           ],
         },
       ] : []}
@@ -195,7 +198,7 @@ export default function DeletePanelConfirmModal({
         {
           id: 'everything_related',
           label: 'Delete panel + related data',
-          description: 'Removes this panel, its wiring schedule/frame files, cables, and assignments. Other panels stay.',
+          description: 'Removes this panel, its wiring/twin files, cables, QA records, and assignments. Sibling panels and the parent project stay.',
         },
       ]}
       defaultScope="everything_related"
@@ -205,7 +208,7 @@ export default function DeletePanelConfirmModal({
       } : null}
       warningText="The panel wiring schedule, frame files, and related assignments for this panel will be removed. This cannot be undone within DWES except via backup restore."
       confirmCheckboxLabel={`I understand that panel “${panelLabel}” and its related wiring data will be permanently deleted.`}
-      confirmButtonLabel="Delete Panel"
+      confirmButtonLabel="Delete Permanently"
       loading={loadingPrecheck || !precheck}
       deleting={deleting}
       error={error}

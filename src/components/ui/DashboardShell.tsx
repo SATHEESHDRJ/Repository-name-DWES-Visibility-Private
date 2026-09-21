@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import AppShell from '../layout/AppShell';
 import PageContainer, { type PageContainerVariant } from '../layout/PageContainer';
 import KpiCard from './KpiCard';
+import PageHeading from './PageHeading';
 import SectionHeader from './SectionHeader';
 import type { NavItem } from '../layout/Topbar';
 
@@ -19,6 +20,7 @@ interface DashboardShellProps {
   badgeVariant?: 'blue' | 'gray' | 'amber' | 'red';
   kpis?: DashboardKpi[];
   tabs?: NavItem[];
+  sideNavItems?: NavItem[];
   activeTab?: string;
   onTabChange?: (key: string) => void;
   /** Centered readable column (default) or full-width for data-dense dashboards */
@@ -31,7 +33,7 @@ interface DashboardShellProps {
   heroAside?: ReactNode;
   /** When true, shows a live-status dot beside the hero title (technician wiring in progress). */
   heroLive?: boolean;
-  /** Extra class on dashboard-hero for role-specific typography. */
+  /** Optional extra class on the shared dashboard header (prefer shared styles). */
   heroClassName?: string;
   children: ReactNode;
 }
@@ -60,6 +62,7 @@ export default function DashboardShell({
   heroAside,
   heroLive = false,
   heroClassName = '',
+  sideNavItems = [],
   children,
 }: DashboardShellProps) {
   const kpiGridClass = kpis.length >= 6 ? 'kpi-grid-6'
@@ -68,26 +71,18 @@ export default function DashboardShell({
   const activeNav = tabs.find(t => t.key === activeTab);
 
   return (
-    <AppShell navItems={tabs} activeTab={activeTab} onTabChange={onTabChange} noPadding>
-      <PageContainer variant={widthVariant} className="dashboard-shell-root flex flex-col gap-4">
+    <AppShell navItems={tabs} activeTab={activeTab} onTabChange={onTabChange} noPadding sideNavItems={sideNavItems}>
+      <PageContainer variant={widthVariant} className="dashboard-shell-root flex flex-col gap-3">
         {!hideHero && (
-        <section className={`dashboard-hero${heroClassName ? ` ${heroClassName}` : ''}`}>
-          <div className="dashboard-hero-copy">
-            <div className="dashboard-hero-title-row">
-              <div className="dashboard-hero-title-wrap">
-                {heroLive && (
-                  <span className="tech-live-dot dashboard-hero-live-dot" data-live="true" aria-hidden="true" />
-                )}
-                <h1 className="section-title dashboard-hero-title">{title}</h1>
-              </div>
-              {badge ? (
-                <span className={`badge badge-${badgeVariant} dashboard-hero-badge`}>{badge}</span>
-              ) : null}
-            </div>
-            {subtitle ? <p className="section-sub dashboard-hero-subtitle">{subtitle}</p> : null}
-          </div>
-          {heroAside ? <div className="dashboard-hero-aside">{heroAside}</div> : null}
-        </section>
+          <PageHeading
+            title={title}
+            subtitle={subtitle}
+            badge={badge}
+            badgeVariant={badgeVariant}
+            aside={heroAside}
+            live={heroLive}
+            className={heroClassName}
+          />
         )}
 
         {kpis.length > 0 && (
@@ -104,20 +99,29 @@ export default function DashboardShell({
           </div>
         )}
 
-        <div className="dashboard-content flex flex-col gap-4 pb-6">
-          {!hideTabSectionHeader && activeNav && (
-            <SectionHeader
-              title={activeNav.label}
-              description={activeNav.description ?? subtitle}
-              icon={activeNav.icon}
-            />
-          )}
+        <div className="dashboard-content flex flex-col gap-3 pb-4">
           {activeTab != null ? (
-            <div key={activeTab} className="nav-tab-panel flex flex-col gap-4">
+            <div key={hideTabSectionHeader ? undefined : activeTab} className="nav-tab-panel flex flex-col gap-3">
+              {!hideTabSectionHeader && activeNav && (
+                <SectionHeader
+                  title={activeNav.label}
+                  description={activeNav.description ?? subtitle}
+                  icon={activeNav.icon}
+                />
+              )}
               {children}
             </div>
           ) : (
-            children
+            <>
+              {!hideTabSectionHeader && activeNav && (
+                <SectionHeader
+                  title={activeNav.label}
+                  description={activeNav.description ?? subtitle}
+                  icon={activeNav.icon}
+                />
+              )}
+              {children}
+            </>
           )}
         </div>
       </PageContainer>

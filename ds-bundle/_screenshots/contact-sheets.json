@@ -1,0 +1,43 @@
+[
+  {
+    "sheet": 1,
+    "components": [
+      "Badge",
+      "Button",
+      "ButtonHintPopover",
+      "CableSchematic",
+      "Card",
+      "ComboField",
+      "CompanyLogo",
+      "CompletionReport",
+      "DashboardShell",
+      "DataTable",
+      "EmptyState",
+      "FormError",
+      "FormGroup",
+      "FormInput",
+      "FormLabel",
+      "FormSelect"
+    ]
+  },
+  {
+    "sheet": 2,
+    "components": [
+      "FormTextarea",
+      "Icon",
+      "Input",
+      "InputField",
+      "KpiCard",
+      "Modal",
+      "OverflowActionMenu",
+      "ProjectInfoCard",
+      "ReportPreviewModal",
+      "SectionHeader",
+      "SelectField",
+      "Skeleton",
+      "ThemeToggle",
+      "Toast",
+      "VerificationModal"
+    ]
+  }
+]

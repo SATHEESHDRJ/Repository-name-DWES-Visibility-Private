@@ -1,6 +1,7 @@
 /*
-  DWES Theme System — Arctic Enterprise (single palette)
-  Applied app-wide via <html data-theme="arctic">.
+  DWES Theme System
+  Applied app-wide via <html data-theme="default|arctic|harbor|graphite|ingenious">.
+  default = modern high-contrast DWES baseline. Optional: arctic, harbor, graphite, ingenious.
   Palettes: src/styles/theme-palettes.css
   Component rules below use [data-theme] + var(--t-*).
 */
@@ -37,8 +38,28 @@
   --color-surface:               var(--t-card);
   --color-surface-variant:       var(--t-surface-3);
   --color-surface-container:     var(--t-table-head);
-  --color-on-surface:            var(--t-text);
-  --color-on-surface-variant:    var(--t-muted);
+  --color-on-surface:            var(--t-text-primary);
+  --color-on-surface-variant:    var(--t-text-muted);
+
+  /* Semantic Typography Hierarchy */
+  --color-text-primary:          var(--t-text-primary, #020617);
+  --color-text-secondary:        var(--t-text-secondary, #0F172A);
+  --color-text-muted:            var(--t-text-muted, #1E293B);
+  --color-text-tertiary:         var(--t-text-faint, #334155);
+  --color-text-heading:          var(--t-text-primary, #020617);
+  --color-text-label:            var(--t-text-secondary, #1E293B);
+  --color-text-value:            var(--t-text-primary, #020617);
+  /* Content-area density — cards inherit soft brand wash (shell unchanged) */
+  --color-card-accent-grad:      var(--t-card-accent-grad, none);
+  --color-text-disabled:         var(--t-text-faint);
+  --color-text-error:            var(--t-danger);
+  --color-text-warning:          var(--t-warning);
+  --color-text-success:          var(--t-success);
+  --color-text-link:             var(--t-accent-strong);
+  --color-text-table-head:       var(--t-text-secondary);
+  --color-text-sidebar-label:    var(--t-text-secondary);
+  --color-text-modal-title:      var(--t-text-primary);
+
   --color-outline:               var(--t-border-strong);
   --color-outline-variant:       var(--t-border);
 
@@ -99,6 +120,26 @@
   --role-supervisor-bg:   var(--t-accent-soft);    --role-supervisor-text: var(--t-accent-bright);
   --role-qaqc-bg:         var(--t-warning-soft);   --role-qaqc-text:       var(--t-warning);
   --role-tech-bg:         var(--t-success-soft);   --role-tech-text:       var(--t-success);
+
+  /* Topbar — uniform dark navy chrome matching DWES logo section */
+  --t-header-bar: #091A40;
+  --t-header-bar-border: color-mix(
+    in srgb,
+    var(--t-login-hero-glow, rgba(255, 255, 255, 0.12)) 32%,
+    var(--t-header-border)
+  );
+  --t-header-bar-shadow:
+    inset 0 1px 0 color-mix(
+      in srgb,
+      var(--t-login-hero-grid, rgba(255, 255, 255, 0.06)) 70%,
+      rgba(255, 255, 255, 0.10)
+    ),
+    var(--t-header-shadow);
+  --t-header-bar-accent: color-mix(
+    in srgb,
+    var(--t-login-hero-glow) 48%,
+    var(--t-header-icon-accent)
+  );
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -113,14 +154,39 @@
 [data-theme] .page-body,
 [data-theme] .page-body-sm { background: transparent; }
 
-/* Topbar — distinct header band (L1) */
+/* Topbar — login-hero-aligned darker chrome (structure unchanged) */
 [data-theme] .topbar {
-  background: var(--t-header);
-  border-bottom: 1px solid var(--t-header-border);
-  box-shadow: var(--t-header-shadow);
+  background: var(--topbar-brand-bg, linear-gradient(90deg, #141E42 0%, #1B2958 46%, #248892 100%));
+  border-bottom: 1px solid var(--topbar-brand-border, rgba(109, 207, 212, 0.28));
+  box-shadow: 0 2px 12px rgba(27, 41, 88, 0.26);
 }
-[data-theme] .topbar-logo-name { color: var(--t-on-header); }
-[data-theme] .topbar-logo-sub  { color: var(--t-on-header-muted); }
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  [data-theme] .topbar {
+    background: var(--topbar-brand-bg, linear-gradient(90deg, #141E42 0%, #1B2958 46%, #248892 100%));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+[data-theme] .topbar::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 30%, transparent) 18%,
+    var(--topbar-brand-accent, #6DCFD4) 50%,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 30%, transparent) 82%,
+    transparent 100%
+  );
+}
+[data-theme] .topbar::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--topbar-brand-accent, #6DCFD4) 42%, transparent),
+    transparent
+  );
+}
+[data-theme] .topbar-logo-name { color: var(--topbar-brand-on, #FFFFFF); }
+[data-theme] .topbar-logo-sub  { color: color-mix(in srgb, var(--topbar-brand-muted, #CCE8EC) 88%, transparent); }
 [data-theme] .topbar-nav-btn {
   color: var(--t-header-icon);
   border-color: transparent;
@@ -133,46 +199,111 @@
 }
 [data-theme] .topbar-nav-btn.active {
   color: var(--t-header-icon-accent);
-  border-color: var(--t-accent-border);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent) 40%, transparent);
   background: var(--t-header-nav-active-bg);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--t-accent-bright) 14%, transparent),
-    0 4px 14px color-mix(in srgb, var(--t-accent) 22%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--t-header-icon-accent) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 [data-theme] .topbar-nav-btn.active svg { color: var(--t-header-icon-accent); }
 [data-theme] .topbar-clock { color: var(--t-on-header-muted); }
-/* §1.1 Deployment status pill — white backdrop, readable text */
+/* Deployment status pill — frosted light chip on dark chrome */
 [data-theme] .topbar-env.topbar-float-pill {
-  background: #FFFFFF;
+  background: rgba(248, 250, 252, 0.94);
   border-color: rgba(15, 23, 42, 0.14);
   color: #1D4ED8;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 [data-theme] .topbar-env--cloud.topbar-float-pill {
-  background: #FFFFFF;
-  border-color: rgba(124, 58, 237, 0.24);
-  color: #6D28D9;
+  background: rgba(248, 250, 252, 0.94);
+  border-color: rgba(37, 99, 235, 0.28);
+  color: #1D4ED8;
 }
 
-[data-theme] .dash-sidebar-link.is-active {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--t-accent) 14%, transparent) 0%,
-    color-mix(in srgb, #6366F1 10%, transparent) 100%
-  );
-  color: var(--t-accent-strong, #1D4ED8);
-  font-weight: 700;
-}
-[data-theme] .dash-sidebar-link.is-active::after {
-  background: linear-gradient(180deg, var(--t-accent-bright, #3B82F6), var(--t-accent-strong, #1D4ED8));
-  width: 4px;
-}
+/* ── Liquid glass chrome (sidebar + topbar family) ─────────────────────────
+   Deep slate/navy frost with cyan/brand-blue accents. Navigation structure
+   and routes unchanged — visual refresh only. No purple AI active pills. */
 [data-theme] .dash-sidebar {
-  border-color: var(--t-card-border, #CBD5E1);
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.06);
+  isolation: isolate;
+  background: var(--t-sidebar-bg-solid, #0C224F);
+  border-color: var(--t-sidebar-border, rgba(255, 255, 255, 0.24));
+  box-shadow:
+    1px 0 0 color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 18%, transparent),
+    6px 0 24px rgba(2, 6, 23, 0.22);
+  color: var(--t-sidebar-text, #F8FAFC);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  [data-theme] .dash-sidebar {
+    background: var(--t-sidebar-bg);
+    backdrop-filter: blur(var(--t-sidebar-blur, 0px)) saturate(var(--t-sidebar-saturate, 100%));
+    -webkit-backdrop-filter: blur(var(--t-sidebar-blur, 0px)) saturate(var(--t-sidebar-saturate, 100%));
+  }
+}
+[data-theme] .dash-sidebar .dash-sidebar-head {
+  position: relative;
+  z-index: 1;
+  border-color: var(--t-sidebar-border, rgba(255, 255, 255, 0.24));
+  background: transparent;
+}
+[data-theme] .dash-sidebar .dash-sidebar-title {
+  color: var(--t-sidebar-muted, #BFDBFE);
+}
+[data-theme] .dash-sidebar .dash-sidebar-toggle {
+  color: var(--t-sidebar-muted, #64748B);
+  border-color: transparent;
+  background: transparent;
+}
+[data-theme] .dash-sidebar .dash-sidebar-toggle:hover {
+  color: var(--t-sidebar-strong, #0F172A);
+  border-color: color-mix(in srgb, var(--t-sidebar-border, #CBD5E1) 65%, transparent);
+  background: var(--t-sidebar-hover, rgba(37, 99, 235, 0.08));
+}
+[data-theme] .dash-sidebar .dash-sidebar-pin.is-pinned {
+  color: var(--t-accent-strong, var(--t-header-icon-accent, #1B7080));
+  border-color: color-mix(in srgb, var(--t-accent, #2E9DAA) 38%, transparent);
+  background: var(--t-accent-soft, rgba(46, 157, 170, 0.12));
+}
+[data-theme] .dash-sidebar .dash-sidebar-nav {
+  position: relative;
+  z-index: 1;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:not(.is-active) {
+  color: var(--t-sidebar-text, #F8FAFC);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:not(.is-active) .dash-sidebar-icon {
+  color: var(--t-sidebar-muted, #BFDBFE);
+  opacity: 1;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:hover:not(.is-active) {
+  color: var(--t-sidebar-strong, #F8FAFC);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 28%, transparent);
+  background: var(--t-sidebar-hover, rgba(255, 255, 255, 0.16));
+  box-shadow: none;
+}
+[data-theme] .dash-sidebar .dash-sidebar-link:hover:not(.is-active) .dash-sidebar-icon {
+  color: var(--t-header-icon-accent, #93C5FD);
+}
+[data-theme] .dash-sidebar-link.is-active {
+  background: var(--t-sidebar-active-bg);
+  color: var(--t-sidebar-active-text, #FFFFFF);
+  font-weight: 750;
+  border-color: var(--t-sidebar-active-border);
+  box-shadow: var(--t-sidebar-active-shadow);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active::after {
+  background: var(--t-header-icon-accent, #93C5FD);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 55%, transparent);
+}
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon svg,
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon .ui-icon,
+[data-theme] .dash-sidebar .dash-sidebar-link.is-active .dash-sidebar-icon .material-symbols-rounded {
+  color: var(--t-sidebar-active-text, #FFFFFF);
+  filter: none;
 }
 [data-theme] .dash-module,
+[data-theme] .dashboard-page-header,
 [data-theme] .dashboard-hero,
+[data-theme] .page-heading,
 [data-theme] .app-section-header,
 [data-theme] .kpi-card,
 [data-theme] .kpi-top-card,
@@ -182,31 +313,47 @@
   border-color: var(--glass-border-strong, var(--t-card-border, #CBD5E1));
   box-shadow: var(--glass-shadow, var(--t-card-shadow));
 }
-[data-theme] .app-section-title { color: var(--t-text); }
+[data-theme] .app-section-title { color: var(--dwes-header-title-blue, #1B2958); }
 [data-theme] .app-section-desc { color: var(--t-muted); }
+[data-theme] .dashboard-page-header__title,
+[data-theme] .dashboard-hero-title,
+[data-theme] .page-heading-title,
+[data-theme] .workspace-section-heading-title,
+[data-theme] .workspace-section-heading-icon,
+[data-theme] .card-title,
+[data-theme] .pj-project-info-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+}
+[data-theme] .dashboard-page-header__subtitle,
+[data-theme] .dashboard-hero-subtitle,
+[data-theme] .page-heading-subtitle {
+  color: #475569;
+}
 [data-theme] .topbar-actions-capsule.topbar-float--dark,
 [data-theme] .topbar-clock-card.topbar-float--dark,
+[data-theme] .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile),
 [data-theme] .topbar-nav-card.topbar-float--dark {
   background: var(--t-header-float-bg);
   border: 1px solid var(--t-header-float-border);
   box-shadow: var(--t-header-float-shadow);
 }
+/* Hover changes only the surface — no translateY lift, so the controls stay
+   seated in the header band instead of reading as floating cards. */
 [data-theme] .topbar-actions-capsule.topbar-float--dark:hover,
 [data-theme] .topbar-clock-card.topbar-float--dark:hover,
+[data-theme] .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile):hover,
 [data-theme] .topbar-nav-card.topbar-float--dark:hover {
-  transform: translateY(-2px);
   box-shadow: var(--t-header-float-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-float-border) 70%, white);
 }
 [data-theme] .topbar-project-pill.topbar-float--light,
-[data-theme] .topbar-user-card.topbar-float--light {
+[data-theme] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile) {
   background: var(--t-header-user-bg);
   border: 1px solid var(--t-header-user-border);
   box-shadow: var(--t-header-user-shadow);
 }
 [data-theme] .topbar-project-pill.topbar-float--light:hover,
-[data-theme] .topbar-user-card.topbar-float--light:hover {
-  transform: translateY(-2px);
+[data-theme] .topbar-user-card.topbar-float--light:not(.topbar-user-card--profile):hover {
   box-shadow: var(--t-header-user-hover-shadow);
   border-color: color-mix(in srgb, var(--t-header-user-border) 70%, #0F172A);
 }
@@ -260,24 +407,230 @@
   box-shadow: 0 4px 14px rgba(220, 38, 38, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-/* §1.5 Fingerprint / biometric — modern gradient treatment */
+/* §1.5 Fingerprint / biometric — theme accent glass (matches chrome) */
 [data-theme] .topbar-capsule-btn--bio {
   color: #FFFFFF;
-  background: linear-gradient(180deg, #22D3EE 0%, #6366F1 100%);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  background: var(--t-primary-grad, linear-gradient(180deg, #3B82F6 0%, #2563EB 100%));
+  border-color: color-mix(in srgb, var(--t-accent-strong, #1D4ED8) 55%, transparent);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 [data-theme] .topbar-capsule-btn--bio:hover:not(:disabled) {
   color: #FFFFFF;
-  background: linear-gradient(180deg, #38BDF8 0%, #4F46E5 100%);
-  border-color: rgba(79, 70, 229, 0.62);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, var(--t-header-icon-accent, #93C5FD) 0%, var(--t-accent-strong, #1D4ED8) 100%);
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 55%, transparent);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 [data-theme] .topbar-capsule-btn--bio.is-active,
 [data-theme] .topbar-capsule-btn--bio[aria-expanded="true"] {
   color: #FFFFFF;
-  background: linear-gradient(180deg, #38BDF8 0%, #4338CA 100%);
-  border-color: rgba(67, 56, 202, 0.72);
+  background: linear-gradient(180deg, var(--t-accent-bright, #3B82F6) 0%, var(--t-accent-strong, #1D4ED8) 100%);
+  border-color: color-mix(in srgb, var(--t-accent-strong, #1D4ED8) 65%, transparent);
+}
+/* Capability-driven states: never present as an enabled fingerprint control
+   unless the platform authenticator is actually available. */
+[data-theme] .topbar-capsule-btn--bio { position: relative; }
+[data-theme] .topbar-capsule-btn--bio:disabled,
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="unsupported"],
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="loading"] {
+  color: #F1F5F9;
+  background: linear-gradient(180deg, #94A3B8 0%, #64748B 100%);
+  border-color: rgba(100, 116, 139, 0.5);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+[data-theme] .topbar-capsule-btn--bio[data-bio-state="error"] {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #FB7185 0%, #E11D48 100%);
+  border-color: rgba(225, 29, 72, 0.5);
+  box-shadow: none;
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+/* Small "enrolled on this device" indicator dot. */
+[data-theme] .topbar-capsule-btn--bio.is-enrolled::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22C55E;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+/* ── §1.6 Right-side header controls — premium 3D refresh ─────────────────
+   Scope: user card, actions capsule (theme / fingerprint / logout), clock only.
+   Everything is nested under .topbar-controls so the logo, brand card, nav
+   tabs, and left side of the bar keep their existing styling untouched.
+   Equal 44px control heights; compact buttons pin explicit min-height/width
+   to defeat the global button touch-target floor (which inflated the 30px
+   capsule buttons to 48px and made them bleed out of the 38px capsule). */
+[data-theme] .topbar-controls .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile),
+[data-theme] .topbar-controls .topbar-actions-capsule.topbar-float--dark,
+[data-theme] .topbar-controls .topbar-clock-card.topbar-float--dark {
+  height: 44px !important;
+  min-height: 44px;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(2, 6, 23, 0.12) 100%),
+    var(--t-header-float-bg);
+  border: 1px solid var(--t-header-float-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.2),
+    0 3px 8px rgba(2, 6, 23, 0.24);
+}
+[data-theme] .topbar-controls .topbar-user-card.topbar-float--dark:not(.topbar-user-card--profile):hover,
+[data-theme] .topbar-controls .topbar-actions-capsule.topbar-float--dark:hover,
+[data-theme] .topbar-controls .topbar-clock-card.topbar-float--dark:hover {
+  border-color: color-mix(in srgb, var(--t-header-float-border) 55%, white);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.2),
+    0 5px 14px rgba(2, 6, 23, 0.32);
+}
+[data-theme] .topbar-controls .topbar-user-card:not(.topbar-user-card--profile) .topbar-user-name {
+  text-shadow: 0 1px 1px rgba(2, 6, 23, 0.35);
+}
+[data-theme] .topbar-controls .topbar-user-card.topbar-user-card--profile {
+  height: 44px !important;
+  min-height: 44px;
+  border-radius: 12px !important;
+}
+[data-theme] .topbar-controls .topbar-actions-capsule {
+  padding: 3px 4px;
+  gap: 5px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+  width: 36px;
+  min-width: 36px !important;
+  border-radius: 10px;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform 0.15s ease;
+}
+[data-theme] .topbar-controls .topbar-capsule-slot {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.97);
+  box-shadow: inset 0 2px 4px rgba(2, 6, 23, 0.28);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 80%, white);
+  outline-offset: 1px;
+}
+/* Monochrome Material glyphs on the three action tiles — subtle depth. */
+[data-theme] .topbar-controls .topbar-capsule-btn .ui-icon {
+  text-shadow: 0 1px 1px rgba(2, 6, 23, 0.3);
+}
+/* Theme switch — raised glass tile so it reads as a control, not a bare icon */
+[data-theme] .topbar-controls .topbar-capsule-btn--theme {
+  color: #F1F5F9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.07) 48%, rgba(2, 6, 23, 0.18) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.24),
+    0 2px 5px rgba(2, 6, 23, 0.26);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--theme:hover:not(:disabled) {
+  color: #FFFFFF;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.12) 48%, rgba(2, 6, 23, 0.16) 100%);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.22),
+    0 4px 12px rgba(2, 6, 23, 0.34);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--theme.is-active,
+[data-theme] .topbar-controls .topbar-capsule-btn--theme[aria-expanded="true"] {
+  color: var(--t-header-icon-accent, #93C5FD);
+  background: var(--t-header-nav-active-bg, rgba(147, 197, 253, 0.22));
+  border-color: color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 45%, transparent);
+  box-shadow: inset 0 2px 3px rgba(2, 6, 23, 0.22);
+}
+/* Fingerprint / passkey — saturated blue tile with crisp bevel. The §1.5
+   disabled / unsupported / error variants stay authoritative via :not(). */
+[data-theme] .topbar-controls .topbar-capsule-btn--bio {
+  border-radius: 10px;
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio:not(:disabled):not([data-bio-state]) {
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #60A5FA 0%, #3B82F6 46%, #1D4ED8 100%);
+  border: 1px solid rgba(29, 78, 216, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.28),
+    0 2px 6px rgba(37, 99, 235, 0.35);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio:hover:not(:disabled):not([data-bio-state]) {
+  background: linear-gradient(180deg, #7CB4FC 0%, #4F8DF8 46%, #2563EB 100%);
+  border-color: rgba(59, 130, 246, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.26),
+    0 4px 12px rgba(59, 130, 246, 0.48);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--bio.is-active:not(:disabled),
+[data-theme] .topbar-controls .topbar-capsule-btn--bio[aria-expanded="true"]:not(:disabled) {
+  background: linear-gradient(180deg, #3B82F6 0%, #2563EB 50%, #1E40AF 100%);
+  border-color: rgba(30, 64, 175, 0.75);
+  box-shadow: inset 0 2px 4px rgba(2, 6, 23, 0.3);
+}
+/* Logout — unmistakable red gradient with the same bevel language */
+[data-theme] .topbar-controls .topbar-capsule-btn--logout {
+  width: auto;
+  min-width: 0 !important;
+  padding-inline: 12px;
+  gap: 7px;
+  border-radius: 10px;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 46%, #B91C1C 100%);
+  border: 1px solid rgba(153, 27, 27, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.28),
+    0 2px 6px rgba(220, 38, 38, 0.35);
+}
+[data-theme] .topbar-controls .topbar-capsule-btn--logout:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FCA5A5 0%, #F05252 46%, #C81E1E 100%);
+  border-color: rgba(220, 38, 38, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(2, 6, 23, 0.26),
+    0 4px 12px rgba(220, 38, 38, 0.5);
+}
+[data-theme] .topbar-controls .topbar-logout-label {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+/* Clock — stronger digits, quiet date line */
+[data-theme] .topbar-controls .topbar-clock-digits {
+  font-size: 16px;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.35);
+}
+[data-theme] .topbar-controls .topbar-clock-digits span.topbar-clock-secs {
+  font-size: 14px;
+}
+[data-theme] .topbar-controls .topbar-clock-date {
+  font-size: 10px;
+  font-weight: 700;
 }
 
 /* Fingerprint panel dropdown (elevated) */
@@ -295,27 +648,28 @@
 /* Cards */
 [data-theme] .card { background: var(--t-card); border: 1px solid var(--t-card-border); box-shadow: var(--t-card-shadow); }
 [data-theme] .card-header { border-color: var(--t-border); }
-[data-theme] .card-title { color: var(--t-text); }
+/* .card-title color set by shared header tokens — see dwes header block below */
 
-/* KPI cards — Material 3 solid surfaces (no glass / gradients) */
+/* KPI / status cards — soft brand wash on white (dense industrial glass) */
 [data-theme] .kpi-card {
-  background: var(--t-card);
-  border: none;
-  box-shadow:
-    0 1px 2px 0 rgba(0, 0, 0, 0.30),
-    0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  background:
+    var(--t-card-accent-grad, linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, transparent 70%)),
+    var(--t-card);
+  border: 1px solid var(--t-card-border, #E2E8F0);
+  box-shadow: var(--t-card-shadow, 0 1px 2px rgba(15, 23, 42, 0.05));
+  padding: 0.65rem 0.75rem;
 }
 [data-theme] .kpi-card:active {
-  box-shadow:
-    0 1px 2px 0 rgba(0, 0, 0, 0.25),
-    0 2px 6px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--t-shadow-2, 0 4px 12px rgba(15, 23, 42, 0.08));
 }
 [data-theme] .kpi-card[data-variant="default"],
 [data-theme] .kpi-card[data-variant="blue"],
 [data-theme] .kpi-card[data-variant="green"],
 [data-theme] .kpi-card[data-variant="amber"],
 [data-theme] .kpi-card[data-variant="red"] {
-  background: var(--t-card);
+  background:
+    var(--t-card-accent-grad, linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, transparent 70%)),
+    var(--t-card);
 }
 [data-theme] .kpi-label { color: var(--t-muted); }
 [data-theme] .kpi-value       { color: var(--t-text); }
@@ -397,7 +751,7 @@
 
 /* Tabs — base tokens; motion in tabs.css */
 [data-theme] {
-  --nav-tab-indicator: linear-gradient(90deg, var(--t-accent-bright, #2563EB) 0%, var(--t-accent, #4F46E5) 52%, var(--t-accent-strong, #7C3AED) 100%);
+  --nav-tab-indicator: linear-gradient(90deg, var(--t-header-icon-accent, #93C5FD) 0%, var(--t-accent-bright, #3B82F6) 52%, var(--t-accent, #2563EB) 100%);
   --nav-tab-indicator-soft: linear-gradient(
     135deg,
     var(--t-accent-soft, color-mix(in srgb, #1A56DB 14%, transparent)) 0%,
@@ -605,7 +959,7 @@
   line-height: 1.25;
   letter-spacing: -0.015em;
 }
-[data-theme] :is(.project-gate-subtitle, .dwf-modal-sub, .dwf-modal-kicker, .dwf-workspace-kicker, .dwf-workspace-sub) {
+[data-theme] :is(.project-gate-subtitle, .dwf-modal-sub, .dwf-modal-kicker, .dwf-workspace-sub) {
   font-weight: 500;
   line-height: 1.5;
 }
@@ -657,8 +1011,7 @@
 [data-theme] .frame-pill-verify:hover:not(:disabled) { filter: brightness(1.10); }
 [data-theme] .frame-pill-drawing { background: var(--t-surface-2); color: var(--t-text); }
 [data-theme] .frame-pill-drawing:hover:not(:disabled) { background: var(--t-surface-3); }
-[data-theme] .frame-pill-report  { background: var(--t-success); color: var(--t-on-accent); }
-[data-theme] .frame-pill-report:hover:not(:disabled) { filter: brightness(1.10); }
+/* .frame-pill-report — shared report-action styling in design-system.css */
 [data-theme] .frame-pill-assign  { background: var(--t-primary-grad); color: var(--t-on-accent); }
 [data-theme] .frame-pill-assign:hover:not(:disabled) { filter: brightness(1.10); }
 [data-theme] .frame-pill-unassign { background: var(--t-warning-soft); color: var(--t-warning); border: 1px solid rgba(251,191,36,0.38); }
@@ -791,7 +1144,7 @@
 [data-theme] .mapping-col-header-row th.col-mapped { background: var(--t-accent-soft); color: var(--t-accent-bright); border-bottom-color: var(--t-accent-bright); }
 [data-theme] .mapping-col-header-row th.col-required { background: var(--t-success-soft); color: var(--t-success); border-bottom-color: var(--t-success); }
 [data-theme] .mapping-field-header-row th { background: var(--t-surface-2); border-bottom-color: var(--t-border-strong); border-right-color: var(--t-border); }
-[data-theme] .mapping-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.03); }
+[data-theme] .mapping-table tbody tr:nth-child(even) { background: rgba(var(--t-surface-white-rgb, 255, 255, 255), 0.03); }
 [data-theme] .mapping-table tbody tr:hover { background: var(--t-accent-soft); }
 [data-theme] .mapping-select { background: var(--t-surface-3); color: var(--t-text); border-color: var(--t-border-strong); }
 [data-theme] .mapping-select:focus { border-color: var(--t-accent); box-shadow: 0 0 0 2px var(--t-accent-soft); }
@@ -800,8 +1153,41 @@
 [data-theme] .mapping-td { color: var(--t-text); border-color: var(--t-border); }
 
 /* Misc — titles, empty states, callouts, banners, flash */
-[data-theme] .section-title { color: var(--t-text); }
-[data-theme] .section-sub { color: var(--t-muted); }
+[data-theme] .section-title:not(.dashboard-page-header__title):not(.dashboard-hero-title):not(.page-heading-title) {
+  color: var(--t-text);
+}
+[data-theme] .section-sub:not(.dashboard-page-header__subtitle):not(.dashboard-hero-subtitle):not(.page-heading-subtitle) {
+  color: var(--t-muted);
+}
+[data-theme] .dashboard-page-header__subtitle,
+[data-theme] .dashboard-hero-subtitle,
+[data-theme] .page-heading-subtitle {
+  color: #475569;
+}
+
+/* Reinforce shared header title colors after generic .section-title / .card-title rules */
+[data-theme] .dashboard-page-header__title,
+[data-theme] .dashboard-hero-title,
+[data-theme] .page-heading-title,
+[data-theme] .dashboard-page-header .section-title,
+[data-theme] .dashboard-hero .section-title,
+[data-theme] .page-heading .section-title,
+[data-theme] .workspace-section-heading-title,
+[data-theme] .workspace-section-heading-icon,
+[data-theme] .app-section-title,
+[data-theme] .card-title,
+[data-theme] .pj-project-info-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+  font-weight: 700;
+}
+[data-theme] [data-ui-polish="saas"] .dashboard-page-header__title,
+[data-theme] [data-ui-polish="saas"] .dashboard-page-header .section-title,
+[data-theme] [data-ui-polish="saas"] .workspace-section-heading-title,
+[data-theme] [data-ui-polish="saas"] .card-title,
+[data-theme] [data-ui-polish="saas"] .app-section-title {
+  color: var(--dwes-header-title-blue, #1B2958);
+  font-weight: 700;
+}
 [data-theme] .empty-icon { color: var(--t-faint); }
 [data-theme] .empty-text { color: var(--t-muted); }
 [data-theme] .paused-banner { background: var(--t-warning-soft); border-left-color: var(--t-warning); color: var(--t-warning); }
@@ -958,71 +1344,284 @@
   box-shadow: var(--t-shadow-1);
 }
 
-/* Project information action group — card-scoped; beats global button:disabled */
+/* ── Project information action group ────────────────────────────────────
+   Add Panel / Digital Wiring View / Drawing View / Edit ▾ are one action
+   bar: identical height, radius, padding, type, icon and shadow, in a
+   single muted slate. Only state (enabled / unavailable / busy) differs.
+   Card-scoped and unlayered so it owns these buttons outright — no theme
+   or polish rule can drift their size or colour apart again. */
+[data-theme] .pj-project-info-card-actions {
+  --pj-action-h: 36px;
+  --pj-action-px: 12px;
+  --pj-action-radius: 10px;
+  --pj-action-fs: 12px;
+  --pj-action-gap: 6px;
+  --pj-action-icon: 18px;
+  --pj-action-bg: #1E293B;
+  --pj-action-bg-hover: #334155;
+  --pj-action-bg-active: #0F172A;
+  --pj-action-border: #1E293B;
+  --pj-action-border-hover: #475569;
+  --pj-action-shadow: 0 1px 2px rgba(15, 23, 42, 0.16);
+  --pj-action-shadow-hover: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action {
+  flex: 0 0 auto;
+  width: auto;
+  height: var(--pj-action-h);
+  min-height: var(--pj-action-h);
+  max-height: var(--pj-action-h);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--pj-action-px);
+  gap: var(--pj-action-gap);
+  border: 1px solid transparent;
+  border-radius: var(--pj-action-radius);
+  font-size: var(--pj-action-fs);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  filter: none;
+  transition:
+    background-color 0.18s var(--btn-ease, ease),
+    border-color 0.18s var(--btn-ease, ease),
+    box-shadow 0.18s var(--btn-ease, ease),
+    transform 0.12s var(--btn-ease, ease);
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action svg {
+  width: var(--pj-action-icon);
+  height: var(--pj-action-icon);
+  flex-shrink: 0;
+}
+
+/* Edit sits in a menu wrapper — keep it the same width as its siblings */
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action-menu .pj-info-action {
+  width: 100%;
+  min-width: 0;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  margin-right: -2px;
+  opacity: 0.75;
+  transition: transform 0.18s ease;
+}
+[data-theme] .pj-project-info-card-actions .pj-info-action .pj-info-action-caret.is-open {
+  transform: rotate(180deg);
+}
+
+/* Enabled — one muted slate for all four */
 [data-theme] .pj-project-info-card-actions .pj-info-action:not(:disabled) {
+  background: var(--pj-action-bg);
+  background-image: none;
+  color: #FFFFFF;
+  border-color: var(--pj-action-border);
+  box-shadow: var(--pj-action-shadow);
   opacity: 1;
   cursor: pointer;
   pointer-events: auto;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:not(:disabled) {
-  background: var(--t-btn-secondary-bg);
-  color: var(--t-text);
-  border-color: var(--t-btn-secondary-border);
-  box-shadow: var(--t-shadow-1);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:hover:not(:disabled) {
-  background: var(--t-surface-3);
-  box-shadow: var(--t-shadow-2);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:not(:disabled) {
-  background: linear-gradient(180deg, #0F766E 0%, #0D9488 55%, #0F766E 100%);
-  color: #FFFFFF;
-  border-color: #115E59;
-  box-shadow: var(--t-shadow-1);
+[data-theme] .pj-project-info-card-actions .pj-info-action:hover:not(:disabled) {
+  background: var(--pj-action-bg-hover);
+  border-color: var(--pj-action-border-hover);
+  box-shadow: var(--pj-action-shadow-hover);
   filter: none;
+  transform: none;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: var(--t-shadow-2);
+[data-theme] .pj-project-info-card-actions .pj-info-action:active:not(:disabled) {
+  background: var(--pj-action-bg-active);
+  box-shadow: var(--pj-action-shadow);
+  transform: scale(0.98);
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:not(:disabled) {
-  background: linear-gradient(180deg, #4338CA 0%, #4F46E5 55%, #4338CA 100%);
-  color: #FFFFFF;
-  border-color: #3730A3;
-  box-shadow: var(--t-shadow-1);
-  filter: none;
+[data-theme] .pj-project-info-card-actions .pj-info-action:focus-visible {
+  outline: 2px solid var(--t-primary, #2563EB);
+  outline-offset: 2px;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: var(--t-shadow-2);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:not(:disabled) {
-  background: var(--t-btn-secondary-bg);
-  color: var(--t-text);
-  border-color: var(--t-btn-secondary-border);
-  box-shadow: var(--t-shadow-1);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:hover:not(:disabled) {
-  background: var(--t-danger-soft);
-  color: var(--t-danger);
-  border-color: rgba(251, 113, 133, 0.38);
-  box-shadow: var(--t-shadow-1);
-}
-[data-theme] .pj-project-info-card-actions .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
-[data-theme] .pj-project-info-card-actions .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+
+/* Unavailable (no drawing / no wiring schedule / no panel selected) — flat muted */
+[data-theme] .pj-project-info-card-actions .pj-info-action:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
   background: var(--t-surface-2, #E2E8F0);
+  background-image: none;
   color: var(--t-muted, #64748B);
   border-color: var(--t-outline, #CBD5E1);
   opacity: 0.72;
   cursor: not-allowed;
   box-shadow: none;
   filter: none;
+  transform: none;
 }
-[data-theme] .pj-project-info-card-actions .pj-info-action--secondary:disabled:not(.btn--loading),
-[data-theme] .pj-project-info-card-actions .pj-info-action--danger:disabled:not(.btn--loading) {
-  opacity: 0.55;
+
+/* Busy — keep the slate fill, just dim it (spinner inherits currentColor) */
+[data-theme] .pj-project-info-card-actions .pj-info-action.btn--loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+  filter: none;
+}
+
+/* Tablet portrait / narrow — wrap naturally; no flex-grow stretch */
+@media (max-width: 1023px) {
+  [data-theme] .pj-project-info-card-actions {
+    --pj-action-h: 44px;
+  }
+}
+
+/* ── Edit ▾ popover (Project information) ────────────────────────────────
+   Opaque light surface — .pj-toolbar-dropdown is in the app-wide "liquid
+   glass" list, which made this menu 72%-transparent so the card text read
+   through it. This block is unlayered and compound-scoped, so it wins over
+   that glass rule without disturbing any other dropdown.
+   Only destructive actions (Remove panel, Delete project) carry red. */
+[data-theme] .pj-toolbar-dropdown.pj-edit-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  z-index: 60;
+  margin-top: 8px;
+  width: max-content;
+  min-width: 268px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 6px;
+  background: var(--t-elev, var(--t-surface-white, #FFFFFF));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--t-border, #E2E8F0);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 32px rgba(15, 23, 42, 0.14);
+  animation: pj-edit-menu-in 0.14s var(--btn-ease, ease-out);
+}
+@keyframes pj-edit-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Section headings — "Project" / "Panel". Every heading after the first
+   carries the group divider, so sections separate without extra markup. */
+[data-theme] .pj-edit-menu .pj-edit-menu-label {
+  display: block;
+  padding: 8px 10px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--t-faint, #94A3B8);
+}
+[data-theme] .pj-edit-menu .pj-edit-menu-label:not(:first-child) {
+  margin: 6px -6px 0;
+  padding: 12px 16px 6px;
+  border-top: 1px solid var(--t-border, #EEF2F7);
+}
+
+/* Items — one row height, one icon size, one hover shape */
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  /* Honour the app-wide touch floor (index.css: 44px, 48px ≥600px) rather
+     than fight it — rows stay uniform and tablet-tappable. */
+  min-height: 44px;
+  height: auto;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--t-text-secondary, #1E293B);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--t-muted, #64748B);
+  transition: color 0.15s ease;
+}
+  .pj-edit-menu-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--t-surface-2, #F1F5F9);
+    color: var(--t-text-muted, #475569);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .pj-edit-menu-ico svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pj-edit-menu-ico--danger {
+    background: var(--t-danger-soft, #FEF2F2);
+    color: var(--t-danger, #DC2626);
+  }
+  [data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico {
+    background: var(--t-surface-2, #E2E8F0);
+    color: var(--t-text-secondary, #334155);
+  }
+  [data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) .pj-edit-menu-ico--danger {
+    background: var(--t-danger-soft, #FEE2E2);
+    color: #B91C1C;
+  }
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) {
+  background: var(--t-surface-3, #F1F5F9);
+  color: var(--t-text-primary, #0F172A);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:hover:not(:disabled) svg {
+  color: var(--t-text-secondary, #334155);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:focus-visible {
+  outline: 2px solid var(--t-primary, #2563EB);
+  outline-offset: -2px;
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
-  pointer-events: auto;
+  background: transparent;
+}
+
+/* Destructive only */
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger,
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger svg {
+  color: var(--t-danger, #DC2626);
+}
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger:hover:not(:disabled),
+[data-theme] .pj-edit-menu .pj-toolbar-dropdown-item--danger:hover:not(:disabled) svg {
+  background: var(--t-danger-soft, #FEF2F2);
+  color: #B91C1C;
+}
+
+/* Divider before the permanent-delete action */
+[data-theme] .pj-edit-menu .pj-edit-menu-divider {
+  height: 1px;
+  margin: 6px -6px;
+  border: 0;
+  background: var(--t-border, #EEF2F7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme] .pj-toolbar-dropdown.pj-edit-menu { animation: none; }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -1456,12 +2055,13 @@
   box-shadow: var(--t-shadow-2);
 }
 
-/* Compact dashboard buttons — page body + modals (topbar / tab nav excluded) */
+/* Compact dashboard buttons — page body + modals (topbar / tab nav excluded).
+   .pj-info-action is deliberately absent: the Project information action bar
+   sizes itself (see PART 5) so all four actions stay identical. */
 [data-theme] [data-ui-polish="saas"] .page-body :is(
   .btn-primary, .btn-primary-lg, .btn-secondary, .btn-ghost, .btn-sm,
   .btn-success, .btn-warning, .btn-danger,
   .pj-btn-primary, .pj-btn-secondary, .pj-btn-danger-ghost,
-  .pj-info-action,
   .frame-pill-btn,
   .tc-cta-btn, .tc-cta-neutral,
   .dr-btn-refresh, .dr-export-btn
@@ -1585,14 +2185,14 @@
   border: 1px solid var(--t-border);
 }
 [data-theme] [data-ui-polish="saas"] .modal-header {
-  padding: var(--pad-head-y) var(--pad-head-x);
+  padding: var(--modal-header-y, 14px) var(--modal-pad-x, 20px);
 }
 [data-theme] [data-ui-polish="saas"] .modal-body {
-  padding: var(--pad-card);
-  gap: var(--space-4);
+  padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px);
+  gap: var(--modal-content-gap, 12px);
 }
 [data-theme] [data-ui-polish="saas"] .modal-footer {
-  padding: var(--space-4) var(--pad-card);
+  padding: var(--modal-footer-y, 14px) var(--modal-pad-x, 20px);
 }
 [data-theme] [data-ui-polish="saas"] .modal-title {
   font-size: var(--fs-section);
@@ -1766,9 +2366,9 @@
   border: 1px solid var(--color-outline-variant);
   box-shadow: var(--sx-3);
 }
-[data-theme] [data-ui-polish="saas"] .modal-header { padding: var(--pad-head-y) var(--pad-head-x); }
-[data-theme] [data-ui-polish="saas"] .modal-body   { padding: var(--pad-card); }
-[data-theme] [data-ui-polish="saas"] .modal-footer { padding: var(--space-4) var(--pad-card); }
+[data-theme] [data-ui-polish="saas"] .modal-header { padding: var(--modal-header-y, 14px) var(--modal-pad-x, 20px); }
+[data-theme] [data-ui-polish="saas"] .modal-body   { padding: var(--modal-body-y, 16px) var(--modal-pad-x, 20px); }
+[data-theme] [data-ui-polish="saas"] .modal-footer { padding: var(--modal-footer-y, 14px) var(--modal-pad-x, 20px); }
 [data-theme] [data-ui-polish="saas"] .modal-title  { font-size: var(--fs-section); font-weight: var(--fw-title); letter-spacing: var(--ls-tight); }
 
 /* Supervisor project/frame surfaces when on light (admin preview parity) */
@@ -1797,13 +2397,43 @@
    Semantic danger (red) and status colors stay meaningful — NOT recolored to indigo.
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* Light-theme legibility tweaks (mid-tone + arctic) */
+[data-theme="ingenious"] {
+  --t-faint: #475569;
+  --status-pending-text: #334155;
+  --status-pending-bg: #E2E8F0;
+  /* Logo-aligned primary scale for buttons, badges, dashboard titles */
+  --color-primary-50:  #E8F6F8;
+  --color-primary-100: #CCE8EC;
+  --color-primary-200: #99D1D9;
+  --color-primary-300: #6DCFD4;
+  --color-primary-400: #5BBFCC;
+  --color-primary-500: #2E9DAA;
+  --color-primary-600: #248892;
+  --color-primary-700: #1B2958;
+  --color-primary-800: #141E42;
+  --color-primary-900: #0D1224;
+}
+
+/* Ingenious — retain the shared light workspace card-header treatment. */
+[data-theme="ingenious"] .workspace-section-heading {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+[data-theme="ingenious"] .workspace-section-heading--secondary {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+/* Light-theme legibility tweaks */
 [data-theme="steel"],
 [data-theme="dusty"],
-[data-theme="arctic"] {
-  --t-faint: #64748B;
-  --status-pending-text: #64748B;
-  --status-pending-bg: #F1F5F9;
+[data-theme="default"],
+[data-theme="arctic"],
+[data-theme="harbor"],
+[data-theme="graphite"] {
+  --t-faint: #475569;
+  --status-pending-text: #334155;
+  --status-pending-bg: #E2E8F0;
 }
 
 [data-theme] {
@@ -1984,7 +2614,7 @@
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(56, 189, 248, 0.16) 0%, rgba(56, 189, 248, 0) 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--t-header-icon-accent, #93C5FD) 22%, transparent) 0%, transparent 58%),
     var(--t-header-float-bg);
 }
 [data-theme] .topbar-clock-card::after {
@@ -1992,7 +2622,7 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.85), transparent);
+  background: linear-gradient(90deg, transparent, var(--t-header-icon-accent, #93C5FD), transparent);
 }
 [data-theme] .topbar-clock-live {
   width: 8px;
@@ -2021,7 +2651,7 @@
   50.01%, 100%  { opacity: 0.3; }
 }
 [data-theme] .topbar-clock-secs {
-  color: #38BDF8;
+  color: var(--t-header-icon-accent, #93C5FD);
   font-size: 0.78em;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -2030,6 +2660,28 @@
 @media (prefers-reduced-motion: reduce) {
   [data-theme] .topbar-clock-live,
   [data-theme] .topbar-clock-sep { animation: none; }
+}
+
+[data-theme] .login-support-note {
+  background: var(--t-surface-subtle, #F8FAFC);
+  border-color: var(--t-border, rgba(15, 23, 42, 0.1));
+  color: var(--t-text-muted, #475569);
+}
+[data-theme] .login-support-note strong { color: var(--t-text, #0F172A); }
+[data-theme] .login-clock-widget {
+  border-color: var(--t-border-strong, rgba(15, 23, 42, 0.14));
+  background: linear-gradient(140deg, rgba(var(--t-surface-white-rgb), 0.9), rgba(var(--t-surface-white-rgb), 0.72));
+}
+[data-theme] .login-clock-time { color: var(--t-text, #0f172a); }
+[data-theme] .login-clock-date { color: var(--t-muted, #475569); }
+[data-theme] .login-install-btn {
+  background: var(--t-primary-grad);
+  color: var(--t-on-accent);
+}
+[data-theme] .login-install-hint {
+  background: var(--t-surface-white, #fff);
+  border-color: var(--t-border);
+  color: var(--t-text-muted);
 }
 
 /* ── Login page (outside AppShell; left brand panel keeps design-system navy gradient) ── */
@@ -2067,11 +2719,14 @@
 }
 [data-theme] .login-card-intro .login-heading { color: var(--t-text); }
 [data-theme] .login-card-intro .login-subtext { color: var(--t-muted); }
-[data-theme] .login-brand-title { color: #FFFFFF; }
+[data-theme] .login-brand-title {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
 [data-theme] .login-brand-tagline { color: rgba(248,250,252,0.85); }
 [data-theme] .login-brand-accent { color: rgba(248,250,252,0.72); }
 [data-theme] .login-feature-icon {
-  background: rgba(255,255,255,0.12);
+  background: rgba(var(--t-surface-white-rgb, 255, 255, 255), 0.12);
   color: var(--t-on-accent);
 }
 [data-theme] .login-feature-text { color: rgba(248,250,252,0.88); }
@@ -2097,7 +2752,8 @@
 }
 @media (min-width: 1024px) {
   [data-theme] [data-ui-polish="saas"] .login-panel-left {
-    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
+    /* Flat divider only — no elevated panel cast shadow */
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
   }
 }
 

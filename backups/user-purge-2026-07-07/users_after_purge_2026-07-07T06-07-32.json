@@ -1,0 +1,258 @@
+{
+  "exported_at": "2026-07-07T06:07:32.780Z",
+  "count": 35,
+  "by_role": {
+    "ops_director": 2,
+    "prod_supervisor": 1,
+    "qaqc_engineer": 2,
+    "system_admin": 1,
+    "wiring_technician": 29
+  },
+  "users": [
+    {
+      "id": 18,
+      "username": "director1",
+      "role": "ops_director",
+      "full_name": "director1",
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "username": "ops_director1",
+      "role": "ops_director",
+      "full_name": "Operations Director",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "username": "supervisor1",
+      "role": "prod_supervisor",
+      "full_name": "Production Supervisor",
+      "is_active": true
+    },
+    {
+      "id": 38,
+      "username": "qa1",
+      "role": "qaqc_engineer",
+      "full_name": "QA Engineer One",
+      "is_active": true
+    },
+    {
+      "id": 39,
+      "username": "qa2",
+      "role": "qaqc_engineer",
+      "full_name": "QA Engineer Two",
+      "is_active": true
+    },
+    {
+      "id": 1,
+      "username": "sysadmin",
+      "role": "system_admin",
+      "full_name": "System Administrator",
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "username": "tech01",
+      "role": "wiring_technician",
+      "full_name": "ROBIN",
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "username": "tech02",
+      "role": "wiring_technician",
+      "full_name": "GANESH",
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "username": "tech03",
+      "role": "wiring_technician",
+      "full_name": "RAMESH",
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "username": "tech04",
+      "role": "wiring_technician",
+      "full_name": "VIJAY",
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "username": "tech05",
+      "role": "wiring_technician",
+      "full_name": "RAJ",
+      "is_active": true
+    },
+    {
+      "id": 40,
+      "username": "tech1",
+      "role": "wiring_technician",
+      "full_name": "Viju Vijayan",
+      "is_active": true
+    },
+    {
+      "id": 49,
+      "username": "tech10",
+      "role": "wiring_technician",
+      "full_name": "Sarath Gopalan",
+      "is_active": true
+    },
+    {
+      "id": 50,
+      "username": "tech11",
+      "role": "wiring_technician",
+      "full_name": "Arun Krishnan Radhakrishnan",
+      "is_active": true
+    },
+    {
+      "id": 51,
+      "username": "tech12",
+      "role": "wiring_technician",
+      "full_name": "Ayenew Mamo Ejugu",
+      "is_active": true
+    },
+    {
+      "id": 52,
+      "username": "tech13",
+      "role": "wiring_technician",
+      "full_name": "Belal Hossain Mozahara Ali",
+      "is_active": true
+    },
+    {
+      "id": 53,
+      "username": "tech14",
+      "role": "wiring_technician",
+      "full_name": "Bikila Mitiku Gizaw",
+      "is_active": true
+    },
+    {
+      "id": 54,
+      "username": "tech15",
+      "role": "wiring_technician",
+      "full_name": "Bona Misgana Ayana",
+      "is_active": true
+    },
+    {
+      "id": 55,
+      "username": "tech16",
+      "role": "wiring_technician",
+      "full_name": "Jenefer Flores Dalinggay",
+      "is_active": true
+    },
+    {
+      "id": 56,
+      "username": "tech17",
+      "role": "wiring_technician",
+      "full_name": "Jinesh Mohanadas Vijayakumari",
+      "is_active": true
+    },
+    {
+      "id": 57,
+      "username": "tech18",
+      "role": "wiring_technician",
+      "full_name": "Md Danish Mustafa",
+      "is_active": true
+    },
+    {
+      "id": 58,
+      "username": "tech19",
+      "role": "wiring_technician",
+      "full_name": "Nithin Vivekanandan",
+      "is_active": true
+    },
+    {
+      "id": 41,
+      "username": "tech2",
+      "role": "wiring_technician",
+      "full_name": "Vineesh Mon Vijayan",
+      "is_active": true
+    },
+    {
+      "id": 59,
+      "username": "tech20",
+      "role": "wiring_technician",
+      "full_name": "Prathap Arumugam",
+      "is_active": true
+    },
+    {
+      "id": 60,
+      "username": "tech21",
+      "role": "wiring_technician",
+      "full_name": "Ajay Viswas",
+      "is_active": true
+    },
+    {
+      "id": 61,
+      "username": "tech22",
+      "role": "wiring_technician",
+      "full_name": "Ajith Sudharsanan",
+      "is_active": true
+    },
+    {
+      "id": 62,
+      "username": "tech23",
+      "role": "wiring_technician",
+      "full_name": "Alban Chella Swamy",
+      "is_active": true
+    },
+    {
+      "id": 63,
+      "username": "tech24",
+      "role": "wiring_technician",
+      "full_name": "Anish Sasikumar",
+      "is_active": true
+    },
+    {
+      "id": 42,
+      "username": "tech3",
+      "role": "wiring_technician",
+      "full_name": "Yidnekachew Mamo",
+      "is_active": true
+    },
+    {
+      "id": 43,
+      "username": "tech4",
+      "role": "wiring_technician",
+      "full_name": "Subin Raj Sathyaraj",
+      "is_active": true
+    },
+    {
+      "id": 44,
+      "username": "tech5",
+      "role": "wiring_technician",
+      "full_name": "Subin Rajendran",
+      "is_active": true
+    },
+    {
+      "id": 45,
+      "username": "tech6",
+      "role": "wiring_technician",
+      "full_name": "Sathiskumar Muthuswamy",
+      "is_active": true
+    },
+    {
+      "id": 46,
+      "username": "tech7",
+      "role": "wiring_technician",
+      "full_name": "Shifa Munir Hussain",
+      "is_active": true
+    },
+    {
+      "id": 47,
+      "username": "tech8",
+      "role": "wiring_technician",
+      "full_name": "Robin Gnanadhas",
+      "is_active": true
+    },
+    {
+      "id": 48,
+      "username": "tech9",
+      "role": "wiring_technician",
+      "full_name": "Sadaiyandi Muniyasamy",
+      "is_active": true
+    }
+  ]
+}

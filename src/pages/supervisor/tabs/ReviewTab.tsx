@@ -7,9 +7,10 @@ import Modal from '../../../components/Modal';
 
 import ReportPreviewModal from '../../../components/ui/ReportPreviewModal';
 
-import { FileText, CheckSquare, TriangleAlert } from '../../../components/ui/icons';
+import { FileText, CheckSquare, TriangleAlert, ClipboardCheck, Check } from '../../../components/ui/icons';
 
 import PendingApprovalsSection from './PendingApprovalsSection';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 
 
@@ -84,9 +85,9 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
 
       <div className="border-t border-slate-200 pt-6 mb-4">
 
-        <h3 className="text-[15px] font-bold text-slate-900">Completed Panel Review</h3>
+        <h3 className="text-[15px] font-bold text-primary">Completed Panel Review</h3>
 
-        <p className="text-[12px] text-slate-500 mt-0.5">
+        <p className="text-[12px] text-muted mt-0.5">
 
           Inspect finished work, validate quality, and submit approval decisions
 
@@ -109,7 +110,7 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
         </div>
       )}
 
-      {projectCode && loading && <div className="empty-state"><p className="empty-text">Loading panels...</p></div>}
+      {projectCode && loading && <DwesLoadingState label="Loading panels…" />}
 
 
 
@@ -133,15 +134,15 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
 
         {panels.map(panel => (
 
-          <div key={panel.id} className="h-[120px] bg-white border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
+          <div key={panel.id} className="h-[120px] bg-[var(--t-surface-white)] border border-[#E2E8F0] rounded-[12px] p-4 flex flex-col justify-between shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-colors">
 
             <div className="flex items-start justify-between">
 
               <div className="flex flex-col min-w-0 pr-2">
 
-                <span className="text-[14px] font-bold text-slate-900 truncate" title={panel.panel_name}>{panel.panel_name}</span>
+                <span className="text-[14px] font-bold text-primary truncate" title={panel.panel_name}>{panel.panel_name}</span>
 
-                <span className="text-[12px] font-medium text-slate-500 truncate mt-0.5">
+                <span className="text-[12px] font-medium text-muted truncate mt-0.5">
 
                   {panel.technician_name} · {panel.completed_at ? new Date(panel.completed_at).toLocaleDateString() : 'unknown'}
 
@@ -151,7 +152,7 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
 
               <div className="flex flex-col items-end flex-shrink-0">
 
-                <span className="text-[18px] font-bold text-slate-800 leading-none">{panel.kpi ?? 0}%</span>
+                <span className="text-[18px] font-bold text-primary leading-none">{panel.kpi ?? 0}%</span>
 
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">KPI</span>
 
@@ -167,7 +168,7 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
 
                 <Badge label={panel.review_status || 'completed'} />
 
-                <span className="text-[12px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-[6px]">
+                <span className="text-[12px] font-medium text-muted bg-slate-100 px-2 py-0.5 rounded-[6px]">
 
                   {panel.cables_src_done}/{panel.total_cables} done
 
@@ -177,15 +178,15 @@ export default function ReviewTab({ projectCode, panelId }: ReviewTabProps) {
 
               <div className="flex items-center gap-1">
 
-                <button onClick={() => setShowReport(panel)} className="flex items-center justify-center h-[32px] px-2.5 bg-white border border-[#E2E8F0] text-slate-600 rounded-[6px] hover:bg-slate-50 hover:text-blue-600 transition-colors text-[12px] font-bold" type="button">
+                <button onClick={() => setShowReport(panel)} className="dwes-report-action-btn" type="button">
 
                   <FileText size={14} strokeWidth={2} className="mr-1" />
 
-                  Report
+                  View Report
 
                 </button>
 
-                <button onClick={() => setShowReview(panel)} className="flex items-center justify-center h-[32px] px-2.5 bg-white border border-[#E2E8F0] text-slate-600 rounded-[6px] hover:bg-slate-50 hover:text-purple-600 transition-colors text-[12px] font-bold" type="button">
+                <button onClick={() => setShowReview(panel)} className="flex items-center justify-center h-[32px] px-2.5 bg-[var(--t-surface-white)] border border-[#E2E8F0] text-muted rounded-[6px] hover:bg-slate-50 hover:text-purple-600 transition-colors text-[12px] font-bold" type="button">
 
                   <CheckSquare size={14} strokeWidth={2} className="mr-1" />
 
@@ -297,6 +298,8 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
       title="Review Panel"
 
+      icon={<ClipboardCheck />}
+
       onClose={onClose}
 
       footer={(
@@ -305,7 +308,7 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
 
-          <button onClick={handleSave} disabled={saving} className="btn-primary" type="button">{saving ? 'Saving...' : 'Submit Review'}</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary" type="button"><Check size={16} />{saving ? 'Saving...' : 'Submit Review'}</button>
 
         </>
 
@@ -313,9 +316,9 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
     >
 
-      <div className="text-sm text-slate-700 mb-4">
+      <div className="text-sm text-secondary mb-4">
 
-        Panel: <span className="font-semibold text-slate-900">{panel.panel_name}</span>
+        Panel: <span className="font-semibold text-primary">{panel.panel_name}</span>
 
       </div>
 
@@ -333,7 +336,7 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
               <input type="radio" checked={status === option.value} onChange={() => setStatus(option.value)} className="accent-blue-600" />
 
-              <span className="text-sm font-medium text-slate-800">{option.label}</span>
+              <span className="text-sm font-medium text-primary">{option.label}</span>
 
             </label>
 
@@ -349,7 +352,13 @@ function ReviewModal({ panel, onClose, onSaved }: { panel: any; onClose: () => v
 
         <label className="form-label mb-1">Notes (optional)</label>
 
-        <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={3} placeholder="Additional review notes..." className="form-textarea" />
+        <div className="field-with-icon field-with-icon--top">
+
+          <span className="field-lead-icon"><FileText size={18} /></span>
+
+          <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={3} placeholder="Additional review notes..." className="form-textarea" />
+
+        </div>
 
       </div>
 

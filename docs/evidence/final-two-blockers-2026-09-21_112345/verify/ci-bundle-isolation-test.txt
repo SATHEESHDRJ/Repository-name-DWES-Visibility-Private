@@ -1,0 +1,7 @@
+ci-bundle-isolation-test — 2026-09-21 (aborted)
+method: stage-for-remote-ci -Apply + git stash -u --keep-index
+result: backend test failed early (evidence-fusion.test.cjs) in partial tree state; stash pop restored WIP; index reset (no commit).
+action: stage script now excludes __pycache__/*.pyc; adds docs/LIVE-TB-LOCATEANYTHING-LICENSE.md + LIVE-TB-CLOUD-GROUNDING-PREP.md (required by evidence-fusion.test.cjs).
+root cause of failure: those docs were untracked and omitted from bundle.
+full isolation proof still requires commit + GitHub Actions.
+note: accidental long-lived staged index was cleared with git reset HEAD.

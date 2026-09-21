@@ -9,10 +9,9 @@ import ProjectPanelSelect from '../../../components/assignment/ProjectPanelSelec
 import AssignTechnicianModal from '../../../components/assignment/AssignTechnicianModal';
 import {
   Upload, FileSpreadsheet, CheckCircle, TriangleAlert, ArrowRight, ArrowLeft,
-  Star, Search, Maximize,
+  Star, Maximize,
 } from '../../../components/ui/icons';
 import PanelFileMetadataBar from '../../../components/supervisor/PanelFileMetadataBar';
-import FileViewer from '../../../components/ui/FileViewer';
 import {
   type PanelFileMetadata,
   type PanelFilePopupMode,
@@ -72,6 +71,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
     }).catch(() => setLoading(false));
   }, [selectedProject]);
 
+  // Already swaps frames/assignments in place and keeps the last good data on failure.
   const loadFrames = useCallback(() => {
     if (!selectedProject) return;
     Promise.all([
@@ -162,21 +162,21 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
           <table className="pj-table w-full text-left border-collapse min-w-[540px]">
             <thead className="sticky top-0 z-10">
               <tr>
-                <th className="font-bold text-slate-500 uppercase">Frame / Panel</th>
-                <th className="font-bold text-slate-500 uppercase">File Source</th>
-                <th className="font-bold text-slate-500 uppercase w-[120px]">Uploaded</th>
-                <th className="font-bold text-slate-500 uppercase w-[240px]">Status</th>
+                <th className="font-bold text-muted uppercase">Frame / Panel</th>
+                <th className="font-bold text-muted uppercase">File Source</th>
+                <th className="font-bold text-muted uppercase w-[120px]">Uploaded</th>
+                <th className="font-bold text-muted uppercase w-[240px]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F1F5F9]">
               {displayedFrames.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-16 text-slate-500">
+                  <td colSpan={4} className="text-center py-16 text-muted">
                     <div className="flex flex-col items-center gap-2">
                       <FileSpreadsheet size={32} className="text-slate-400 mb-2" strokeWidth={1} />
-                      <div className="text-[14px] font-medium text-slate-600">No panels yet for this project.</div>
-                      <p className="text-[13px] text-slate-500 max-w-sm text-center">
-                        Use <strong className="text-slate-700">Upload Schedule</strong> to add a wiring schedule (.xlsx), or <strong className="text-slate-700">Upload</strong> for PDF documents and director reports.
+                      <div className="text-[14px] font-medium text-muted">No panels yet for this project.</div>
+                      <p className="text-[13px] text-muted max-w-sm text-center">
+                        Use <strong className="text-secondary">Upload Schedule</strong> to add a wiring schedule (.xlsx), or <strong className="text-secondary">Upload</strong> for PDF documents and director reports.
                       </p>
                     </div>
                   </td>
@@ -201,15 +201,15 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
                   return (
                     <tr key={frame.id}>
                       <td>
-                        <span className="font-bold text-slate-900">{frame.panel_name}</span>
+                        <span className="font-bold text-primary">{frame.panel_name}</span>
                       </td>
                       <td>
                         <div className="flex flex-col justify-center">
-                          <span className="text-[13px] font-medium text-slate-700 truncate max-w-[220px]" title={frame.original_filename}>{frame.original_filename}</span>
-                          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{frame.cable_count} cables</span>
+                          <span className="text-[13px] font-medium text-secondary truncate max-w-[220px]" title={frame.original_filename}>{frame.original_filename}</span>
+                          <span className="text-[11px] font-semibold text-muted uppercase tracking-wide">{frame.cable_count} cables</span>
                         </div>
                       </td>
-                      <td className="font-medium text-slate-500 whitespace-nowrap">
+                      <td className="font-medium text-muted whitespace-nowrap">
                         {new Date(frame.uploaded_at).toLocaleDateString()}
                       </td>
 
@@ -218,7 +218,7 @@ export default function FramesTab({ projectCode: propCode }: FramesTabProps = {}
                         {asgn ? (
                           <div className="flex flex-col gap-0.5">
                             <span className={`frame-status-pill ${pillClass}`}>{pillLabel}</span>
-                            <span className="text-[11px] text-slate-500 truncate max-w-[200px]" title={asgn.technician_name}>
+                            <span className="text-[11px] text-muted truncate max-w-[200px]" title={asgn.technician_name}>
                               {asgn.technician_name}
                             </span>
                           </div>
@@ -285,6 +285,8 @@ export function UploadFrameModal({
   targetFrameId,
   targetPanelName,
   existingCableCount = 0,
+  startInReplaceMode = false,
+  initialFile = null,
   siblingPanels = [],
   onEditPanel,
   onSelectPanel,
@@ -297,6 +299,10 @@ export function UploadFrameModal({
   targetPanelName?: string;
   /** When > 0, modal opens with View / Replace choice instead of upload-only. */
   existingCableCount?: number;
+  /** Parent has already shown the replacement warning and wants the file picker directly. */
+  startInReplaceMode?: boolean;
+  /** Pre-selected Excel from Engineering Package upload — starts header/mapping flow. */
+  initialFile?: File | null;
   /** All panels in the project — used for duplicate-name detection. */
   siblingPanels?: { id?: string; panel_name: string }[];
   onEditPanel?: (panelId: string) => void;
@@ -307,7 +313,6 @@ export function UploadFrameModal({
   const dialog = useAppDialog();
   const [mode, setMode] = useState<PanelFilePopupMode>('loading');
   const [metadata, setMetadata] = useState<PanelFileMetadata | null>(null);
-  const [sheetName, setResolvedSheetName] = useState('');
   const [step, setStep] = useState<UploadStep>('file');
   const [file, setFile] = useState<File | null>(null);
   const [dupInfo, setDupInfo] = useState<{ kind: 'same' | 'other'; file_name: string; project_code: string; uploaded_at: string } | null>(null);
@@ -321,22 +326,11 @@ export function UploadFrameModal({
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [includedHeaders, setIncludedHeaders] = useState<Record<string, boolean>>({});
   const [headerRow, setHeaderRow] = useState(0);
-  const [preview, setPreview] = useState<{
-    cable_count: number;
-    mapped_columns: number;
-    unmatched_headers: string[];
-    validation: { total: number; ok_count: number; error_count: number; issues: Record<number, Record<string, string>> };
-    sample_cables: Array<Record<string, string>>;
-  } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [columnFilter, setColumnFilter] = useState<'all' | 'selected' | 'required' | 'unselected'>('all');
   const [fullViewOpen, setFullViewOpen] = useState(false);
-  const [viewBlob, setViewBlob] = useState<Blob | null>(null);
-  const [viewLoading, setViewLoading] = useState(false);
-  const [viewLoadError, setViewLoadError] = useState('');
+  const [replacementConfirmed, setReplacementConfirmed] = useState(startInReplaceMode);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -357,38 +351,33 @@ export function UploadFrameModal({
           uploadedAt: frame.uploaded_at ? String(frame.uploaded_at) : undefined,
           sheetName: frame.sheet_name ? String(frame.sheet_name) : undefined,
         });
-        setResolvedSheetName(frame.sheet_name ? String(frame.sheet_name) : '');
-        setMode('populated');
+        setMode(startInReplaceMode ? 'replacing' : 'populated');
       } else {
         setMetadata(null);
         setMode('empty');
       }
     } catch {
-      setMode(existingCableCount > 0 ? 'populated' : 'empty');
+      setMode(existingCableCount > 0 ? (startInReplaceMode ? 'replacing' : 'populated') : 'empty');
     }
-  }, [projectCode, targetFrameId, existingCableCount]);
+  }, [projectCode, targetFrameId, existingCableCount, startInReplaceMode]);
 
   useEffect(() => {
     void resolveFrameOnOpen();
   }, [resolveFrameOnOpen]);
 
-  const loadViewBlob = useCallback(() => {
-    if (!targetFrameId) return;
-    setViewLoading(true);
-    setViewLoadError('');
-    setViewBlob(null);
-    supervisorApi.wiringScheduleXlsx(projectCode, targetFrameId)
-      .then(blob => {
-        setViewBlob(blob);
-        setMetadata(prev => prev ? { ...prev, sizeBytes: blob.size } : prev);
-        setViewLoading(false);
-      })
-      .catch((err: { response?: { data?: { message?: string } }; message?: string }) => {
-        setViewLoadError(err?.response?.data?.message || err?.message || 'Failed to load wiring schedule file.');
-        setViewBlob(null);
-        setViewLoading(false);
-      });
-  }, [projectCode, targetFrameId]);
+  const initialFileAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!initialFile || initialFileAppliedRef.current) return;
+    if (mode === 'loading') return;
+    initialFileAppliedRef.current = true;
+    if (mode === 'populated' && !startInReplaceMode && !replacementConfirmed) {
+      setReplacementConfirmed(true);
+      setMode('replacing');
+    }
+    void onFileSelect(initialFile);
+    // one-shot handoff from Engineering Package modal
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile, mode]);
 
   const duplicateGuard = assertNoDuplicatePanels(
     siblingPanels,
@@ -405,21 +394,10 @@ export function UploadFrameModal({
     original_filename: 'original_filename' in p ? (p as { original_filename?: string }).original_filename : undefined,
   }));
 
-  useEffect(() => {
-    if (mode !== 'populated' || !targetFrameId || duplicateBlocked) return;
-    loadViewBlob();
-  }, [mode, targetFrameId, loadViewBlob, duplicateBlocked]);
-
   const finishUploadPopulated = useCallback(async (frameId: string) => {
-    setStep('file');
-    setFile(null);
-    setPreview(null);
-    setError('');
     onUploaded(frameId);
-    await resolveFrameOnOpen();
-    setMode('populated');
-    loadViewBlob();
-  }, [loadViewBlob, onUploaded, resolveFrameOnOpen]);
+    onClose();
+  }, [onClose, onUploaded]);
 
   const handleColumnResize = useCallback((header: string, width: number) => {
     setColumnWidths(prev => ({ ...prev, [header]: width }));
@@ -454,11 +432,20 @@ export function UploadFrameModal({
     }
 
     return dialog.confirm({
-      title: 'Replace wiring schedule?',
+      title: 'Replace wiring schedule',
       message:
-        `This will replace the current wiring schedule for panel ${targetPanelName || 'this panel'}.${progressWarning}\n\nThe current schedule and Excel file will be archived to uploads/backups/ before overwrite. Continue?`,
+        `This replaces the current wiring schedule for the selected panel.${progressWarning}`,
       tone: 'warning',
       confirmText: 'Replace Upload',
+      actionSummary: 'Archive the current Excel schedule, then upload the new file for this panel only.',
+      entity: [
+        { label: 'Project', value: projectCode, kind: 'project' },
+        { label: 'Panel', value: targetPanelName || 'Selected panel', kind: 'panel' },
+      ],
+      removalItems: [
+        'Current wiring schedule mapping for this panel (archived to uploads/backups/ before overwrite)',
+        ...(progressWarning ? ['Cable completion data may become orphaned if progress already exists'] : []),
+      ],
     });
   };
 
@@ -499,6 +486,11 @@ export function UploadFrameModal({
     }
   };
 
+  const sheetRows = (sheet: any): any[][] =>
+    sheet?.sample_rows || sheet?.rows || [];
+  const sheetRowCount = (sheet: any, rows: any[][]): number =>
+    sheet?.data_row_count ?? sheet?.dataRowCount ?? rows.length;
+
   const readHeaders = async () => {
     if (!file) return;
     setUploading(true);
@@ -511,16 +503,17 @@ export function UploadFrameModal({
       setBestSheet(result.best_sheet);
       setSelSheet(result.best_sheet);
       const best = result.sheets.find((sheet: any) => sheet.name === result.best_sheet);
+      const rows = sheetRows(best);
       setHeaders(best?.headers || []);
-      setSampleRows(best?.sample_rows || []);
-      setDataRowCount(best?.data_row_count ?? best?.sample_rows?.length ?? 0);
-      setHeaderRow(best?.header_row ?? 0);
+      setSampleRows(rows);
+      setDataRowCount(sheetRowCount(best, rows));
+      setHeaderRow(best?.header_row ?? best?.headerRow ?? 0);
       setStep('sheet');
       if (result.best_sheet && best) {
         selectSheet(result.best_sheet, result.sheets);
       }
     } catch (apiError: any) {
-      setError(apiError?.response?.data?.message || 'Failed to read file');
+      setError(apiError?.response?.data?.message || 'Failed to read Excel file — check the file is a readable .xlsx/.xls workbook.');
     } finally {
       setUploading(false);
     }
@@ -532,20 +525,30 @@ export function UploadFrameModal({
     setSelSheet(name);
     const selected = sheetList.find(sheet => sheet.name === name);
     const hdrs: string[] = selected?.headers || [];
-    const rows: any[][] = selected?.sample_rows || [];
+    const rows: any[][] = sheetRows(selected);
     setHeaders(hdrs);
     setSampleRows(rows);
-    setDataRowCount(selected?.data_row_count ?? rows.length);
-    setHeaderRow(selected?.header_row ?? 0);
+    setDataRowCount(sheetRowCount(selected, rows));
+    setHeaderRow(selected?.header_row ?? selected?.headerRow ?? 0);
     setMapping(buildAutoMapping(hdrs, rows));
     setIncludedHeaders(Object.fromEntries(hdrs.map(h => [h, true])));
-    setPreview(null);
-    setSearchQuery('');
-    setColumnFilter('all');
     setStep('mapping');
   };
 
-  const runPreview = async () => {
+  const handleUploadSchedule = async () => {
+    if (duplicateBlocked) return;
+    if (!file) {
+      setError('Select a readable Excel file (.xlsx or .xls) before uploading.');
+      return;
+    }
+    if (!selSheet || headers.length === 0) {
+      setError('Could not detect a valid worksheet header row. Choose another sheet or check the workbook.');
+      return;
+    }
+    if (dataRowCount === 0 && sampleRows.length === 0) {
+      setError('No cable rows found in the selected worksheet.');
+      return;
+    }
     const missing = WIRING_SYSTEM_FIELDS.filter(field => field.required && !effectiveMapping[field.key]).map(field => field.label);
     if (missing.length) {
       setError(`Map required fields: ${missing.join(', ')}`);
@@ -557,54 +560,11 @@ export function UploadFrameModal({
       setError('Map at least Source, Destination, Path, or Source/Dest Device so cables can be located.');
       return;
     }
-    if (!file) return;
 
-    setUploading(true);
-    setError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('sheet_name', selSheet);
-      formData.append('mapping', JSON.stringify(effectiveMapping));
-      formData.append('header_row', String(headerRow));
-      const result = await uploadApi.previewMapped(projectCode, formData);
-      if (result.cable_count === 0) {
-        setError('No cables parsed — check your column mapping and sheet selection');
-        return;
-      }
-      if (result.validation.error_count === 0) {
-        if (duplicateBlocked) return;
-        if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
-          const ok = await confirmReplaceSchedule();
-          if (!ok) return;
-        }
-        setPreview(result);
-        setProgress(0);
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-        uploadData.append('sheet_name', selSheet);
-        uploadData.append('mapping', JSON.stringify(effectiveMapping));
-        uploadData.append('header_row', String(headerRow));
-        const uploaded = await uploadApi.uploadMapped(projectCode, appendTargetFrame(uploadData), setProgress);
-        finishUploadPopulated(uploaded.id);
-        return;
-      }
-      setPreview(result);
-      if (result.validation.error_count > 0) {
-        setColumnFilter('all');
-      }
-    } catch (apiError: any) {
-      setError(apiError?.response?.data?.message || 'Preview failed');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleImport = async () => {
-    if (!file || duplicateBlocked) return;
-    if ((mode === 'populated' || mode === 'replacing') && targetFrameId) {
+    if ((mode === 'populated' || mode === 'replacing') && targetFrameId && !replacementConfirmed) {
       const ok = await confirmReplaceSchedule();
       if (!ok) return;
+      setReplacementConfirmed(true);
     }
 
     setUploading(true);
@@ -619,7 +579,7 @@ export function UploadFrameModal({
       const result = await uploadApi.uploadMapped(projectCode, appendTargetFrame(formData), setProgress);
       await finishUploadPopulated(result.id);
     } catch (apiError: any) {
-      setError(apiError?.response?.data?.message || 'Upload failed');
+      setError(apiError?.response?.data?.message || 'Upload failed — check column mapping and worksheet data.');
     } finally {
       setUploading(false);
     }
@@ -639,25 +599,14 @@ export function UploadFrameModal({
 
   const toggleHeaderIncluded = (header: string, nextChecked: boolean) => {
     setIncludedHeaders(prev => ({ ...prev, [header]: nextChecked }));
-    if (!nextChecked) {
-      setMapping(prev => {
-        const next = { ...prev };
-        Object.keys(next).forEach(key => {
-          if (next[key] === header) delete next[key];
-        });
-        return next;
-      });
-    }
-    setPreview(null);
+    // Keep the detected mapping as the source of truth. `effectiveMapping`
+    // excludes unchecked columns and restores their automatic mapping when
+    // the supervisor re-selects them; no manual mapping row is required.
     setError('');
   };
 
   const toggleAllHeaders = (checked: boolean) => {
     setIncludedHeaders(Object.fromEntries(headers.map(h => [h, checked])));
-    if (!checked) {
-      setMapping({});
-    }
-    setPreview(null);
     setError('');
   };
 
@@ -669,48 +618,31 @@ export function UploadFrameModal({
     }).length;
   }, [headers, effectiveMapping]);
 
-  const unselectedCount = headers.length - includedCount;
+  const unmappedSelectedCount = useMemo(
+    () => activeHeaders.filter(h => !fieldKeyForHeader(effectiveMapping, h)).length,
+    [activeHeaders, effectiveMapping],
+  );
 
-  const visibleColumnCount = useMemo(() => {
-    return headers.filter(header => {
-      const included = includedHeaders[header] !== false;
-      const fk = fieldKeyForHeader(mapping, header);
-      const field = fk ? WIRING_SYSTEM_FIELDS.find(f => f.key === fk) : null;
-      switch (columnFilter) {
-        case 'selected':
-          return included;
-        case 'unselected':
-          return !included;
-        case 'required':
-          return !!field?.required;
-        default:
-          return true;
-      }
-    }).length;
-  }, [headers, includedHeaders, mapping, columnFilter]);
-  const displayRowCount = preview?.cable_count ?? dataRowCount;
+  const displayRowCount = Math.max(dataRowCount, sampleRows.length);
 
   const wiringGridProps = {
     headers,
     rows: sampleRows,
     mapping,
     includedHeaders,
-    onMappingChange: (m: Record<string, string>) => { setMapping(m); setPreview(null); setError(''); },
+    onMappingChange: (m: Record<string, string>) => { setMapping(m); setError(''); },
     onToggleHeader: toggleHeaderIncluded,
     onToggleAll: toggleAllHeaders,
-    searchQuery,
-    columnFilter,
-    preview,
     columnWidths,
     onColumnResize: handleColumnResize,
     frozenColumns: 1 as const,
   };
 
   const inMappingUpload = (mode === 'empty' || mode === 'replacing') && step === 'mapping';
-  const showViewer = mode === 'populated' && step === 'file';
+  const showUploadedStatus = mode === 'populated' && step === 'file';
 
-  const modalTitle = showViewer
-    ? 'View Wiring Schedule'
+  const modalTitle = showUploadedStatus
+    ? 'Wiring Schedule Uploaded'
     : mode === 'replacing' && step === 'file'
       ? 'Replace Wiring Schedule'
       : inMappingUpload && fullViewOpen
@@ -730,35 +662,35 @@ export function UploadFrameModal({
   const startReplaceUpload = async () => {
     if (duplicateBlocked) return;
     if (!(await confirmReplaceSchedule())) return;
+    setReplacementConfirmed(true);
     setMode('replacing');
     setStep('file');
     setFile(null);
     setError('');
-    setPreview(null);
   };
+
+  const summaryChips = (
+    <div className="wu-chips" role="list" aria-label="Worksheet summary">
+      <span className="wu-chip wu-chip--sheet" role="listitem">{selSheet || 'Worksheet'}</span>
+      <span className="wu-chip" role="listitem">{displayRowCount} parsed rows</span>
+      <span className="wu-chip wu-chip--accent" role="listitem">{includedCount} selected columns</span>
+      <span className="wu-chip wu-chip--accent" role="listitem">{mappedCount} mapped columns</span>
+      <span className="wu-chip" role="listitem">{unmappedSelectedCount} unmapped columns</span>
+      {requiredHeaderCount > 0 && (
+        <span className="wu-chip wu-chip--required" role="listitem">{requiredHeaderCount} required</span>
+      )}
+    </div>
+  );
 
   const fullViewBar = (
     <>
       <div className="wu-fullview-bar">
-        <div className="wu-chips" role="list" aria-label="Worksheet summary">
-          <span className="wu-chip wu-chip--sheet" role="listitem">{selSheet}</span>
-          <span className="wu-chip" role="listitem">{displayRowCount} rows</span>
-          <span className="wu-chip" role="listitem">{headers.length} columns</span>
-          <span className="wu-chip wu-chip--accent" role="listitem">{includedCount} selected</span>
-          <span className="wu-chip wu-chip--accent" role="listitem">{mappedCount} mapped</span>
+        <div className="wu-cable-total wu-cable-total--compact" aria-live="polite">
+          <span className="wu-cable-total-label">TOTAL CABLES:</span>
+          <span className="wu-cable-total-value">{displayRowCount}</span>
         </div>
+        {summaryChips}
         <div className="wu-fullview-actions">
-          <div className="wu-search">
-            <Search size={15} strokeWidth={1.75} className="wu-search-icon" aria-hidden />
-            <input
-              type="search"
-              className="wu-input wu-input--compact"
-              placeholder="Search rows…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              aria-label="Search worksheet rows"
-            />
-          </div>
           <button
             type="button"
             className="btn-secondary wu-expand-btn wu-expand-btn--compact"
@@ -769,24 +701,6 @@ export function UploadFrameModal({
         </div>
       </div>
 
-      {preview && (
-        <div className={`wu-banner wu-banner--compact ${preview.validation.error_count ? 'wu-banner--warn' : 'wu-banner--ok'}`} role="status">
-          <div className="wu-banner-icon">
-            {preview.validation.error_count
-              ? <TriangleAlert size={16} strokeWidth={1.75} />
-              : <CheckCircle size={16} strokeWidth={1.75} />}
-          </div>
-          <div className="wu-banner-body">
-            <p className="wu-banner-title">
-              {preview.cable_count} cable{preview.cable_count === 1 ? '' : 's'} parsed
-              {preview.validation.error_count
-                ? ` · ${preview.validation.error_count} issue(s) highlighted`
-                : ' · validated'}
-            </p>
-          </div>
-        </div>
-      )}
-
       <WiringScheduleMappingGrid {...wiringGridProps} variant="fullview" />
     </>
   );
@@ -795,17 +709,18 @@ export function UploadFrameModal({
     <>
     <Modal
       title={modalTitle}
+      subtitle={
+        inMappingUpload
+          ? `TOTAL CABLES: ${displayRowCount}`
+          : undefined
+      }
+      icon={<FileSpreadsheet />}
       onClose={handleModalClose}
       size={
-        showViewer || inMappingUpload
-          ? 'fullscreen'
-          : 'lg'
+        inMappingUpload ? 'fullscreen' : 'lg'
       }
       bodyClassName={
-        (showViewer && viewBlob && !viewLoading)
-        || inMappingUpload
-          ? 'modal-body-flush'
-          : undefined
+        inMappingUpload ? 'modal-body-flush' : undefined
       }
       closeOnBackdrop={
         !fullViewOpen || !inMappingUpload
@@ -813,7 +728,7 @@ export function UploadFrameModal({
       footer={
         mode === 'loading' ? (
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
-        ) : showViewer && !viewLoading && viewBlob ? (
+        ) : showUploadedStatus ? (
           <>
             <button
               type="button"
@@ -823,14 +738,14 @@ export function UploadFrameModal({
               title={duplicateBlocked ? duplicateBlockMessage : undefined}
             >
               <Upload size={16} strokeWidth={1.5} />
-              <span>Replace Upload</span>
+              <span>Re-upload Wiring Schedule</span>
             </button>
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
           </>
         ) : (mode === 'empty' || mode === 'replacing') && step === 'file' ? (
           <>
             {mode === 'replacing' && (
-              <button type="button" className="btn-secondary" onClick={() => { setMode('populated'); setStep('file'); }}>Cancel replace</button>
+              <button type="button" className="btn-secondary" onClick={() => { setReplacementConfirmed(false); setMode('populated'); setStep('file'); }}>Cancel replace</button>
             )}
             <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
             <button
@@ -845,44 +760,39 @@ export function UploadFrameModal({
           </>
         ) : step === 'mapping' && !fullViewOpen ? (
           <>
-            <button onClick={() => { setPreview(null); setFullViewOpen(false); setStep('sheet'); }} className="btn-secondary" type="button" disabled={uploading}>
+            <button onClick={() => { setFullViewOpen(false); setStep('sheet'); }} className="btn-secondary" type="button" disabled={uploading}>
               <ArrowLeft size={16} />
               <span>Back</span>
             </button>
             <button onClick={onClose} className="btn-secondary" type="button" disabled={uploading}>Cancel</button>
-            {preview ? (
-              <button
-                onClick={handleImport}
-                disabled={uploading || preview.cable_count === 0 || duplicateBlocked}
-                className="btn-primary"
-                type="button"
-              >
+            <button
+              onClick={() => void handleUploadSchedule()}
+              disabled={!requiredDone || uploading || duplicateBlocked || displayRowCount === 0}
+              className="btn-primary"
+              type="button"
+            >
+              <Upload size={16} strokeWidth={1.5} />
+              <span>
                 {uploading
-                  ? `Importing… ${progress}%`
-                  : preview.validation.error_count
-                    ? `Import anyway (${preview.validation.error_count} issue${preview.validation.error_count === 1 ? '' : 's'})`
-                    : `Import ${preview.cable_count} cables`}
-              </button>
-            ) : (
-              <button onClick={runPreview} disabled={!requiredDone || uploading || duplicateBlocked} className="btn-primary" type="button">
-                {uploading ? 'Validating…' : 'Validate & Import'}
-              </button>
-            )}
+                  ? `Uploading… ${progress}%`
+                  : `Upload Wiring Schedule${displayRowCount > 0 ? ` (${displayRowCount})` : ''}`}
+              </span>
+            </button>
           </>
         ) : undefined
       }
     >
       {mode === 'loading' ? (
-        <div className="flex items-center justify-center py-12 text-slate-500 text-[13px]">
+        <div className="flex items-center justify-center py-12 text-muted text-[13px]">
           Checking for existing wiring schedule…
         </div>
       ) : !targetFrameId && !targetPanelName ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500 text-[13px]">
+        <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted text-[13px]">
           <TriangleAlert size={24} className="text-amber-500" />
           <p>Select a panel before uploading a wiring schedule.</p>
         </div>
-      ) : showViewer ? (
-        <div className="panel-file-popup flex flex-col gap-4 min-h-0">
+      ) : showUploadedStatus ? (
+        <div className="panel-file-popup flex flex-col gap-4">
           {(targetPanelName && projectName) && (
             <div className="px-4 pt-4">
               <UploadTargetHeader
@@ -908,21 +818,9 @@ export function UploadFrameModal({
             </div>
           )}
           {!duplicateBlocked && (
-          <FileViewer
-            blob={viewBlob}
-            fileType="excel"
-            panelLabel={
-              targetPanelName && targetFrameId
-                ? `${targetPanelName} · ID: ${targetFrameId}`
-                : targetPanelName || projectName || projectCode
-            }
-            fileName={metadata?.fileName}
-            sheetName={sheetName || metadata?.sheetName}
-            loading={viewLoading}
-            error={viewLoadError}
-            onRetry={loadViewBlob}
-            className="file-viewer--modal"
-          />
+            <div className="mx-4 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800" role="status">
+              The wiring schedule is saved for this panel. Use Re-upload Wiring Schedule only when a replacement is required.
+            </div>
           )}
         </div>
       ) : step === 'mapping' && !fullViewOpen ? (
@@ -945,94 +843,26 @@ export function UploadFrameModal({
             onSelectPanel={onSelectPanel}
           />
 
+          <div className="wu-cable-total" aria-live="polite">
+            <span className="wu-cable-total-label">TOTAL CABLES:</span>
+            <span className="wu-cable-total-value">{displayRowCount}</span>
+          </div>
+
           <div className="wu-toolbar">
             <div className="wu-toolbar-controls">
-              <div className="wu-search">
-                <Search size={15} strokeWidth={1.75} className="wu-search-icon" aria-hidden />
-                <input
-                  type="search"
-                  className="wu-input"
-                  placeholder="Search worksheet…"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  aria-label="Search worksheet rows"
-                />
-              </div>
-              {/* Column filter hidden from UI — re-enable by removing wu-filter--hidden */}
-              <div className="wu-filter wu-filter--hidden" aria-hidden>
-                <select
-                  className="wu-select"
-                  value={columnFilter}
-                  onChange={e => setColumnFilter(e.target.value as 'all' | 'selected' | 'required' | 'unselected')}
-                  aria-label="Filter columns"
-                  tabIndex={-1}
-                >
-                  <option value="all">All columns</option>
-                  <option value="selected">Selected columns</option>
-                  <option value="required">Required columns</option>
-                  <option value="unselected" disabled={unselectedCount === 0}>Unselected columns</option>
-                </select>
-              </div>
               <button
                 type="button"
                 className="btn-secondary wu-expand-btn"
                 onClick={() => setFullViewOpen(true)}
-                title="Open full-screen preview"
-                aria-label="Open full-screen wiring schedule preview"
+                title="Open full-screen worksheet view"
+                aria-label="Open full-screen wiring schedule view"
               >
                 <Maximize size={16} strokeWidth={1.75} aria-hidden />
                 <span>Full view</span>
               </button>
             </div>
-            <div className="wu-chips" role="list" aria-label="Worksheet summary">
-              <span className="wu-chip wu-chip--sheet" role="listitem">{selSheet}</span>
-              <span className="wu-chip" role="listitem">{displayRowCount} rows</span>
-              <span className="wu-chip" role="listitem">{headers.length} columns</span>
-              <span className="wu-chip wu-chip--accent" role="listitem">{includedCount} selected</span>
-              <span className="wu-chip wu-chip--accent" role="listitem">{mappedCount} mapped</span>
-              {requiredHeaderCount > 0 && (
-                <span className="wu-chip wu-chip--required" role="listitem">{requiredHeaderCount} required</span>
-              )}
-            </div>
+            {summaryChips}
           </div>
-
-          {headers.length > 0 && visibleColumnCount === 0 && (
-            <div className="wu-hint" role="status">
-              <TriangleAlert size={14} strokeWidth={1.75} aria-hidden />
-              No columns match the current filter — try &ldquo;All columns&rdquo; or adjust selection.
-            </div>
-          )}
-
-          {preview && (
-            <div className={`wu-banner ${preview.validation.error_count ? 'wu-banner--warn' : 'wu-banner--ok'}`} role="status">
-              <div className="wu-banner-icon">
-                {preview.validation.error_count
-                  ? <TriangleAlert size={18} strokeWidth={1.75} />
-                  : <CheckCircle size={18} strokeWidth={1.75} />}
-              </div>
-              <div className="wu-banner-body">
-                <p className="wu-banner-title">
-                  {preview.cable_count} cable{preview.cable_count === 1 ? '' : 's'} parsed from &ldquo;{selSheet}&rdquo;
-                </p>
-                <p className="wu-banner-sub">
-                  {preview.mapped_columns} columns mapped
-                  {preview.unmatched_headers.length > 0 && ` · ${preview.unmatched_headers.length} Excel column(s) skipped`}
-                  {preview.validation.error_count
-                    ? ` · ${preview.validation.error_count} field issue(s) in ${Object.keys(preview.validation.issues).length} row(s) — highlighted below`
-                    : ' · all rows validated — ready to import'}
-                </p>
-              </div>
-              {preview.validation.error_count > 0 && (
-                <button
-                  type="button"
-                  className="wu-banner-action"
-                  onClick={() => { setPreview(null); setColumnFilter('all'); }}
-                >
-                  Re-map columns
-                </button>
-              )}
-            </div>
-          )}
 
           {headers.length > 0 && (
             <WiringScheduleMappingGrid {...wiringGridProps} />
@@ -1096,9 +926,9 @@ export function UploadFrameModal({
           {step === 'file' && (
             <div>
               {!targetPanelName && (
-              <p className="text-[13px] text-slate-600 leading-relaxed mb-4">
+              <p className="text-[13px] text-muted leading-relaxed mb-4">
                 Upload a wiring schedule for{' '}
-                <span className="font-semibold text-slate-800">{projectName || projectCode}</span>
+                <span className="font-semibold text-primary">{projectName || projectCode}</span>
                 {projectName && <span className="font-mono text-[12px] text-slate-400"> · {projectCode}</span>}
               </p>
               )}
@@ -1133,7 +963,7 @@ export function UploadFrameModal({
                       Re-upload (create new version)
                     </button>
                     <button type="button" onClick={() => setDupChoice('keep')}
-                      className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors">
+                      className="flex-1 h-10 rounded-lg bg-[var(--t-surface-white)] border border-slate-200 text-secondary text-[13px] font-semibold hover:bg-slate-50 transition-colors">
                       Cancel
                     </button>
                   </div>
@@ -1144,7 +974,7 @@ export function UploadFrameModal({
                 <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[13px] text-blue-700 flex items-center gap-2">
                   <TriangleAlert size={16} className="shrink-0" />
                   Will create a new version alongside the existing one — click Next to continue.
-                  <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-slate-500 hover:underline">Change</button>
+                  <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-muted hover:underline">Change</button>
                 </div>
               )}
 

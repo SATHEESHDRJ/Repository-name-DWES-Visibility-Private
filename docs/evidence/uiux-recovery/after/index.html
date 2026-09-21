@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DWES UI/UX Recovery — Owner review gallery</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --before: #fef2f2;
+      --after: #ecfdf5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    h1 { margin: 0 0 0.35rem; font-size: 1.35rem; }
+    .meta { color: var(--muted); font-size: 0.92rem; }
+    .pill {
+      display: inline-block;
+      margin-top: 0.55rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem 3rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    section h2 {
+      margin: 0;
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      border-bottom: 1px solid var(--line);
+      background: #f1f5f9;
+    }
+    section p {
+      margin: 0;
+      padding: 0.55rem 1rem 0.75rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      padding: 0 1rem 1rem;
+    }
+    @media (max-width: 900px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+    .frame {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .frame h3 {
+      margin: 0;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .frame.before h3 { background: var(--before); color: #991b1b; }
+    .frame.after h3 { background: var(--after); color: #065f46; }
+    .frame a { display: block; }
+    .frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-top: 1px solid var(--line);
+    }
+    a.shot {
+      display: block;
+      padding: 0 1rem 1rem;
+    }
+    a.shot img {
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    footer {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .signoff {
+      margin-top: 0.75rem;
+      padding: 0.85rem 1rem;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--ink);
+    }
+    code { font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DWES UI/UX Recovery — Owner review</h1>
+    <div class="meta">Desktop BEFORE vs AFTER per role · supplemental Status Selected Panel · phone/tablet PNGs in <code>after/</code></div>
+    <div class="pill">PENDING OWNER VISUAL ACCEPTANCE</div>
+  </header>
+  <main>
+    <section>
+      <h2>1. Supervisor — Projects</h2>
+      <p>Workflow command bar · Working · Offline · single toolbar (no duplicate CTAs)</p>
+      <div class="compare">
+        <div class="frame before">
+          <h3>Before (Phase 0)</h3>
+          <a href="../phase0/before/before-supervisor-desktop.png" target="_blank" rel="noopener">
+            <img src="../phase0/before/before-supervisor-desktop.png" alt="Supervisor desktop BEFORE" />
+          </a>
+        </div>
+        <div class="frame after">
+          <h3>After</h3>
+          <a href="after-supervisor-desktop.png" target="_blank" rel="noopener">
+            <img src="after-supervisor-desktop.png" alt="Supervisor Projects desktop AFTER" />
+          </a>
+        </div>
+      </div>
+      <p>Status → Selected Panel (after only): identity in Active selectors · no duplicate Completed/Total/Remaining under progress</p>
+      <a class="shot" href="after-supervisor-status-selected-desktop.png" target="_blank" rel="noopener">
+        <img src="after-supervisor-status-selected-desktop.png" alt="Supervisor Status Selected Panel desktop AFTER" />
+      </a>
+    </section>
+    <section>
+      <h2>2. Technician</h2>
+      <p>No mission KPI strip above wiring · Prep % in matrix</p>
+      <div class="compare">
+        <div class="frame before">
+          <h3>Before</h3>
+          <a href="../phase0/before/before-technician-desktop.png" target="_blank" rel="noopener">
+            <img src="../phase0/before/before-technician-desktop.png" alt="Technician desktop BEFORE" />
+          </a>
+        </div>
+        <div class="frame after">
+          <h3>After</h3>
+          <a href="after-technician-desktop.png" target="_blank" rel="noopener">
+            <img src="after-technician-desktop.png" alt="Technician desktop AFTER" />
+          </a>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>3. Director</h2>
+      <p>Single Read Only · linear progress only</p>
+      <div class="compare">
+        <div class="frame before">
+          <h3>Before</h3>
+          <a href="../phase0/before/before-director-desktop.png" target="_blank" rel="noopener">
+            <img src="../phase0/before/before-director-desktop.png" alt="Director desktop BEFORE" />
+          </a>
+        </div>
+        <div class="frame after">
+          <h3>After</h3>
+          <a href="after-director-desktop.png" target="_blank" rel="noopener">
+            <img src="after-director-desktop.png" alt="Director desktop AFTER" />
+          </a>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>4. Admin</h2>
+      <p>Headcount health group · no Diagnostics env/uptime/heap duplicate</p>
+      <div class="compare">
+        <div class="frame before">
+          <h3>Before</h3>
+          <a href="../phase0/before/before-admin-desktop.png" target="_blank" rel="noopener">
+            <img src="../phase0/before/before-admin-desktop.png" alt="Admin desktop BEFORE" />
+          </a>
+        </div>
+        <div class="frame after">
+          <h3>After</h3>
+          <a href="after-admin-desktop.png" target="_blank" rel="noopener">
+            <img src="after-admin-desktop.png" alt="Admin desktop AFTER" />
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <div class="signoff">
+      <strong>Close this goal:</strong> reply in chat with <strong>approve</strong> or <code>UI/UX accepted</code>, or numbered change notes.
+      Full report: <code>../UIUX_RECOVERY_REPORT.md</code> · packet: <code>../OWNER_REVIEW_PACKET.md</code> · verdict: <code>../FINAL_VERDICT.md</code>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,67 @@
+﻿{
+    "capturedAt":  "2026-09-19T14:58:09.3607092+04:00",
+    "logins":  {
+                   "director":  {
+                                    "ok":  true,
+                                    "user":  "ops_director1",
+                                    "role":  "ops_director"
+                                },
+                   "supervisor":  {
+                                      "ok":  true,
+                                      "user":  "supervisor1",
+                                      "role":  "prod_supervisor"
+                                  },
+                   "admin":  {
+                                 "ok":  true,
+                                 "user":  "sysadmin",
+                                 "role":  "system_admin"
+                             },
+                   "technician":  {
+                                      "ok":  true,
+                                      "user":  "tech2",
+                                      "role":  "wiring_technician"
+                                  }
+               },
+    "supervisor":  {
+                       "projects":  1,
+                       "panelsFrameUniverse":  null,
+                       "framesByProject":  [
+
+                                           ]
+                   },
+    "director_stats":  {
+                           "projects_total":  3,
+                           "projects_active":  0,
+                           "projects_completed":  0,
+                           "technicians_active":  29,
+                           "technicians_in_progress":  4,
+                           "panels_total":  10,
+                           "panels_assigned":  0,
+                           "panels_in_progress":  4,
+                           "panels_completed":  2,
+                           "panels_paused":  0,
+                           "panels_ready_for_qc":  0,
+                           "cables_total":  5825,
+                           "cables_src_done":  1277,
+                           "cables_dst_done":  1275,
+                           "wiring_kpi":  22,
+                           "qc_inspections":  0,
+                           "qc_pass_rate":  0,
+                           "composite_kpi":  22,
+                           "total_wiring_hours":  0,
+                           "pending_approvals":  0,
+                           "rework_requested":  0
+                       },
+    "admin_diagnostics":  {
+                              "assignments":  null,
+                              "panels_completed":  2,
+                              "users_active":  null,
+                              "projects":  null,
+                              "users_disabled":  null,
+                              "failed_errors":  null,
+                              "frames":  null,
+                              "technicians":  null,
+                              "users_total":  null
+                          },
+    "tech_err":  "The remote server returned an error: (404) Not Found."
+}

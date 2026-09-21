@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,6 +26,9 @@ export class AuthService {
   async issueToken(userId: number, ip: string, projectCode = '') {
     const user = await this.prisma.users.findUnique({ where: { id: userId } });
     if (!user || !user.is_active) throw new UnauthorizedException('Account is disabled');
+    if (user.role === 'sales_director') {
+      throw new ForbiddenException('The Sales Director role has been removed. Contact your administrator.');
+    }
 
     await this.prisma.users.update({
       where: { id: user.id },
@@ -103,6 +106,44 @@ export class AuthService {
     };
   }
 
+  /** Usernames from the given list that exist and are active (dev Device Preview role list). */
+  async filterActiveUsernames(usernames: string[]): Promise<Set<string>> {
+    if (usernames.length === 0) return new Set();
+    const rows = await this.prisma.users.findMany({
+      where: { username: { in: usernames }, is_active: true },
+      select: { username: true },
+    });
+    return new Set(rows.map(row => row.username));
+  }
+
+  /** Safe public profile fields for every active account in the local demo user picker. */
+  async listActiveDemoUsers() {
+    return this.prisma.users.findMany({
+      where: {
+        is_active: true,
+        role: { in: ['system_admin', 'ops_director', 'prod_supervisor', 'qaqc_engineer', 'wiring_technician'] },
+      },
+      select: {
+        username: true,
+        full_name: true,
+        role: true,
+      },
+      orderBy: [
+        { role: 'asc' },
+        { full_name: 'asc' },
+      ],
+    });
+  }
+
+  /** DEMO_MODE-only account switch; production callers never reach this method. */
+  async loginDemoUser(username: string, ip: string) {
+    const normalized = String(username ?? '').trim();
+    if (!normalized) throw new UnauthorizedException('Invalid demo account');
+    const user = await this.prisma.users.findUnique({ where: { username: normalized } });
+    if (!user || !user.is_active) throw new UnauthorizedException('Demo account is unavailable');
+    return this.issueToken(user.id, ip, '');
+  }
+
   // ── Password login (unchanged validation logic) ────────────────────────────
 
   async login(username: string, password: string, ip: string, projectCode = '') {
@@ -116,6 +157,16 @@ export class AuthService {
     return this.issueToken(user.id, ip, projectCode);
   }
 
+  async deferWebAuthnBootstrap(userId: number, role: string) {
+    const allowed = new Set(['system_admin', 'ops_director']);
+    if (!allowed.has(role)) {
+      throw new ForbiddenException('Bootstrap defer is not available for this role.');
+    }
+    this.bootstrap.deferWebAuthnEnrollment(userId);
+    const credCount = this.webauthnStore.byUserId(userId).length;
+    return { bootstrap: this.bootstrap.statusForUser(userId, role, credCount > 0) };
+  }
+
   async logout(userId: number, role: string, ip: string, refreshToken?: string) {
     if (refreshToken?.trim()) {
       this.tokenStore.revokeRefreshToken(refreshToken.trim());
@@ -124,50 +175,5 @@ export class AuthService {
       data: { user_id: userId, action: 'logout', login_role: role, ip_address: ip },
     });
     return { message: 'Logged out successfully' };
-  }
-
-  // ── Demo-mode only: safe user list (username / name / role, NO secrets) ────
-
-  async getDemoUsers() {
-    const ROLE_ORDER: Record<string, number> = {
-      system_admin: 0, ops_director: 1, prod_supervisor: 2,
-      qaqc_engineer: 3, wiring_technician: 4,
-    };
-
-    const DEMO_USERNAMES = [
-      'sysadmin', 'director1', 'ops_director1', 'supervisor1',
-      'qa1', 'qa2',
-      'tech01', 'tech02', 'tech03', 'tech04', 'tech05',
-      'tech1',  'tech2',  'tech3',  'tech4',  'tech5',  'tech6',
-      'tech7',  'tech8',  'tech9',  'tech10', 'tech11', 'tech12',
-      'tech13', 'tech14', 'tech15', 'tech16', 'tech17', 'tech18',
-      'tech19', 'tech20', 'tech21', 'tech22', 'tech23', 'tech24',
-    ];
-
-    const rows = await this.prisma.users.findMany({
-      where: { username: { in: DEMO_USERNAMES }, is_active: true },
-      select: { username: true, full_name: true, role: true },
-    });
-
-    return rows.sort((a, b) => {
-      const ro = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
-      if (ro !== 0) return ro;
-      return a.username.localeCompare(b.username, undefined, { numeric: true, sensitivity: 'base' });
-    });
-  }
-
-  getLoginHints() {
-    return {
-      hint: 'Development seed credentials',
-      accounts: [
-        { role: 'system_admin',      username: 'sysadmin',      password: 'admin123'        },
-        { role: 'ops_director',      username: 'director1',     password: 'dir123'          },
-        { role: 'ops_director',      username: 'ops_director1', password: 'ops_director123' },
-        { role: 'prod_supervisor',   username: 'supervisor1',   password: 'super123'        },
-        { role: 'qaqc_engineer',     username: 'qa1',           password: 'qa1'             },
-        { role: 'qaqc_engineer',     username: 'qa2',           password: 'qa2'             },
-        { role: 'wiring_technician', username: 'tech1',         password: 'tech1'           },
-      ],
-    };
   }
 }

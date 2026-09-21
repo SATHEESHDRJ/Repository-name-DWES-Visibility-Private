@@ -1,0 +1,54 @@
+{
+    "cable_index":  201,
+    "required":  true,
+    "overall":  "REWORK_REQUIRED",
+    "wiring_locked":  true,
+    "readyForWiring":  false,
+    "openEnd":  null,
+    "wiring_src":  false,
+    "wiring_dst":  false,
+    "legacyWiringCompleted":  false,
+    "legacyCrimpWithoutStrip":  false,
+    "legacyPartial":  false,
+    "qaHold":  false,
+    "cut":  {
+                "status":  "COMPLETED",
+                "plannedLength":  "3",
+                "by":  42,
+                "at":  "2026-09-18T13:00:54.769Z"
+            },
+    "wireStrip":  {
+                      "status":  "COMPLETED",
+                      "by":  42,
+                      "at":  "2026-09-18T13:00:55.570Z"
+                  },
+    "wireCrimp":  {
+                      "status":  "COMPLETED",
+                      "by":  42,
+                      "at":  "2026-09-18T13:00:57.179Z"
+                  },
+    "source":  {
+                   "strippingStatus":  "COMPLETED",
+                   "crimpingStatus":  "REWORK_REQUIRED",
+                   "strippedBy":  42,
+                   "strippedAt":  "2026-09-18T13:00:55.570Z",
+                   "crimpedBy":  42,
+                   "crimpedAt":  "2026-09-18T13:00:57.179Z"
+               },
+    "destination":  {
+                        "strippingStatus":  "COMPLETED",
+                        "crimpingStatus":  "REWORK_REQUIRED",
+                        "strippedBy":  42,
+                        "strippedAt":  "2026-09-18T13:00:55.570Z",
+                        "crimpedBy":  42,
+                        "crimpedAt":  "2026-09-18T13:00:57.179Z"
+                    },
+    "source_strip":  "COMPLETED",
+    "source_crimp":  "REWORK_REQUIRED",
+    "destination_strip":  "COMPLETED",
+    "destination_crimp":  "REWORK_REQUIRED",
+    "sourceBy":  42,
+    "destinationBy":  42,
+    "sourceAt":  "2026-09-18T13:00:57.179Z",
+    "destinationAt":  "2026-09-18T13:00:57.179Z"
+}

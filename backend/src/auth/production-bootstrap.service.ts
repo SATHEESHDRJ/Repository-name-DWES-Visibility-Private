@@ -3,7 +3,8 @@ import Database = require('better-sqlite3');
 import * as fs from 'fs';
 import * as path from 'path';
 
-const BOOTSTRAP_ROLES = new Set(['system_admin', 'ops_director']);
+const BOOTSTRAP_ROLES = new Set(['system_admin']);
+// ops_director: password-only for now — fingerprint enrollment will be required later.
 const DEMO_USERNAMES = new Set([
   'sysadmin', 'director1', 'ops_director1', 'supervisor1', 'qa1', 'qa2', 'tech1',
 ]);
@@ -69,6 +70,15 @@ export class ProductionBootstrapService implements OnModuleInit {
     ).run(userId);
   }
 
+  /** Password-only continuation until the user enrolls WebAuthn later. */
+  deferWebAuthnEnrollment(userId: number): void {
+    this.db.prepare(
+      `INSERT INTO production_bootstrap (user_id, webauthn_enrolled_at)
+       VALUES (?, 'deferred')
+       ON CONFLICT(user_id) DO UPDATE SET webauthn_enrolled_at = 'deferred'`,
+    ).run(userId);
+  }
+
   statusForUser(userId: number, role: string | null | undefined, hasWebAuthn: boolean): BootstrapStatus {
     if (!this.isProduction() || !BOOTSTRAP_ROLES.has(role || '')) {
       return { required: false, needs_password_rotation: false, needs_webauthn_enrollment: false };
@@ -78,7 +88,10 @@ export class ProductionBootstrapService implements OnModuleInit {
     ).get(userId) as { password_rotated_at?: string; webauthn_enrolled_at?: string } | undefined;
 
     const needsPassword = !row?.password_rotated_at;
-    const needsWebAuthn = !row?.webauthn_enrolled_at && !hasWebAuthn;
+    // Fingerprint enrollment is optional for now — password-only access for admin/director.
+    // Re-enable by restoring: !row?.webauthn_enrolled_at && !hasWebAuthn
+    void hasWebAuthn;
+    const needsWebAuthn = false;
     return {
       required: needsPassword || needsWebAuthn,
       needs_password_rotation: needsPassword,

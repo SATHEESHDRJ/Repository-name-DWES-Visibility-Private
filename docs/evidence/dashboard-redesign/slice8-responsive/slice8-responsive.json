@@ -1,0 +1,11 @@
+﻿{
+  "slice": 8,
+  "verdict": "PARTIAL",
+  "checks": {
+    "phone_390": { "overflowX": false, "mainScroller": "app-shell", "clippedDialog": false },
+    "tablet_1024": { "overflowX": false, "mainScroller": "app-shell", "htmlBodyOverflow": "visible" },
+    "laptop_1440": { "set": true, "not_fully_audited_all_roles": true }
+  },
+  "note": "Single primary scrollbar via .app-shell; html/body not dual-scrolling. Full 4-role × 4-viewport matrix and a11y contrast audit still pending in slice 9.",
+  "screenshots": ["responsive-admin-phone.png"]
+}

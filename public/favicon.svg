@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Compact favicon — same canonical Ingenious globe mark as public/app-icon.svg -->
+<!-- Compact favicon — same navy app tile / canonical Ingenious globe mark as public/app-icon.svg -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="10" fill="#FFFFFF"/>
+  <rect width="48" height="48" rx="10" fill="#1B2958"/>
+  <rect x="2" y="2" width="44" height="44" rx="8" fill="#FFFFFF"/>
+  <rect x="2" y="2" width="44" height="44" rx="8" fill="none" stroke="#6DCFD4" stroke-opacity="0.56" stroke-width="0.8"/>
   <g transform="translate(-4.3 10.5) scale(0.1875)">
     <circle cx="150" cy="72" r="56"
             stroke="#2A7A8A" stroke-width="2.5" opacity="0.45"/>

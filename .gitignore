@@ -1,101 +1,39 @@
-# ===== Dependencies =====
 node_modules/
 **/node_modules/
-
-# ===== Env & secrets (keep example templates only) =====
+dist/
+**/dist/
+backend/uploads/
+backend/data/
+data/
+*.dump
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 .env
 .env.*
-deploy-secrets.local.env
-docs/go-live-artifacts/
-!.env.example
-!**/.env.example
-!infra/docker/.env.production.example
-!infra/docker/.env.e2e.example
-!infra/docker/.env.dev.example
-infra/docker/.env
-infra/docker/.env.e2e
-infra/docker/.e2e-data/
-infra/docker/ssl/*.pem
-infra/docker/.previous-tag*
-.terraform/
-*.tfstate
-*.tfstate.*
+!.env*.example
 *.pem
+*.ppk
 *.key
-*.pfx
-
-# ===== Build output =====
-dist/
-build/
-**/dist/
-**/build/
-.vite/
-*.tsbuildinfo
-dist-ssr/
-*.local
-
-# ===== Frontend (Vite) =====
-frontend/dist/
-.cache/
-
-# ===== Backend (NestJS) =====
-backend/dist/
-backend/data/
-
-# ===== File-store: uploaded frames / drawings (user uploads — never commit) =====
-uploads/
-**/uploads/
-file-store/
-**/file-store/
-storage/
-**/storage/
-
-# ===== Database backups / dumps (contain password hashes — never commit) =====
-backup*.sql
-*_backup.sql
-pg_dump*.sql
-dwes_backup*.sql
-*.dump
-*.pg_dump
-backups/
-Backup/
-DEWS_Backups/
-
-# ===== Logs =====
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# ===== OS / editor cruft =====
+!*.key.pub
+login*.json
+tmp-*-creds.json
+**/artifacts/
+**/*.tar
+**/*.tar.gz
+!package-lock.json
 .DS_Store
-Thumbs.db
-desktop.ini
-.idea/
-*.swp
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-!.vscode/launch.json
-!.vscode/tasks.json
-
-# ===== Test / coverage =====
-coverage/
-.nyc_output/
-.smoke-shots/
-test-results/
-**/test-results/
-
-# ===== Project-specific (from prior .gitignore) =====
-certs/
-.dwes-port
-.ds-sync/
-ds-bundle/
-.design-sync/.cache/
-.design-sync/learnings/
-.design-sync/node_modules
-
-# ===== Archived legacy files (not part of the app) =====
-_archive/
-_old_src_extract/
+*.log
+infra/oci/terraform/.terraform/
+logs/launcher/*.log.*
+Backup/
+tmp-*.js
+tmp-*.cjs
+tmp-*.json
+tmp-*.txt
+twin2d.txt
+twin3d.txt
+typography-migration.cjs
+viewport-screenshots/

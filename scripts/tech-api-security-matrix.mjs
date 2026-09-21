@@ -6,6 +6,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const API = process.env.DWES_API || 'http://127.0.0.1:3001/api';
 const ACTIVE_PROJECT = process.env.DWES_TEST_PROJECT || '132KV33KV_KSA_RIYADH_2026_001';
@@ -84,8 +85,10 @@ async function testProjectEndpoints(projectCode, panelId, tokens, labels, expect
   return drawingId;
 }
 
-const sup = await login('supervisor1', 'super123');
-const tech1 = await login('tech1', 'tech1');
+const supervisorAccount = accountForRole('prod_supervisor');
+const technicianAccount = accountForRole('wiring_technician');
+const sup = await login(supervisorAccount.username, supervisorAccount.password);
+const tech1 = await login(technicianAccount.username, technicianAccount.password);
 const tech01 = await login('tech01', 'tech01');
 
 const supToken = sup.access_token;

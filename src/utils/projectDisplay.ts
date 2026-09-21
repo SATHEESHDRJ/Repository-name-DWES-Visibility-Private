@@ -3,7 +3,13 @@ import type { Project } from '../types';
 /** Machine-readable creation metadata stored in projects.description */
 export interface ProjectCreationMeta {
   locationRegion: string;
-  monthYear: string;
+  /** Optional on legacy projects created by the earlier month/year flow. */
+  monthYear?: string;
+  /** Creation-form values retained separately from the final display name. */
+  substationName?: string;
+  location?: string;
+  region?: string;
+  projectNumbering?: string;
 }
 
 const META_PREFIX = '@dwes-meta:';
@@ -22,7 +28,7 @@ export function decodeProjectMeta(description: string | null | undefined): {
   }
   try {
     const meta = JSON.parse(raw.slice(META_PREFIX.length)) as ProjectCreationMeta;
-    if (meta && typeof meta.locationRegion === 'string' && typeof meta.monthYear === 'string') {
+    if (meta && typeof meta.locationRegion === 'string') {
       return { meta, userNotes: '' };
     }
   } catch { /* fall through */ }
@@ -46,7 +52,8 @@ export interface ProjectCodeParts {
   locationRegionLabel: string;
 }
 
-export function parseProjectCode(code: string): ProjectCodeParts | null {
+export function parseProjectCode(code: string | null | undefined): ProjectCodeParts | null {
+  if (!code) return null;
   const parts = code.split('_').filter(Boolean);
   if (parts.length < 5) return null;
   const numbering = parts[parts.length - 1];
@@ -70,14 +77,15 @@ function normalizeClient(value: string): string {
 }
 
 /** Parse legacy projects whose name was stored as a long dash-separated title. */
-export function parseLegacyProjectName(name: string, client: string) {
-  const parts = name.split(/\s+[–—]\s+|\s+-\s+/).map(p => p.trim()).filter(Boolean);
+export function parseLegacyProjectName(name: string | null | undefined, client: string | null | undefined) {
+  const safeName = (name || '').trim();
+  const parts = safeName.split(/\s+[–—]\s+|\s+-\s+/).map(p => p.trim()).filter(Boolean);
   if (parts.length <= 1) {
-    return { substationName: name.trim() };
+    return { substationName: safeName };
   }
   const substationName = parts[0];
   let i = 1;
-  if (parts[i] && client && normalizeClient(parts[i]) === normalizeClient(client)) {
+  if (parts[i] && client && normalizeClient(parts[i]) === normalizeClient(client || '')) {
     i += 1;
   }
   const rest = parts.slice(i);
@@ -97,6 +105,9 @@ export interface ProjectCardDetails {
   monthYear: string;
   projectCode: string;
   projectNumbering: string;
+  /** User-facing Project State (derived from project_state). */
+  stateLabel: string;
+  /** @deprecated Use stateLabel — kept for brief compatibility. */
   statusLabel: string;
 }
 
@@ -105,10 +116,15 @@ export function resolveProjectCardDetails(project: Project): ProjectCardDetails 
   const { meta } = decodeProjectMeta(project.description);
   const legacy = parseLegacyProjectName(project.name, project.client);
 
-  const substationName = legacy.substationName || project.name.trim() || project.code;
+  const substationName =
+    meta?.substationName?.trim()
+    || legacy.substationName
+    || (project.name || '').trim()
+    || project.code;
   const client = project.client?.trim() || 'Not set';
   const locationRegion =
     meta?.locationRegion?.trim()
+    || [meta?.location?.trim(), meta?.region?.trim()].filter(Boolean).join(' / ')
     || legacy.locationRegion?.trim()
     || codeParts?.locationRegionLabel
     || 'Not set';
@@ -124,7 +140,13 @@ export function resolveProjectCardDetails(project: Project): ProjectCardDetails 
     locationRegion,
     monthYear,
     projectCode: project.code,
-    projectNumbering: codeParts?.numbering || project.sequence?.toString().padStart(3, '0') || '—',
+    projectNumbering:
+      meta?.projectNumbering?.trim()
+      || codeParts?.numbering
+      || project.code?.trim()
+      || project.sequence?.toString().padStart(3, '0')
+      || '—',
+    stateLabel: (project.project_state || 'not_started').replace(/_/g, ' '),
     statusLabel: (project.project_state || 'not_started').replace(/_/g, ' '),
   };
 }
@@ -180,3 +202,112 @@ export function buildProjectReferenceTitle(
     monthYear.trim(),
   ].filter(Boolean).join(' – ');
 }
+
+/**
+ * Canonical project name for the current creation flow. Panels stay as their own
+ * project-scoped records, so adding another panel never changes the project name.
+ */
+export function buildProjectFullName(
+  substationName: string,
+  client: string,
+  location: string,
+  region: string,
+  projectNumbering: string,
+): string {
+  const locationRegion = [location.trim(), region.trim()].filter(Boolean).join(' / ');
+  return [
+    substationName.trim(),
+    client.trim(),
+    locationRegion,
+    projectNumbering.trim(),
+  ].filter(Boolean).join(' – ');
+}
+
+/** Technician assignment row fields used for the Panels workspace header. */
+export interface TechnicianAssignmentHeaderSource {
+  project_code: string;
+  project_name?: string | null;
+  project_client?: string | null;
+  panel_name?: string | null;
+}
+
+export function technicianAssignmentToProject(source: TechnicianAssignmentHeaderSource): Project {
+  return {
+    id: 0,
+    code: source.project_code,
+    name: String(source.project_name || source.project_code || '').trim(),
+    client: String(source.project_client || '').trim(),
+    description: '',
+    sequence: 0,
+    is_active: true,
+    created_at: '',
+    project_state: 'active',
+    assigned_technicians: '',
+  };
+}
+
+function splitLocationRegionLabel(label: string): { location: string; region: string } {
+  if (!label || label === 'Not set') return { location: '', region: '' };
+  const idx = label.indexOf(' / ');
+  if (idx === -1) return { location: label.trim(), region: '' };
+  return {
+    location: label.slice(0, idx).trim(),
+    region: label.slice(idx + 3).trim(),
+  };
+}
+
+/** Plain-text Panels section title: canonical project name + panel (creation-flow format). */
+export function buildTechnicianPanelsSectionTitle(
+  source: TechnicianAssignmentHeaderSource | null | undefined,
+): string {
+  if (!source?.project_code) return 'Panels';
+  const details = resolveProjectCardDetails(technicianAssignmentToProject(source));
+  const { location, region } = splitLocationRegionLabel(details.locationRegion);
+  const projectPart = buildProjectFullName(
+    details.substationName,
+    details.client !== 'Not set' ? details.client : '',
+    location,
+    region,
+    details.projectNumbering !== '—' ? details.projectNumbering : '',
+  );
+  const panel = source.panel_name ? compactPanelDisplayName(source.panel_name) : '';
+  if (panel && projectPart) return `${projectPart} — ${panel}`;
+  return projectPart || panel || 'Panels';
+}
+
+export interface TechnicianPanelsSectionTitleParts {
+  plain: string;
+  substationName: string;
+  projectSuffix: string;
+  panelName: string;
+}
+
+/** Structured title for emphasis styling (bold substation + panel names). */
+export function buildTechnicianPanelsSectionTitleParts(
+  source: TechnicianAssignmentHeaderSource | null | undefined,
+): TechnicianPanelsSectionTitleParts {
+  const plain = buildTechnicianPanelsSectionTitle(source);
+  if (!source?.project_code) {
+    return { plain: 'Panels', substationName: 'Panels', projectSuffix: '', panelName: '' };
+  }
+  const details = resolveProjectCardDetails(technicianAssignmentToProject(source));
+  const { location, region } = splitLocationRegionLabel(details.locationRegion);
+  const projectPart = buildProjectFullName(
+    details.substationName,
+    details.client !== 'Not set' ? details.client : '',
+    location,
+    region,
+    details.projectNumbering !== '—' ? details.projectNumbering : '',
+  );
+  const panelName = source.panel_name ? compactPanelDisplayName(source.panel_name) : '';
+  const projectSuffix = projectPart.startsWith(details.substationName)
+    ? projectPart.slice(details.substationName.length)
+    : '';
+  return {
+    plain,
+    substationName: details.substationName,
+    projectSuffix,
+    panelName,
+  };
+}
+

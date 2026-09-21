@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
-import { MulterModule } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
+import { GaFoundationModule } from '../ga-foundation/ga-foundation.module';
+import { DrawingTbAnalysisModule } from '../drawing-tb-analysis/drawing-tb-analysis.module';
 
+// Multipart handling is registered app-wide in main.ts (@fastify/multipart,
+// limits in ./upload-limits). Controllers use DwesFileInterceptor.
 @Module({
-  imports: [MulterModule.register({ storage: undefined, limits: { fileSize: 50 * 1024 * 1024 } })],
+  imports: [GaFoundationModule, DrawingTbAnalysisModule],
   providers: [UploadService],
   controllers: [UploadController],
   exports: [UploadService],

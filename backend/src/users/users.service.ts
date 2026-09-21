@@ -196,7 +196,24 @@ export class UsersService {
   }
 
   async findTechnicians() {
-    const users = await this.prisma.users.findMany({ where: { role: TECHNICIAN_ROLE, is_active: true } });
-    return users.map(safeUser);
+    const users = await this.prisma.users.findMany({
+      where: { role: TECHNICIAN_ROLE, is_active: true },
+      orderBy: { username: 'asc' },
+    });
+    const activeAssignments = users.length
+      ? await this.prisma.tech_assignments.findMany({
+        where: {
+          technician_id: { in: users.map(user => user.id) },
+          status: { in: ['assigned', 'in_progress', 'paused'] },
+          changeover_locked: { not: true },
+        },
+        select: { technician_id: true },
+      })
+      : [];
+    const assignedIds = new Set(activeAssignments.map(assignment => assignment.technician_id));
+    return users.map(user => ({
+      ...safeUser(user),
+      availability_status: assignedIds.has(user.id) ? 'ASSIGNED' : 'AVAILABLE',
+    }));
   }
 }

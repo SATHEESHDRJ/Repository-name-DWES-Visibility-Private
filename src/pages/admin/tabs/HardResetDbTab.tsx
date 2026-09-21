@@ -86,13 +86,20 @@ export default function HardResetDbTab() {
 
   const handleReset = async () => {
     const ok = await dialog.confirm({
-      title: 'Hard Reset DB',
+      title: 'Hard Reset Database',
       tone: 'delete',
-      confirmText: 'Continue to reset',
+      confirmText: 'Delete Permanently',
       message:
-        'This will delete ALL projects, panels, wiring schedules, drawings, reports, '
-        + 'technician assignments, duplicate hash records, session log entries, and WebAuthn passkeys. '
-        + 'User accounts are preserved. This cannot be undone except from pg_dump backup.',
+        'This permanently clears all project execution data from the database and uploads store. User accounts are preserved. Recovery requires a pg_dump backup.',
+      actionSummary: 'Delete all projects, panels, wiring schedules, drawings, reports, assignments, hashes, session log entries, and WebAuthn passkeys.',
+      removalItems: [
+        'All projects and panels',
+        'Wiring schedules, drawings, and reports',
+        'Technician assignments and inspections',
+        'Duplicate file hashes and session log entries',
+        'WebAuthn passkeys',
+      ],
+      entity: { label: 'Scope', value: 'Entire WiringSchemeDB project dataset', kind: 'other' },
     });
     if (!ok) return;
 
@@ -120,7 +127,7 @@ export default function HardResetDbTab() {
   };
 
   return (
-    <div className="rounded-2xl border border-red-300 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-300 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-red-300 bg-red-50 flex items-center gap-3">
         <Database size={20} className="text-red-800 shrink-0" />
         <div>
@@ -162,16 +169,16 @@ export default function HardResetDbTab() {
                   }`}>
                     {item.value}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">{item.label}</div>
+                  <div className="text-[11px] text-muted mt-1">{item.label}</div>
                 </div>
               ))}
             </div>
-            <div className="text-[12px] text-slate-500 flex items-start gap-1.5 mb-3">
+            <div className="text-[12px] text-muted flex items-start gap-1.5 mb-3">
               <CheckCircle2 size={14} className="text-green-500 shrink-0 mt-0.5" />
               <span>{precheck?.backup_note}</span>
             </div>
-            <div className="text-[12px] text-slate-600">
-              Preserved: {precheck?.preserved.join('; ')}. After reset, {precheck?.reseed_projects} canonical seed projects are recreated.
+            <div className="text-[12px] text-muted">
+              Preserved: {precheck?.preserved.join('; ')}. After reset, no projects are recreated — all projects are created manually in the app.
             </div>
           </div>
         )}
@@ -196,6 +203,8 @@ export default function HardResetDbTab() {
       {showModal && (
         <Modal
           title="Confirm Hard Reset DB"
+          icon={<Database />}
+          iconTone="danger"
           onClose={closeModal}
           size="lg"
           footer={result ? undefined : (
@@ -204,7 +213,7 @@ export default function HardResetDbTab() {
                 type="button"
                 onClick={closeModal}
                 disabled={resetting}
-                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-[var(--t-surface-white)] text-secondary font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -240,17 +249,20 @@ export default function HardResetDbTab() {
 
               <div className="mb-4">
                 <label className="form-label mb-1">Type confirmation phrase</label>
-                <input
-                  type="text"
-                  value={confirmPhrase}
-                  onChange={e => { setConfirmPhrase(e.target.value); setError(''); }}
-                  className="form-input font-mono"
-                  placeholder={CONFIRM_PHRASE}
-                  autoComplete="off"
-                  disabled={resetting}
-                  aria-label="Hard reset confirmation phrase"
-                />
-                <div className="text-[11px] text-slate-500 mt-1">
+                <div className="field-with-icon">
+                  <span className="field-lead-icon"><ShieldAlert size={18} /></span>
+                  <input
+                    type="text"
+                    value={confirmPhrase}
+                    onChange={e => { setConfirmPhrase(e.target.value); setError(''); }}
+                    className="form-input font-mono"
+                    placeholder={CONFIRM_PHRASE}
+                    autoComplete="off"
+                    disabled={resetting}
+                    aria-label="Hard reset confirmation phrase"
+                  />
+                </div>
+                <div className="text-[11px] text-muted mt-1">
                   Type exactly: <strong>{CONFIRM_PHRASE}</strong>
                 </div>
               </div>
@@ -260,9 +272,9 @@ export default function HardResetDbTab() {
           ) : (
             <div className="text-center">
               <CheckCircle2 size={48} className="text-green-500 mx-auto mb-3" />
-              <div className="text-[16px] font-bold text-slate-800 mb-2">Hard reset complete</div>
-              <div className="text-[13px] text-slate-600 mb-4">{result.message}</div>
-              <div className="text-[12px] text-slate-500">Reloading app…</div>
+              <div className="text-[16px] font-bold text-primary mb-2">Hard reset complete</div>
+              <div className="text-[13px] text-muted mb-4">{result.message}</div>
+              <div className="text-[12px] text-muted">Reloading app…</div>
             </div>
           )}
         </Modal>

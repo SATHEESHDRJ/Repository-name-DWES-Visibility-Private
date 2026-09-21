@@ -3,10 +3,8 @@ import {
   WIRING_SYSTEM_FIELDS,
   fieldKeyForHeader,
   isMonoWiringField,
-  updateWiringMapping,
 } from '../../constants/wiringSystemFields';
 
-export type WiringColumnFilter = 'all' | 'selected' | 'required' | 'unselected';
 export type WiringGridVariant = 'inline' | 'fullview';
 
 export interface WiringSchedulePreview {
@@ -29,9 +27,7 @@ interface WiringScheduleMappingGridProps {
   onMappingChange: (mapping: Record<string, string>) => void;
   onToggleHeader: (header: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
-  searchQuery: string;
-  columnFilter: WiringColumnFilter;
-  preview: WiringSchedulePreview | null;
+  preview?: WiringSchedulePreview | null;
   variant?: WiringGridVariant;
   columnWidths?: Record<string, number>;
   onColumnResize?: (header: string, width: number) => void;
@@ -104,12 +100,9 @@ export default function WiringScheduleMappingGrid({
   rows,
   mapping,
   includedHeaders,
-  onMappingChange,
   onToggleHeader,
   onToggleAll,
-  searchQuery,
-  columnFilter,
-  preview,
+  preview = null,
   variant = 'inline',
   columnWidths,
   onColumnResize,
@@ -117,7 +110,6 @@ export default function WiringScheduleMappingGrid({
   readOnly = false,
 }: WiringScheduleMappingGridProps) {
   const isFullview = variant === 'fullview';
-  const q = searchQuery.trim().toLowerCase();
 
   const [resizing, setResizing] = useState<{
     header: string;
@@ -174,33 +166,13 @@ export default function WiringScheduleMappingGrid({
     setResizing({ header, startX: e.clientX, startWidth: getColWidth(header) });
   };
 
-  const visibleHeaders = useMemo(() => {
-    return headers.filter(header => {
-      const included = isHeaderIncluded(includedHeaders, header);
-      const fk = fieldKeyForHeader(mapping, header);
-      const field = fk ? WIRING_SYSTEM_FIELDS.find(f => f.key === fk) : null;
-      switch (columnFilter) {
-        case 'selected':
-          return included;
-        case 'unselected':
-          return !included;
-        case 'required':
-          return !!field?.required;
-        default:
-          return true;
-      }
-    });
-  }, [headers, includedHeaders, mapping, columnFilter]);
+  /** Always show every column — selection is via checkboxes only, not filters. */
+  const visibleHeaders = headers;
 
-  const visibleRows = useMemo(() => {
-    let list = rows.map((row, idx) => ({ row, idx }));
-    if (q) {
-      list = list.filter(({ row }) =>
-        row.some(cell => String(cell ?? '').toLowerCase().includes(q)),
-      );
-    }
-    return list;
-  }, [rows, q]);
+  const visibleRows = useMemo(
+    () => rows.map((row, idx) => ({ row, idx })),
+    [rows],
+  );
 
   const headerIndex = useMemo(() => {
     const m = new Map<string, number>();
@@ -289,53 +261,12 @@ export default function WiringScheduleMappingGrid({
               );
             })}
           </tr>
-          <tr className="wu-grid-row-map">
-            <th className={`wu-grid-th-idx ${frozenClass}`} scope="col" style={idxStyle} aria-hidden>
-              <span className="wu-grid-map-icon">↕</span>
-            </th>
-            {visibleHeaders.map(header => {
-              const included = isHeaderIncluded(includedHeaders, header);
-              const fk = fieldKeyForHeader(mapping, header);
-              const field = fk ? WIRING_SYSTEM_FIELDS.find(f => f.key === fk) : null;
-              const state = headerColumnState(header, mapping, included);
-              const mapState = !included
-                ? 'skip'
-                : field?.required
-                  ? 'required'
-                  : fk
-                    ? 'mapped'
-                    : 'idle';
-              return (
-                <th key={`map-${header}`} scope="col" className={`wu-col--${state}`} style={colStyle(header)}>
-                  <select
-                    className={`wu-map-select wu-map-select--${mapState}`}
-                    value={fk || ''}
-                    disabled={!included || readOnly}
-                    onChange={e => { if (!readOnly) onMappingChange(updateWiringMapping(mapping, header, e.target.value)); }}
-                    aria-label={`Map column ${header}`}
-                    aria-readonly={readOnly || undefined}
-                  >
-                    <option value="">— skip —</option>
-                    {WIRING_SYSTEM_FIELDS.map(sf => (
-                      <option
-                        key={sf.key}
-                        value={sf.key}
-                        disabled={!!mapping[sf.key] && mapping[sf.key] !== header}
-                      >
-                        {sf.label}{sf.required ? ' ★' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </th>
-              );
-            })}
-          </tr>
         </thead>
         <tbody>
           {visibleRows.length === 0 ? (
             <tr>
               <td colSpan={visibleHeaders.length + 1} className="wu-grid-empty">
-                No rows match the current search.
+                No data rows found in this worksheet.
               </td>
             </tr>
           ) : visibleRows.map(({ row, idx }) => {

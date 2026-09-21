@@ -1,40 +1,99 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TechService } from '../tech/tech.service';
+import { DashboardCacheService } from '../common/cache/dashboard-cache.service';
 import { MockStore } from '../data/mock-store';
 import { FrameStore } from '../frames/frame-store';
-import * as XLSX from 'xlsx';
 import * as ExcelJS from 'exceljs';
 import { buildCompletionReport } from '../common/completion-report.helper';
 import { getReportLogoBuffer, REPORT_COMPANY, REPORT_SYSTEM } from '../common/report-branding';
 import { collectPanelCompletionReportData } from '../common/panel-completion-report.helper';
 import { assertPanelNameUniqueForWrite } from '../common/panel-duplicate.helper';
+import { assignedCableKpiPercent, wiringKpiPercent } from '../common/kpi.constants';
+import { parseCableStatus as parseCS } from '../common/cable-status.util';
+import { countOpenEnds } from '../common/director-submission.util';
+import { buildAssignmentActionPolicy } from '../common/assignment-lifecycle';
 
 interface AnyUser { id: number; role: string | null; full_name: string | null; }
-
-function parseCS(raw: string | null | undefined): Record<string, any> {
-  try { return JSON.parse(raw || '{}'); } catch { return {}; }
-}
 
 @Injectable()
 export class SupervisorService {
   constructor(
     private prisma: PrismaService,
     private techService: TechService,
+    @Optional() private cacheService?: DashboardCacheService,
   ) {}
 
   async allPanels() {
+    const cached = await this.cacheService?.getAsync<any>('supervisor:allPanels');
+    if (cached) return cached;
+
     const assignments = await this.prisma.tech_assignments.findMany({ orderBy: { assigned_at: 'desc' } });
-    const techIds = [...new Set(assignments.map(a => a.technician_id))];
+    const submitAudits = await this.prisma.tech_audit_log.findMany({
+      where: { action: 'submitted_to_director' },
+      orderBy: { created_at: 'desc' },
+      take: 5000,
+      select: {
+        project_code: true,
+        frame_id: true,
+        technician_name: true,
+        created_at: true,
+      },
+    });
+    const directorSubmitByFrame = new Map<string, { at: Date | null; by: string }>();
+    for (const row of submitAudits) {
+      const key = `${row.project_code || ''}::${row.frame_id || ''}`;
+      if (!key.endsWith('::') && !directorSubmitByFrame.has(key)) {
+        directorSubmitByFrame.set(key, {
+          at: row.created_at,
+          by: row.technician_name || 'Supervisor',
+        });
+      }
+    }
+    // One lookup covers technicians plus review/approval actors (names for the
+    // Status workspace's Review & Approval audit line — additive fields only).
+    const techIds = [...new Set(assignments.flatMap(a => [
+      a.technician_id, a.reviewed_by, a.approved_by, a.rework_requested_by,
+    ].filter((id): id is number => typeof id === 'number' && id > 0)))];
     const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
     const techMap = new Map(techs.map(t => [t.id, t]));
-    return assignments.map(a => {
+    const res = assignments.map(a => {
       const tech = techMap.get(a.technician_id);
       const frame = MockStore.findFrameById(a.frame_id);
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
-      return { ...a, cable_status: undefined, technician_name: tech?.full_name || '', technician_username: tech?.username || '', panel_display_name: frame?.panel_name || a.panel_name, kpi };
+      const cableState = parseCS(a.cable_status);
+      const states = Object.values(cableState);
+      const cablesCompleted = states.filter(state => Boolean(state?.src && state?.dst)).length;
+      const hasRecordedWork = (a.cables_src_done || 0) > 0
+        || (a.cables_dst_done || 0) > 0
+        || states.some(state => Boolean(state?.src || state?.dst));
+      const cablesTotal = a.cables_total || 0;
+      const kpi = assignedCableKpiPercent(cablesCompleted, cablesTotal);
+      const { openEndSource, openEndDestination } = countOpenEnds(a.cable_status);
+      const directorKey = `${a.project_code}::${a.frame_id}`;
+      const directorSubmit = directorSubmitByFrame.get(directorKey);
+      return {
+        ...a,
+        cable_status: undefined,
+        technician_name: tech?.full_name || '',
+        technician_username: tech?.username || '',
+        panel_display_name: frame?.panel_name || a.panel_name,
+        cables_completed: cablesCompleted,
+        cables_remaining: Math.max(0, cablesTotal - cablesCompleted),
+        has_recorded_work: hasRecordedWork,
+        kpi,
+        open_end_source: openEndSource,
+        open_end_destination: openEndDestination,
+        director_submitted: Boolean(directorSubmit),
+        director_submitted_at: directorSubmit?.at?.toISOString() ?? null,
+        director_submitted_by: directorSubmit?.by ?? null,
+        reviewer_name: a.reviewed_by ? (techMap.get(a.reviewed_by)?.full_name || '') : '',
+        approver_name: a.approved_by ? (techMap.get(a.approved_by)?.full_name || '') : '',
+        rework_by_name: a.rework_requested_by ? (techMap.get(a.rework_requested_by)?.full_name || '') : '',
+      };
     });
+
+    this.cacheService?.set('supervisor:allPanels', res, 30_000);
+    return res;
   }
 
   async reviewPanels(projectCode: string) {
@@ -47,8 +106,7 @@ export class SupervisorService {
     const techMap = new Map(techs.map(t => [t.id, t]));
     return assignments.map(a => {
       const tech = techMap.get(a.technician_id);
-      const kpi = (a.cables_total || 0) > 0
-        ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       return { ...a, cable_status: undefined, technician_name: tech?.full_name || '', kpi };
     });
   }
@@ -63,8 +121,7 @@ export class SupervisorService {
       where: { technician_id: a.technician_id, frame_id: a.frame_id },
       orderBy: { created_at: 'asc' },
     });
-    const kpi = (a.cables_total || 0) > 0
-      ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+    const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
     const { hashed_password: _hashed_password, ...safeTech } = tech || ({} as any);
     return {
       assignment: { ...a, cable_status: parseCS(a.cable_status) },
@@ -116,6 +173,257 @@ export class SupervisorService {
       };
     });
     return { assignments: result, frameId, projectCode, polled_at: new Date().toISOString() };
+  }
+
+  /**
+   * Compact, database-backed activity summary for the supervisor Project Information card.
+   * Historical handover rows remain immutable; the latest unlocked row represents the
+   * current technician while contribution counts are calculated from cable snapshots.
+   */
+  async panelActivity(projectCode: string, frameId: string) {
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    });
+    const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
+      ?? FrameStore.getFrameFromDisk(projectCode, frameId);
+    const frameTotal = frame?.cable_count || 0;
+
+    if (assignments.length === 0) {
+      const emptyPolicy = buildAssignmentActionPolicy(null);
+      return {
+        project_code: projectCode,
+        frame_id: frameId,
+        panel_name: frame?.panel_name || frameId,
+        assigned: false,
+        status: 'not_assigned',
+        status_label: 'Not Assigned',
+        work_state_label: 'Not Started',
+        technician: null,
+        assigned_at: null,
+        wiring_started_at: null,
+        last_activity_at: null,
+        completed_at: null,
+        completed_by: null,
+        has_started: false,
+        is_completed: false,
+        cables_total: frameTotal,
+        cables_completed: 0,
+        cables_remaining: frameTotal,
+        completion_percentage: 0,
+        mid_change: null,
+        lifecycle: emptyPolicy.lifecycle,
+        can_reassign: emptyPolicy.can_reassign,
+        can_mid_change: emptyPolicy.can_mid_change,
+        wiring_started: false,
+        synced_with_wiring_stage: false,
+      };
+    }
+
+    const technicianIds = [...new Set(assignments.map(assignment => assignment.technician_id))];
+    const [technicians, auditRows, sessionRows] = await Promise.all([
+      this.prisma.users.findMany({ where: { id: { in: technicianIds } } }),
+      this.prisma.tech_audit_log.findMany({
+        where: { project_code: projectCode, frame_id: frameId },
+        orderBy: { created_at: 'asc' },
+      }),
+      this.prisma.session_log.findMany({
+        where: { user_id: { in: technicianIds } },
+        orderBy: { created_at: 'asc' },
+      }),
+    ]);
+    const technicianMap = new Map(technicians.map(technician => [technician.id, technician]));
+    const assignmentMap = new Map(assignments.map(assignment => [assignment.id, assignment]));
+    const current = [...assignments].reverse().find(assignment => (
+      !assignment.is_hidden && !assignment.changeover_locked
+    )) ?? assignments[assignments.length - 1];
+    const currentTechnician = technicianMap.get(current.technician_id);
+    const currentStatus = parseCS(current.cable_status);
+    const cablesTotal = current.cables_total || frameTotal;
+    const cablesCompleted = Object.values(currentStatus).filter(state => Boolean(state?.src && state?.dst)).length;
+    const cablesRemaining = Math.max(0, cablesTotal - cablesCompleted);
+    const completionPercentage = assignedCableKpiPercent(cablesCompleted, cablesTotal);
+
+    const currentAssignedAtMs = current.assigned_at?.getTime() || 0;
+    const currentAuditRows = auditRows.filter(row => (
+      row.technician_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const currentSessionRows = sessionRows.filter(row => (
+      row.user_id === current.technician_id
+      && (row.created_at?.getTime() || 0) >= currentAssignedAtMs
+    ));
+    const latestSession = currentSessionRows[currentSessionRows.length - 1] ?? null;
+    const latestAudit = currentAuditRows[currentAuditRows.length - 1] ?? null;
+    const latestTimestamp = [
+      current.assigned_at,
+      current.started_at,
+      current.paused_at,
+      current.completed_at,
+      latestAudit?.created_at,
+      latestSession?.created_at,
+    ].filter((value): value is Date => value instanceof Date)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+    const pauseReason = (current.pause_reason || '').trim();
+    const normalizedPauseReason = pauseReason.toLowerCase();
+    let status = current.status || 'assigned';
+    let statusLabel = 'Not Started';
+    if (status === 'completed') {
+      status = 'completed';
+      statusLabel = 'Completed';
+    } else if (status === 'paused' && normalizedPauseReason.includes('lunch')) {
+      status = 'lunch_break';
+      statusLabel = 'On Lunch Break';
+    } else if (status === 'paused' && normalizedPauseReason.includes('tea')) {
+      status = 'tea_break';
+      statusLabel = 'On Tea Break';
+    } else if (status === 'paused') {
+      statusLabel = 'Paused';
+    } else if (status === 'in_progress' && latestSession?.action === 'logout') {
+      status = 'logged_out';
+      statusLabel = 'Working · Offline';
+    } else if (status === 'in_progress') {
+      statusLabel = 'Working';
+    } else if (status === 'assigned') {
+      statusLabel = 'Not Started';
+    } else {
+      statusLabel = status.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    const contributions = assignments.map(segment => {
+      const baseline = segment.handover_from_id ? assignmentMap.get(segment.handover_from_id) : null;
+      const before = parseCS(baseline?.cable_status);
+      const after = parseCS(segment.cable_status);
+      const segmentCompleted = Object.keys(after).filter(index => (
+        after[index]?.src && after[index]?.dst && !(before[index]?.src && before[index]?.dst)
+      )).length;
+      const segmentHasWork = Object.keys(after).some(index => (
+        (after[index]?.src && !before[index]?.src) || (after[index]?.dst && !before[index]?.dst)
+      ));
+      const technician = technicianMap.get(segment.technician_id);
+      return {
+        assignment_id: segment.id,
+        technician_id: segment.technician_id,
+        technician_name: technician?.full_name || technician?.username || `Technician #${segment.technician_id}`,
+        technician_username: technician?.username || '',
+        cables_completed: segmentCompleted,
+        has_recorded_work: segmentHasWork,
+        assigned_at: segment.assigned_at,
+        started_at: segment.started_at,
+        ended_at: segment.completed_at || (segment.changeover_locked ? segment.paused_at : null),
+      };
+    });
+
+    const currentContribution = contributions.find(item => item.assignment_id === current.id);
+    const previous = current.handover_from_id
+      ? assignmentMap.get(current.handover_from_id)
+      : assignments.length > 1 ? assignments[assignments.length - 2] : null;
+    const previousContribution = previous
+      ? contributions.find(item => item.assignment_id === previous.id)
+      : null;
+    const midChangeAudit = [...auditRows].reverse().find(row => (
+      ['mid_changeover', 'mid_change_confirmed', 'mid_change_swap'].includes(row.action)
+    ));
+    const incomingStartAudit = currentAuditRows.find(row => ['start', 'resume'].includes(row.action));
+    const incomingStarted = Boolean(
+      currentContribution
+      && (currentContribution.has_recorded_work || incomingStartAudit || current.status === 'completed')
+    );
+    const previousTechnician = previous ? technicianMap.get(previous.technician_id) : null;
+
+    const completedAssignment = [...assignments].reverse().find(assignment => (
+      assignment.status === 'completed' || assignment.completed_at
+    ));
+    const completedTechnician = completedAssignment
+      ? technicianMap.get(completedAssignment.technician_id)
+      : null;
+    const firstStartedAt = assignments.find(assignment => assignment.started_at)?.started_at ?? null;
+    const actionPolicy = buildAssignmentActionPolicy(current);
+    const wiringStarted = Boolean(firstStartedAt || cablesCompleted > 0 || current.started_at);
+
+    let syncedWithWiringStage = false;
+    try {
+      const workflow = await this.prisma.panel_workflows.findUnique({
+        where: {
+          project_code_frame_id: {
+            project_code: projectCode,
+            frame_id: frameId,
+          },
+        },
+        include: {
+          stages: {
+            where: { stage_key: 'WIRING' },
+            include: { assignees: true },
+          },
+        },
+      });
+      const wiringStage = workflow?.stages?.[0];
+      if (wiringStage && !current.changeover_locked) {
+        const assigneeIds = (wiringStage.assignees || []).map((a) => a.user_id);
+        syncedWithWiringStage =
+          assigneeIds.length === 1 && assigneeIds[0] === current.technician_id;
+      }
+    } catch {
+      syncedWithWiringStage = false;
+    }
+
+    return {
+      project_code: projectCode,
+      frame_id: frameId,
+      panel_name: frame?.panel_name || current.panel_name || frameId,
+      assigned: true,
+      status,
+      status_label: statusLabel,
+      work_state_label: statusLabel,
+      pause_reason: pauseReason || null,
+      technician: {
+        id: current.technician_id,
+        name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+        username: currentTechnician?.username || '',
+      },
+      assigned_at: current.assigned_at,
+      wiring_started_at: firstStartedAt,
+      last_activity_at: latestTimestamp,
+      completed_at: completedAssignment?.completed_at || null,
+      completed_by: completedAssignment ? {
+        id: completedAssignment.technician_id,
+        name: completedTechnician?.full_name || completedTechnician?.username || `Technician #${completedAssignment.technician_id}`,
+        username: completedTechnician?.username || '',
+      } : null,
+      has_started: Boolean(firstStartedAt || cablesCompleted > 0),
+      is_completed: status === 'completed',
+      // Session-derived login state + recorded active wiring duration for the
+      // Status workspace activity row (additive; existing consumers unaffected).
+      technician_logged_out: Boolean(latestSession && latestSession.action === 'logout'),
+      active_seconds: current.total_wiring_seconds || 0,
+      cables_total: cablesTotal,
+      cables_completed: cablesCompleted,
+      cables_remaining: cablesRemaining,
+      completion_percentage: completionPercentage,
+      lifecycle: actionPolicy.lifecycle,
+      can_reassign: actionPolicy.can_reassign,
+      can_mid_change: actionPolicy.can_mid_change,
+      wiring_started: wiringStarted,
+      synced_with_wiring_stage: syncedWithWiringStage,
+      mid_change: previous && current.technician_id !== previous.technician_id ? {
+        occurred: true,
+        changed_at: midChangeAudit?.created_at || current.assigned_at,
+        original_technician: {
+          id: previous.technician_id,
+          name: previousTechnician?.full_name || previousTechnician?.username || `Technician #${previous.technician_id}`,
+          username: previousTechnician?.username || '',
+          cables_completed: previousContribution?.cables_completed || 0,
+        },
+        incoming_technician: {
+          id: current.technician_id,
+          name: currentTechnician?.full_name || currentTechnician?.username || `Technician #${current.technician_id}`,
+          username: currentTechnician?.username || '',
+          cables_completed: currentContribution?.cables_completed || 0,
+        },
+        incoming_started: incomingStarted,
+      } : null,
+    };
   }
 
   async review(id: number, reviewStatus: string, reviewNotes: string, reviewerId: number) {
@@ -201,27 +509,7 @@ export class SupervisorService {
   }
 
   async pendingChangeovers() {
-    const assignments = await this.prisma.tech_assignments.findMany({
-      where: {
-        status: { in: ['paused', 'in_progress'] },
-        changeover_locked: { not: true },
-        is_hidden: { not: true },
-      },
-      orderBy: { assigned_at: 'desc' },
-    });
-    const techIds = [...new Set(assignments.map(a => a.technician_id))];
-    const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
-    const techMap = new Map(techs.map(t => [t.id, t]));
-    return assignments.map(a => {
-      const counts = this.countCableProgress(a.cable_status, a.cables_total);
-      return {
-        ...a,
-        cable_status: undefined,
-        technician_name: techMap.get(a.technician_id)?.full_name || '',
-        total_cables: counts.cables_total,
-        ...counts,
-      };
-    });
+    return this.techService.midChangeRequests();
   }
 
   async changeoverCandidate(projectCode: string, frameId: string) {
@@ -229,7 +517,17 @@ export class SupervisorService {
       where: {
         project_code: projectCode,
         frame_id: frameId,
-        status: { in: ['paused', 'in_progress'] },
+        OR: [
+          { status: { in: ['paused', 'in_progress'] } },
+          {
+            status: 'assigned',
+            OR: [
+              { handover_from_id: { not: null } },
+              { cables_src_done: { gt: 0 } },
+              { cables_dst_done: { gt: 0 } },
+            ],
+          },
+        ],
         changeover_locked: { not: true },
         is_hidden: { not: true },
       },
@@ -261,6 +559,20 @@ export class SupervisorService {
     return this.techService.changeover(oldAssignmentId, newTechId, supervisorId, changeoverReason, reasonNotes);
   }
 
+  reassignBeforeStart(
+    assignmentId: number,
+    newTechnicianId: number,
+    supervisorId: number,
+    reason: string,
+  ) {
+    return this.techService.reassignBeforeStart({
+      assignmentId,
+      newTechnicianId,
+      supervisorId,
+      reason,
+    });
+  }
+
   async panelReport(projectCode: string, frameId: string) {
     assertPanelNameUniqueForWrite(projectCode, frameId);
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
@@ -268,8 +580,9 @@ export class SupervisorService {
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
     const assignments = await this.prisma.tech_assignments.findMany({
       where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
     });
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
     const auditAll = await this.prisma.tech_audit_log.findMany({
       where: { project_code: projectCode, frame_id: frameId }, orderBy: { created_at: 'asc' },
     });
@@ -279,19 +592,29 @@ export class SupervisorService {
 
     const techDetails = assignments.map(a => {
       const tech = techMap.get(a.technician_id);
-      const kpi = (a.cables_total || 0) > 0 ? Math.round((((a.cables_src_done || 0) + (a.cables_dst_done || 0)) / ((a.cables_total || 1) * 2)) * 100) : 0;
+      const kpi = wiringKpiPercent(a.cables_src_done || 0, a.cables_dst_done || 0, a.cables_total || 0);
       const { hashed_password: _hashed_password, ...safeTech } = tech || ({} as any);
       return { assignment: { ...a, cable_status: parseCS(a.cable_status) }, technician: tech ? safeTech : null, kpi };
     });
-    const totalSrc = assignments.reduce((s, a) => s + (a.cables_src_done || 0), 0);
-    const totalDst = assignments.reduce((s, a) => s + (a.cables_dst_done || 0), 0);
+    const latestAssignment = assignments[assignments.length - 1];
+    const totalSrc = latestAssignment?.cables_src_done || 0;
+    const totalDst = latestAssignment?.cables_dst_done || 0;
     const overallKpi = frame.cable_count > 0 ? Math.round(((totalSrc + totalDst) / (frame.cable_count * 2)) * 100) : 0;
 
     const mergedStatus: Record<string, any> = {};
     for (const a of assignments) {
       const cs = parseCS(a.cable_status);
       for (const [idx, st] of Object.entries(cs)) {
-        mergedStatus[idx] = { ...(st as any), technician_id: a.technician_id };
+        const previous = mergedStatus[idx] || {};
+        const state = st as any;
+        mergedStatus[idx] = {
+          ...state,
+          src_technician_id: state.src && !previous.src ? a.technician_id : previous.src_technician_id,
+          dst_technician_id: state.dst && !previous.dst ? a.technician_id : previous.dst_technician_id,
+          technician_id: state.dst && !previous.dst
+            ? a.technician_id
+            : state.src && !previous.src ? a.technician_id : previous.technician_id,
+        };
       }
     }
     const cablesWithStatus = frame.cables.map((c, i) => {
@@ -309,7 +632,7 @@ export class SupervisorService {
 
   /**
    * Panel Completion Report — professional, management-quality Excel export.
-   * Live data (project status, KPIs, timeline, working hours, approval) from the
+   * Live data (project state, KPIs, timeline, working hours, approval) from the
    * DB via collectPanelCompletionReportData, plus a fully-styled cable execution
    * table. Branded, print-friendly (landscape, fit-to-width, repeating header).
    */
@@ -318,7 +641,10 @@ export class SupervisorService {
     const frame = MockStore.findFrameByProjectAndId(projectCode, frameId)
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
-    const assignments = await this.prisma.tech_assignments.findMany({ where: { project_code: projectCode, frame_id: frameId } });
+    const assignments = await this.prisma.tech_assignments.findMany({
+      where: { project_code: projectCode, frame_id: frameId },
+      orderBy: { assigned_at: 'asc' },
+    });
     const techIds = [...new Set(assignments.map(a => a.technician_id))];
     const techs = await this.prisma.users.findMany({ where: { id: { in: techIds } } });
     const techMap = new Map(techs.map(t => [t.id, t]));
@@ -375,7 +701,9 @@ export class SupervisorService {
 
     mergeRow(2); ws.getRow(2).height = 22;
     const t2 = ws.getCell('A2');
-    t2.value = `PANEL COMPLETION REPORT — ${data.panel.name}`;
+    // Title follows the real production state: progress while wiring is in flight,
+    // completion only once the panel is fully wired and supervisor-approved.
+    t2.value = `${data.reportTitle.toUpperCase()} — ${data.panel.name}`;
     t2.font = { bold: true, size: 12, color: { argb: WHITE } };
     t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
     t2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -389,15 +717,15 @@ export class SupervisorService {
 
     // ── Summary section ──
     const bar = (r: number, text: string) => {
-      mergeRow(r); ws.getRow(r).height = 18;
+      mergeRow(r); ws.getRow(r).height = 16;
       const c = ws.getCell(`A${r}`);
       c.value = text;
       c.font = { bold: true, size: 9, color: { argb: WHITE } };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_BG } };
       c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     };
     const pair = (r: number, l1: string, v1: string, l2: string, v2: string) => {
-      ws.getRow(r).height = 15;
+      ws.getRow(r).height = 14;
       const put = (lCell: string, vStart: string, vEnd: string, label: string, value: string) => {
         const lc = ws.getCell(`${lCell}${r}`);
         lc.value = label.toUpperCase();
@@ -451,7 +779,7 @@ export class SupervisorService {
     let r = headerRow + 1;
     frame.cables.forEach((cable, idx) => {
       let cs: any = null; let techId: number | undefined;
-      for (const a of assignments) {
+      for (const a of [...assignments].reverse()) {
         const parsed = parseCS(a.cable_status);
         if (parsed[String(idx)]) { cs = parsed[String(idx)]; techId = a.technician_id; break; }
       }
@@ -497,6 +825,74 @@ export class SupervisorService {
     ws.pageSetup.printTitlesRow = `${headerRow}:${headerRow}`;
     ws.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Panel Completion Report&R&8Page &P of &N`;
 
+    if (data.contributions.length > 0) {
+      const history = wb.addWorksheet('Technician Contributions', {
+        pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+      });
+      history.columns = [
+        { header: 'Technician', key: 'technician', width: 30 },
+        { header: 'Username', key: 'username', width: 18 },
+        { header: 'Work Start', key: 'start', width: 24 },
+        { header: 'Work End', key: 'end', width: 24 },
+        { header: 'Duration', key: 'duration', width: 14 },
+        { header: 'Cables Completed', key: 'cables', width: 18 },
+        { header: 'Source Ends', key: 'source', width: 14 },
+        { header: 'Destination Ends', key: 'destination', width: 18 },
+        { header: 'Progress Before', key: 'before', width: 17 },
+        { header: 'Progress After', key: 'after', width: 17 },
+        { header: 'Login / Logout Details', key: 'sessions', width: 48 },
+      ];
+      const historyHeader = history.getRow(1);
+      historyHeader.height = 24;
+      historyHeader.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: WHITE } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_BG } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = boxBorder;
+      });
+      data.contributions.forEach(contribution => {
+        const row = history.addRow({
+          technician: contribution.technician.fullName,
+          username: contribution.technician.username,
+          start: fmt(contribution.startedAt),
+          end: contribution.endedAt ? fmt(contribution.endedAt) : 'Active',
+          duration: contribution.durationHuman,
+          cables: contribution.cablesCompleted,
+          source: contribution.sourceEndsCompleted,
+          destination: contribution.destinationEndsCompleted,
+          before: contribution.progressBefore,
+          after: contribution.progressAfter,
+          sessions: contribution.sessionLog.length
+            ? contribution.sessionLog.map(session => `${fmt(session.loginAt)} → ${session.logoutAt ? fmt(session.logoutAt) : 'Active'}`).join('\n')
+            : '—',
+        });
+        row.height = Math.max(20, contribution.sessionLog.length * 15);
+        row.eachCell({ includeEmpty: true }, cell => {
+          cell.font = { size: 9, color: { argb: INK } };
+          cell.alignment = { vertical: 'top', wrapText: true };
+          cell.border = boxBorder;
+        });
+      });
+      if (data.midChangeHistory.length > 0) {
+        const titleRow = history.addRow([]);
+        history.mergeCells(`A${titleRow.number}:K${titleRow.number}`);
+        titleRow.getCell(1).value = 'PERMANENT MID CHANGE AUDIT';
+        titleRow.getCell(1).font = { bold: true, color: { argb: WHITE } };
+        titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+        data.midChangeHistory.forEach(entry => {
+          const auditRow = history.addRow([fmt(entry.at), entry.technicianName, entry.action.replace(/_/g, ' '), entry.details]);
+          history.mergeCells(`D${auditRow.number}:K${auditRow.number}`);
+          auditRow.eachCell({ includeEmpty: true }, cell => {
+            cell.alignment = { vertical: 'top', wrapText: true };
+            cell.border = boxBorder;
+          });
+        });
+      }
+      history.views = [{ state: 'frozen', ySplit: 1, showGridLines: false }];
+      history.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 11 } };
+      history.headerFooter.oddFooter = `&L&8${REPORT_COMPANY} — Confidential&C&8Technician Contribution History&R&8Page &P of &N`;
+    }
+
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 
@@ -508,7 +904,7 @@ export class SupervisorService {
                ?? FrameStore.getFrameFromDisk(projectCode, frameId);
     if (!frame) throw new NotFoundException(`Frame ${frameId} not found`);
 
-    const project = await this.prisma.projects.findUnique({ where: { code: projectCode } });
+    const project = await this.prisma.projects.findFirst({ where: { code: projectCode, is_active: true } });
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'DWES — Digital Wiring Execution System';
@@ -591,10 +987,11 @@ export class SupervisorService {
     r3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     ws.getRow(3).height = 18;
 
-    // Row 4 — Frame / total cables
+    // Row 4 — Panel / total cables. The internal frame id is never printed: readers
+    // identify the panel by its name.
     merge(4);
     const r4 = ws.getCell('A4');
-    r4.value = `Frame ID: ${frameId}   |   Total Cables: ${frame.cable_count || frame.cables.length}`;
+    r4.value = `Panel: ${frame.panel_name || frameId}   |   Total Cables: ${frame.cable_count || frame.cables.length}`;
     r4.font = { size: 10, color: { argb: INFO_FG } };
     r4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: INFO_BG } };
     r4.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -814,4 +1211,96 @@ export class SupervisorService {
 
     return { message: 'Revalidation confirmed and stamped' };
   }
+
+  /** Read-only compact project/panel progress for supervisor live status cards. */
+  async projectLiveSummary() {
+    const cacheKey = 'supervisor:projectLiveSummary';
+    const cached = await this.cacheService?.getAsync<any>(cacheKey);
+    if (cached) return cached;
+
+    const panelRows = await this.allPanels();
+    const projects = await this.prisma.projects.findMany({
+      where: { is_active: true },
+      orderBy: { sequence: 'asc' },
+    });
+
+    const assignmentByFrame = new Map<string, (typeof panelRows)[number]>();
+    for (const row of panelRows) {
+      const key = `${row.project_code}::${row.frame_id}`;
+      const prev = assignmentByFrame.get(key);
+      if (!prev || row.id > prev.id) assignmentByFrame.set(key, row);
+    }
+
+    const result = projects.map(project => {
+      const frames = MockStore.findFramesByProject(project.code);
+      let completedPanels = 0;
+      let inProgressPanels = 0;
+      let weightedDone = 0;
+      let weightedTotal = 0;
+      let totalCables = 0;
+      let completedCables = 0;
+
+      const panels = frames.map(frame => {
+        const key = `${project.code}::${frame.id}`;
+        const a = assignmentByFrame.get(key);
+        const total = a?.cables_total ?? frame.cable_count ?? 0;
+        const completed = a?.cables_completed ?? 0;
+        const remaining = a?.cables_remaining ?? Math.max(0, total - completed);
+        const progressPercentage = typeof a?.kpi === 'number'
+          ? a.kpi
+          : (total > 0 ? Math.round((completed / total) * 100) : 0);
+        const status = this.livePanelStatusLabel(a);
+        totalCables += total;
+        completedCables += completed;
+        const weight = Math.max(total, 1);
+        weightedDone += (progressPercentage / 100) * weight;
+        weightedTotal += weight;
+        if (status === 'completed' || status === 'ready_for_qc') completedPanels += 1;
+        else if (status !== 'unassigned') inProgressPanels += 1;
+        const updatedAt = a?.completed_at ?? a?.assigned_at ?? null;
+        return {
+          panelId: frame.id,
+          panelName: a?.panel_display_name || frame.panel_name || frame.id,
+          totalCables: total,
+          completedCables: completed,
+          remainingCables: remaining,
+          progressPercentage,
+          status,
+          updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : (updatedAt || null),
+        };
+      });
+
+      const progressPercentage = weightedTotal > 0 ? Math.round((weightedDone / weightedTotal) * 100) : 0;
+      return {
+        projectId: project.code,
+        projectName: project.name,
+        client: project.client,
+        totalPanels: panels.length,
+        completedPanels,
+        inProgressPanels,
+        totalCables,
+        completedCables,
+        progressPercentage,
+        panels,
+      };
+    });
+
+    this.cacheService?.set(cacheKey, result, 30_000);
+    return result;
+  }
+
+  private livePanelStatusLabel(a: any | undefined): string {
+    if (!a) return 'unassigned';
+    if (a.status === 'assigned' && a.supervisor_approved === false && !a.rework_requested) {
+      return 'pending_approval';
+    }
+    if (a.status === 'completed') {
+      if (a.review_status === 'ready_for_qc') return 'ready_for_qc';
+      return 'completed';
+    }
+    if (a.status === 'paused') return 'paused';
+    if (a.status === 'in_progress') return 'in_progress';
+    return 'assigned';
+  }
+
 }

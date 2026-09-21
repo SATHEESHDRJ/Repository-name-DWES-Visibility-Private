@@ -1,0 +1,154 @@
+{
+  "coordinate_system": "panel-local-mm",
+  "origin_from_drawing_mm": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "panel_extents_mm": {
+    "width": 600.0,
+    "height": 400.0,
+    "min": [
+      0.0,
+      0.0
+    ],
+    "max": [
+      600.0,
+      400.0
+    ]
+  },
+  "units_detected": "mm",
+  "to_mm_scale": 1.0,
+  "layers": [
+    {
+      "name": "0",
+      "on": false,
+      "frozen": true
+    },
+    {
+      "name": "Defpoints",
+      "on": false,
+      "frozen": true
+    }
+  ],
+  "blocks": [
+    {
+      "name": "MCB",
+      "entity_count": 2
+    }
+  ],
+  "entities": [
+    {
+      "type": "LWPOLYLINE",
+      "handle": "2F",
+      "layer": "PANEL",
+      "source_space": "model",
+      "points": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          600.0,
+          0.0,
+          0.0
+        ],
+        [
+          600.0,
+          400.0,
+          0.0
+        ],
+        [
+          0.0,
+          400.0,
+          0.0
+        ]
+      ],
+      "closed": true,
+      "source_handle": "2F",
+      "source_layer": "PANEL",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "35",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        100.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q1+F1"
+      },
+      "nested": true,
+      "source_handle": "35",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    },
+    {
+      "type": "INSERT",
+      "handle": "38",
+      "layer": "DEVICE",
+      "source_space": "model",
+      "block_name": "MCB",
+      "insert": [
+        300.0,
+        100.0,
+        0.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "attributes": {
+        "TAG": "=Q1+F1"
+      },
+      "nested": true,
+      "source_handle": "38",
+      "source_layer": "DEVICE",
+      "transform": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "units": "mm"
+      }
+    }
+  ],
+  "texts": [],
+  "counts": {
+    "entities": 3,
+    "texts": 0,
+    "layers": 2,
+    "blocks": 1
+  }
+}

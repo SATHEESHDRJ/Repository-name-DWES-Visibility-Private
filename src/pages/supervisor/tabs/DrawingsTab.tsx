@@ -1,20 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { projectsApi, uploadApi } from '../../../services/api';
 import { emitDocumentsChanged } from '../../../utils/projectDocumentsEvents';
-import type { Project } from '../../../types';
+import type { Frame, Project } from '../../../types';
 import Modal from '../../../components/Modal';
 import { usePermissions } from '../../../hooks/usePermissions';
+import GaFoundationWorkspace from '../../../components/supervisor/GaFoundationWorkspace';
 import DeleteConfirmModal, {
   type DeleteGuardedPrecheck,
   type DeleteResultSummary,
   type DeleteScopeId,
 } from '../../../components/ui/DeleteConfirmModal';
 import { Upload, Trash2, FileText, FileImage, PenTool, Paperclip, Map, CheckCircle, ExternalLink, TriangleAlert } from '../../../components/ui/icons';
+import { DwesLoadingState } from '../../../components/ui/DwesLoadingIndicator';
 
 export default function DrawingsTab() {
   const perms = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selProject, setSelProject] = useState('');
+  const [frames, setFrames] = useState<Frame[]>([]);
+  const [selFrame, setSelFrame] = useState('');
   const [drawings, setDrawings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -31,6 +35,22 @@ export default function DrawingsTab() {
     projectsApi.drawings(selProject).then(d => { setDrawings(d); setLoading(false); }).catch(() => setLoading(false));
   };
   useEffect(loadDrawings, [selProject]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setFrames([]);
+    setSelFrame('');
+    if (!selProject) return () => controller.abort();
+    projectsApi.frames(selProject, controller.signal)
+      .then((data: Frame[]) => {
+        setFrames(data);
+        setSelFrame(data[0]?.id ?? '');
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFrames([]);
+      });
+    return () => controller.abort();
+  }, [selProject]);
 
   const handleView = async (d: any) => {
     setViewing(d.id);
@@ -73,6 +93,10 @@ export default function DrawingsTab() {
         <select value={selProject} onChange={e => setSelProject(e.target.value)} className="form-select" data-layout="grow" aria-label="Select project">
           {projects.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
         </select>
+        <select value={selFrame} onChange={e => setSelFrame(e.target.value)} className="form-select" data-layout="grow" aria-label="Select panel for GA foundation">
+          <option value="">Select panel for GA foundation</option>
+          {frames.map(frame => <option key={frame.id} value={frame.id}>{frame.panel_name || frame.id}</option>)}
+        </select>
         {perms.canManageProjects && (
           <button onClick={() => setShowUpload(true)} disabled={!selProject}
             className="btn-primary" type="button">
@@ -82,7 +106,7 @@ export default function DrawingsTab() {
         )}
       </div>
 
-      {loading && <div className="empty-state"><p className="empty-text">Loading drawings...</p></div>}
+      {loading && <DwesLoadingState label="Loading drawings…" />}
 
       {!loading && drawings.length === 0 && (
         <div className="empty-state history-empty-state">
@@ -108,7 +132,7 @@ export default function DrawingsTab() {
                 title="View / Download"
                 onClick={() => handleView(d)}
                 disabled={viewing === d.id}
-                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
                 type="button"
               >
                 <ExternalLink size={16} strokeWidth={1.5} />
@@ -117,7 +141,7 @@ export default function DrawingsTab() {
                 <button
                   title="Delete Drawing"
                   onClick={() => handleDelete(d)}
-                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-white border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center justify-center w-[36px] h-[36px] text-slate-400 rounded-[8px] bg-[var(--t-surface-white)] border border-[#E2E8F0] hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
                   type="button"
                 >
                   <Trash2 size={16} strokeWidth={1.5} />
@@ -127,6 +151,10 @@ export default function DrawingsTab() {
           </div>
         ))}
       </div>
+
+      {selProject && selFrame && (
+        <GaFoundationWorkspace projectCode={selProject} frameId={selFrame} />
+      )}
 
       {showUpload && (
         <UploadDrawingModal
@@ -213,16 +241,17 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
   const canUpload = !!file && !uploading && (dupInfo?.kind !== 'same' || dupChoice === 'replace');
 
   return (
-    <Modal title="Upload Drawing" onClose={onClose}
+    <Modal title="Upload Drawing" icon={<Upload />} onClose={onClose}
       footer={!done ? (
         <>
           <button onClick={onClose} className="btn-secondary" type="button">Cancel</button>
           <button onClick={handleUpload} disabled={!canUpload} className="btn-primary" type="button">
+            <Upload size={16} />
             {uploading ? 'Uploading…' : dupChoice === 'replace' ? 'Replace & Upload' : 'Upload'}
           </button>
         </>
       ) : (
-        <button onClick={onClose} className="btn-primary" type="button">Done</button>
+        <button onClick={onClose} className="btn-primary" type="button"><CheckCircle size={16} />Done</button>
       )}>
       {!done ? (
         <>
@@ -264,7 +293,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
                 <button
                   type="button"
                   onClick={() => setDupChoice('keep')}
-                  className="flex-1 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 h-10 rounded-lg bg-[var(--t-surface-white)] border border-slate-200 text-secondary text-[13px] font-semibold hover:bg-slate-50 transition-colors"
                 >
                   Keep existing
                 </button>
@@ -273,7 +302,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
           )}
 
           {dupInfo?.kind === 'same' && dupChoice === 'keep' && (
-            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[13px] text-slate-600 flex items-center gap-2">
+            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[13px] text-muted flex items-center gap-2">
               <CheckCircle size={16} className="text-green-500 shrink-0" />
               Keeping existing drawing — no changes made.
               <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-blue-600 hover:underline">Change</button>
@@ -284,7 +313,7 @@ export function UploadDrawingModal({ projectCode, onClose, onUploaded }: {
             <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[13px] text-blue-700 flex items-center gap-2">
               <TriangleAlert size={16} className="shrink-0" />
               Will re-upload "{dupInfo.file_name}" — click "Replace &amp; Upload" to confirm.
-              <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-slate-500 hover:underline">Change</button>
+              <button type="button" onClick={() => setDupChoice(null)} className="ml-auto text-[12px] text-muted hover:underline">Change</button>
             </div>
           )}
 

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   DWES app / PWA / desktop icon — derived from canonical Ingenious Network mark
-  (src/assets/logo-icon.svg). Colors pulled from public/logo.svg; white tile matches
-  CompanyLogo topbar pill treatment.
+  (src/assets/logo-icon.svg). The deep-navy tile keeps the mark distinct in the
+  Windows/PWA title strip; the white inset preserves the canonical logo treatment.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="108" fill="#FFFFFF"/>
-  <rect x="2" y="2" width="508" height="508" rx="106" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+  <rect width="512" height="512" rx="108" fill="#1B2958"/>
+  <rect x="24" y="24" width="464" height="464" rx="88" fill="#FFFFFF"/>
+  <rect x="24" y="24" width="464" height="464" rx="88" fill="none" stroke="#6DCFD4" stroke-opacity="0.48" stroke-width="6"/>
 
   <g transform="translate(-46 112) scale(2)">
     <circle cx="150" cy="72" r="56"

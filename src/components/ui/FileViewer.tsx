@@ -9,16 +9,21 @@ import {
   type TouchEvent as ReactTouchEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
-import * as XLSX from 'xlsx';
-import PdfDocumentViewer, { asPdfBlob } from './PdfDocumentViewer';
+import { lazy, Suspense } from 'react';
+const PdfDocumentViewer = lazy(() => import('./PdfDocumentViewer'));
+
+import type { PdfFocusRegion } from './PdfDocumentViewer';
+import { asPdfBlob } from '../../utils/blobResponse';
+export { asPdfBlob };
 import {
   Download,
   Maximize,
   ZoomIn,
   ZoomOut,
 } from './icons';
+import { DwesLoadingIndicator } from './DwesLoadingIndicator';
 
-export type FileViewerType = 'pdf' | 'image' | 'excel' | 'csv' | 'download-only';
+export type FileViewerType = 'pdf' | 'image' | 'csv' | 'excel' | 'download-only';
 
 export interface FileViewerProps {
   blob: Blob | null;
@@ -31,27 +36,22 @@ export interface FileViewerProps {
   onRetry?: () => void;
   onDownload?: () => void;
   className?: string;
+  /** LIVE TB: auto-zoom/pan PDF to this normalized page region. */
+  focusRegion?: PdfFocusRegion | null;
 }
 
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.12;
 
-async function parseSpreadsheetAsync(blob: Blob, sheetName?: string) {
-  const buf = await blob.arrayBuffer();
-  const wb = XLSX.read(buf, { type: 'array', cellDates: true });
-  const activeSheet = sheetName && wb.SheetNames.includes(sheetName)
-    ? sheetName
-    : wb.SheetNames[0];
-  if (!activeSheet) return { headers: [] as string[], rows: [] as string[][], activeSheet: '' };
-  const sheet = wb.Sheets[activeSheet];
-  const raw: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-  if (!raw.length) return { headers: [], rows: [], activeSheet };
-  const headers = (raw[0] as unknown[]).map(c => String(c ?? '').trim());
-  const rows = raw.slice(1).map(row =>
-    headers.map((_, i) => String((row as unknown[])[i] ?? '').trim()),
-  );
-  return { headers, rows, activeSheet };
+/** Parse CSV blob into headers + rows. */
+async function parseCsvAsync(blob: Blob) {
+  const text = await blob.text();
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (!lines.length) return { headers: [] as string[], rows: [] as string[][], activeSheet: 'Sheet1' };
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = lines.slice(1).map(line => line.split(',').map(c => c.trim()));
+  return { headers, rows, activeSheet: 'Sheet1' };
 }
 
 function ImageCanvasViewer({
@@ -60,12 +60,18 @@ function ImageCanvasViewer({
   zoom,
   onZoomChange,
   onWheelZoom,
+  rotation,
+  resetToken,
+  fitMode,
 }: {
   blob: Blob;
   title: string;
   zoom: number;
   onZoomChange: (z: number) => void;
   onWheelZoom: (delta: number) => void;
+  rotation: number;
+  resetToken: number;
+  fitMode: 'width' | 'page' | 'custom';
 }) {
   const [url, setUrl] = useState('');
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -73,6 +79,8 @@ function ImageCanvasViewer({
   const lastPos = useRef({ x: 0, y: 0 });
   const viewportRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+
+  useEffect(() => { setPan({ x: 0, y: 0 }); }, [resetToken]);
 
   useEffect(() => {
     const objectUrl = URL.createObjectURL(blob);
@@ -127,7 +135,7 @@ function ImageCanvasViewer({
   };
 
   const style: CSSProperties = {
-    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
     transformOrigin: 'center center',
   };
 
@@ -148,7 +156,17 @@ function ImageCanvasViewer({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <img src={url} alt={title} className="file-viewer-image" draggable={false} />
+        <img
+          src={url}
+          alt={title}
+          className={`file-viewer-image file-viewer-image--${fitMode}`}
+          draggable={false}
+          style={fitMode === 'width'
+            ? { width: '100%', height: 'auto', maxWidth: 'none', maxHeight: 'none' }
+            : fitMode === 'page'
+              ? { width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' }
+              : { width: 'auto', height: 'auto', maxWidth: 'none', maxHeight: 'none' }}
+        />
       </div>
     </div>
   );
@@ -220,11 +238,14 @@ export default function FileViewer({
   onRetry,
   onDownload,
   className = '',
+  focusRegion = null,
 }: FileViewerProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-  const [fitMode, setFitMode] = useState<'fit' | 'custom'>('fit');
+  const [fitMode, setFitMode] = useState<'width' | 'page' | 'custom'>('page');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [resetToken, setResetToken] = useState(0);
   const [sheetData, setSheetData] = useState<{ headers: string[]; rows: string[][]; activeSheet: string } | null>(null);
   const [parseError, setParseError] = useState('');
   const [parsing, setParsing] = useState(false);
@@ -235,8 +256,8 @@ export default function FileViewer({
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
 
-  useEffect(() => {
-    if (!blob || (fileType !== 'excel' && fileType !== 'csv')) {
+useEffect(() => {
+    if (!blob || fileType !== 'csv') {
       setSheetData(null);
       setParseError('');
       return;
@@ -244,18 +265,18 @@ export default function FileViewer({
     let cancelled = false;
     setParsing(true);
     setParseError('');
-    parseSpreadsheetAsync(blob, sheetName)
+    parseCsvAsync(blob)
       .then(data => {
         if (!cancelled) setSheetData(data);
       })
-      .catch(() => {
-        if (!cancelled) setParseError('Could not parse spreadsheet file.');
+      .catch(err => {
+        if (!cancelled) setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
       })
       .finally(() => {
         if (!cancelled) setParsing(false);
       });
     return () => { cancelled = true; };
-  }, [blob, fileType, sheetName]);
+  }, [blob, fileType]);
 
   const applyZoomDelta = useCallback((delta: number) => {
     setFitMode('custom');
@@ -265,8 +286,10 @@ export default function FileViewer({
   const zoomIn = () => applyZoomDelta(ZOOM_STEP);
   const zoomOut = () => applyZoomDelta(-ZOOM_STEP);
   const resetZoom = () => {
-    setFitMode('fit');
+    setFitMode('page');
     setZoom(1);
+    setRotation(0);
+    setResetToken(token => token + 1);
   };
 
   const toggleFullscreen = useCallback(async () => {
@@ -296,7 +319,7 @@ export default function FileViewer({
               <ZoomOut size={18} strokeWidth={1.75} />
             </button>
             <span className="file-viewer-zoom-label" aria-live="polite">
-              {fitMode === 'custom' ? `${Math.round(zoom * 100)}%` : 'Fit'}
+              {fitMode === 'custom' ? `${Math.round(zoom * 100)}%` : fitMode === 'width' ? 'Fit width' : 'Fit page'}
             </span>
             <button type="button" className="file-viewer-btn" onClick={zoomIn} disabled={busy || !!displayError} aria-label="Zoom in">
               <ZoomIn size={18} strokeWidth={1.75} />
@@ -304,12 +327,33 @@ export default function FileViewer({
             <span className="file-viewer-divider" aria-hidden />
             <button
               type="button"
-              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'fit' ? ' is-active' : ''}`}
-              onClick={resetZoom}
+              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'width' ? ' is-active' : ''}`}
+              onClick={() => { setFitMode('width'); setZoom(1); setResetToken(token => token + 1); }}
               disabled={busy || !!displayError}
             >
-              Fit / Reset
+              Fit width
             </button>
+            <button
+              type="button"
+              className={`file-viewer-btn file-viewer-btn--text${fitMode === 'page' ? ' is-active' : ''}`}
+              onClick={() => { setFitMode('page'); setZoom(1); setResetToken(token => token + 1); }}
+              disabled={busy || !!displayError}
+            >
+              Fit page
+            </button>
+            <button type="button" className="file-viewer-btn file-viewer-btn--text" onClick={resetZoom} disabled={busy || !!displayError}>
+              Reset
+            </button>
+            {fileType === 'image' && (
+              <button
+                type="button"
+                className="file-viewer-btn file-viewer-btn--text"
+                onClick={() => setRotation(value => (value + 90) % 360)}
+                disabled={busy || !!displayError}
+              >
+                Rotate 90°
+              </button>
+            )}
           </>
         )}
       </div>
@@ -345,18 +389,30 @@ export default function FileViewer({
       );
     }
     if (busy) {
-      return <div className="file-viewer-loading">Loading file…</div>;
+      return (
+        <div className="file-viewer-loading">
+          <DwesLoadingIndicator label="Loading file…" />
+        </div>
+      );
     }
     if (!blob) return null;
 
     if (fileType === 'pdf') {
       return (
-        <PdfDocumentViewer
-          blob={asPdfBlob(blob)}
-          title={title}
-          downloadFilename={fileName}
-          className="file-viewer-pdf"
-        />
+        <Suspense fallback={(
+          <div className="file-viewer-loading">
+            <DwesLoadingIndicator label="Loading PDF viewer…" />
+          </div>
+        )}>
+          <PdfDocumentViewer
+            blob={asPdfBlob(blob)}
+            title={title}
+            downloadFilename={onDownload ? fileName : undefined}
+            onDownload={onDownload}
+            className="file-viewer-pdf"
+            focusRegion={focusRegion}
+          />
+        </Suspense>
       );
     }
 
@@ -368,12 +424,15 @@ export default function FileViewer({
           zoom={zoom}
           onZoomChange={setZoom}
           onWheelZoom={applyZoomDelta}
+          rotation={rotation}
+          resetToken={resetToken}
+          fitMode={fitMode}
         />
       );
     }
 
-    if (fileType === 'excel' || fileType === 'csv') {
-      if (!sheetData) return <div className="file-viewer-loading">Parsing spreadsheet…</div>;
+    if (fileType === 'csv') {
+      if (!sheetData) return <div className="file-viewer-loading">Parsing CSV…</div>;
       return (
         <SpreadsheetTableViewer
           headers={sheetData.headers}
@@ -387,13 +446,13 @@ export default function FileViewer({
 
     return (
       <div className="file-viewer-download-only">
-        <p className="text-[14px] font-semibold text-slate-800">{title}</p>
-        <p className="text-[13px] text-slate-500 mt-2 max-w-md text-center">
+        <p className="text-[14px] font-semibold text-primary">{title}</p>
+        <p className="text-[13px] text-muted mt-2 max-w-md text-center">
           This file type cannot be previewed in the browser. Use Download to open it in a compatible application.
         </p>
       </div>
     );
-  }, [blob, busy, displayError, fileName, fileType, onRetry, sheetData, sheetName, title, zoom, applyZoomDelta]);
+  }, [blob, busy, displayError, fileName, fileType, fitMode, focusRegion, onDownload, onRetry, resetToken, rotation, sheetData, sheetName, title, zoom, applyZoomDelta]);
 
   return (
     <div

@@ -1,0 +1,1 @@
+{"status":"ok","ready":true,"degraded":true,"db":"ok","db_error":null,"storage":"ok","sse_events":{"mode":"pg","redisReady":false,"pgReady":true},"queue":{"redisConfigured":false,"bullmqActive":false},"cache":{"redisConfigured":false,"redisActive":false},"memory":{"rss_mb":248,"heap_used_mb":81,"heap_total_mb":111},"uptime":30.060124008,"timestamp":"2026-09-21T05:16:37.862Z"}

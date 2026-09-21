@@ -1,0 +1,112 @@
+{
+  "project_code": "VERIFY",
+  "frame_id": "exploded_lines",
+  "drawing_revision": null,
+  "started_at": "2026-07-20T02:16:34.570125+00:00",
+  "stages": [
+    {
+      "stage": "INGEST",
+      "ok": true,
+      "detail": "source copied",
+      "checksum": "e51022cc8da3e55edabba2786d82ec0209f6a42e586a1025e0b362c68cdd9d4a",
+      "source_name": "drawing.dxf"
+    },
+    {
+      "stage": "DWG_TO_DXF",
+      "ok": true,
+      "detail": "skipped — input already DXF"
+    },
+    {
+      "stage": "DXF_PARSE",
+      "ok": true,
+      "detail": "ezdxf parse OK",
+      "counts": {
+        "entities": 3,
+        "texts": 2,
+        "layers": 2,
+        "blocks": 0
+      }
+    },
+    {
+      "stage": "GEOMETRY_NORMALIZATION",
+      "ok": true,
+      "detail": "panel-local mm",
+      "extents": {
+        "width": 600.0,
+        "height": 400.0,
+        "min": [
+          0.0,
+          0.0
+        ],
+        "max": [
+          600.0,
+          400.0
+        ]
+      }
+    },
+    {
+      "stage": "SEMANTIC_EXTRACTION",
+      "ok": true,
+      "detail": "1 candidates",
+      "object_count": 1
+    },
+    {
+      "stage": "SCHEDULE_MATCHING",
+      "ok": true,
+      "detail": "exact match report",
+      "matched_count": 0,
+      "schedule_tag_count": 2
+    },
+    {
+      "stage": "FLAT_3D_GENERATION",
+      "ok": true,
+      "detail": "extrusion complete",
+      "authoritative": 1,
+      "suggested": 0
+    },
+    {
+      "stage": "GLB_EXPORT",
+      "ok": true,
+      "detail": "wrote model.glb",
+      "bytes": 2112
+    },
+    {
+      "stage": "GLB_VALIDATION",
+      "ok": true,
+      "detail": "skipped by flag"
+    },
+    {
+      "stage": "BROWSER_VERIFICATION",
+      "ok": true,
+      "detail": "deferred to Nest/agent browser harness"
+    },
+    {
+      "stage": "READY_FOR_REVIEW",
+      "ok": true,
+      "detail": "awaiting supervisor review"
+    }
+  ],
+  "status": "READY_FOR_REVIEW",
+  "finished_at": "2026-07-20T02:16:34.584121+00:00",
+  "overlay": {
+    "panel_bounds_mm": {
+      "width": 600.0,
+      "height": 400.0
+    },
+    "drawing_insert_count": 0,
+    "flat3d_part_count": 0,
+    "matched_device_pct": 0.0,
+    "missing_device_pct": 0.0,
+    "positional_deviation_mm": {
+      "mean": null,
+      "max": null
+    },
+    "size_deviation_mm": {
+      "mean": null,
+      "max": null
+    },
+    "unresolved_object_count": 0
+  },
+  "glb_bytes": 2112,
+  "checksum": "e51022cc8da3e55edabba2786d82ec0209f6a42e586a1025e0b362c68cdd9d4a"
+}

@@ -1,22 +1,15 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../../services/api';
 import { RefreshCw, CheckCircle, XCircle } from '../../../components/ui/icons';
+import { DwesLoadingCenter } from '../../../components/ui/DwesLoadingIndicator';
+import { WorkspaceInfoMatrix } from '../../../components/ui/WorkspaceInfoMatrix';
 
-function MetricCard({ label, val, sub, tone = 'muted', wide = false }: { label: string; val: any; sub?: string; tone?: string; wide?: boolean }) {
-  const isDanger = tone === 'danger';
-  const isWarning = tone === 'warning';
-  const isSuccess = tone === 'completed' || tone === 'progress' || tone === 'qaqc';
-  const bgClass = isDanger ? 'bg-red-50 text-red-700' : isWarning ? 'bg-amber-50 text-amber-700' : isSuccess ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700';
-
+function MetricCard({ label, val, sub, wide = false }: { label: string; val: any; sub?: string; wide?: boolean }) {
   return (
-    <div className={`h-[90px] border border-[#E2E8F0] rounded-[10px] bg-white p-4 flex flex-col justify-between shadow-sm hover:border-blue-200 transition-colors ${wide ? 'col-span-2 md:col-span-4 lg:col-span-2' : ''}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.06em] truncate">{label}</span>
-        {sub && <span className="text-[11px] font-medium text-slate-400 truncate ml-2">{sub}</span>}
-      </div>
-      <div className={`text-[18px] font-bold px-2.5 py-0.5 rounded-[6px] w-fit truncate ${bgClass}`}>
-        {val ?? '—'}
-      </div>
+    <div className={`dw-wim-cell${wide ? ' dw-wim-matrix-span' : ''}`}>
+      <span className="dw-wim-label">{label}</span>
+      <span className="dw-wim-value dw-wim-value--primary">{val ?? '—'}</span>
+      {sub ? <span className="dw-wim-value dw-wim-value--meta">{sub}</span> : null}
     </div>
   );
 }
@@ -24,8 +17,8 @@ function MetricCard({ label, val, sub, tone = 'muted', wide = false }: { label: 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <div className="text-[14px] font-bold text-slate-800 uppercase tracking-[0.08em] mb-4 pb-2 border-b border-[#E2E8F0]">{title}</div>
-      <div className="grid grid-cols-2 tablet-port:grid-cols-3 tablet-land:grid-cols-4 gap-4">{children}</div>
+      <div className="text-[14px] font-bold text-primary uppercase tracking-[0.08em] mb-4 pb-2 border-b border-[#E2E8F0]">{title}</div>
+      <WorkspaceInfoMatrix columns={4}>{children}</WorkspaceInfoMatrix>
     </div>
   );
 }
@@ -76,23 +69,22 @@ export default function DiagnosticsTab() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center p-12 text-slate-500">Loading diagnostics...</div>;
+  if (loading) return <DwesLoadingCenter label="Loading diagnostics…" className="flex items-center justify-center p-12" />;
   if (!data) return <div className="p-4 bg-red-50 text-red-600 rounded-[10px] border border-red-200">Failed to load diagnostics</div>;
 
   const heapPct = data.memory.heap_pct;
-  const heapTone = heapPct > 80 ? 'danger' : heapPct > 60 ? 'warning' : 'completed';
 
   return (
     <div className="p-2">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={load} className="flex items-center justify-center gap-2 h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm" type="button">
+        <button onClick={load} className="flex items-center justify-center gap-2 h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-secondary font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm" type="button">
           <RefreshCw size={16} strokeWidth={1.5} />
           <span>Refresh</span>
         </button>
-        <button onClick={doPing} disabled={pinging} className="flex items-center justify-center h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" type="button">
+        <button onClick={doPing} disabled={pinging} className="flex items-center justify-center h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-secondary font-medium text-[14px] rounded-[10px] hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" type="button">
           {pinging ? 'Pinging...' : 'DB Ping'}
         </button>
-        <button onClick={doClearCache} disabled={clearing} className="flex items-center justify-center h-[44px] px-[16px] bg-white border border-[#E2E8F0] text-slate-700 font-medium text-[14px] rounded-[10px] hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ml-auto disabled:opacity-50" type="button">
+        <button onClick={doClearCache} disabled={clearing} className="flex items-center justify-center h-[44px] px-[16px] bg-[var(--t-surface-white)] border border-[#E2E8F0] text-secondary font-medium text-[14px] rounded-[10px] hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ml-auto disabled:opacity-50" type="button">
           {clearing ? 'Clearing...' : 'Clear Error Buffer'}
         </button>
       </div>
@@ -111,22 +103,22 @@ export default function DiagnosticsTab() {
       {msg && <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-[10px] text-[14px] font-medium mb-6">{msg}</div>}
 
       <Section title="System">
-        <MetricCard label="Node" val={data.system.node_version} tone="completed" />
+        <MetricCard label="Node" val={data.system.node_version} />
         <MetricCard label="Platform" val={data.system.platform} />
-        <MetricCard label="Uptime" val={data.system.uptime_human} tone="progress" sub={`${data.system.uptime_seconds}s`} />
-        <MetricCard label="Environment" val={data.system.env} tone="warning" />
+        <MetricCard label="Uptime" val={data.system.uptime_human} sub={`${data.system.uptime_seconds}s`} />
+        <MetricCard label="Environment" val={data.system.env} />
       </Section>
 
       <Section title="Memory">
-        <MetricCard label="Heap Used" val={`${data.memory.heap_used_mb} MB`} tone={heapTone} sub={`${heapPct}% of total`} />
+        <MetricCard label="Heap Used" val={`${data.memory.heap_used_mb} MB`} sub={`${heapPct}% of total`} />
         <MetricCard label="Heap Total" val={`${data.memory.heap_total_mb} MB`} />
-        <MetricCard label="RSS" val={`${data.memory.rss_mb} MB`} tone="qaqc" />
+        <MetricCard label="RSS" val={`${data.memory.rss_mb} MB`} />
         <MetricCard label="External" val={`${data.memory.external_mb} MB`} />
       </Section>
 
       <div className="mb-8 p-6 border border-[#E2E8F0] rounded-[10px] bg-slate-50 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-bold text-slate-700 uppercase tracking-[0.06em]">Heap Utilization</span>
+          <span className="text-[13px] font-bold text-secondary uppercase tracking-[0.06em]">Heap Utilization</span>
           <span className={`text-[14px] font-bold ${heapPct > 80 ? 'text-red-600' : heapPct > 60 ? 'text-amber-600' : 'text-green-600'}`}>{heapPct}%</span>
         </div>
         <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -138,26 +130,26 @@ export default function DiagnosticsTab() {
       </div>
 
       <Section title="Database (WiringSchemeDB)">
-        <MetricCard label="Users" val={data.database.users} tone="progress" />
-        <MetricCard label="Projects" val={data.database.projects} tone="progress" />
+        <MetricCard label="Users" val={data.database.users} />
+        <MetricCard label="Projects" val={data.database.projects} />
         <MetricCard label="Frames" val={data.database.frames} />
         <MetricCard label="Assignments" val={data.database.assignments} />
-        <MetricCard label="Inspections" val={data.database.inspections} tone="qaqc" />
+        <MetricCard label="Inspections" val={data.database.inspections} />
         <MetricCard label="Audit Logs" val={data.database.audit_logs} />
         <MetricCard label="Session Logs" val={data.database.session_logs} />
         <MetricCard label="File Hashes" val={data.database.file_hashes} />
       </Section>
 
       <Section title="Wiring Summary">
-        <MetricCard label="Total Cables" val={data.wiring.total_cables.toLocaleString()} tone="completed" />
-        <MetricCard label="Panels Done" val={data.wiring.panels_completed} tone="completed" />
-        <MetricCard label="Wiring Hours" val={`${data.wiring.total_wiring_hours}h`} tone="warning" />
-        <MetricCard label="QC Done" val={data.wiring.qc_inspections} tone="qaqc" />
+        <MetricCard label="Total Cables" val={data.wiring.total_cables.toLocaleString()} />
+        <MetricCard label="Panels Done" val={data.wiring.panels_completed} />
+        <MetricCard label="Wiring Hours" val={`${data.wiring.total_wiring_hours}h`} />
+        <MetricCard label="QC Done" val={data.wiring.qc_inspections} />
       </Section>
 
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#E2E8F0]">
-          <span className="text-[14px] font-bold text-slate-800 uppercase tracking-[0.08em]">Recent Errors</span>
+          <span className="text-[14px] font-bold text-primary uppercase tracking-[0.08em]">Recent Errors</span>
           <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[11px] font-bold">{data.recent_errors.length}</span>
         </div>
         {data.recent_errors.length === 0 ? (

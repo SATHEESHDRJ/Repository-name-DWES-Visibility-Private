@@ -1,0 +1,41 @@
+# PASTE INTO ORACLE CLOUD SHELL | region: me-dubai-1
+# Instance Console Connection for ingenious-dwes-prod-maintenance-01 (193.123.79.209)
+# Use when TCP 22 to the public IP is blocked but you need emergency VM access.
+#
+# IMPORTANT (from OCI-CURRENT-TARGET.md):
+# - Console Connection SSH uses the key registered WHEN YOU CREATED this connection.
+#   It is NOT the same as updating /home/ubuntu/.ssh/authorized_keys unless you used the same key pair.
+# - Regular deploy/SSL scripts use: .oci-ssh\ssh-key-2026-07-20.key → ubuntu@193.123.79.209:22
+
+export USER="${USER:-$(id -un)}"
+set -eo pipefail
+CONN_ID="ocid1.instanceconsoleconnection.oc1.me-dubai-1.anshqljrohxhxzycecdpygyiw5zpzrvnqp3v5xb4h5j7p77vvegyntk5hqfq"
+
+echo "==> Console connection metadata"
+oci compute instance-console-connection get \
+  --instance-console-connection-id "$CONN_ID" \
+  --query 'data.{"state":"lifecycle-state","instanceId":"instance-id","fingerprint":"fingerprint","compartmentId":"compartment-id"}' \
+  --output table
+
+echo ""
+echo "==> Expected instance (maintenance VM)"
+oci compute instance list --all \
+  --query "data[?\"display-name\"=='ingenious-dwes-prod-maintenance-01'].{\"name\":\"display-name\",\"id\":\"id\",\"state\":\"lifecycle-state\",\"publicIp\":\"\"}" \
+  --output table 2>/dev/null || true
+
+echo ""
+echo "SSH connection string (private key = the one registered for THIS console connection):"
+oci compute instance-console-connection get \
+  --instance-console-connection-id "$CONN_ID" \
+  --query 'data."connection-string"' \
+  --raw-output
+
+echo ""
+echo "If lifecycle-state is not ACTIVE, wait or recreate the connection in Console:"
+echo "  Compute → Instances → ingenious-dwes-prod-maintenance-01 → Console connection"
+echo ""
+echo "After console login as ubuntu, fix normal SSH if needed:"
+echo "  paste infra/oci/scripts/vm-paste-authorized-keys-ubuntu.sh"
+echo ""
+echo "From Windows (OCI CLI installed + same API profile as Cloud Shell), optional tunnel:"
+echo '  ssh -i "PATH\\TO\\console-connection-private-key" -o ProxyCommand="oci compute instance-console-connection ssh-proxy-command --instance-console-connection-id %CONN_ID% --ssh-user ubuntu --ssh-private-key-file PATH\\TO\\key" ubuntu@instanceconsoleconnection'

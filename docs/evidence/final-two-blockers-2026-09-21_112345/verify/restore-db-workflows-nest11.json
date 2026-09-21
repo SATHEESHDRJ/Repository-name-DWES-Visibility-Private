@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-09-21T10:24:29.165Z",
+  "api": "http://127.0.0.1:3101",
+  "ui": "http://127.0.0.1:5275",
+  "checks": [
+    {
+      "name": "health",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "ready": true,
+        "degraded": true,
+        "db": "ok",
+        "db_error": null,
+        "storage": "ok",
+        "sse_events": {
+          "mode": "pg",
+          "redisReady": false,
+          "pgReady": true
+        },
+        "queue": {
+          "redisConfigured": false,
+          "bullmqActive": false
+        },
+        "cache": {
+          "redisConfigured": false,
+          "redisActive": false
+        },
+        "memory": {
+          "rss_mb": 202,
+          "heap_used_mb": 75,
+          "heap_total_mb": 79
+        },
+        "uptime": 8971.497316384,
+        "timestamp": "2026-09-21T10:24:28.773Z"
+      }
+    },
+    {
+      "name": "login_supervisor",
+      "ok": true,
+      "status": 200,
+      "token": "[redacted]"
+    },
+    {
+      "name": "supervisor/api/projects",
+      "status": 200,
+      "sample": {
+        "type": "array",
+        "length": 3
+      }
+    },
+    {
+      "name": "supervisor/api/supervisor/crimping-portfolio",
+      "status": 200,
+      "sample": {
+        "type": "object",
+        "keys": [
+          "scope",
+          "assignment_count",
+          "portfolio",
+          "panels",
+          "invented",
+          "source"
+        ]
+      }
+    },
+    {
+      "name": "supervisor/api/supervisor/pending-approvals",
+      "status": 200,
+      "sample": {
+        "type": "array",
+        "length": 0
+      }
+    },
+    {
+      "name": "login_tech3",
+      "ok": true,
+      "status": 200,
+      "token": "[redacted]"
+    },
+    {
+      "name": "tech_my_panels",
+      "status": 200,
+      "sample": {
+        "type": "array",
+        "length": 1
+      }
+    },
+    {
+      "name": "ui/",
+      "status": 200
+    },
+    {
+      "name": "ui/login",
+      "status": 200
+    },
+    {
+      "name": "ui/supervisor",
+      "status": 200
+    },
+    {
+      "name": "ui/technician",
+      "status": 200
+    }
+  ],
+  "failed": [],
+  "pass": true
+}

@@ -51,11 +51,11 @@ function ProgressBar({ value, tone, height = 8 }: { value: number; tone: 'source
 function StatBlock({ value, label, tone }: { value: number | string; label: string; tone?: 'blue' | 'orange' | 'green' | 'red' | 'gray' }) {
   const textColors: Record<string, string> = {
     blue: 'text-blue-700', orange: 'text-orange-600', green: 'text-green-700',
-    red: 'text-red-600', gray: 'text-slate-600',
+    red: 'text-red-600', gray: 'text-muted',
   };
   return (
     <div className="flex flex-col items-center px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-w-[72px]">
-      <div className={`text-[20px] font-bold tabular-nums leading-none ${tone ? textColors[tone] : 'text-slate-800'}`}>{value}</div>
+      <div className={`text-[20px] font-bold tabular-nums leading-none ${tone ? textColors[tone] : 'text-primary'}`}>{value}</div>
       <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1 select-none">{label}</div>
     </div>
   );
@@ -71,7 +71,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
   const isCompleted = a.status === 'completed' || a.status === 'approved';
 
   return (
-    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+    <div className="flex flex-col gap-0 rounded-2xl border border-slate-200 bg-[var(--t-surface-white)] overflow-hidden shadow-sm">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-700 flex items-center gap-3">
@@ -80,7 +80,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
           ? <CheckCircle size={20} className="text-emerald-400 shrink-0" />
           : <AlertCircle size={20} className="text-amber-400 shrink-0" />}
         <div className="flex-1 min-w-0">
-          <div className="text-[15px] font-bold text-white truncate select-none">{a.panel_name}</div>
+          <div className="text-[15px] font-bold text-white break-words [overflow-wrap:anywhere] select-none">{a.panel_name}</div>
           <div className="text-[11px] font-mono text-slate-400 mt-0.5 select-none">{project.code}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -93,7 +93,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <button
               type="button"
               onClick={onDownloadXlsx}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors"
+              className="flex items-center gap-1.5 h-7 px-3 rounded-lg dwes-report-action-btn dwes-report-export-btn"
             >
               <FileSpreadsheet size={12} />
               <span>XLSX</span>
@@ -110,7 +110,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
             <User size={16} className="text-blue-700" />
           </div>
           <div className="min-w-0">
-            <div className="text-[13px] font-bold text-slate-800 truncate">{technician.full_name}</div>
+            <div className="text-[13px] font-bold text-primary break-words [overflow-wrap:anywhere]">{technician.full_name}</div>
             <div className="text-[11px] text-slate-400 mt-0.5 select-none">
               @{technician.username}
               {technician.employee_id && <> · <span className="font-mono">{technician.employee_id}</span></>}
@@ -120,10 +120,10 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
         {/* Project */}
         <div className="px-5 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-            <Building2 size={16} className="text-slate-600" />
+            <Building2 size={16} className="text-muted" />
           </div>
           <div className="min-w-0">
-            <div className="text-[13px] font-bold text-slate-800 truncate">{project.name}</div>
+            <div className="text-[13px] font-bold text-primary break-words [overflow-wrap:anywhere]">{project.name}</div>
             <div className="text-[11px] text-slate-400 mt-0.5 select-none">
               {project.client && <>{project.client} · </>}
               <span className="font-mono">{project.code}</span>
@@ -148,7 +148,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
           </div>
           <div className="text-[18px] font-bold text-blue-700 tabular-nums shrink-0 min-w-[3.5ch]">{a.kpi}%</div>
         </div>
-        <div className="text-[11px] text-slate-500 mb-3 select-none">
+        <div className="text-[11px] text-muted mb-3 select-none">
           {a.cables_both_done} of {a.cables_total} cables fully completed ({a.kpi}%)
         </div>
 
@@ -192,15 +192,15 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
         <div className="grid grid-cols-3 gap-3">
           <div>
             <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5 select-none">Started</div>
-            <div className="text-[12px] font-semibold text-slate-700">{fmt(a.started_at)}</div>
+            <div className="text-[12px] font-semibold text-secondary">{fmt(a.started_at)}</div>
           </div>
           <div>
             <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5 select-none">Completed</div>
-            <div className="text-[12px] font-semibold text-slate-700">{fmt(a.completed_at)}</div>
+            <div className="text-[12px] font-semibold text-secondary">{fmt(a.completed_at)}</div>
           </div>
           <div>
             <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5 select-none">Duration</div>
-            <div className="text-[14px] font-bold text-slate-800">{a.duration_human || '--'}</div>
+            <div className="text-[14px] font-bold text-primary">{a.duration_human || '--'}</div>
           </div>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function CompletionReport({ data, onDownloadXlsx, compact = false
           </div>
           <span className="text-[13px] font-bold text-green-700 tabular-nums shrink-0">{rollup.project_kpi}%</span>
         </div>
-        <div className="mt-1.5 text-[11px] text-slate-500 select-none">
+        <div className="mt-1.5 text-[11px] text-muted select-none">
           {rollup.completed_frames} of {rollup.total_frames} panel{rollup.total_frames !== 1 ? 's' : ''} completed in {project.name}
         </div>
       </div>

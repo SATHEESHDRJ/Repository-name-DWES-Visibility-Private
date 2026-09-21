@@ -1,0 +1,10 @@
+{
+  "proposed": {
+    "x": 0.055,
+    "y": 0.405,
+    "width": 0.22,
+    "height": 0.055,
+    "note": "LHS aux-relay bank row (K74-1..KS3) \u2014 KF87L in bank; supervisor-verified geometry from INTERNAL layout"
+  },
+  "hits": []
+}

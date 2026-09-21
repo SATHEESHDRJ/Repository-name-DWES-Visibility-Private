@@ -1,0 +1,101 @@
+{
+    "source_marker_candidates":  [
+
+                                 ],
+    "destination_marker_candidates":  [
+
+                                      ],
+    "best_source":  null,
+    "best_destination":  null,
+    "source_unmatched":  true,
+    "destination_unmatched":  true,
+    "source_match_reason":  "Header group not found: no marker for Source \"87STUB\".",
+    "destination_match_reason":  "Header group not found: no marker for Destination \"QDC1\".",
+    "source_candidate_count":  0,
+    "destination_candidate_count":  0,
+    "drawing_checksum_applied":  null,
+    "superseded_excluded":  21,
+    "source_rejection_reasons":  [
+                                     "equipment/device"
+                                 ],
+    "destination_rejection_reasons":  [
+                                          "equipment/device"
+                                      ],
+    "same_physical_group":  false,
+    "source_resolution":  {
+                              "endpoint_type":  "DEVICE_TERMINAL",
+                              "physical_identity":  null,
+                              "terminal_reference":  "X420 / 2",
+                              "location_granularity":  "UNRESOLVED",
+                              "status":  "UNRESOLVED",
+                              "confidence":  "NONE"
+                          },
+    "destination_resolution":  {
+                                   "endpoint_type":  "DEVICE_TERMINAL",
+                                   "physical_identity":  null,
+                                   "terminal_reference":  "4",
+                                   "location_granularity":  "UNRESOLVED",
+                                   "status":  "UNRESOLVED",
+                                   "confidence":  "NONE"
+                               },
+    "source_endpoint_kind":  "EQUIPMENT_CONNECTOR",
+    "destination_endpoint_kind":  "EQUIPMENT_TERMINAL",
+    "source_header_group_diagnostics":  {
+                                            "matched_label":  null,
+                                            "group_bbox":  null,
+                                            "confidence":  "NONE",
+                                            "rejected_candidates":  [
+
+                                                                    ]
+                                        },
+    "destination_header_group_diagnostics":  {
+                                                 "matched_label":  null,
+                                                 "group_bbox":  null,
+                                                 "confidence":  "NONE",
+                                                 "rejected_candidates":  [
+
+                                                                         ]
+                                             },
+    "diagnostics":  {
+                        "source_rejected_reasons":  [
+                                                        "equipment/device"
+                                                    ],
+                        "destination_rejected_reasons":  [
+                                                             "equipment/device"
+                                                         ],
+                        "source_classification":  {
+                                                      "kind":  "EQUIPMENT_CONNECTOR",
+                                                      "legacyType":  "DEVICE_TERMINAL",
+                                                      "parentEquipment":  "87STUB",
+                                                      "connector":  "X420",
+                                                      "pin":  "2",
+                                                      "tbHeader":  null,
+                                                      "physicalLookupKey":  "87STUB",
+                                                      "terminalReference":  "X420 / 2",
+                                                      "provenance":  {
+                                                                         "source":  "schedule_header",
+                                                                         "devTblk":  "87STUB",
+                                                                         "term":  "X420:2",
+                                                                         "connector":  "X420",
+                                                                         "pin":  "2"
+                                                                     }
+                                                  },
+                        "destination_classification":  {
+                                                           "kind":  "EQUIPMENT_TERMINAL",
+                                                           "legacyType":  "DEVICE_TERMINAL",
+                                                           "parentEquipment":  "QDC1",
+                                                           "connector":  null,
+                                                           "pin":  "4",
+                                                           "tbHeader":  null,
+                                                           "physicalLookupKey":  "QDC1",
+                                                           "terminalReference":  "4",
+                                                           "provenance":  {
+                                                                              "source":  "schedule_header",
+                                                                              "devTblk":  "QDC1",
+                                                                              "term":  "4",
+                                                                              "connector":  null,
+                                                                              "pin":  "4"
+                                                                          }
+                                                       }
+                    }
+}

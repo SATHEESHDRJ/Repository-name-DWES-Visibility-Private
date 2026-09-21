@@ -1,0 +1,42 @@
+{
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "Prisma.prisma",
+    "ms-azuretools.vscode-containers",
+    "redhat.vscode-yaml",
+    "ms-playwright.playwright",
+    "bradlc.vscode-tailwindcss",
+    "mikestead.dotenv",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "humao.rest-client",
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense",
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "yzhang.markdown-all-in-one"
+  ],
+  "unwantedRecommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ritwickdey.LiveServer",
+    "ms-azuretools.vscode-docker",
+    "ms-mssql.mssql",
+    "ms-azuretools.vscode-azureresourcegroups",
+    "tabnine.tabnine-vscode",
+    "sourcegraph.cody-ai",
+    "saoudrizwan.claude-dev",
+    "rooveterinaryinc.roo-cline",
+    "shengsuan-cloud.cline-shengsuan",
+    "cline.cline",
+    "ollama.ollama",
+    "namdang.ollama-copilot-vscode",
+    "google.geminicodeassist",
+    "meteorstudio.cursorcode",
+    "ms-python.python",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "ms-python.vscode-pylance",
+    "anysphere.cursorpyright"
+  ]
+}

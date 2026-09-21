@@ -52,12 +52,17 @@
     
     --color-primary-brand: #1B4FD8;
 
+    /* Shared dashboard / workspace header titles — medium-large bold dark blue */
+    --dwes-header-title-blue: #1B2958;
+    --dwes-header-title-size-section: clamp(1.0625rem, 1.5vw, 1.1875rem);
+    --dwes-header-title-size-page: clamp(1.5rem, 2.35vw, 1.75rem);
+
     /* Role Badges */
     --role-admin-bg: #FEE2E2;
     --role-admin-text: #DC2626;
 
-    --role-director-bg: #EDE9FE;
-    --role-director-text: #7C3AED;
+    --role-director-bg: #DBEAFE;
+    --role-director-text: #1D4ED8;
 
     --role-supervisor-bg: #DBEAFE;
     --role-supervisor-text: #1D4ED8;
@@ -74,9 +79,9 @@
     --glass-bg-subtle: rgba(255, 255, 255, 0.52);
     --glass-border: rgba(255, 255, 255, 0.55);
     --glass-border-strong: rgba(15, 23, 42, 0.10);
-    --glass-blur: 14px;
-    --glass-blur-subtle: 10px;
-    --glass-blur-overlay: 6px;
+    --glass-blur: 0px;
+    --glass-blur-subtle: 0px;
+    --glass-blur-overlay: 4px;
     --glass-saturate: 165%;
     --glass-shadow:
       0 1px 2px rgba(15, 23, 42, 0.04),

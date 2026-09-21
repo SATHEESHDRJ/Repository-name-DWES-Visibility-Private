@@ -3,6 +3,32 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 
+const WEAK_JWT_SECRETS = new Set([
+  'DWES_JWT_SECRET_DEV_2026',
+  'secret',
+  'changeme',
+  'jwt-secret',
+  'dev-secret',
+  'test-secret',
+  'your-secret-key',
+  'my-secret',
+]);
+
+function getValidatedSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error('[DWES] JWT_SECRET environment variable is required but not set');
+  }
+  const trimmed = secret.trim();
+  if (trimmed.length < 32) {
+    throw new Error('[DWES] JWT_SECRET must be at least 32 characters long');
+  }
+  if (WEAK_JWT_SECRETS.has(trimmed)) {
+    throw new Error('[DWES] JWT_SECRET must not be a known default or weak value');
+  }
+  return trimmed;
+}
+
 export interface JwtPayload {
   sub: number;
   username: string;
@@ -17,7 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'DWES_JWT_SECRET_DEV_2026',
+      secretOrKey: getValidatedSecret(),
     });
   }
 

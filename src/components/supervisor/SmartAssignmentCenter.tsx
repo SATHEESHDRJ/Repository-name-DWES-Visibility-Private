@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Modal from '../Modal';
 import DeleteConfirmModal, { type DeleteScopeId } from '../ui/DeleteConfirmModal';
+import { useAppDialog } from '../AppDialogProvider';
 import { projectsApi, supervisorApi, techApi, usersApi } from '../../services/api';
 import { emitFramesChanged } from '../../utils/projectFramesEvents';
 import { emitWorkflowChanged } from '../../utils/dwesRefreshEvents';
-import { useDwesRefresh } from '../../hooks/useDwesRefresh';
+import { useDwesRefresh, type RefreshOptions } from '../../hooks/useDwesRefresh';
 import Toast from '../ui/Toast';
+import TechnicianStatusIndicator from '../ui/TechnicianStatusIndicator';
 import {
   CHANGEOVER_REASONS,
   type ChangeoverAssignment,
@@ -47,10 +49,13 @@ import {
   Columns3,
   LayoutGrid,
   ListChecks,
+  MessageCircle,
   RefreshCw,
   Search,
   Star,
+  Tag,
   TriangleAlert,
+  User,
   UserMinus,
   UserPlus,
   Users,
@@ -89,10 +94,9 @@ const STATUS_META: Record<WorkflowStatus, { label: string; chip: string }> = {
 const STATUS_FILTERS: Array<{ key: TechResourceStatus | 'all'; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'available', label: 'Free' },
+  { key: 'assigned', label: 'Assigned' },
   { key: 'working', label: 'Working' },
-  { key: 'on_break', label: 'Break' },
-  { key: 'material_delay', label: 'Material' },
-  { key: 'qa_qc', label: 'QA/QC' },
+  { key: 'busy', label: 'Busy' },
 ];
 
 const BOARD_LANES: Array<{ id: BoardLaneId; label: string; shortLabel: string; hint: string }> = [
@@ -156,6 +160,7 @@ export default function SmartAssignmentCenter({
   panelName,
   cableCount = 0,
 }: TechnicianWorkflowModalProps) {
+  const dialog = useAppDialog();
   const [section, setSection] = useState<TechnicianWorkflowSection>(initialSection);
   const [toast, setToast] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<'success' | 'warn'>('success');
@@ -205,8 +210,9 @@ export default function SmartAssignmentCenter({
     setToast(message);
   };
 
-  const loadContext = useCallback(async () => {
-    setLoading(true);
+  const loadContext = useCallback(async (options?: RefreshOptions) => {
+    const silent = options?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const [frames, panels, changeovers, audit] = await Promise.all([
         projectsApi.frames(projectCode).catch(() => []),
@@ -254,7 +260,7 @@ export default function SmartAssignmentCenter({
           }),
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [projectCode, panelId]);
 
@@ -369,11 +375,26 @@ export default function SmartAssignmentCenter({
 
     if (isFocusPanel) {
       const conflict = techHasConflictingPanel(targetId, targetProject, targetPanel, allAssignments);
-      if (conflict && !window.confirm(
-        `${techResources.find(t => t.id === targetId)?.full_name ?? 'Technician'} is active on `
-        + `${conflict.panel_name || conflict.frame_id} (${conflict.project_code}). Assign to ${targetName} anyway?`,
-      )) {
-        return;
+      if (conflict) {
+        const techName = techResources.find(t => t.id === targetId)?.full_name ?? 'Technician';
+        const ok = await dialog.confirm({
+          title: 'Assign with active conflict',
+          message: `${techName} is already active on another panel. Assigning them here will create a concurrent assignment.`,
+          tone: 'warning',
+          confirmText: 'Assign Anyway',
+          actionSummary: `Assign ${techName} to ${targetName} while they remain active elsewhere.`,
+          entity: [
+            { label: 'Technician', value: techName, kind: 'user' },
+            { label: 'Target panel', value: targetName, meta: targetProject, kind: 'panel' },
+            {
+              label: 'Current panel',
+              value: conflict.panel_name || conflict.frame_id,
+              meta: conflict.project_code,
+              kind: 'panel',
+            },
+          ],
+        });
+        if (!ok) return;
       }
     }
 
@@ -390,7 +411,7 @@ export default function SmartAssignmentCenter({
       emitFramesChanged({ projectCode: targetProject, frameId: targetPanel, action: 'updated' });
       emitWorkflowChanged({ scope: 'assignment', projectCode: targetProject, frameId: targetPanel });
       persistQueue(queue.filter(q => q.id !== queueItemId(targetProject, targetPanel)));
-      await loadContext();
+      await loadContext({ silent: true });
       if (isFocusPanel) setSection('deassign');
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Assignment failed';
@@ -402,7 +423,7 @@ export default function SmartAssignmentCenter({
     }
   }, [
     selectedTechId, projectCode, panelId, panelName, canAssign, allAssignments,
-    techResources, queue, persistQueue, loadContext,
+    techResources, queue, persistQueue, loadContext, dialog,
   ]);
 
   // Auto-next: when a tech completes a panel, try to assign their next queued panel.
@@ -458,7 +479,7 @@ export default function SmartAssignmentCenter({
               `Auto-assigned ${next.panelName} → tech #${done.techId} (queue)`,
               'success',
             );
-            await loadContext();
+            await loadContext({ silent: true });
           } catch {
             showToast(
               `${next.panelName} marked auto-ready — supervisor confirm required`,
@@ -521,7 +542,7 @@ export default function SmartAssignmentCenter({
       showToast('Assignment removed');
       emitFramesChanged({ projectCode, frameId: panelId, action: 'updated' });
       emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
-      await loadContext();
+      await loadContext({ silent: true });
       setShowDeassignConfirm(false);
       setSection('assign');
     } finally {
@@ -546,7 +567,7 @@ export default function SmartAssignmentCenter({
       showToast('Mid-changeover completed');
       emitFramesChanged({ projectCode, frameId: panelId, action: 'updated' });
       emitWorkflowChanged({ scope: 'assignment', projectCode, frameId: panelId });
-      await loadContext();
+      await loadContext({ silent: true });
       setSection('deassign');
     } catch (e: any) {
       setChangeoverError(e?.response?.data?.message || 'Changeover failed');
@@ -601,6 +622,7 @@ export default function SmartAssignmentCenter({
     <Modal
       title="Production Assignment"
       subtitle={`${projectCode} · ${panelName}${frameCableCount > 0 ? ` · ${frameCableCount} cables` : ''}`}
+      icon={<Users />}
       onClose={onClose}
       size="fullscreen"
       bodyClassName="modal-body-flush"
@@ -657,7 +679,7 @@ export default function SmartAssignmentCenter({
             <button
               type="button"
               className="twf-refresh-btn"
-              onClick={() => void loadContext()}
+              onClick={() => void loadContext({ silent: true })}
               title="Refresh"
             >
               <RefreshCw size={15} />
@@ -855,14 +877,12 @@ export default function SmartAssignmentCenter({
                         <div className="sac-selected-chip">
                           <span className="sac-avatar sac-avatar--sm">{selectedTechResource.initials}</span>
                           <span className="sac-selected-chip-name">{selectedTechResource.full_name}</span>
-                          <span className={`twf-status-badge ${selectedTechResource.statusChip}`}>
-                            {selectedTechResource.statusLabel}
-                          </span>
+                          <TechnicianStatusIndicator status={selectedTechResource.status} compact />
                           {selectedTechResource.parallelMode === 'parallel_ok' && (
                             <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
                           )}
-                          {selectedTechResource.parallelMode === 'reassign_required' && (
-                            <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+                          {selectedTechResource.parallelMode === 'handover_required' && (
+                            <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
                           )}
                         </div>
                       ) : (
@@ -945,42 +965,51 @@ export default function SmartAssignmentCenter({
                       </div>
                       <label className="tech-workflow-field" htmlFor="sac-new-tech">
                         <span className="tech-workflow-field-label">Replacement</span>
-                        <select
-                          id="sac-new-tech"
-                          className="form-select"
-                          value={changeoverTech}
-                          onChange={e => setChangeoverTech(e.target.value)}
-                        >
-                          <option value="">Select…</option>
-                          {techUsers.filter(t => t.id !== changeoverTarget.technician_id).map(t => (
-                            <option key={t.id} value={t.id}>{t.full_name}</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><User size={18} /></span>
+                          <select
+                            id="sac-new-tech"
+                            className="form-select"
+                            value={changeoverTech}
+                            onChange={e => setChangeoverTech(e.target.value)}
+                          >
+                            <option value="">Select…</option>
+                            {techUsers.filter(t => t.id !== changeoverTarget.technician_id).map(t => (
+                              <option key={t.id} value={t.id}>{t.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </label>
                       <label className="tech-workflow-field" htmlFor="sac-reason">
                         <span className="tech-workflow-field-label">Reason</span>
-                        <select
-                          id="sac-reason"
-                          className="form-select"
-                          value={changeoverReason}
-                          onChange={e => setChangeoverReason(e.target.value as ChangeoverReason)}
-                        >
-                          <option value="">Select…</option>
-                          {CHANGEOVER_REASONS.map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
+                        <div className="field-with-icon">
+                          <span className="field-lead-icon"><Tag size={18} /></span>
+                          <select
+                            id="sac-reason"
+                            className="form-select"
+                            value={changeoverReason}
+                            onChange={e => setChangeoverReason(e.target.value as ChangeoverReason)}
+                          >
+                            <option value="">Select…</option>
+                            {CHANGEOVER_REASONS.map(r => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        </div>
                       </label>
                       <label className="tech-workflow-field sac-changeover-notes" htmlFor="sac-notes">
                         <span className="tech-workflow-field-label">Notes</span>
-                        <textarea
-                          id="sac-notes"
-                          className="form-textarea"
-                          rows={1}
-                          value={changeoverNotes}
-                          onChange={e => setChangeoverNotes(e.target.value)}
-                          placeholder="Optional…"
-                        />
+                        <div className="field-with-icon field-with-icon--top">
+                          <span className="field-lead-icon"><MessageCircle size={18} /></span>
+                          <textarea
+                            id="sac-notes"
+                            className="form-textarea"
+                            rows={1}
+                            value={changeoverNotes}
+                            onChange={e => setChangeoverNotes(e.target.value)}
+                            placeholder="Optional…"
+                          />
+                        </div>
                       </label>
                       {changeoverError && <div className="form-error">{changeoverError}</div>}
                       <button
@@ -1300,7 +1329,7 @@ function TechnicianResourceCard({
             {tech.employee_id || `@${tech.username}`}
           </div>
         </div>
-        <span className={`twf-status-badge ${tech.statusChip}`}>{tech.statusLabel}</span>
+        <TechnicianStatusIndicator status={tech.status} compact />
       </div>
 
       <div className="sac-tech-context-row">
@@ -1340,8 +1369,8 @@ function TechnicianResourceCard({
         {tech.parallelMode === 'parallel_ok' && (
           <span className="sac-parallel-badge sac-parallel-badge--ok">Parallel OK</span>
         )}
-        {tech.parallelMode === 'reassign_required' && (
-          <span className="sac-parallel-badge sac-parallel-badge--warn">Reassign</span>
+        {tech.parallelMode === 'handover_required' && (
+          <span className="sac-parallel-badge sac-parallel-badge--warn">Mid-changeover only</span>
         )}
         {tech.skillTag === 'experienced' && (
           <span className="sac-skill-badge">Exp</span>

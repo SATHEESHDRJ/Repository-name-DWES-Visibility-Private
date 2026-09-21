@@ -1,0 +1,9 @@
+{
+  "description": "Revision mismatch: drawing =Q1+F1,=Q2+K1 vs schedule =Q1+F1,=Q9+EXTRA",
+  "expected_unmatched_schedule": [
+    "=Q9+EXTRA"
+  ],
+  "expected_unmatched_drawing": [
+    "=Q2+K1"
+  ]
+}

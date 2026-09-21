@@ -1,20 +1,30 @@
-import { useState } from 'react';
-import {
-  FolderKanban, Activity,
-} from '../../components/ui/icons';
+import { useEffect, useState } from 'react';
+import { DashboardIcon } from '../../components/ui/DashboardIcon';
 import DashboardShell from '../../components/ui/DashboardShell';
 import { useAuthStore } from '../../store/useAuthStore';
+import WorkspaceSectionHeading from '../../components/ui/WorkspaceSectionHeading';
 import SupervisorAlertStrips from '../../components/supervisor/SupervisorAlertStrips';
-import SupervisorSectionHeader from '../../components/supervisor/SupervisorSectionHeader';
 import TechnicianWorkflowModal, {
   type TechnicianWorkflowSection,
 } from '../../components/supervisor/TechnicianWorkflowModal';
+import LiveTbSupervisorPanel from '../../components/supervisor/LiveTbSupervisorPanel';
 import ProjectsTab from './tabs/ProjectsTab';
 import ReviewApprovalSection from './sections/ReviewApprovalSection';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
+import { useProjectSelectionStore } from '../../store/useProjectSelectionStore';
+import { useDashboardTab } from '../../hooks/useDashboardUrl';
+
+const TAB_KEYS = ['projects', 'status', 'live-tb'] as const;
 
 const TABS = [
-  { key: 'projects', label: 'Projects', icon: <FolderKanban size={20} /> },
-  { key: 'status', label: 'Status', icon: <Activity size={20} /> },
+  {
+    key: 'projects',
+    label: 'Projects',
+    icon: <DashboardIcon name="projects" size={20} />,
+    description: 'Select one project and one panel — uploads, reports, and technician workflow target the active panel.',
+  },
+  { key: 'status', label: 'Status', icon: <DashboardIcon name="status" size={20} /> },
+  { key: 'live-tb', label: 'LIVE TB', icon: <DashboardIcon name="drawing" size={20} /> },
 ];
 
 interface WorkflowState {
@@ -28,8 +38,14 @@ interface WorkflowState {
 
 export default function SupervisorDashboard() {
   const { user } = useAuthStore();
-  const [tab, setTab] = useState('projects');
+  const [tab, setTab] = useDashboardTab(TAB_KEYS, 'projects');
   const [workflow, setWorkflow] = useState<WorkflowState | null>(null);
+  const selectedProject = useProjectSelectionStore(s => s.selectedProject);
+  const selectedPanelByProject = useProjectSelectionStore(s => s.selectedPanelByProject);
+  const liveTbProjectCode = selectedProject?.code || '';
+  const liveTbFrameId = liveTbProjectCode
+    ? (selectedPanelByProject[liveTbProjectCode] || '')
+    : '';
 
   const handleNavigate = (nextTab: string) => {
     setTab(nextTab);
@@ -43,13 +59,31 @@ export default function SupervisorDashboard() {
     setWorkflow(opts);
   };
 
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted' || !workflow) return;
+    if (workflow.projectCode === detail.projectCode
+      && (!detail.frameId || workflow.panelId === detail.frameId)) {
+      setWorkflow(null);
+    }
+  }), [workflow]);
+
+  const shellSubtitle = (() => {
+    const name = (user?.full_name || '').trim();
+    const emp = (user?.employee_id || '').trim();
+    // Avoid "Production Supervisor · Production Supervisor · EMP-…" when full_name mirrors the role title.
+    if (name && name.toLowerCase() !== 'production supervisor') {
+      return [name, emp].filter(Boolean).join(' · ');
+    }
+    return emp || user?.username || '';
+  })();
+
   return (
     <DashboardShell
       title="Production Supervisor"
       tabs={TABS}
       activeTab={tab}
-      onTabChange={setTab}
-      subtitle={`${user?.full_name || ''} · ${user?.employee_id || ''}`}
+      onTabChange={handleNavigate}
+      subtitle={shellSubtitle}
       badge="Supervisor Workspace"
       widthVariant="wide"
       hideTabSectionHeader
@@ -57,16 +91,28 @@ export default function SupervisorDashboard() {
       <SupervisorAlertStrips onNavigate={handleNavigate} />
       {tab === 'projects' && (
         <div className="dash-module dash-module--wide flex flex-col gap-4 min-w-0">
-          <SupervisorSectionHeader
-            title="Projects"
-            description="Select one project and one panel — uploads, reports, and technician workflow target the active panel."
-          />
           <ProjectsTab onOpenTechnicianWorkflow={openTechnicianWorkflow} />
         </div>
       )}
-      <div className="dash-module dash-module--wide" hidden={tab !== 'status'}>
-        <ReviewApprovalSection isActive={tab === 'status'} />
-      </div>
+      {tab === 'status' && (
+        <div className="dash-module dash-module--wide">
+          <ReviewApprovalSection isActive />
+        </div>
+      )}
+      {tab === 'live-tb' && (
+        <div className="dash-module dash-module--wide">
+          <WorkspaceSectionHeading
+            title="LIVE TB"
+            subtitle="Panel analysis status, Supervisor verification, Retry Analysis, and debug export."
+            icon={<DashboardIcon name="status" size={16} />}
+          />
+          <LiveTbSupervisorPanel
+            projectCode={liveTbProjectCode}
+            frameId={liveTbFrameId}
+            panelName={liveTbFrameId}
+          />
+        </div>
+      )}
 
       {workflow && (
         <TechnicianWorkflowModal

@@ -1,0 +1,7 @@
+projects=8
+users=36
+tech_assignments=10
+auth_sqlite_bytes=274432
+dump_sha256=BD99751E98252266917BB5F3DE35AE6B9E96758E9486EA9F1DD7F63F9CE89732
+isolated_pg=dwes_disposable_restore_pg_20260921:55433
+working_stack_untouched=true

@@ -1,0 +1,17 @@
+﻿{
+  "role": "ops_director",
+  "username": "ops_director1",
+  "read_only_surface": true,
+  "assign_action_buttons": [],
+  "api_stats": {
+    "projects_total": 3,
+    "panels_total": 10,
+    "panels_in_progress": 4,
+    "panels_completed": 2,
+    "cables_total": 5825,
+    "wiring_kpi": 22,
+    "technicians_active": 29
+  },
+  "note": "Director panels_total=10 includes assignment rows; Supervisor Status UI shows Total Panels=5 (frame universe). Redesign must document which canonical projection each KPI uses.",
+  "screenshot": "baseline-director-desktop.png"
+}

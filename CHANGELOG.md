@@ -1,10 +1,1500 @@
-﻿# DWES Changelog
+## 2026-09-20 — Supervisor Status Selected Panel de-dupe
+
+- Removed repeated project/panel titles under Active selectors (identity stays in dropdowns).
+- Removed Completed/Total/Remaining matrix under progress (Technician Activity owns assignee; progress block + SRC/DST only).
+- Supplemental evidence: `after-supervisor-status-selected-desktop.png`; owner gallery `after/index.html`. Overall still **PENDING OWNER VISUAL ACCEPTANCE**.
+
+## 2026-09-19 — Crimping matrix Prep % label
+
+- Renamed stripping/crimping matrix `Progress %` → `Prep %` so it is not mistaken for overall wiring progress (Wire Number remains the panel position).
+
+## 2026-09-19 — URL forward history fix + evidence re-proof
+
+- ProjectsTab URL sync: hydrate guards + `replace` on automatic mirror (remount no longer wipes forward).
+- Live CDP: Projects → Status → back → forward all PASS; regression smoke all 200.
+
+## 2026-09-19 — Director progress de-dupe + Admin health label
+
+- Director Live Status: removed duplicate KpiRing beside linear progress (one % surface).
+- Admin health strip: group label `Headcount` (no longer echoes Settings “Users and roles”).
+- Re-captured AFTER gallery (20 PNGs).
+
+## 2026-09-19 — Technician assignment KPI de-dupe + AFTER re-capture
+
+- Current Assignment: single Completed/Total/Remaining/Progress matrix + bar (removed chip-strip duplicate and progress fields from meta grid).
+- Re-captured full AFTER gallery (20 PNGs) after command-bar reorder + KPI de-dupe.
+
+## 2026-09-19 — Supervisor Projects command bar reorder
+
+- Reordered Projects toolbar into workflow order: New Project → Users → Add Panel → Edit → Wiring Upload → GA Upload → Digital Wiring View → Drawing View → Workflow.
+
+## 2026-09-19 — Premium enterprise UI/UX recovery (Supervisor / Tech / Director / Admin)
+
+- Industrial dashboard density + glass dial-back; no duplicate command CTAs (supervisor single command bar; technician mission KPI strip removed while wiring is open).
+- URL-addressable nav: `?tab=` / `?project=` / `?panel=` / technician `?view=` via `useDashboardUrl` (back/forward history).
+- confirmAsync industrial density polish; Cut/Strip portfolio stays **PARTIAL** (no fake aggregate card).
+- Evidence: `docs/evidence/uiux-recovery/` (BEFORE 20 + AFTER 20 + `FINAL_VERDICT.md` **PENDING OWNER VISUAL ACCEPTANCE**).
+
+## 2026-09-19 — LIVE ENDPOINT: DEVICE paint + Match 1 of N + drawing index
+
+- TB/DEVICE paint: no cell ovals; DEVICE footprints via `manualMapToCandidate` (`PHYSICAL_DEVICE` / INTERNAL from notes); eligible view set includes `PHYSICAL_DEVICE`.
+- Match 1 of N: multi-candidate matches keep peers + Previous/Next (FE no longer wipes `count>1`); prefer INTERNAL/REAR over FRONT.
+- Drawing index service + Solar Wadi seed (`uploads/drawing-index/003/…`); rejects LEGEND/BOM for auto paint.
+- Canonical prep events mapper (`WIRE_CUT` / `SRC_STRIPPED` / …) + dual-write on tech audit log.
+- Wire 20.16:E: Source **H74** resolved (Match 1 of 2); Destination **KF87L** unresolved (directory-only; not aliased to F87L). Evidence: `docs/evidence/live-endpoint/WIRE_2016E_MAPPING_STATUS.md`.
+- Regression: Wire 021/D1 Match still returns 87STUB + QDC1.
+
+## 2026-09-19 — LIVE TB analysis lifecycle chip (no forever in-progress)
+
+- Technician LIVE ENDPOINT banner no longer treats empty/unfetched status as permanent “in progress”.
+- Explicit chip states: **QUEUED / PROCESSING / READY / PARTIAL / FAILED** with real failure reason when FAILED.
+- Tests: `tests/live-tb-analysis-lifecycle.test.mjs`.
+
+## 2026-09-19 — Assignment dual-source fix + Mid Change route + transfer lock
+
+- Restored missing `POST /api/supervisor/mid-changeover`; reassign-before-start + Mid Change both publish via EventsInterceptor (`old_assignment_id` / `new_assignment_id`).
+- Mid Change closes prior row as `mid_changed` (VARCHAR(20)); receiver stays `assigned` with `handover_from_id` (ASSIGNED_VIA_MID_CHANGE in audit).
+- `assertWritableAssignment` blocks cable/start/pause/resume/complete on transferred rows (previous tech cannot continue).
+- Workflow `decorateWithWiringAssignment` heals WIRING stage assignees from `tech_assignments` so UI never shows Assigned + Not Assigned.
+- Browser accept (Solar Wadi 003 / FEEDER-1): Reassign before start + Supervisor Mid Change after start — both passed.
+
+## 2026-09-19 — Supervisor FE: Reassign / Mid Change confirm modals
+
+- `supervisorApi.reassignBeforeStart` wired; Assign / Reassign / Mid Change use stacked `Modal` confirmations (no `window.confirm`).
+- `PanelAssignmentModal`: lifecycle-aware Already Assigned (B) with Reassign (C) / Mid Change (D); initial Assign opens Confirm Technician Assignment (A).
+- `PanelWorkflowWorkspaceModal`: prefers `panel_wiring_assignment` for synced labels; Reassign / Mid Change CTAs; WIRING stage assign confirms via Modal A; not-started conflict routes to Reassign.
+
+## 2026-09-19 — Supervisor reassign-before-start + WIRING stage sync
+
+- `TechService.assignFrame` / `changeover` sync `panel_workflow_stage_assignees` for WIRING via public `syncWiringStageAssignee`.
+- New `POST /api/supervisor/reassign-before-start` (prod_supervisor) for virgin assignments only; Mid Change unchanged after start.
+- Lifecycle helpers in `common/assignment-lifecycle.ts`; panelActivity + panel workflow attach `lifecycle` / action flags / `panel_wiring_assignment`.
+- Tests: `backend/test/assignment-reassign-before-start.test.cjs`.
+
+## 2026-09-18 — Whole-Wire Preparation (PREPARE WIRE)
+
+- Technician confirms one complete wire (cut + strip + crimp) via PREPARE WIRE / CONFIRM WIRE PREPARED.
+- New `POST /api/tech/crimping/prepare-wire` + `markWirePrepared` (atomic applicable ends; open ends N/A; rework-safe attribution).
+- STRIPPING/CRIMPING modules and Group View use whole-wire prepare (no four-button tech completion).
+- KPI strip: To Prepare / Prepared / Rework / Ready / Progress %; report title CRIMPING / WIRE PREPARATION REPORT.
+- Evidence: `docs/evidence/crimping-global/DWES_WHOLE_WIRE_PREPARATION_COMPLETION.md` (34/34 tests).
+
+## 2026-09-18 — Crimping finish (CR-07 UI + polish)
+
+- Wired `supervisorApi.setCrimpingRework` in Supervisor Crimping Data detail (Mark Strip/Crimp Rework + required reason).
+- `getCrimpingReport` projects `reworkHistory`; Rework filter + KPI on supervisor/tech surfaces; Director `crimping_rework` column.
+- QA Inspection Form opens same Crimping Data view (`allowSetRequired=false`).
+- Evidence/docs: PROJECT_STATUS stale Pending rows cleared; CR-05→CR-10 completion note updated.
+
+## 2026-09-04 — UI-01 Premium Modern Brand Lockup — FROZEN
+
+- Owner visual approval 2026-09-04 (branding exception only).
+- Compact official logo ~108–128px (`clamp(108px, 7vw, 128px)`); reduced white container (pad ~6–7px).
+- Company one line `INGENIOUS NETWORK FZC` (~21–27px); muted descriptor `DIGITAL ENGINEERING PLATFORM`; single cyan accent line.
+- Refined eyebrow; company/product separation; product title remains primary. Auth/Login card/palette unchanged.
+- Evidence: `docs/evidence/ui-login-showcase/premium-brand-lockup/`.
+- UI-02B not started.
+
+## 2026-09-04 — UI-01 Final Brand Size Correction — FROZEN (superseded by premium lockup)
+
+- Prior Owner approval for ~145–160px logo / one-line company; superseded by premium compact lockup above.
+- Evidence retained: `docs/evidence/ui-login-showcase/final-brand-size-correction/`.
+
+## 2026-09-04 — UI-01 Brand Header Micro-Refinement — FROZEN (superseded by final size correction)
+
+- Prior Owner approval for lockup modernization; logo ~192px / two-line company later corrected by final size exception above.
+- Evidence retained under `docs/evidence/ui-login-showcase/` for comparison.
+
+## 2026-09-04 — UI-01 visual correction (palette + straight title) — FROZEN (superseded into brand freeze)
+
+- Restored previous theme hero blue via `--login-bg-dark: var(--t-login-hero)` (Ingenious `#091A40 → #0C224F → #1D4ED8`); retuned atmosphere/cards to `--t-login-hero-*`.
+- Product title is one line on ≥768px: `DIGITAL WIRING EXECUTION SYSTEM` (responsive size; wrap only on narrow mobile).
+- Master layout preserved; wire graphic still removed; auth unchanged. Included in Owner-approved FROZEN login presentation.
+
+## 2026-09-04 — Master UI-01 Login Showcase (wire graphic removed) — FROZEN
+
+- Removed SOURCE/DEST / Wire 001–003 showcase component and layout entirely.
+- Left hero rebuilt with abstract technical atmosphere (grid/glow/geometry) — no fake wiring data.
+- Capability cards: REAL-TIME EXECUTION / DIGITAL WORKFLOWS / COMPLETE TRACEABILITY (3-column glass).
+- Unified utility rail; cool-light auth surface; “Sign in to continue to DWES”; `--dwes-*` tokens.
+- Evidence: `docs/evidence/ui-login-showcase/` (incl. 1600×900). Owner visual confirmation recorded 2026-09-04 — **FROZEN**.
+
+## 2026-09-04 — UI-01 Premium Login / Product Showcase — FROZEN
+
+- Redesigned `/` login presentation into Ingenious Network FZC + DWES product showcase (≈55/45 split).
+- Abstract SVG SOURCE→DEST wiring visual (no fake production data); three capability cards; compact utilities/clock.
+- Auth logic frozen (store, `POST /api/auth/login`, JWT, redirect, biometric enroll gate unchanged).
+- Friendly inline credential/network errors; design tokens `--login-*`; `prefers-reduced-motion` honored.
+- Evidence: `docs/evidence/ui-login-showcase/`; tests: `tests/login-showcase.test.ts`.
+
+## 2026-09-04 — CR-05→CR-10 Supervisor / Director / QA / PDF / Freeze
+
+- CR-05: Supervisor Crimping Data View in Status (`CompactStatusWorkspace`) with filters, drill-down, Crimping Required, PDF download — consumes `getCrimpingReport`.
+- CR-06: `summarizeCrimpingKpis` adds rework/open counts; Director monitoring consolidated panels include crimping_* KPIs (required denominator) + Stripping/Crimping KPI tile.
+- CR-07: `markPrepReworkRequired` + `POST /supervisor/crimping/:id/rework`; history preserved; audit `crimp_rework`; no DDL.
+- CR-08: Formal landscape PDF `crimping-report-pdf.ts` + `GET .../crimping-report/:id/pdf`.
+- CR-09: Reuses assignment SSE / sessionStorage module restore (no WebSockets).
+- CR-10: Freeze regression tests `technician-module-freeze.test.cjs`; evidence doc under `docs/evidence/crimping-global/`.
+
+## 2026-09-04 — Global Stripping + Crimping + Crimping Report
+
+- Four Technician modules on one assignment: DIGITAL WIRING (frozen) | STRIPPING | CRIMPING | CRIMPING REPORT.
+- Additive canonical crimping-leg fields via upload mapping (`source_crimp_leg_*` / `dest_crimp_leg_*`); missing → NOT AVAILABLE; never inferred from wire size/color.
+- Single global `getCrimpingReport` projection + `GET /api/tech/crimping-report/:id` (tech ownership 403) and supervisor mirror route.
+- Complete engineering Crimping Report UI (leg columns + execution status); multi-project T1–T5 in `crimping-report.test.cjs`.
+- No WiringSchemeDB DDL; E01+R1 remains fixture-only (no production project-name branches).
+
+## 2026-09-04 — CR-04A–D Stripping + Group View + Technician Report
+
+- Nested `crimping.source|destination` with independent `strippingStatus` / `crimpingStatus` (+ attribution). Flat CR-01→CR-04 data normalized without inventing stripping.
+- Same-end gate: crimp blocked until strip (`SOURCE_STRIPPING_REQUIRED` / `DESTINATION_STRIPPING_REQUIRED`); wiring unlock requires all applicable strip+crimp COMPLETE.
+- Technician Wire View: SOURCE/DEST STRIPPED + CRIMPED; Group View by `sourceEquipment → destinationEquipment`; bulk actions with per-wire skip reasons.
+- In-app STRIPPING & CRIMPING REPORT (workspace REPORT tab + sidebar Crimping Report); KPIs for Src/Dst strip & crimp + Ready.
+- APIs: `operation` on `/tech/crimping/action`; new `/tech/crimping/bulk-action`. Unit tests 12/12. No DDL / no DB reset.
+
+## 2026-09-03 — Crimping before Wiring (CR-01…CR-04)
+
+- Additive `cable_status[i].crimping` JSON (no WiringSchemeDB DDL) with per-end Source/Destination state, overall, attribution, and legacy grandfather stamp.
+- Hard per-wire gate: Crimping-required wires must finish applicable crimp ends before Wiring `FINISHED` / complete mutations (`CRIMPING_NOT_COMPLETED`).
+- Technician workstation: `[ CRIMPING ] | [ WIRING ]` mode toggle, SOURCE/DEST CRIMPED actions, mode-specific KPI row, gate banner + GO TO CRIMPING; session mode persisted per assignment.
+- Supervisor Review & Approval: **Crimping Required** multi-select modal (Select unfinished / Clear / Apply) via `/api/supervisor/crimping/:assignmentId/required`.
+- Backend unit tests: `backend/test/crimping.test.cjs` (10/10). Verify at `http://localhost:5275/technician` and Supervisor Review panel overview.
+
+## 2026-08-19 — Technician modal overlay covers full viewport (no sidebar shadow)
+
+- Removed the `html.tech-fn-modal-open .modal-overlay/.tech-equip-filter-root/.tech-skipped-filter-root { left: 16.5rem }` shift that left the dark sidebar rail un-dimmed while a technician function modal was open.
+- The sidebar rail (dark navy `#0C224F`) was staying fully visible next to the dimmed content, reading as a stark "shadow" block on the left of every Tag Cable-Wise / Skipped Wire / Equipment filter popup.
+- Modal backdrops now cover the full viewport (`inset: 0`) so the sidebar is dimmed along with the content — no more dark block.
+- Behaviour change: sidebar function buttons are no longer clickable while a function modal is open; close the modal (Escape / Close) before switching functions.
+- Scope: Technician Dashboard modal overlays only; verify at `http://localhost:5275/technician` (Tag Cable-Wise Filter, Skipped Wire Filter, Equipment Filter).
+
+## 2026-07-30 — LIVE TB universal analysis: real text only + schedule/drawing mismatch
+
+- Nest PDF fallback matches expected physical TB headers against PDF **literal** text only (not compressed binary), preventing false hits (e.g. random `X9` bytes).
+- Expected headers include embedded schedule TBs (`TERM_*` like `X321:17` → `X321`) and exclude equipment tags.
+- Analysis `result_summary` records `headers_found` / `headers_missing`; full miss → `SCHEDULE_DRAWING_MISMATCH` failure reason.
+- LIVE TB banner: *"The wiring schedule TB could not be found in the assigned panel GA drawing."* when the active wire’s physical TBs are absent from the GA text.
+- Python CLI no longer promotes placeholder geometry to HIGH (no fake marker seeding).
+- Repro case Wire 030/D3 used only for verification — no hardcoded project/TB/geometry.
+
+## 2026-07-30 — LIVE TB compact oval overlay + auto-zoom
+
+- LIVE TB highlight is a compact red (Source) / blue (Destination) oval on the TB group centre — not a large rectangle over legend or surrounding area.
+- Opening LIVE TB VIEW auto-zooms and pans the GA to the matched TB location.
+- Oversized/placeholder marker boxes are clamped to a small oval at the reported centre.
+
+## 2026-07-30 — LIVE TB VIEW physical TB resolution (not equipment)
+
+- LIVE TB match resolves only **physical** terminal-block headers (X-series / embedded TB refs such as `X317:10`).
+- Equipment endpoints (`74IO`, `K01`, relays, contactors) are no longer treated as TB strips for match or expected-header detection.
+- Seeded 74IO/K01 fixture markers no longer paint as a successful LIVE TB detection.
+- Wire chip / banner distinguish equipment ends vs physical TB headers.
+- Scope: LIVE TB VIEW + TB match/expected-headers; not a final automatic-detection geometry pass.
+
+## 2026-07-28 — Correction Centre download name + View button
+
+- Download Excel now uses a professional filename with the full project name (e.g. `SHUNOOF-DEWA-DXB-UAE-002__Panel-H001__…`), not a `frame_*` basename.
+- Correction table **View** button is a compact horizontal icon+label control matching View Excel.
+- Scope: Technician Correction Centre only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — View Excel landscape spreadsheet viewer
+
+- Fixed Correction View Excel modal: overrides the 34rem `.swm-modal` width so the viewer is large landscape (~96vw × ~90vh).
+- Spreadsheet-primary layout; compact single-row sheet tabs and toolbar; detail panel defaults collapsed when the focused wire has no correction (≤~320px when open).
+- Opens **WIRING SCHEDULE** by default; Correction Centre hidden while Excel is open.
+- Scope: Technician View Excel UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Compact vertical status row + inline EQUIP STATUS
+
+- Progress matrix cards are vertical (label top, large bold value below) in one equal-height wrapping grid.
+- EQUIP STATUS sits in that row immediately after Wire Number (opens existing popup); separate button row removed.
+- Short labels OPEN SRC / OPEN DST; equipment card shows ALL or selected name.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Equipment Status live popup polish
+
+- Removed the ALL EQUIPMENT badge beside the EQUIPMENT STATUS trigger.
+- Equipment Status popup now shows a LIVE indicator and colour-coded Overall Status pills (In Progress / Attention Required blink; Completed with Open Ends soft-pulses).
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Equipment Filter / Status from schedule ferrules
+
+- Equipment Filter and Equipment Status list Source (`DEV_TBLK_A`) plus Destination derived from `IEC_FERR_B` (`IEC_FERR_A` fallback), preserving names that contain `/` (e.g. `T23/H23`).
+- Replaced the Equipment Wiring Status 9-card strip with an **EQUIPMENT STATUS** trigger + searchable popup (per-equipment totals/status via existing helpers).
+- Filter selection clears automatically when the equipment is absent from the newly loaded Project/Panel schedule.
+- Scope: Technician UI only; no DB/API/Excel mapping changes. Verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Equipment Wiring Status card grid
+
+- Replaced the continuous Equipment Wiring Status text strip with a compact 9-card grid below the main Wire Number / KPI row.
+- Cards: Selected Equipment, Wiring Status (wider), Finished, Pending, Skipped, Open Source, Open Destination, Corrected, Progress (ring + bar).
+- Same equipment-filter calculations and status rules; main KPI cards unchanged.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Internal Device Looping sidebar entry
+
+- Moved **Internal Device Looping** from the DWS header into the Technician left sidebar under Equipment Filter (`NOT CONFIGURED` badge).
+- Same read-only popup; no looping data, wiring, or Equipment Filter behaviour changes.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Project-panel Correction Centre / View Excel
+
+- CORRECTION opens a project-and-panel **Correction Centre** (all panel corrections) while showing the active wire.
+- View Excel / Download Excel stay available on any active wire; they load/download the latest corrected project-panel workbook (or the original schedule when none exists).
+- View Excel modal ~85% × 85%, frozen headers, collapsible detail panel, focus corrected wire/cell or scroll to the active wire; yellow/amber highlights retained.
+- Scope: Technician correction Excel UI + correction preview/download fallback only; wiring progress/status/mapping unchanged.
+- Verify at `http://localhost:5280/technician`.
+
+## 2026-07-28 — Internal Device Looping entry (UI-only)
+
+- Added compact **Internal Device Looping** button in the DWS **top bar** only (`NOT CONFIGURED` badge).
+- Opens a read-only popup: looping data will be configured/linked later by the Production Supervisor; reserved field sections stay empty.
+- No looping sample data, wiring/DB/Excel/API changes; Equipment Filter, Equipment Wiring Status, matrix, and actions unchanged.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Action bar OPEN SIDE (no NEXT)
+
+- FINISHED and SKIP remain separate save actions (each advances to next pending wire).
+- Replaced OPEN SOURCE / OPEN DESTINATION with one **OPEN SIDE** confirmation popup (Source or Destination → Cancel / Confirm).
+- No NEXT button; PREVIOUS / HISTORY / PAUSE unchanged; compact centred medium action buttons.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Dense one-screen matrix (no duplicate wire specs)
+
+- Removed always-visible Wire Colour / Size / Length fields under the cable visual; values show once as `COLOUR · SIZE · LENGTH` with compact Edit for corrections.
+- Tightened DWS header, progress strip, matrix and action bar spacing for less vertical scroll.
+- Scope: Technician UI only; verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Project/Panel ID in Digital Wiring Schedule header
+
+- Moved Project + Panel identification into the DWS workspace header (`PROJECT… | PANEL: …`).
+- Removed the duplicate SectionHeader banner while the schedule is embedded (Panels / Tablet / Full View / filters).
+- Scope: Technician UI only (OCI-derived); verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Compact Technician workspace density
+
+- Status strip: equal-height Wire Number + KPI cards with medium labels/numbers.
+- Action bar: medium touch-friendly buttons; one row ≥960px, two columns 600–959px, stack &lt;600px.
+- Single Wire Matrix: content-hugging card, reduced padding/blank space; elevated Cable/Wire center and open-end indicators retained.
+- Scope: Technician UI only (OCI-derived); verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Compact Single Wire Matrix + open-end visuals
+
+- Technician matrix: reduced empty space; balanced Source / Cable / Destination; medium tablet-readable labels/values.
+- Elevated center **Cable / Wire Details** (bordered surface, stronger hierarchy, larger cable visual).
+- OPEN SOURCE / OPEN DESTINATION show orange-red / indigo-purple endpoint indicators (both when both open); driven by existing `cable_status` + notes; persists across refresh / Previous / Resume / filters / SSE.
+- Scope: Technician UI only in OCI-derived repo; verify at `http://localhost:5280/technician`.
+
+## 2026-07-27 — Inline single-wire corrections (Technician Matrix)
+
+- Replaced Correction/Edit popup with **inline Edit** beside permitted matrix fields (original / new / mandatory reason / Save / Cancel).
+- Footer **HISTORY** button + Corrected badge open read-only history with file path, View Excel, Download Excel.
+- Corrections still write only under `uploads/<PROJECT>/Corrections/`; original frame Excel untouched; corrected copy gets yellow cells + Excel comments with full audit text.
+- Secured download `GET /api/tech/cable-corrections/:id/excel` for technician (owner) and Supervisor/QA/QC/Director (read).
+
+## 2026-07-27 — Tablet-first Single Wire Digital Wiring Matrix
+
+- **One active wire only** in Technician main execution workspace (no multi-row Excel table in single-exec).
+- **Modern full-page matrix**: Source Details (red) | Cable / Wire Details (large 2D visual) | Destination Details (blue); Additional Wire Details for leftover `_raw` columns; empty optional fields show `—`.
+- Field coverage from mapped cable + `_raw`: S.NO, PNLNO_A, DEV_TBLK_A/B, TERM_A/B, TERMSIDE_A/B, IEC_FERR_A/B, REFRNCE, colour/size/length, sign, remarks — no schema or Excel mapping changes.
+- Compact status cards + active-wire history band + START/FINISHED/SKIP/OPEN*/PREVIOUS/PAUSE|RESUME action bar (handlers/API unchanged).
+- Scope: OCI-derived repo Technician UI only; verify at `http://localhost:5280`.
+
+## 2026-07-26 — Technician Digital Wiring Schedule: matrix card + corrections
+
+- **Compact status matrix** above the schedule: Wire Number, Equipment-Wise Filter, Total / Finished / Skipped / Open Source / Open Destination / **Corrected** (reduced padding; no-wrap labels).
+- **Action bar**: FINISHED | SKIP | OPEN SOURCE | OPEN DESTINATION | **CORRECTION/EDIT** | PREVIOUS | PAUSE/RESUME — balanced gradient buttons; local status + poll refresh (no full page reload).
+- **Single-wire matrix card**: Source | Cable Visual | Destination with ferrules, colour/size/length, status, Corrected badge.
+- **Correction/Edit workflow** (technician overlay only): modal with project/panel/wire/parameter/existing/corrected/reason/tech/timestamp; rejects empty reason or identical values; history popup; Corrected badge + field highlight.
+- **Persistence**: additive `cable_status.corrected` + notes/`tech_audit_log`; file store under `uploads/<PROJECT>/Corrections/` (`*-corrections.json`, `correction-register.xlsx`, `*_corrected.xlsx`). Original frame JSON and source Excel are **not** overwritten.
+- Scope: Technician Dashboard after supervisor assignment only (OCI production source tree).
+
+## 2026-07-20 — Production TLS diagnosis (self-signed IP cert still active)
+
+- **Live cert** (inspected from this PC): `Subject=CN=193.123.79.209`, `Issuer=CN=193.123.79.209` (365-day IP-only bootstrap from `deploy-demo-from-windows.ps1 -IpOnly`). Chrome/curl/`Invoke-WebRequest` fail hostname validation (`SEC_E_WRONG_PRINCIPAL` / not trusted). `/healthz` over TLS still returns `ok` when verification is skipped.
+- **Nginx repo config** is correct: `dwes.ingenious-network.com` vhost uses `/etc/nginx/ssl/fullchain.pem` + `privkey.pem` (host mount `${DATA_ROOT}/ssl/nginx`). Replacing those PEMs with Let's Encrypt fixes trust without app rebuild.
+- **`init-letsencrypt.sh`**: removed silent `|| true` on certbot; fail loudly + nginx log tail on error.
+- **`sync-letsencrypt-to-nginx.sh`**: `nginx -t`, reload, print cert subject/issuer/dates after copy.
+- **`production-ssl-from-windows.ps1`**: rewritten UTF-8; DNS check, sync nginx/cert scripts, run init-letsencrypt, certbot dry-run, local `curl`/`Invoke-WebRequest` verify.
+- **Blocked from agent**: SSH :22 times out (security list allows `86.98.142.46/32` only). **Run on your PC:** `powershell -NoProfile -ExecutionPolicy Bypass -File infra\oci\scripts\production-ssl-from-windows.ps1` then confirm Chrome padlock.
+
+## 2026-07-20 — OCI production canonical host + Let's Encrypt finalize (prep)
+
+- **Nginx** (`infra/nginx/conf.d/dwes.conf`): canonical `dwes.ingenious-network.com`; HTTP on public IP redirects to domain HTTPS; default HTTPS uses `ssl_reject_handshake` so bare IP no longer serves a different app with a mismatched cert.
+- **Compose** (`infra/docker/docker-compose.yml`): mount live nginx config from repo (reload without rebuilding frontend image).
+- **PWA**: `public/manifest.webmanifest` absolute production URLs; `public/sw.js` version `20260720-prod-1` purges legacy caches on activate.
+- **Scripts**: `production-oci-finalize.sh` (backup, LE, certbot renewal, `DEMO_MODE=false`, PWA static sync); `production-ssl-from-windows.ps1` driver (UTF-8).
+- **Blocked**: Cursor/agent egress cannot reach SSH :22 (rule is `86.98.142.46/32` only). Run finalize from your PC: `production-ssl-from-windows.ps1`.
+
+## 2026-07-20 — OCI IP-only deploy resume (maintenance VM)
+
+- Fixed `TopbarProfileMenu.tsx` UTF-16 encoding and restored the Topbar dropdown component (Docker frontend build was failing on missing/invalid TS).
+- `deploy-demo-from-windows.ps1`: LF-only remote env script (CRLF broke `cd /opt/dwes`); IP-only path bootstraps self-signed PEMs under `DATA_ROOT/ssl/nginx` before compose up.
+- VM **`193.123.79.209`**: `docker compose` images built; Postgres restored from synced `backend/backups/cutover_20260709_2211.dump`; API healthy; nginx serves `/healthz` locally. **Open OCI ingress 80/443** if the public IP still times out from your PC.
+
+## 2026-07-20 — OCI public IP migration (maintenance VM)
+
+- Active OCI target: **`ingenious-dwes-prod-maintenance-01`**, public IP **`193.123.79.209`**, DNS **`dwes.ingenious-network.com`** → same IP. Canonical deploy/SSH: `infra/oci/scripts/OCI-CURRENT-TARGET.md`.
+- Replaced **`84.235.240.255`** / default **`ssh-key-2026-07-19`** references in OCI scripts and docs with **`193.123.79.209`** / **`ssh-key-2026-07-20`**. No Certbot or live stack changes in this doc-only/config update.
+
+## 2026-07-20 — Excel tests migrated off undeclared `xlsx` package
+
+- `backend/test/{async-job-handlers,cable-visual-flow,excel-parser-regression}.test.cjs` built fixture workbooks with `require('xlsx')`, which was never declared in any package.json — all three crashed on load. Fixture builders rewritten to `exceljs` (the declared production library; `SafeExcelReader` deliberately avoids SheetJS/xlsx). Builders became async (`wb.xlsx.writeBuffer()`); assertions unchanged; no upload business logic touched.
+- `excel-parser-regression` header-position test now feeds its aoa directly to the pure `findHeaderRow`/`dataStartRow` helpers instead of round-tripping through `XLSX.read`.
+- Full backend suite: **193/193 pass** (previously 177/180 with the 3 files failing on `Cannot find module 'xlsx'`).
+
+## 2026-07-20 — Workflow diagnose repair (Flat 3D honesty checks)
+
+- Repaired UTF-16 high-byte corruption in `backend/src/panel-model/workflow-diagnose.ts` and `auto-extract.ts` (em-dash → `\x14`, ellipsis → `&` in check messages) and rewrote UTF-16-encoded `backend/test/auto-extract.test.cjs` as UTF-8 (it previously crashed the test runner).
+- `runWorkflowDiagnose` now reports honest blockers: `schedule_tags` FAILS when zero schedule devices match the drawing (missing-tag evidence attached), new `terminals_detected` / `ducts_detected` warnings when terminal rows or wire ducts are undetected, new `revision_match` FAIL when the conversion run's recorded `drawing_revision` differs from the current package revision, and new `flat3d_run` FAIL surfacing a FAILED run's `failureReason`.
+- Removed fabricated passes: `checksum_unchanged` no longer claims a match when the stored drawing checksum is absent (warns "provenance not verifiable" instead); `approved_2d_fallback` fails when no drawing is stored; GLB structural check now uses `validateGlbBuffer` (magic + version) with unreadable-file handling.
+- `applySafeAutoFixes` no longer claims "Trimmed whitespace" after dedup index shifts — it reports a trim only when a label actually had stray whitespace.
+- Provenance plumbing: `Flat3dConversionOptions.drawingRevision` added; `PanelModelService.convert()` passes `pkg.revision` and the service forwards `--drawing-revision` to `python -m flat3d.cli`, so future run manifests record the source revision for the `revision_match` check.
+- New `backend/test/workflow-diagnose.test.cjs` (16 tests: blockers, no-fabrication paths, GLB validation, safe auto-fixes). WiringSchemeDB untouched (no migrate/db push).
+
+## 2026-07-20 — Technician Full View fullscreen (Digital Wiring Schedule)
+
+- **Full View** sidebar mode now portals the Excel reference schedule to `document.body` with `dwf-full-view-root` and `html.dwf-full-view-active` (hides AppShell), matching Tablet View immersion.
+- **Return to Web View** control restores embedded web layout; Escape also exits full view.
+- Removed `70vh` cap on full schedule table when in viewport fullscreen (`design-system.css`).
+
+## 2026-07-20 — Auto Extract & Fill (3D GA / 2D Drawing View)
+
+- `backend/src/panel-model/auto-extract.ts` — full-document scan of all panel 2D sources; confidence-tagged fields; exact schedule tag keys; Auto Fix report.
+- `POST .../model/auto-extract` and `POST .../model/auto-fix` (supervisor).
+- `PanelGaDrawingModal` Side-by-Side Verify: **Auto Extract & Fill** + **Auto Fix** with source/confidence hints.
+
+## 2026-07-20 — Flat 3D Drawing Conversion Pipeline (Phase 2 — CAD-first path)
+
+- Added `backend/src/flat3d-conversion/` module: `flat3d-conversion.types.ts` (stage constants, interfaces), `flat3d-conversion.service.ts` (orchestration), `flat3d-conversion.module.ts`.
+- `Flat3dConversionService.runConversion()`: copies source DWG/DXF immutably into `uploads/<code>/flat3d/<frameId>/<runId>/source.*`, spawns `python -m flat3d.cli` (env `DWES_PYTHON`, `DWES_FLAT3D_SCRIPT_ROOT`, `DWES_LIBREDWG_BIN_DIR`, `DWES_FLAT3D_TIMEOUT_MS`), reads `report.json` + `model.glb` from output dir; PDF input returns `FAILED / APPROVED_2D_ONLY` immediately without spawning CLI.
+- `PanelModelService.convert()`: CAD-first branch added — when primary drawing is DWG/DXF and `Flat3dConversionService` is injected, runs flat3d pipeline first; on `READY_FOR_REVIEW` persists `verification_required` model with Flat 3D GLB; on hard failure persists `conversion_failed`; PDF / APPROVED_2D_ONLY fallback continues to existing parametric path. **No auto-publish; no schema migrations.**
+- `FramesController`: added `GET /api/projects/:code/frames/:id/model/flat3d/latest` and `POST /api/projects/:code/frames/:id/model/flat3d/convert` (supervisor only).
+- `FramesModule`: imports `Flat3dConversionModule`.
+- `AppModule`: imports `Flat3dConversionModule`.
+- `src/services/api.ts`: added `panelModelFlat3dLatest` and `panelModelFlat3dConvert`.
+- `Panel3dModelWorkspaceModal.tsx`: Convert step adds CAD-first honesty note; shows overlay metrics (device match %, positional deviation, missing device count) from latest flat3d run; existing PDF/parametric path and approve flow unchanged.
+- `backend/test/flat3d-conversion.test.cjs`: unit tests for stage constants, PDF rejection, missing file, unsupported format, special chars in device names, and graceful Python-not-found failure.
+
+## 2026-07-20 — Hybrid Panel 3D Model (Phase 1)
+
+- Supervisor **3D Model** action on Project Information (gated after wiring schedule) opens `Panel3dModelWorkspaceModal`: Upload → Convert → Map → Validate → Approve, reusing existing upload, convert/approve APIs, GA mapping, engineering package, and `PanelGaDrawingModal` / R3F viewers.
+- Technician Digital Wiring Schedule header gains read-only **Cable Digital Twin** (modal entry; not an inline OT pane).
+- No new 3D viewer dependency: evaluated model-viewer / Online3DViewer / xeokit — kept existing `@react-three/fiber` + `EngineeringModelViewer` (MIT, already integrated, tablet quality path exists).
+- `VITE_ENABLE_PANEL_3D=true` documented in `.env.example`; local `.env` created for Flat/Engineering tabs.
+- Workflow rule updated: twin modal via header is allowed; inline DWS twin remains disallowed.
+- Git CLI not on PATH — no change branch created this session.
+## 2026-07-20 — Unified design system across devices
+
+- Added `src/styles/device-unity.css` so canvas/body/native controls follow `data-theme` / `data-mode` on every viewport.
+- ThemeProvider now applies theme via `useLayoutEffect` + shared `applyDocumentTheme` (including `color-scheme`).
+- Removed portrait Digital Wiring table card-grid restyle; tablet keeps the same table chrome with horizontal scroll.
+- Tokenized project-gate, KPI value, wiring CVP/full-view/open-end labels, tabs active icons, and Project Edit menu surfaces.
+- Sidebar Material/3D icons use the same filled weight/size at all breakpoints (layout rail still responsive).
+- Fixed depth-icon selector from incorrect `data-theme="dark"` to `data-mode="dark"`.
+- Sales Director was not added (unsupported role). AppShell structure unchanged.
+## 2026-07-19 — Revoke DuckDNS demo hostname (await exact DNS)
+
+- Removed assumed hostname `ingeniousdwes.duckdns.org` and deleted `.env.demo-duckdns.example`.
+- Deploy default domain restored to `dwes.ingenious-network.com`; pass `-Domain <exact-host>` only when DNS is ready.
+- Kept SSH paste-script pubkey fix and pre-TLS DNS A-record check. OCI HTTPS deploy waits for author DNS.
+
+## 2026-07-19 — DuckDNS demo deploy blocked (SSH + DNS)
+
+- Target: `https://ingeniousdwes.duckdns.org` on OCI `84.235.240.255`.
+- **SSH:** still `Permission denied (publickey)` for both local keys; TCP 22 reachable; 80/443 closed.
+- **Fixed** `vm-paste-authorized-keys-ubuntu.sh` to embed the pubkey that matches `.oci-ssh/ssh-key-2026-07-19.key` (was wrongly embedding `dwes-demo-oci`).
+- **DNS:** `ingeniousdwes.duckdns.org` is NXDOMAIN — must create DuckDNS subdomain → VM IP before Let's Encrypt.
+- Added `infra/docker/.env.demo-duckdns.example`; `deploy-demo-from-windows.ps1` now defaults DuckDNS domain, selects DuckDNS env template, and **refuses TLS until DNS A record matches PublicIp**.
+- Docs: `FREE-HTTPS-DEMO-HOSTNAME.md` DuckDNS option A. Deployment not complete — awaiting manual SSH key paste + DuckDNS create.
+
+## 2026-07-19 — Xiaomi tablet standalone app and touch navigation
+
+- Insecure LAN HTTP now shows **HTTPS Required** with the exact trusted HTTPS URL;
+  it no longer implies that a browser shortcut will open as a standalone PWA.
+- Digital Wiring Schedule tablet fullscreen now allows vertical touch scrolling in
+  both orientations and preserves horizontal table scrolling/pinch gestures.
+- Approved Drawing PDF now uses native one-finger touch scrolling and supports
+  two-finger zoom while retaining mouse/pen drag-to-pan and toolbar zoom.
+- Added Xiaomi/Android mkcert CA trust and Chrome **Install app** steps to
+  `DEPLOY-LAN.md`; no authentication, API, RBAC, database, or wiring-state logic changed.
+- Verified production build, PWA tests (3/3), lint (exit 0 with pre-existing
+  warnings), trusted HTTPS secure context, root-scoped service worker, API health
+  200, no mixed-content resources, and tablet CSS overflow/touch behavior.
+
+## 2026-07-19 — LAN access fix: IPv4 bind + Public-profile firewall
+
+- **Root cause of "works on host, not on tablet":** (1) active Wi‑Fi profile was **Public**, so Windows Firewall blocked inbound LAN; the old rule targeted **Private** only. (2) No inbound rule existed for port **5175**. (3) Vite bound `::` (IPv6) via `--host`.
+- `scripts/ensure-lan-firewall.ps1` now creates inbound TCP allow rules for 5175/5173/3001/4173 on **Any** profile (Domain/Private/Public), repairs older Private-only rules, reports each adapter's network category, and flags AP/client isolation.
+- Added `dev:lan` script (`vite --host 0.0.0.0 --port 5175`); `scripts/start-lan-mode.mjs` runs it via `concurrently` (single quoted shell string) so FE binds **IPv4 0.0.0.0**, not `::`.
+- Fixed `.mjs`/`.ps1` files re-saved as UTF-16 (encoding bug) back to UTF-8. `print-lan-url.mjs` footer notes all-profile firewall + client-isolation caveat.
+- Verified from LAN IP `192.168.0.164`: FE 200, backend `/api/health` 200, Vite `/api` proxy 200, CORS preflight 204 (`Allow-Origin` echoes LAN origin), app `fetch('/api/health')` ok, `#root` mounts. No business-logic/API/RBAC/auth changes.
+
+## 2026-07-19 — Universal Local Network Mode
+
+- Added `npm run lan` (`scripts/start-lan-mode.mjs`): auto-detect private LAN IPv4, bind FE/BE on `0.0.0.0`, print Frontend/Backend/Health URLs, optional Windows Firewall helper.
+- Shared detection in `scripts/lan-network.mjs` (skips `169.254.*`); `print-lan-url.mjs` and `launchers/START-DWES-LAN.bat` no longer hardcode a Wi‑Fi IP.
+- `npm run lan:firewall` → `scripts/ensure-lan-firewall.ps1` (Private profile TCP 5175/3001/4173).
+- Backend startup LAN banner skips link-local addresses. No business-logic / API / RBAC changes; frontend still uses relative `/api` + Vite proxy.
+
+## 2026-07-19 — Free HTTPS demo hostname (sslip.io) prep
+
+- Added `infra/docker/.env.demo-sslip.example` and `infra/oci/scripts/FREE-HTTPS-DEMO-HOSTNAME.md` for `\<IP\>.sslip.io` + existing Let's Encrypt path.
+- Deploy still blocked until VM has matching `authorized_keys` for `ssh-key-2026-07-19` (see `vm-paste-authorized-keys-ubuntu.sh`).
+
+## 2026-07-19 — OCI demo SSH: matching key pair + IP-only deploy
+
+- Scripts use only `.oci-ssh/ssh-key-2026-07-19.key` (+ `.pub`); no fallback to unrelated key names.
+- `vm-paste-authorized-keys-ubuntu.sh` installs current matching pubkey under `/home/ubuntu/.ssh` (700/600, ubuntu:ubuntu, duplicate-safe).
+- `deploy-demo-from-windows.ps1 -IpOnly` targets `http://<PublicIp>/` without Let's Encrypt / DNS.
+- `copy-ssh-pub-to-clipboard.bat` / `test-demo-ssh.bat` / `deploy-ip-demo.bat` keep commands separate (no `-IpOnlyGet-Content`).
+
+## 2026-07-19 — OCI demo: proper domain + instance naming
+
+- Added `infra/docker/.env.demo.example`: `DEMO_MODE=true`, `dwes.ingenious-network.com`, `RP_NAME='DWES'`.
+- `deploy-demo-from-windows.ps1` uses demo env template, sets `RP_NAME=DWES`, prefers SSH key `.oci-ssh/ingenious-dwes-prod-01` (legacy `dwes-demo-oci`), documents TLS deploy to **https://dwes.ingenious-network.com/**.
+- PuTTY/SSH helpers and Cloud Shell inject messages use instance key name `ingenious-dwes-prod-01`.
+- Fixed `deploy-secrets.local.env.example` and `docs/HUMAN-ACTIONS.md` to canonical hyphenated domain (was `dwes.ingeniousnetwork.com`).
+
+## 2026-07-19 — PuTTY quick-start (demo VM)
+
+- Added `SIMPLE-SSH-PUTTY.md`, `open-demo-vm-putty.bat`, `copy-cloudshell-paste.bat`; UTF-8 `CLOUDSHELL-PASTE-ADD-SSH.txt` wraps `cloudshell-inject-ssh-via-agent.sh`.
+
+## 2026-07-19 — OCI SSH key rotation (demo host)
+
+- Rotated demo SSH public key in Cloud Shell inject helpers to match Windows `.oci-ssh/dwes-demo-oci.pub` (`ssh-key-2026-07-19` RSA).
+- `cloudshell-inject-ssh-via-agent.sh` / `cloudshell-add-ssh-key.sh` accept `PUB_KEY` override; `CLOUDSHELL-PASTE-ADD-SSH.txt` and `README-DEMO-HOST-SSH.md` updated for me-dubai-1 paste workflow.
+
+## 2026-07-19 — OCI Dubai demo host bootstrap scripts
+
+- Added VM bootstrap + Windows deploy helpers for light demo on `ingenious-dwes-prod-01` (E5.Flex 2/12, Dubai): `infra/oci/scripts/bootstrap-demo-vm.sh`, `deploy-demo-from-windows.ps1`, `cloudshell-inject-ssh-via-agent.sh`, `cloudshell-add-ssh-key.sh`, `cloudshell-open-ports-hint.sh`, `README-DEMO-HOST-SSH.md`.
+- SSH private keys stay under ignored `.oci-ssh/`. Hosting blocked until Instance Agent inject or Console Connection installs `dwes-demo-oci.pub` on the VM.
+
+## 2026-07-19 — Technician Dashboard header formatter
+
+- Technician Dashboard header now uses canonical project display format with dynamic fields, matching the New Project creation preview and Production Supervisor logic. Project name and panel name are bolded. Fields are only shown if they have real values (no empty separators, repeated names).
+
+## 2026-07-19 — Shared premium report action button styling
+
+- Unified **View Report**, **Export PDF/XLSX**, **Download PDF**, and related report CTAs under `.dwes-report-action-btn` / `.dwes-report-export-btn` (indigo view + slate export, hover/focus/disabled, dark theme). No workflow or label changes.
+
+## 2026-07-19 — Supervisor Status Workspace typography emphasis
+
+- Status Workspace KPIs, matrix dynamic values, selected-panel summary, and Active Project/Panel fields use shared `sws-*` / scoped matrix weights: 700 for names, KPIs, progress % and technician; 600 for panel/cable counts and status pills; 500 for column headings and field labels. Layout, colours, and workflows unchanged.
+
+## 2026-07-19 — Operations Director sidebar + flat submitted register
+
+- Restored the shared `DashboardShell` / `dash-sidebar` navigation for Operations Director with a single active item, **Submitted Panels**.
+- Removed the oversized inner `dash-module` wrapper so the section heading and responsive project smart-card grid sit directly in the workspace (no large empty panel).
+- Project cards now show a labeled **Client** hierarchy (optional **Location** when present in API data); panel rows unchanged (**View Report** only).
+
+## 2026-07-19 — Operations Director smart-card grid
+
+- Restyled the existing grouped submitted-project register as compact responsive smart cards: three columns on wide desktop, two on tablet, and one on mobile.
+- Preserved the Director header, submitted-panel grouping, read-only permissions, SSE refresh, APIs, and existing `View Report` behavior.
+
+## 2026-07-19 — QA/QC under development, director submit fix, compact director/supervisor cards
+
+- **Panel assignment not found (Submit to Director):** `ProjectsService.submitToDirector` now resolves the latest assignment by `project_code` + `frame_id` (or by id within project) without excluding hidden technician-dashboard rows; director register uses latest assignment id per panel.
+- **Director dashboard:** read-only submitted register only — one compact project card per project with nested panels and **View Report** (existing `ReportPreviewModal`); global KPIs/large workspaces removed from this page.
+- **Supervisor Status live matrix:** panel rows show **total** and **completed** cable counts; project rows show panel count and completed count; assignment lookup keyed by `project_code::frame_id`.
+- **Additive API:** `GET /api/supervisor/project-live-summary` (read-only, cached) for compact smart-card payloads.
+- **QA/QC dashboard:** badge **Under Development**; production supervisor director submit remains available when `QA_QC_WORKFLOW_ENABLED` is false (unchanged gates).
+
+## 2026-07-19 — Repository-clean follow-up: frontend build fix, test root-cause fix, async Excel/PDF jobs
+
+Follow-up to the Redis infrastructure audit below. Full detail in the report's "Addendum (2026-07-19)" section: `docs/DWES-REDIS-INFRASTRUCTURE-AUDIT-REPORT.md`.
+
+- **Frontend build fixed (was exit 2, now exit 0):** removed an unused variable in `DiagnosticsTab.tsx`; fixed a literal-type-widening TS error in `PanelsTab.tsx`; fixed 11 `@apply <plain-class>` call sites in `design-system.css` that Tailwind v4 rejects outright (unrelated pre-existing bug the TS fixes exposed one build stage later). Zero visual change, 55/55 frontend tests pass.
+- **Backend test fixed at the root cause:** `ProjectsService.submitToDirector per-panel writes one audit when wiring is complete` had a stale test fixture (wired the fake assignment onto `findFirst`, which that code path never calls — the real code correctly uses `findMany`+`orderBy`+`take:1` to get the *latest* assignment for a frame). Fixed the fixture, not the implementation. Added a companion idempotent-retry regression test for the same branch (one audit row, one SSE publish, `idempotent: true` on replay).
+- **Real async Excel/PDF processing added**, gated by `DWES_ASYNC_EXCEL_PROCESSING` / `DWES_ASYNC_REPORT_GENERATION` (both default off): new `JobsService.registerHandler` pluggable-handler mechanism (mirrors the existing `ga-foundation/job-queue.service.ts` pattern) lets `UploadService`/`WiringDocumentService` supply real job logic that calls their exact existing synchronous methods — zero duplicated parsing/report logic, zero change to any existing endpoint. 8 new tests, including a real end-to-end `.xlsx` upload through the job queue.
+- Backend: 169/169 tests pass. Frontend: 55/55 tests pass, build exit 0.
+
+## 2026-07-18 — Redis infrastructure audit: defect repair + real-Redis runtime verification
+
+Audited the existing Redis/BullMQ/Pub-Sub/cache/idempotency infrastructure (backend/src/jobs, backend/src/common/cache, backend/src/events, backend/src/common/guards/idempotency.interceptor.ts, backend/src/common/health.service.ts). No new Redis client, queue, cache, or event bus was introduced — all fixes are inside the existing modules.
+
+- **Critical fix:** `JobsService.updateJobProgress` wrote a `progress` field that has no column on `background_jobs` — every Postgres write threw and was silently swallowed, freezing every BullMQ-backed job (including `backup_export`) at `QUEUED` forever even though the work genuinely ran. Confirmed live against Postgres before and after the fix.
+- **Idempotency:** concurrent duplicate requests (same `X-Idempotency-Key`) previously got an immediate `409`; they now wait for the in-flight request and replay its exact result. Verified live: 10 concurrent requests across two backend instances → 1 mutation, 1 audit row, identical response body on all 10.
+- **Event duplication:** a replayed idempotent response could still re-trigger `EventsInterceptor` (duplicate SSE publish + cache invalidation). Fixed with an explicit `req.__dwesIdempotentReplay` marker, independent of global-interceptor ordering.
+- **Health/readiness:** `/api/health/ready` now reports live Redis status for the queue, cache, and SSE fan-out, and an additive `ready`/`degraded` distinction (existing `status` field unchanged for compatibility). Verified live: stopping Redis flips `degraded: true` within one request; the app stays up and serves traffic throughout.
+- **Reconnect accuracy:** `DashboardCacheService` and `JobsService` previously latched Redis-active flags at startup and never revisited them — a later outage was invisible to health checks and idempotency locks would fail closed. Now tracked via ioredis `ready`/`error` listeners; verified live stop/restart of Redis with automatic recovery (<1s) and zero duplicate jobs/mutations across the transition.
+- **DWG conversion:** the generic job queue's `dwg_convert` type fabricated a fake "converted" result; it now fails with a clear configuration error (the app's real DWG path is `ga-foundation`'s `CadProviderRegistry`/LibreDWG, already correct). Unknown job types now fail clearly instead of silently completing with an empty result.
+- **`backup_export`:** replaced a blocking `spawnSync` (freezes the whole Node event loop — HTTP, SSE heartbeats, DB health checks, BullMQ lock renewal — for up to 10 minutes) with a non-blocking `spawn`.
+- Dashboard cache reads (`supervisor:allPanels`, `director:core`/`stats`/`projectsSummary`) switched from memory-only `get()` to `getAsync()` so a warm Redis entry is actually reused across instances.
+- Documented `REDIS_URL` and the per-subsystem enable flags in `backend/.env.example` (previously undocumented).
+- New tests: `backend/test/idempotency-interceptor.test.cjs`, `backend/test/dashboard-cache.test.cjs`, `backend/test/jobs-service.test.cjs`.
+
+Real-Redis runtime verification (Windows-native `redis-server.exe`, two backend instances on :3002/:3003, same Postgres DB): BullMQ job lifecycle QUEUED→PROCESSING→COMPLETED, cross-instance Redis Pub/Sub delivery, 10-way concurrent idempotency, Redis cache cross-instance reuse, and full stop/restart resilience all confirmed with live evidence (see audit report).
+
+## 2026-07-18 — Top-bar profile card + supervisor Project Information layout
+
+- Global header user profile (`Topbar.tsx`): permanent white 3D-style capsule (`topbar-user-card--profile`) with dark readable name, @username, and role in all themes; size, position, auth, and actions unchanged.
+- Supervisor Projects: removed nested “Project & Panel Overview” wrapper; overview grid renders directly inside `Project Information` with the same data and actions.
+
+## 2026-07-18 — Background `backup_export` wired to real backup
+
+- `JobsService.runBackupExportJob` runs `scripts/backup.ps1` (same as `npm run backup`) with `DWES_BACKUP_TRIGGER=background-job`; job result includes parsed `backup-report.json` from the latest backup folder.
+- `POST /api/jobs/backup-export` (Production Supervisor, System Administrator) enqueues the job; Operations Centre **Full backup** button calls it.
+- Exit 0/2 treated as success (2 = warnings); exit 1 fails the job. Windows + PowerShell required.
+
+## 2026-07-18 — Unified DWES loading indicator (UI only)
+
+- Added reusable blue 3D-style circular loader (`DwesLoadingIndicator` and helpers in `src/components/ui/Skeleton.tsx`, re-exported from `DwesLoadingIndicator.tsx`).
+- Replaced plain-text, skeleton-table, and inconsistent spinners across role dashboards, modals, PDF/file viewers, twins, and wiring workspaces with centered in-card loaders; technician wiring keeps schedule visible under a light overlay while saving.
+- CSS: `.dwes-loader*` tokens in `design-system.css`. No API, business logic, layout shell, or workflow changes.
+
+## 2026-07-18 — Technician Single-Wire action buttons (SKIP & OPEN END)
+
+- **SKIP button:** Renamed the `Next / Complete Wire` action button to `SKIP` in the single-wire execution view. Its exact existing Next/Complete functionality (`doCableAction('complete')`) remains unchanged.
+- **OPEN END button:** Replaced the separate `Source End Open` and `Destination End Open` buttons with a single `OPEN END` button placed beside `SKIP` on the right.
+- **Open End business workflow:** Clicking `OPEN END` marks the current cable as completed with an open end (calling `doCableAction('source_end_open')` under the hood). The status chip displays `Open End` with the orange `open-src` tone.
+- **Report integration:** Updated the panel completion report helper (`panel-completion-report.helper.ts`) to correctly count completed open-end cables (by checking both `st.openEnd` and legacy partial states). The reports (PDF and dashboard previews) are updated with the project, panel, cable/row ID, technician, and timestamp details from the audit log and per-cable notes.
+
+## 2026-07-18 — Top-bar action tiles: theme / fingerprint / logout redesign
+
+- The three action buttons are now uniform premium tiles: 36×36 (logout wider with label), 10px radius, per-hue gradients with crisp top/bottom bevels — glass slate theme tile, saturated blue fingerprint, red logout — plus hue-matched glow on hover, pressed inset on active, `:focus-visible` rings.
+- Icons switched from the 3D WebP pack to professional monochrome **Material Symbols** glyphs (`palette`, `fingerprint`, `logout`) with white high-contrast rendering and subtle depth shadow; menu/close and dashboard icons unchanged.
+- All behaviour preserved: tooltips, aria labels, theme menu + switching, fingerprint panel (incl. §1.5 disabled/unsupported/error variants kept authoritative via `:not()` guards), logout flow.
+- Profile card, clock, logo, header size/background untouched (re-verified 44px cards, content intact).
+- Files: `Topbar.tsx` (3 icon swaps + import), `themes.css` (§1.6 tile styling).
+
+## 2026-07-18 — Top-bar right-side controls premium 3D refresh
+
+- User card, actions capsule (theme / fingerprint / logout), and clock card unified at **44px** height, 12px radius, layered 3D gradient surfaces with inset highlights and professional shadows; hover deepens shadow, buttons lift on hover and press on active; `:focus-visible` rings added.
+- Fixed pre-existing defect: capsule buttons were inflated to 48px by the global button touch-target floor and bled out of the 38px capsule; now explicit 36px with pinned `min-height`/`min-width` (repo-known pattern).
+- Theme button is a raised glass tile; fingerprint and logout keep their gradients and all state variants (enrolled dot, disabled/error); clock digits 16px with stronger contrast.
+- Scoped entirely under `[data-theme] .topbar-controls` in `themes.css` — logo, brand, nav tabs, sidebar, and left side untouched; all behaviour (profile modal, theme switch, passkey panel, logout, live clock) unchanged.
+- Verified live: equal heights/no overlap/no clipping at 1440×900 and 1024×768; 8/8 functional checks.
+
+## 2026-07-18 — Technician DWS 3D cable visual + centred label & headers
+
+- **Cable Visual (active single-wire row only):** thin line replaced with a 3D-style straight single-core cable — CSS-gradient insulation cylinder in the row's `WIRE COLOR` (bi-colour e.g. GREEN/YELLOW renders as longitudinal stripe) with stripped copper conductor tips at SRC/DST. No external image, watermark, or 3D library.
+- Diameter is proportional to `WIRE SIZE` (`wireSizeCableDiameter`: 12–26px @ zoom 1; 1.5→16px, 2.5→20px); width stays length-proportional; scales with the existing `--dwf-cv-zoom` row zoom.
+- `Colour · Size · Length` label is slightly larger (15px @ zoom 1) and exactly centred beneath the cylinder for every cable length/colour/size/column width and zoom (path group now `justify-content: center`).
+- Single-wire header: checkbox + Excel header name centred as a pair per column (horizontal + vertical); Full Wiring View and supervisor tables stay left-aligned.
+- Full Wiring View / supervisor mini cells, Excel headers/data, hide/show persistence, workflow controls, progression, APIs, and layout unchanged.
+- Files: `CableVisualPath.tsx`, `wiring-utils.ts` (additive helper), `design-system.css`.
+
+## 2026-07-18 — Technician DWS hidden columns persist per technician
+
+- Single-wire view column hide/show now survives cable navigation, pause/resume, page refresh, dashboard reopen, and logout/login: hidden-column ids are stored in `localStorage` under `dwes_dwf_hidden_columns:<userId>` (per technician account, per device).
+- Re-checking a hidden column restores it at its original Excel position (existing ordered-filter rendering unchanged); unhiding everything removes the storage key.
+- Ids not present in the current schedule are kept, so a column stays hidden when the technician returns to a schedule that has it; a different technician on the same device is unaffected.
+- Excel data, APIs, workflow, layout, zoom, Full Wiring View, and supervisor views unchanged.
+- Files: `DigitalWiringFrame.tsx` only.
+
+## 2026-07-18 — Technician DWS active-row zoom + larger Cable Visual default
+
+- Cable Visual in the single-wire execution view is larger by default (18px path, 12px label, bigger SRC/DST terminals, thicker data-driven wire stroke) and centred in its column.
+- Two small dark Zoom In / Zoom Out buttons sit in the white exec toolbar (between **Full Wiring View** and the cable counter), approximately above the CABLE VISUAL column; compact 28×24px, exempt from the global 48px touch-target floor.
+- Zoom scales the **entire active cable row** together (all Excel cell values, fonts, padding, row height, illustration, SRC/DST labels, colour·size·length label) via a `--dwf-cv-zoom` CSS variable set inline on the row; steps 0.15, clamped 0.7–1.6, default 1.0; state local to the view.
+- Table header, Excel headings, column order, Full Wiring View, action bar, progression, APIs, and data binding unchanged; oversize rows use the existing horizontal scroll (no page overflow, no column misalignment).
+- Files: `DigitalWiringFrame.tsx`, `CableVisualPath.tsx` (optional `zoom` prop, default 1 — supervisor/full-view call sites unaffected), `design-system.css`.
+
+## 2026-07-18 — Technician Panels heading shows live Project — Panel
+
+- Technician Dashboard section heading uses live assignment selection: `Project Name — Panel Name` (prefers `project_name` over `project_code`).
+- Generic **Panels** title only when no panel is selected/assigned; updates immediately when the selected assignment changes.
+- Nav tab label stays **Panels**; heading rendered via `SectionHeader` + `hideTabSectionHeader` (same pattern as Supervisor/Director).
+
+## 2026-07-18 — Cable Visual driven by Excel row colour / size / length
+
+- Cable Visual Path now resolves colour, size, and length from the selected wiring-schedule row (`_raw` + supervisor mapping), so the illustration matches the Excel cells after upload.
+- Revised schedule re-uploads refresh technician DWS and supervisor preview automatically (`onFramesChanged`).
+- Unit test: `tests/cable-visual-data.test.ts` (ENOWA headers + mapped aliases + metric update).
+
+## 2026-07-18 — Excel-aligned Cable Visual placement (ENOWA)
+
+- Cable Visual sits between source ferrule (`IEC_FERR_A`) and destination ferrule (`IEC_FERR_B`) per `=H00+R.xlsx` column order.
+- Upload parse keeps that empty Excel column as **Cable Visual**; UI injects the same slot for older frames that dropped it.
+- Technician Digital Wiring Schedule: mid-row compact illustration; Full Wiring View mini path column.
+- Supervisor Digital Wiring Schedule preview: same Cable Visual column (colour + length bar) after upload.
+
+## 2026-07-18 — Remove technician dashboard 2D Operational Twin button
+
+- Removed the **2D Operational Twin** action from Technician Dashboard `PanelsTab` (button, modal mount, and exclusive open state).
+- Digital Wiring Schedule, Current Assignment, Mid Change, Complete/Submit/Hide flows unchanged.
+- `CableDigitalTwinModal` / OT2D components and APIs remain in the repo (not deleted); supervisor twin entry points unchanged.
+
+## 2026-07-18 — Dashboard 3D icon migration (CC0)
+
+- Role dashboards (Supervisor, Technician, QA/QC, Admin, Director), workspace sidebar, and topbar controls now use filled 3D **3dicons.co V1 Color/Dynamic** WebP icons (CC0-1.0 commercial use).
+- Assets live under `src/assets/dashboard-icons/` with LICENSE + `manifest.json`; rendered via `DashboardIcon` + typed registry.
+- Unique source asset per semantic function; Material Symbols retained for non-dashboard workflow UI (forms, wiring workstation, modals, viewers).
+- Validation: `node scripts/validate-dashboard-icons.mjs`.
+
+## 2026-07-18 — Technician Digital Wiring Schedule one-cable redesign
+
+- Clean DWS header: project name, panel name, panel type, Acknowledge/Start, Pause, Tablet View (KPI/timer/twin removed from this page).
+- Permanently removed Operational Twin content from Digital Wiring Schedule (OT2D/OT3D/twin modal/button).
+- Single active cable shows supervisor-selected Excel columns; modern single-conductor illustration (colour/size/length/ferrule/sign).
+- Action bar: Previous · Source End Open · Destination End Open · Next/Complete Wire.
+- Open-end actions complete the cable with additive `openEnd` + note + audit (`cable_src_open` / `cable_dst_open`) in `cable_status` JSON — no schema migration.
+- Pause / Mid Change workflows unchanged.
+
+## 2026-07-17 — Demo 3D from front + rear GA faces only
+
+- Engineering Convert Step 3: **Demo 3D from faces only** builds a panel box textured with enrolled Front + Rear layout images (no mapping, no wiring, not Approved Exact Route).
+- Full OT3D preview remains separate; when OT3D is not ready, Demo 3D opens automatically if both faces exist.
+- Default panel mm 800×2000×600 until GA asset-set dimensions are set.
+
+## 2026-07-17 — Engineering: one multi-page GA PDF for front + rear
+
+- Convert Step 1 default: **One PDF (front + rear pages)** — same file (e.g. H00+R) enrolled as Front and Rear sources; pick different pages when cropping.
+- Separate front/rear files remain available as an alternate mode.
+
+## 2026-07-17 — Engineering: GA layout-only convert with visible front/back preview
+
+- **Convert GA → 3D Operational Twin** is now the default Engineering tab (wiring schedule moved to optional tab).
+- **Step 1:** Quick upload front + rear GA layout PDFs (`GaLayoutQuickUpload`) — drawing only, no Excel required.
+- **Visible 2D preview strip** (`GaFacePreviewStrip`) shows enrolled front and rear faces before 3D preview.
+- **Preview 3D** required before **Approve & release** is enabled (supervisor eye verification).
+- Face save in GA enrollment emits workflow refresh so previews update immediately.
+
+## 2026-07-17 — Supervisor Engineering: Convert / Preview / Approve OT3D
+
+- Production Supervisor **Engineering** button (Projects tab) opens `EngineeringWorkspaceModal` with:
+  - **Package upload** — wiring schedule + Flat 2D GA layout (not cover-only / not schematic-as-geometry).
+  - **Convert to 3D Operational Twin** — embeds `GaFoundationWorkspace` (GA Foundation nav tab stays hidden), Preview via `engineeringApi.operationalTwin3d` + `OperationalTwin3D`, Approve via `gaApi.release`.
+- Honest Twin Not Ready when geometry/mapping/release incomplete; no fabricated cubes. Phase 3 auto PDF→device extract still not production-ready.
+- Assign technician + wiring schedule unchanged; OT3D for assigned tech still gated by release + `VITE_ENABLE_OPERATIONAL_TWIN_3D`.
+
+## 2026-07-17 — Remove Approved Drawing from Technician Dashboard
+
+- Removed the **Approved Drawing** dashboard action and classic `PanelGaDrawingModal` open path from technician `PanelsTab.tsx` only.
+- Preserved **Digital Wiring Schedule** and **2D Operational Twin** on the technician dashboard. Supervisor drawing upload/view and twin-internal drawing paths unchanged.
+
+## 2026-07-17 — OT3D: do not close Cable Digital Twin on 3D readiness 403
+
+- Fixed `PanelGaDrawingModal`: when `VITE_ENABLE_OPERATIONAL_TWIN_3D` is on, an OT3D API 403/404 (e.g. GA not released) no longer calls `onClose()` and dismisses the whole modal. 2D Operational Twin stays open; 3D shows its unavailable / Twin Not Ready fallback only.
+- Technician access path unchanged: no dedicated dashboard “3D” button — OT3D embeds under Digital Wiring Schedule and under the **2D Operational Twin** / Cable Digital Twin `ot2d` surface when the flag is enabled.
+
+## 2026-07-17 — Hide GA Foundation from Production Supervisor nav
+
+- Removed the **GA Foundation** tab from Production Supervisor dashboard navigation (`SupervisorDashboard.tsx`). Projects + Status remain. `GaFoundationWorkspace` / `DrawingsTab` code retained (not deleted) for later re-enable.
+
+## 2026-07-17 — Restore Approved Drawing on Technician Dashboard
+
+- Restored **Approved Drawing** as a third dashboard-only action beside Digital Wiring Schedule and 2D Operational Twin (`PanelsTab.tsx`).
+- Opens classic read-only drawing viewer (`PanelGaDrawingModal` without twin mode). Closes on panel/project delete. Not added to other roles.
+
+## 2026-07-17 — Enterprise Twin Phase 2 polish + release checklist
+
+- **Upload Engineering Package:** shows bold **TOTAL CABLES** from `readHeaders` and PDF **DRAWING PAGES** inventory before upload; guides supervisor to GA Foundation after package.
+- **GA Foundation release gate:** explicit readiness checklist (GA confirmed, mapping confirmed, schedule present, finalization queue clear); blocks release while unresolved exceptions remain; clarifies Twin Not Ready / 2D fallback until release.
+
+## 2026-07-17 — Enterprise Twin Phase 1–2 (Director demo track)
+
+- **Phase 1 unblock:** Live 3D flag enabled locally (`VITE_ENABLE_OPERATIONAL_TWIN_3D=true`, `VITE_OT3D_QUALITY=tablet` in UTF-8 `.env.local`); GA Foundation tab mounted in Supervisor dashboard; Cable Digital Twin modal loads OT3D when released; `technicianId` preserved for `my_wires` Mid Change attribution; Twin Not Ready when GA/mapping incomplete; 2D fallback retained.
+- **Phase 2 start:** New **Upload Engineering Package** toolbar action + `EngineeringPackageUploadModal` — uploads approved drawing then hands Excel into existing `UploadFrameModal` mapping workflow; separate Wiring Upload / Drawing buttons kept as fallbacks.
+- Login `#root` verified rendering (blank-screen issue cleared for clean session).
+
+## 2026-07-17 — 2D/3D Operational Twin audit, cleanup, and readiness fixes
+
+- Standardized **Twin Not Ready** messaging (`src/constants/twinMessaging.ts`) across 2D modal fallback, 3D viewer, and assignment empty states.
+- 3D Operational Twin now refuses to render legacy/unreleased GA payloads (`isOperationalTwin3dReady`); shows **Twin Not Ready** instead of synthetic legacy geometry.
+- OT3D execution wire state now scopes to the requesting technician assignment (prevents cross-technician execution bleed).
+- Removed confirmed-unreferenced twin code: `GaDrawingViewModal`, `DigitalTwinMappingEditor`, `EngineeringImportModal`, `mappingDrafts.ts`, and `scripts/_tmp_*.cjs` scaffolds.
+- Retained intentional 2D fallback (`OperationalTwin2D` + Mode B schematic) and flag-gated Flat/Engineering 3D tabs (`VITE_ENABLE_PANEL_3D`).
+
+## 2026-07-17 — Centralized permanent-delete (project & panel)
+
+- Extended `backend/src/common/project-delete.util.ts` with **`permanentlyDeletePanel`** (transactional twin/GA/QA/assignment purge + tombstone + file cleanup) alongside existing **`permanentlyDeleteProject`**.
+- Wired supervisor/admin project delete and panel `remove` / `deleteFrameGuarded` through the shared orchestration paths; added `permanent_delete` audit rows after purge.
+- Role guards: Production Supervisor **and** System Administrator on project DELETE and panel delete/precheck/guarded routes.
+- SSE: `EventsInterceptor` now treats `POST …/hard-delete` and `POST …/delete-guarded` as **`deleted`** so all role dashboards drop stale selections via `useServerEvents` → `emitFramesChanged`.
+- Confirmation copy updated for accurate project/panel scope (twin, QA, Mid Change, files retained vs removed).
+
+## 2026-07-17 — Technician assignment isolation
+
+- Only the assigned technician may access panel work: shared `assertTechnicianAssignedToFrame` guards engineering twin APIs and GA correlation-map; SSE audience re-reads assignments per event (no stale 10s cache).
+- Technician UI shows **NO PANEL WORK ASSIGNED** with no action buttons when unassigned; assignment SSE immediately refreshes and revokes prior technician access; twin/wiring modals close on 403/404 or assignment events.
+- Supervisor, QA/QC, Director, and Admin permissions unchanged.
+
+## 2026-07-17 — Technician stale-state fix after project/panel delete
+
+- Backend `myPanels` / `myAssignmentDetail` now filter orphaned assignments (inactive/deleted project or blocked panel) and return clean 404 for invalid IDs.
+- Technician dashboard clears stale `selectedPanel`, wiring workstation, twin modals, and live-wiring store on SSE `frames-changed` delete events; silent refresh no longer preserves removed assignments.
+- `WiringWorkstation` aborts in-flight loads, exits on 404/410, and stops the “Loading wiring schedule…” loop when an assignment is deleted mid-session.
+- Shared `assignmentMatchesDeletion` helper aligns panel/project delete handling across technician UI and storage purge.
+
+## 2026-07-17 — Project Status → Project State (read-only)
+
+- Renamed user-facing **Project Status** labels to **Project State** / **Project state** (Overview FieldGrid, Edit Project modal, director Excel/CSV headers for `project_state`).
+- Edit Project modal: Project State is **read-only** badge (automatic from assignment/workflow); removed editable `<select>` and `projectsApi.setState` on save.
+- Preserved DB column `project_state`, Status Workspace nav label, and `PROJECT_STATUS.md` doc title.
+
+## 2026-07-17 — Technician Dashboard: single Current Assignment card
+
+- Removed **My Assigned Panels** list from the Technician Dashboard (`PanelsTab.tsx`); only one **Current Assignment** card remains.
+- Project name + panel name shown prominently; essential details (type, voltage, client, assigned time, cables, state, progress) kept on the card.
+- Compact **No Panel Assigned** empty state when none assigned; Digital Wiring Schedule / 2D Operational Twin stay disabled until an active assignment exists.
+- Complete / report / hide actions moved onto the Current Assignment card; Mid Change strip and SSE refresh via existing `useDwesRefresh` preserved.
+
+## 2026-07-17 — Panel Report consolidation (remove Project Executive Report)
+
+- Removed **Project Executive Report** card and `ProjectPdfPreviewModal` wiring from supervisor Status workspace (`CompactStatusWorkspace.tsx`); per-panel **Panel Report** remains with multi-panel rows unchanged.
+- Standardized user-facing name to **Panel Report** everywhere (Status card title, preview modal, on-screen preview header, PDF/Excel export title via `PANEL_REPORT_TITLE` in `panel-completion-report.helper.ts`).
+- Cleaned unused **Overall Project Report** row from legacy `ReviewApprovalWorkspace.tsx`. Backend project-level `report-pdf` API preserved (no route removal).
+- **Verify:** `npm run build` exit 0; grep confirms no user-facing "Project Executive Report" or "Panel Report - Live".
+
+## 2026-07-17 — Excel Wiring Upload: show all rows + direct upload
+
+- Fixed `readHeaders` so worksheets return full `sample_rows` / `data_row_count` (regression had empty `rows: []`), preserving the first cable row.
+- Removed worksheet search/filter UI; Select All + column checkboxes remain for column choice.
+- Replaced Validate & Preview with direct **Upload Wiring Schedule**; essential checks only (file, headers, required mapping, non-empty rows).
+- Header shows **TOTAL CABLES: [count]** plus parsed / selected / mapped / unmapped column chips.
+
+## 2026-07-17 — Supervisor Drawing toolbar opens upload modal
+
+- Toolbar **Drawing** button now opens `PanelDrawingUploadModal` for the active project/panel (2D slot), with toast guards when none selected.
+- **Drawing View** still opens `PanelGaDrawingModal`; upload success refreshes drawing availability.
+
+## 2026-07-17 — Shared action status popups
+
+- Added `ActionStatusPanel` and upgraded `AppDialogProvider` confirms with entity, action summary, removal list, status badge, and progress.
+- Standardized destructive confirms to **Cancel** + **Delete Permanently**; replaced remaining `window.confirm` with shared dialogs; upload drawing modals show clear Uploading/Completed/Failed status.
+
+## 2026-07-17 — Status Workspace All Projects / Selected Panel
+
+- Redesigned Status Workspace into two views: **All Projects** (KPI row + expandable project/panel rows) and **Selected Panel** (Technician Activity + Panel Report details).
+- Live data from projects, frames, and supervisor assignments; SSE/workflow refresh preserved; no duplicated other-panel report list in Selected Panel.
+
+## 2026-07-17 — Topbar login-theme colour alignment
+
+- Added `--t-login-hero-stop-*` palette tokens and composed `--t-header-bar` (darker navy→indigo gradient), border, shadow, and accent from active login-hero tokens.
+- Wired `[data-theme] .topbar` and design-system fallbacks to `--t-header-bar`; removed hard-coded topbar gradient fallback.
+- Preserved layout, controls, user card, clock, and aurora role theme overrides.
+
+## 2026-07-17 — Shared compact dashboard header card
+
+- Redesigned `DashboardPageHeader` as a compact elevated rounded card (tinted background, border, shadow) within the content column.
+- Title + role/employee ID stacked left; workspace badge as right-aligned pill; tablet-safe wrap without clip.
+
+## 2026-07-17 — Project & Panel Overview compact card
+
+- Replaced four stacked section headers (Project Summary, Selected Panel, Assigned Technician, Wiring Progress) with one `Project & Panel Overview` card in supervisor Projects tab.
+- Responsive 2-column grid on tablet; technician and wiring progress span full width in compact rows.
+- Status badges (Not Started, Not Assigned) and slim progress bar; filled icons in group labels.
+
+## 2026-07-17 — Controlled project data reset + full deletion cascade
+
+- Extended `backend/src/common/project-delete.util.ts` with comprehensive project purge (engineering/GA/Twin tables, workflow data, session logs, uploads, MockStore caches).
+- Wired purge into `admin.service.ts` (`resetAllProjects`, `hardResetProject`, `hardDeleteProject` precheck) and `dev.service.ts` (`hardReset`).
+- Added `backend/scripts/project-data-reset.mjs` for backup, inventory, wipe, zero-count verification, and smoke test.
+- Executed one-time reset: 1 project, 493 session_log rows, 1 file_hash, 2 upload folders removed; 41 users preserved.
+- Backend tests: 137/137 pass; `npm run build` exit 0.
+
+## 2026-07-17 — Shared working-page action buttons (compact, uniform height)
+
+Unified Supervisor Projects toolbar + Project Information actions: same 36px/44px height, 18px icons, 10px radius, auto width (no flex-grow or fixed min-width stretch), left-aligned wrap. Shared `.pj-action-btn__icon` / `__label` structure on all nine buttons.
+
+- **Files:** `design-system.css`, `buttons.css`, `themes.css`, `ProjectsTab.tsx`
+- **Build:** `npm run build` exit 0
+
+---
+
+## 2026-07-17 — Supervisor project toolbar uniform action buttons
+
+New Project, Wiring Upload, Workflow, Drawing, and Users now share fixed dimensions (9.75rem × 36px desktop / 44px touch), equal icon column, centered labels, and consistent filled 18px icons via `.pj-action-btn` / `__icon` / `__label` in `design-system.css` and `ProjectsTab.tsx`. Wrap preserved on narrow widths.
+
+- **Build:** `npm run build` exit 0
+- **Git:** no commit
+
+---
+
+## 2026-07-17 — Launcher fix: blank window on “already running”
+
+When the stack was already healthy, `launch-dwes.mjs` could open a second chromeless window via `--app-id` (no URL) or duplicate `--app=` instances — often blank on Windows. Now always opens `--app=<url>`, and when services are up prefers focusing an existing DWES Chrome/Edge window before spawning a new one.
+
+- **File:** `scripts/launch-dwes.mjs`
+- **Verify:** `node --check scripts/launch-dwes.mjs`; re-run desktop **DWES — Start Application** while stack is up
+
+---
+
+## 2026-07-17 — Shared compact sidebar modernization (icons, labels, wrap)
+
+Fixed clipped sidebar icons/labels on the fixed 5.75rem compact rail: filled Material Symbols (Workspace + nav), larger icon boxes (28px nav / 24px workspace), two-line label wrap with `-webkit-line-clamp: 2`, improved vertical rhythm, and clearer inactive icon contrast. Width unchanged; no expand/collapse. Scope: `Sidebar.tsx`, `design-system.css`, `icons.css`, `tabs.css` only.
+
+- **Build:** `npm run build` exit 0
+- **Browser:** login required (backend not running in verify session); manual smoke on `/technician`, `/supervisor`, `/qaqc` at 768px+ recommended
+- **Git:** no commit
+
+---
+
+## 2026-07-17 — Project completion & report package (Live 3D Twin + Panel Completion)
+
+Master handoff and panel completion operational guides for stakeholders and pilot leads. Re-verified: typecheck/build/lint PASS; backend **137/137**; frontend focused **55/55** (`test:ot3d` **26/26**); combined **192/192**. Release: **READY FOR CONTROLLED PILOT** (PASS WITH WARNINGS).
+
+- **Docs:** `docs/DWES-LIVE-3D-TWIN-PROJECT-COMPLETION-REPORT.md`, `docs/DWES-PANEL-COMPLETION-REPORT-GUIDE.md`, expanded `LIVE-3D-TWIN-POST-IMPLEMENTATION-FINAL-REPORT.md`, `DWES-WHOLE-PROJECT-HARDENING-FINAL-REPORT.md` (test matrix)
+- **Code fixes (same session):** 3D live painting, correlation-map API, supervisor Operational Twin tab, TS/lint clean
+- **Regenerate docs:** `node scripts/write-handoff-docs.cjs`
+- **Git:** no commit
+
+---
+
+## 2026-07-17 — Whole-project hardening pass
+
+H0-H16 audit per DWES_Whole_Project_Hardening_FINAL.md. Lint restored (removed corrupt scripts/_inspect-enowa-xlsx.mjs). Full regression: backend 137/137, frontend focused 55/55, lint exit 0, npm audit 0 prod vulns. Release: READY FOR CONTROLLED PILOT.
+
+- Docs: DWES-WHOLE-PROJECT-HARDENING-* reports
+- Git: no commit
+
+---
+
+# DWES Changelog
 
 Append-only log of scoped changes. Each entry includes a restore-point reference when git is in use.
 
 Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 ---
+
+## 2026-07-17 — Post-implementation verification (Live 3D Twin)
+
+Independent V0–V10 verification per `DWES_Post_Implementation_Verification_Hardening_FINAL.md`. Automated: typecheck/build PASS, backend **137/137**, frontend focused **55** (ot3d 26 + twin/state/panels/schematic/pwa). Removed corrupt temp `scripts/write-twin-files.*` (DEF-001). Security: no Critical/High in feature paths. Release decision: **READY FOR CONTROLLED PILOT**.
+
+- **Docs:** `LIVE-3D-TWIN-POST-IMPLEMENTATION-*`, `LIVE-3D-TWIN-SECURITY-REVIEW.md`, `LIVE-3D-TWIN-PERFORMANCE-REPORT.md`, `LIVE-3D-TWIN-DEFECT-REGISTER.md`, `LIVE-3D-TWIN-E2E-VERIFICATION-MATRIX.md`
+- **Open:** authenticated E2E (DEF-003), tablet FPS (DEF-004), my_wires filter (DEF-002)
+- **Git:** no commit
+
+---
+
+Implemented panel-scoped GA Foundation per `DWES_Phase0_Phase1_Foundation_Implementation_FINAL.md`: immutable PDF/DWG/DXF uploads, PDF.js page/crop face workflow, PostgreSQL-backed GA Asset Set and Mapping Catalog, deterministic correlation with exception-only finalization, background CAD conversion jobs (LibreDWG external-process), and server-enforced release gate on TechService wiring actions for enrolled panels. Supervisor UI: `GaFoundationWorkspace` on Drawings tab.
+
+- **Backend:** `backend/src/ga-foundation/*`, `upload.service.ts`, `tech.service.ts`, `schema.prisma`, migration `20260717121500_live_3d_twin_phase1`
+- **Frontend:** `GaFoundationWorkspace.tsx`, `DrawingsTab.tsx`, `gaApi` in `api.ts`
+- **Tests:** `backend/test/ga-foundation.test.cjs` (10); full backend **127/127** PASS
+- **Docs:** `docs/LIVE-3D-TWIN-PHASE-1-PROGRESS.md`, `docs/LIVE-3D-TWIN-PHASE-1-REPORT.md`
+- **Build:** `npm run build` exit 0; `npm run typecheck` PASS
+- **Lint:** pre-existing FAIL (`scripts/_inspect-enowa-xlsx.mjs` invalid UTF-8)
+- **Git:** no commit (dirty worktree overlap; author review)
+
+---
+
+## 2026-07-17 — Workspace header bar fix (Projects + all roles)
+
+Fixed the Supervisor **Projects** tab header to match **Project Information** / **Project Summary** style: unlayered `.workspace-section-heading` CSS (light bar, bold dark-blue `#1B2958` title, icon, spacing). Wired `WorkspaceSectionHeading` with `FolderKanban` icon on Projects; `SupervisorSectionHeader` now delegates directly; tab `SectionHeader` moved inside `nav-tab-panel`; Technician + Admin tab descriptions enabled.
+
+- **Files:** `design-system.css`, `tokens.css`, `themes.css`, `SupervisorDashboard.tsx`, `SupervisorSectionHeader.tsx`, `DashboardShell.tsx`, `TechnicianDashboard.tsx`, `AdminDashboard.tsx`, supervisor section headers
+- **Build:** pending verification
+
+---
+
+## 2026-07-17 — Shared bold blue dashboard + workspace header typography
+
+Refined main dashboard headers and workspace/card section headers across all five role dashboards: **medium-large bold blue** (`#1D4ED8`) titles via shared tokens, improved title/subtitle/badge spacing and grid alignment on tablet+.
+
+- **Tokens:** `--dwes-header-title-blue`, `--dwes-header-title-size-section`, `--dwes-header-title-size-page` in `tokens.css`
+- **Main header:** page title `clamp(1.5rem–1.75rem)` bold blue; subtitle `#475569`; badge grid-aligned right on title row (768px+)
+- **Workspace/card headers:** `WorkspaceSectionHeading`, `.card-title`, `.app-section-title`, `.pj-project-info-section-title` → medium-large bold blue
+- **Roles:** Supervisor, Technician, QA/QC, Operations Director, System Administrator (Sales Director excluded)
+- **Files:** `tokens.css`, `design-system.css`, `themes.css`
+- **Build:** pending verification
+
+---
+
+## 2026-07-17 — Shared navy dashboard + workspace header typography (superseded)
+
+Standardized main dashboard headers and workspace/card section headers across all five role dashboards: large bold **#1B2958** navy titles, aligned title/subtitle/badge rows, light card-header bands for internal sections.
+
+- **Main header:** `clamp(1.375rem–1.875rem)` title, subtitle `#475569`, badge right-aligned on title row
+- **Workspace/card headers:** `WorkspaceSectionHeading` — larger navy titles, light `#F8FAFC` band + border
+- **Also:** `.card-title`, `.app-section-title`, `.pj-project-info-section-title` → navy
+- **Roles:** Supervisor, Technician, QA/QC, Operations Director, System Administrator (Sales Director excluded)
+- **Files:** `design-system.css`, `themes.css`, `WorkspaceSectionHeading.tsx`, `SectionHeader.tsx`
+- **Build:** `npm run build` exit 0
+
+---
+
+## 2026-07-17 — Login app-name premium gradient + shimmer
+
+Elevated the login brand title (**DWES** / **Digital Wiring Execution System**) with a white→ice→teal logo-palette gradient, soft glow, and a slow 9.5s shimmer motion (disabled under `prefers-reduced-motion`).
+
+- **Files:** `src/styles/design-system.css`, `src/styles/themes.css`
+- **Verified:** login `/` — `background-clip: text`, animation `login-brand-title-shimmer` on acronym + name; auth/layout unchanged
+- **Git:** no commit
+
+---
+
+## 2026-07-17 — Branded desktop/PWA window identity
+
+Updated the browser/PWA window title to **DWES — Digital Wiring Execution System | Ingenious Network FZC** and strengthened the small-size app icon used by desktop shortcuts, browser tabs, and PWA windows.
+
+- **Native window controls:** intentionally remain OS-owned and unchanged; this Vite/PWA app does not replace Windows minimize, maximize, or close controls.
+- **Title-strip branding:** document title, PWA manifest name, and navy `theme_color` align with the Ingenious Network palette.
+- **App icon:** canonical Ingenious orbital mark is now framed by a deep-navy tile and white inset for clear recognition at title-bar/favicon sizes.
+- **Generated assets:** refreshed `favicon.ico`, `app-icon.ico`, PWA icon PNGs, and Apple touch icon from `public/app-icon.svg`.
+- **Files:** `index.html`, `public/manifest.webmanifest`, `public/app-icon.svg`, `public/favicon.svg`, generated `public/icons/*`, `public/favicon.ico`, `public/app-icon.ico`, `tests/pwa-install.test.mjs`
+- **Verification:** `npm run icons:generate` ✓ · `npm run test:pwa` ✓ (3/3) · `npm run build` ✓
+- **Git:** no commit (not requested)
+
+---
+
+## 2026-07-17 — Ingenious Network primary theme + switcher trim + stale-session fix
+
+Set **Ingenious Network** as the primary application theme with light sidebar/content surfaces and navy/teal chrome accents. Theme switcher (login + topbar) shows **Ingenious Network** and **Default** only; Arctic/Harbor/Graphite remain in CSS but hidden from menus. One-time migration (`dwes-primary-ingenious-20260717`) promotes saved sessions to `ingenious` + `light`; inline bootstrap in `index.html` applies theme before React paint to fix stale cached UI.
+
+- **Primary load:** `ingenious` + `light` (retired switcher ids map to ingenious).
+- **Light surfaces:** sidebar, page canvas, cards, tables, panels (`#E8ECF0` / `#FFFFFF`).
+- **Dark chrome only:** global topbar (`--t-header` navy gradient), workspace section headers (`#1B2958`), key action controls (teal/navy `--color-primary-*`).
+- **Removed dark content mode** for Ingenious — cards/tables stay light in both light/dark mode toggles.
+- **Login + topbar switcher:** `THEME_SWITCHER_THEMES` = Ingenious Network + Default only.
+- **Debug / verify:** build exit 0; hard refresh recommended once if service worker cached old CSS (`Ctrl+Shift+R`).
+- **Files:** `ThemeProvider.tsx`, `LoginPage.tsx`, `Topbar.tsx`, `theme-palettes.css`, `themes.css`, `index.html`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Build:** `npm run build` — exit 0
+- **Git:** no commit
+
+---
+
+## 2026-07-17 — Ingenious Network theme + restore Harbor/Graphite
+
+Added switchable **Ingenious Network** brand theme (deep navy, teal, white, light grey) sourced from `public/logo.svg`. Restored **Harbor** and **Graphite** to the theme switcher per user request to keep existing themes available.
+
+- **Theme id:** `ingenious` — display name **Ingenious Network** in login + topbar palette menus.
+- **Brand hex (logo.svg):** navy `#1B2958`, teal `#2E9DAA`, variants `#248892` / `#6DCFD4` / `#2A7A8A` / `#1B7080`, white `#FFFFFF`, light grey canvas `#E8ECF0`.
+- **Switcher themes:** Default, Arctic, Harbor, Graphite, Ingenious Network (Default remains first load).
+- **Tokens:** `theme-palettes.css` — full `--t-*` palette + `[data-mode="dark"]` content variant for Ingenious; Harbor/Graphite palettes re-imported from backup.
+- **Login:** theme-tinted liquid mesh blobs for Harbor / Ingenious; hero uses `--t-login-hero`.
+- **Light sidebar:** Ingenious + Harbor get teal active states under `[data-mode="light"]`.
+- No routes / permissions / business logic changes. No commit.
+- **Files:** `ThemeProvider.tsx`, `theme-palettes.css`, `themes.css`, `design-system.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Build:** `npm run build` — exit 0
+- **Git:** no commit (not requested)
+
+---
+
+## 2026-07-17 — Light reusable sidebar + topbar breathing room (theme-token driven)
+
+Apply a light, reusable sidebar and dashboard header across all role dashboards. Theme-token driven so dark mode keeps the existing dark navy chrome.
+
+- **Sidebar:** light surface in light mode (`[data-mode="light"]` override of `--t-sidebar-*` tokens — white→slate gradient, slate text, subtle border, brand-blue active pill with white text). Dark mode unchanged (Default/Arctic base values). Existing nav items, pin, labels-under-icons (tablet), profile/settings entry preserved.
+- **Topbar:** slightly increased global height + spacing for breathing room — `--topbar-control-h` 44→46px (mobile/tablet), 46→48px (desktop); padding 1.25/1.125rem → 1.375/1.25rem (mobile/tablet), 1.5rem → 1.625rem (desktop); `--dash-topbar-height` fallback 5.5→5.75rem, 6→6.25rem; `.topbar-inner` gaps nudged. Branding, profile pill, utility icons, clock/date preserved. Topbar stays dark navy brand chrome in both modes (works in light + dark).
+- **Shared dashboard header:** already unified via `DashboardShell` → `PageHeading` → `DashboardPageHeader` for all 5 roles (Supervisor, Technician, QA/QC, Operations Director, System Administrator). Sales Director excluded. No change needed — confirmed consistent, responsive, theme-token driven.
+- New tokens: `--t-sidebar-toggle-bg`, `--t-sidebar-active-text` (default + arctic + light-mode override). Hardcoded `rgba(255,255,255,0.06)` / `#FFFFFF` in sidebar toggle/active link replaced with tokens.
+- Themes: Default + Arctic preserved. Harbor/Graphite still backed up in `theme-backup-harbor-graphite.css` (not imported). No schema / API / commit.
+- **Files:** `src/styles/theme-palettes.css`, `src/styles/design-system.css`, `src/styles/themes.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Skipped (concurrent worker):** `src/pages/supervisor/tabs/ProjectsTab.tsx` and related Project Information components — not touched.
+- **Build:** `npm run build` exit 0.
+- **Git:** `git` not on PATH; no branch/commit.
+
+---
+
+## 2026-07-17 — Supervisor Project Information: remove duplicate Re-upload + reorganize
+
+Production Supervisor Projects tab: Project Information had a duplicate **Re-upload Wiring Schedule** control (re-upload already lives in Wiring Upload / UploadFrameModal).
+
+- Removed Project Information `WiringScheduleStatus` row (Upload / Re-upload) and the Replace Wiring Schedule confirm modal from this card only.
+- Projects header **Wiring Upload** and FramesTab / UnifiedUploadModal re-upload flows unchanged.
+- Reorganized Project Information into glanceable groups: action bar (Add Panel, Digital Wiring View, Drawing View, Edit + doc badges), Project Summary, Selected Panel, Assigned Technician, Wiring Progress + current work-state status.
+- Compact progress strip from `panelActivity` (completed / total / remaining / %). No schema / API / commit.
+- **Files:** `ProjectsTab.tsx`, `PanelTechnicianActivity.tsx`, `design-system.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** `git` not on PATH; no branch/commit.
+
+---
+
+## 2026-07-17 — Login left panel: remove vertical accent rail
+
+User feedback: remove the thin glowing vertical cyan/blue divider on the login left brand panel.
+
+- Removed `login-brand-rail` markup from `LoginPage.tsx` and deleted unused `.login-brand-rail` CSS (3px vertical gradient accent). Auth and other login content unchanged. No commit.
+- **Files:** `LoginPage.tsx`, `design-system.css`, `CHANGELOG.md`
+
+---
+
+## 2026-07-17 — Login left panel: flatten glass + remove QC bullet
+
+User feedback: login left brand panel must not look elevated/floating; remove QC feature from Login only.
+
+- Flattened left brand content: removed frosted glass sheet/rim, elevated glass card (shadow, blur, glowing border, rounded float). Brand content is flush with the panel background; subtle vignette + accent rail retained (no glow).
+- Removed Login-only feature bullet “QA / QC verification & reports” (and its list icon usage). QA/QC elsewhere in the app unchanged. Support note still uses ShieldCheck.
+- Themes remain Default + Arctic. No entrance delay. Auth / WebAuthn unchanged. No commit.
+- **Files:** `LoginPage.tsx`, `design-system.css`, `themes.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** `git` not on PATH; no branch/commit.
+
+---
+
+## 2026-07-17 — Login brand panel elevation + themes Default/Arctic only
+
+Elevated login left brand panel for a stronger first impression; trimmed UI themes to **Default** + **Arctic**.
+
+- Login left panel: deeper stage vignette, elevated glass card, accent rail, stronger typography hierarchy, badge/logo/feature presence; ambient aurora drift (~24s, no entrance delay); `prefers-reduced-motion` respected.
+- Themes: Harbor + Graphite removed from `APP_THEMES` / switcher; retired users fall back to Default. Palette CSS backed up to `src/styles/theme-backup-harbor-graphite.css` (not imported).
+- Auth / WebAuthn / credentials / demo paths unchanged. No cloud / DDL / commit.
+- **Files:** `LoginPage.tsx`, `design-system.css`, `ThemeProvider.tsx`, `theme-palettes.css`, `theme-backup-harbor-graphite.css` (new), `themes.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** skip branch if `git` unavailable; no commit.
+
+---
+
+## 2026-07-17 — Shared dashboard page header (all roles)
+
+One reusable `DashboardPageHeader` for Production Supervisor, Technician, QA/QC, Operations Director, and System Administrator. **Sales Director excluded** (not a supported role).
+
+- Rewrote `DashboardPageHeader.tsx` as clean UTF-8 shared component (title/subtitle/badge/aside/live).
+- `PageHeading` continues to re-export it for `DashboardShell`.
+- Unified CSS: `.dashboard-page-header` + legacy `.dashboard-hero` / `.page-heading*` use theme tokens (no hardcoded `#1D4ED8` / `#64748B`); role-specific `dashboard-hero--technician` / `admin-dashboard-hero` overrides neutralized.
+- Removed `heroClassName` special casing from Admin + Technician dashboards; preserved titles/badges/`heroLive`.
+- Aligned layout `PageHeader` to the same visual classes.
+- No cloud / DDL / commit.
+- **Files:** `DashboardPageHeader.tsx`, `PageHeading.tsx` (unchanged re-export), `DashboardShell.tsx`, `PageHeader.tsx`, `AdminDashboard.tsx`, `TechnicianDashboard.tsx`, `design-system.css`, `index.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit (not requested).
+
+---
+
+## 2026-07-17 — Modern layout colours for all (Default baseline)
+
+Shared token refresh for a modern, high-contrast professional look across login, AppShell chrome, and role dashboards.
+
+- **Default** remains first / loads for everyone (`dwes-app-theme`); carefully modernized: cooler slate canvas `#D2DCE8`, solid navy chrome `#0C224F`, stronger card borders `#475569`, brand-blue accents `#93C5FD` (no cyan bleed, no purple).
+- **Optional** Arctic / Harbor / Graphite polished for clearer canvas vs white cards and stronger muted text.
+- **Chrome wiring:** AppShell topbar/sidebar/login rim accents use `var(--t-header-icon-accent)` instead of hardcoded Arctic cyan — themes switch cleanly.
+- **tokens.css:** Operations Director badge fallback blue (was purple).
+- Login stays snappy (no liquid delay). No cloud / DDL / commit.
+- **Files:** `theme-palettes.css`, `themes.css`, `design-system.css`, `tokens.css`, `tabs.css`, `ThemeProvider.tsx`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** `git` not on PATH in this environment — no branch/commit.
+
+---
+
+## 2026-07-16 — Technician Operational Twin: PDF-primary redesign
+
+Critical redesign: technician Operational Twin is driven by the **approved panel PDF** (primary), not fake Excel schematic boxes or fabricated 3D.
+
+- **PDF layout twin:** `OperationalTwin2D` renders the panel’s approved 2D drawing (pdf.js first page) with a schedule colour + length-aware SRC→DST overlay. No Engineering/Flat 3D fabrication (`VITE_ENABLE_PANEL_3D` unchanged / off).
+- **Cable path:** `CableVisualPath` + overlay use `wireColorHex` + `cablePathVisualMetrics` / `buildLengthAwareWirePath` so each cable’s stroke colour/code and length shape the path (not a generic grey line).
+- **Clutter removed (technician compact):** zoom/fit/focus/trail toggles and reverse-legend chrome stripped; single Full view control kept. Fake schematic device rectangles are not shown when a PDF is present.
+- **Drawing fetch:** `DigitalWiringFrame` loads `projectsApi.panelDrawing` + `panelDrawingSlotFile('2d')`. `PanelGaDrawingModal` twin tab passes the same PDF blob when available.
+- **DWG:** TYPE-01.zip inspected (secondary reference only) — not parsed in-app; future path. Desktop `Drawing\*.pdf` remain the operational reference.
+- **Preserved:** Previous/Start-Pause-Resume/Complete/Skip/Complete Panel, Mid Change, KPI, RBAC, single-wire schedule. No cloud, no DDL, no commit.
+- **Files:** `OperationalTwin2D.tsx`, `CableVisualPath.tsx`, `DigitalWiringFrame.tsx`, `wiring-utils.ts`, `PanelGaDrawingModal.tsx`, `design-system.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit (not requested).
+
+---
+
+## 2026-07-16 — Login instant (no liquid delay) + icon-rail labels
+
+- **Login:** Removed ~2.8s liquid slide / veil / sheen entrance and morphing blob/aurora motion. Left panel is static navy + light glass; form mounts instantly. Auth, WebAuthn, theme switcher unchanged.
+- **Icon rail / collapsed sidebar:** Labels under icons always visible (Status, Project, Panel, etc.) when minimized or on tablet rail — fixed shared `Sidebar` + CSS (was `sr-only` + opacity:0). Applies to all role dashboards via AppShell.
+- **Default theme:** Confirmed one-time reset flag `dwes-theme-reset-default-20260716` in ThemeProvider (Default loads; Arctic/Harbor/Graphite optional).
+- **Files:** `LoginPage.tsx`, `Sidebar.tsx`, `design-system.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit. **Flags:** no cloud; no DDL; no plan edits.
+
+---
+
+## 2026-07-16 — Default theme restored + contrast; optional modern themes
+
+**Default = original DWES look** (solid brand-blue AppShell, clear white cards, stronger borders/icons). Modern liquid-glass themes remain **optional** and switchable — never forced.
+
+- **Themes (4):** `default` (first / loads for everyone) · `arctic` · `harbor` · `graphite`. Persist `localStorage` `dwes-app-theme`. Switcher on login + top-bar lists **Default first**.
+- **Contrast:** Default canvas `#D8E0EB` vs white cards; solid `#0F2557` sidebar/header; white chrome icons; stronger card borders (`#64748B`). Optional themes also get clearer canvas + brighter chrome icons.
+- **Icons:** default Material weight 500; sidebar inactive icons use full-opacity muted token (not washed grey).
+- **Login liquid:** unchanged visually; theme-aware; Default still uses liquid left panel with brand-blue hero tokens.
+- **Files:** `ThemeProvider.tsx`, `theme-palettes.css`, `themes.css`, `icons.css`, `Icon.tsx`, `design-system.css`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit. **Flags:** no cloud; no DDL.
+
+**How to switch:** Login palette button or AppShell top-bar Palette → Default / Arctic / Harbor / Graphite.
+
+---
+
+## 2026-07-16 — Force open on Default theme (one-time)
+
+Overnight may have left `arctic` in `localStorage`. ThemeProvider now one-time resets to **Default** (original DWES), then honors user palette picks (Arctic / Harbor / Graphite still switchable).
+
+- **Files:** `src/components/layout/ThemeProvider.tsx`
+- **Flag:** `dwes-theme-reset-default-20260716`
+- **Git:** no commit (not requested).
+
+---
+
+## 2026-07-17 — Fix pin, login gradient, login theme switch
+
+- **Sidebar pin:** Always-visible pin + collapse controls; persist merge for `sidebarPinned`; pin forces expanded Workspace (including tablet rail override). Filled pin icon when active.
+- **Login left:** Modern static gradient mesh (`login-panel-left--gradient`) — no entrance delay; theme-coloured aurora/blobs.
+- **Login theme switch:** `setTheme` writes `data-theme` + localStorage immediately; menu z-index/overflow fixed; left panel remounts on theme change.
+- **Files:** `Sidebar.tsx`, `useUIStore.ts`, `ThemeProvider.tsx`, `LoginPage.tsx`, `design-system.css`, `CHANGELOG.md`
+- **Flags:** no cloud; no DDL; no commit.
+
+---
+
+## 2026-07-17 — Director Workspace sidebar + pinnable nav (all roles)
+
+- **Director:** same AppShell Workspace sidebar as other dashboards (`Live Status` nav item). Previously had zero `tabs`, so Sidebar returned null.
+- **All dashboards:** sidebar **Pin** control (persisted `sidebarPinned` in `dwes-ui-storage`). Pin keeps Workspace expanded; collapse unpins when pinned. Shared `Sidebar` used by Supervisor, Technician, Director, Admin, QAQC.
+- **Files:** `DirectorDashboard.tsx`, `Sidebar.tsx`, `useUIStore.ts`, `design-system.css`, `CHANGELOG.md`
+- **Flags:** no cloud; no schema DDL; no commit.
+
+---
+
+## 2026-07-16 — Login liquid glass + theme switcher (Arctic / Harbor / Graphite)
+
+Critical UI polish: login left panel is industrial **liquid glass** (not flat blue); three full app themes with switcher on login + AppShell top bar.
+
+- **Login liquid:** deep navy/slate base + frosted glass sheet, soft cyan/brand-blue aurora mesh, morphing blobs, caustic drift, one-shot ~2.8s liquid slide + veil + sheen on mount; glass content card; `prefers-reduced-motion` disables motion. Auth / WebAuthn / health ping unchanged.
+- **Themes:** `arctic` (slate/navy cyan), `harbor` (steel + teal), `graphite` (charcoal + blue). Persist `localStorage` `dwes-app-theme`. Switch via login palette button or top-bar Palette menu. AppShell topbar/sidebar use theme glass tokens.
+- **Director:** simplified live status retained; walkthrough `docs/DIRECTOR-WALKTHROUGH.md` restored UTF-8.
+- **Files:** `LoginPage.tsx`, `design-system.css`, `ThemeProvider.tsx`, `Topbar.tsx`, `theme-palettes.css`, `DirectorDashboard.tsx`, `docs/DIRECTOR-WALKTHROUGH.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit (not requested).
+- **Flags:** no cloud provision; no WiringSchemeDB DDL.
+
+---
+
+## 2026-07-16 — Cloud UI Twin Reports
+
+Implements product UI density, 2D Operational Twin multi-cable live trail, panel completion report densification, local security readiness docs, and ≥70 concurrent tech load guidance. **No OCI resource creation, DNS, Vault fetch, or production deploy.**
+
+- **Cloud gate:** Confirmed zero provision; hosting still blocked until user replies exactly **approve OCI hosting** (+ tenancy credentials). `oci-provision-deploy` cancelled as blocked.
+- **UI density (“Dense industrial glass”):** Stronger WCAG text tokens on white; `.text-value` weight ≥600; tighter CompactCard / KPI / director cards; soft blue brand card wash only (no purple AI look, AppShell/sidebar/top bar unchanged).
+- **2D twin live trail:** Geometry mode returns prior wires; `OperationalTwin2D` overlays completed/skipped/in-progress routes; current S.No highlighted. Flat/Engineering 3D remain behind `VITE_ENABLE_PANEL_3D`. No WiringSchemeDB DDL.
+- **Reports:** Preview zones densified (`.pcr-*`); PDF section/field spacing tightened; Excel section bars denser; branding still via `report-branding.ts` / `CompanyLogo`.
+- **Security (local/repo):** JWT missing/weak fails startup (`auth.module.ts` + `main.ts`); `DEMO_MODE` gated via `demo-mode.util.ts`; production checklist documented in `PROJECT_STATUS.md`. No secrets committed; no VM `.env` edits.
+- **Load:** `infra/load/k6/tech-70vus.js` + `npm run load:tech70`; `docs/LOAD-TEST.md` updated. Run localhost only when servers are up.
+- **Files:** `theme-palettes.css`, `design-system.css`, `themes.css`, `index.css`, `OperationalTwin2D.tsx`, `DigitalWiringFrame.tsx`, `operational-twin.service.ts`, `PanelCompletionReportPreview.tsx`, `panel-completion-report-pdf.ts`, `supervisor.service.ts`, `infra/load/k6/tech-70vus.js`, `scripts/k6-tech70.mjs`, `package.json`, `docs/LOAD-TEST.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** no commit (not requested); dirty tree preserved.
+- **Flags:** no OCI create; no schema DDL; AppShell preserved.
+
+---
+
+## 2026-07-16 — Tablet UI/UX roadmap (Phases 1–5)
+
+Completes tablet-first UI/UX roadmap across all roles (plan file not edited).
+
+- **Phase 1 (Technician):** Confirmed Approved Drawing removed from dashboard; home = Digital Wiring Schedule + 2D Operational Twin only. Twin modal hides Approved 2D tab + fallback “View Approved Drawing” for technicians (`twinMode`). Supervisor drawing access unchanged. Orphan `GaDrawingViewModal` documented as unused.
+- **Phase 2 (Supervisor Status):** `CompactStatusWorkspace` densified with `CompactCard`; CSS conflict fixed (looser `.sws-*` overrides removed); View Report / review / submit touch targets ≥44px; Approve/Rework/Submit APIs unchanged.
+- **Phase 3 (Operations Director):** Project cards nest panels grouped Active / In Progress / Completed; KPI remains assigned-cable formula; exactly one panel **View Report** via `ReportPreviewModal` (live progress modal removed); backend `projectsSummary` emits In Progress; styles in `index.css`.
+- **Phase 4 (Admin):** Settings chrome trimmed to ops surfaces; orphan `HardResetTab` / `ResetAllProjectsTab` stay unmounted (backend endpoints retained).
+- **Phase 5 (QA/QC):** Merged Completed + Reports into **History / Reports**; Review Queue → Inspection Form flow preserved; badge “Interim QC”; denser check rows.
+- **Files:** `PanelsTab` (verified), `PanelGaDrawingModal.tsx`, `CableDigitalTwinModal.tsx`, `GaDrawingViewModal.tsx`, `CompactStatusWorkspace.tsx`, `design-system.css`, `DirectorDashboard.tsx`, `director.service.ts`, `index.css`, `AdminSettingsPage.tsx`, `HardResetTab.tsx`, `ResetAllProjectsTab.tsx`, `QAQCDashboard.tsx`, `InspectionFormTab.tsx`, `CHANGELOG.md`, `PROJECT_STATUS.md`
+- **Git:** branch `migration/fastify-perf-ios`; status/diff skipped if `git` binary unavailable; no commit.
+- **Flags:** no WiringSchemeDB schema change; AppShell/sidebar/top nav preserved.
+
+---
+
+## 2026-07-16 — Master — 2D Twin / 3D Removal / Enterprise UI (finish)
+
+Completes interrupted Master-2DTwin-3DRemoval-EnterpriseUI work (prompt file missing from Downloads; goals reconstructed from prior session + repo state).
+
+- **Fix:** Cable Digital Twin loaded Operational 2D Twin data but never rendered the `ot2d` tabpane — `OperationalTwin2D` now mounts as the primary twin surface; drawing-package load/errors no longer block the 2D twin tab; "Not Yet Configured" fallback only when ot2d also empty.
+- **3D demotion (already gated):** Flat/Engineering/Generated 3D stay behind `PANEL_3D_ENABLED` (`VITE_ENABLE_PANEL_3D`, default off). Twin icon `Boxes` → `Map`.
+- **Preserved:** Digital Wiring Schedule Excel row + Cable Visual Path + inline OperationalTwin2D; Approved Drawing; Skip/Mid Change/KPI/RBAC/APIs.
+- **Files:** `src/components/ui/PanelGaDrawingModal.tsx` (+ prior session: `features.ts`, `CableDigitalTwinModal.tsx`, `PanelsTab.tsx`, `WiringWorkstation.tsx`, `GaDrawingViewModal.tsx`, `EngineeringImportModal.tsx`)
+- **Git:** skipped (unavailable per author).
+
+---
+
+## 2026-07-16 — Final verification — Technician 2D Twin + Compact UI
+
+Executes `Final-Verification-Prompt.md` (verification-first; minimal defect repairs only).
+
+- **Repairs:** Removed orphaned corrupted `backend/check.{ts,js,d.ts,js.map}` (oxlint parse errors). Restored FE typecheck by aligning Digital Twin mapping editor row shapes, `FileViewerType` + CSV `activeSheet`, and unused imports. Fixed Excel wiring parser off-by-one (`parseWiringSheet` now treats `readSheetData` rows as post-header and applies sub-header skip at index 0). Awaited async parser in `excel-parser-regression.test.cjs`. Removed leftover `sales_demo` / `sales_director` entry from private `demo-accounts.local.json`.
+- **Automated:** FE typecheck 0 / lint 0 errors (warnings only) / `npm run build` 0; BE prisma validate+generate 0 / nest build 0 / tests **117/117**; FE `test:twin` 7/7, `test:schematic` 5/5, `test:panels` 10/10, `test:state` 4/4.
+- **Browser:** `verify-operational-2d-twin.mjs` **23 PASS / 0 FAIL / 3 SKIP**; `compact-ui-smoke.mjs` **0 failures** (5 roles × 4 viewports); role login diag PASS for tech/supervisor/qaqc/admin + `ops_director1` (director1 disabled locally).
+- **Sales Director:** absent from FE roles/routes/admin dropdowns/demo seed; login rejected; RBAC tests assert exclusion.
+- **Git:** skipped (unavailable per author) — no `git status`, `git diff`, `git diff --check`, commit, branch, or remotes.
+- **Flags:** no intentional API/RBAC/workflow redesign; Mode A twin still not exercisable without published geometry; `SupervisorOperationalTwinMonitor` remains unwired (optional).
+
+---
+
+## 2026-07-16 — Verify + Fix — Operational 2D Twin browser matrix
+
+Completed interactive browser verification for Digital Wiring Schedule + OperationalTwin2D (tech1 / =H001 / assignment 72). Fixed verification-blocking duplicate React terminal keys.
+
+- **Defect fixed:** Mode B schematic terminal ids collided when nested device tags shared colon paths (`87BB`+`X102:2` vs `87BB:X102`+`2` → both `term:87BB:X102:2`). IDs now use `term:{device}::{terminal}`; `SCHEMATIC_GENERATION_VERSION` bumped to **2** so TwinLayoutStore regenerates cache. Frontend circle keys use `${id}#${idx}` as defense.
+- **Files:** `backend/src/engineering/schematic-layout.ts`, `tests/schematic-layout.test.ts`, `src/components/technician/wiring/OperationalTwin2D.tsx`, `scripts/verify-operational-2d-twin.mjs`, `docs/OPERATIONAL-2D-TWIN.md`
+- **Browser matrix:** 23 PASS / 0 FAIL / 3 SKIP (Mode A no published geometry; theme toggle absent; Complete Cable disabled on already-complete row — Complete passed on earlier matrix run). Viewports 1920×1080, 1024×768, 768×1024, 820×1180 — no horizontal overflow; console clean after fix.
+- **API:** authenticated `GET /api/engineering/operational-twin/...` → 200 SCHEMATIC; unauthenticated → 401.
+- **Git:** skipped (unavailable per author) — no status/diff/commit/branch.
+- **Flags:** no API/RBAC/workflow changes beyond schematic id uniqueness.
+
+---
+
+## 2026-07-16 — UI — Login page non-scrollable responsive fit
+
+Executes `Login-Responsive-Fix-Prompt.md`: viewport-locked Login layout so logo, title, username, password, Sign In, Install App, and support info fit without page scroll across tablet/desktop sizes.
+
+- **CSS:** `design-system.css` login section — `100vh`/`100svh`/`100dvh` lock + `overflow: hidden`; fluid `--login-*` tokens via `clamp()`; height media queries compress gaps/logo/type; stacked brand strip `max-height` caps; landscape short-height side-by-side; PWA `standalone` uses `svh`.
+- **Theme:** `themes.css` — support note, clock, install button token remaps for light/dark parity.
+- **TSX:** `LoginPage.tsx` — remove conflicting `overflow-x-hidden` / fixed button `minHeight` (CSS owns sizing). Auth/WebAuthn/validation untouched.
+- **Git:** skipped (unavailable per author) — no status/diff/commit.
+- **Flags:** layout/CSS only; no API/RBAC/auth logic changes.
+
+---
+
+## 2026-07-16 — UI — Modern compact redesign of ALL role dashboards
+
+Executes `Modern-Compact-UI-All-Dashboards-Prompt.md`: density-only layout pass across Production Supervisor, Technician, QA/QC, System Administrator, and Operations Director. No API/RBAC/workflow changes; AppShell / top nav / sidebar / icon rail untouched.
+
+- **Shared primitives:** `PageHeading`, `CompactCard`, `FieldGrid`, `StatChip`, `ActionRow`; `DashboardShell` uses `PageHeading`; `SectionHeader` delegates to dark compact `WorkspaceSectionHeading`.
+- **Density CSS:** hero ≤64px; KPI/card/dash-module padding tightened; badges smaller; dark section bars (~36–40px); denser tables; supervisor scope band + FieldGrid project/panel info; technician subtitle = name · EMP-ID; admin settings dark section heads; director KPI icons compact.
+- **Git:** skipped (unavailable per author) — no status/diff/commit.
+- **Flags:** layout/CSS only; functional behaviour preserved.
+
+---
+
+## 2026-07-16 — Feature — 2D Operational Digital Twin (Mode B schematic + Mode A gate)
+
+Implements `Final-2D-Twin-Cursor-Prompt.md`: technician inline 2D twin with automatic Mode B Excel schematic (always works) and Mode A CAD/published geometry when available.
+
+- **Mode B:** deterministic schematic layout from wiring schedule (`schematic-layout.ts`), persisted under `uploads/<PROJECT>/twin-layouts/*.schematic.json` (db-guard: no WiringSchemeDB DDL).
+- **Mode A:** reuses published `panel_models` / device / terminal / duct tables; `CadGeometryAdapter` + `DWES_CAD_GEOMETRY_ENABLED` (default false) — no CAD parser / react-konva / APS bundled.
+- **API:** `GET /api/engineering/operational-twin/:projectCode/:frameId?cableRef=`
+- **UI:** `OperationalTwin2D` (SVG layers, zoom/pan/fit/focus/fullscreen, status colours) inline in Digital Wiring Schedule; optional `SupervisorOperationalTwinMonitor` read-only.
+- **Docs/fixtures:** `docs/OPERATIONAL-2D-TWIN.md`, schematic + geometry sample fixtures.
+- **Restore point:** branch `migration/fastify-perf-ios` HEAD `9f6a4a4` (uncommitted prior work retained).
+- **Flags:** no commit/push; Mode A CAD parse disabled pending licence approval.
+
+---
+
+## 2026-07-16 — Fix — Production build: invalid `@apply text-muted` in Status Workspace CSS
+
+- `design-system.css` `.sws-report-row-desc`: `.text-muted` is a plain project class (not a Tailwind utility), so `@apply text-muted` failed `vite build` ("Cannot apply unknown utility class"). Replaced with `color: var(--color-text-muted);`, matching the file's existing token pattern. Verified: `npx vite build` exits 0.
+- Verified the technician Digital Wiring Schedule single-cable workspace (one-cable SOURCE → CABLE → DESTINATION card, action bar Previous / Pause / Complete Cable / Skip / Complete Panel, Full Wiring View behind secondary button) in-browser against real assignment 72 (=H001, 400 cables) at 1280×900 / 1024×768 / 768×1024 — no overflow, no console errors, no failed API calls, no snap-back across the 30 s sync poll; backend skip/mid-change tests 21/21 pass.
+
+---
+
+## 2026-07-16 — UI — Status Workspace: unified View Report + compact accent headings
+
+- `CompactStatusWorkspace.tsx`: all report rows use one **View Report** button (replaces View Live / View Completed / Report / Generate); existing `ReportPreviewModal` + `ProjectPdfPreviewModal` workflows unchanged.
+- `WorkspaceSectionHeading` gains `variant="accent"` (blue/purple compact row); applied to Status Workspace, Technician Activity, Reports & Review.
+- `design-system.css`: `sws-*` density classes + accent heading + `sws-view-report-btn`.
+
+---
+
+- Added `.cursor/rules/dwes.mdc` from author download — consolidated rules for roles (no Sales Director), protected workflows, Digital Wiring Schedule / Cable Digital Twin, UI shell protection, workspace headings, popups, security, Prisma, git safety, cloud-neutral deployment planning, verification, and PASS/PASS WITH WARNINGS/FAIL reporting.
+- Cross-linked from `.cursor/rules/dwes-project-skill.mdc`.
+
+---
+
+## 2026-07-16 — UI/RBAC — Workspace standardization, compact Project Information, Sales Director removal
+
+Implements prompt-optimized.md sections 1–4 (partial popup rollout — `TabletFields` foundation only).
+
+- **`WorkspaceSectionHeading`** (`src/components/ui/WorkspaceSectionHeading.tsx`): compact dark internal section heading using `--pj-action-bg`; applied to Project Information, Selected Panel, Status Workspace, Director Live Production Overview.
+- **Assigned Technician block** (`PanelTechnicianActivity.tsx`): name + Assigned At / Wiring Started / Last Action only; Mid Change preserved in compact `<details>`; pause state retained.
+- **Wiring schedule metadata removed** from Project Information card (`WiringScheduleStatus` → upload button only; filename/cable count/upload date no longer shown).
+- **Sales Director removed**: frontend `UserRole`/`ROLE_LABELS`/`ROLE_ROUTES`; backend RBAC, director controller (ops-only), frames/users `@Roles`, demo accounts, auth login rejection; cleanup script `backend/scripts/remove-sales-director-users.cjs`; tests updated.
+- **Dashboard titles**: Technician → "Technician", QA/QC → "QA/QC", Director → "Operations Director".
+- **`TabletFields`**: `required` prop, `AlertCircle` error icons, `isBlank()` helper.
+- **Verified:** backend build + guard tests 5/5 pass; frontend `tsc` clean on changed files; full `npm run build` blocked by pre-existing TS errors in `DigitalTwinMappingEditor.tsx`, `FileViewer.tsx`, `PdfDrawingUploadModal.tsx`, `mappingCsvImport.ts` (unchanged by this pass).
+
+---
+
+## 2026-07-16 — Feature — Engineering geometry pipeline: Chennai package → validate → import → review → approve → publish → Flat 3D / Calculated Guidance
+
+Implements the full Engineering-3D data path (joint session: author built `EngineeringImportModal` + supervisor "Import Twin Data" action; AI built the backend pipeline, spec, Flat 3D view, and tests). No DDL; no data imported — the pipeline is live but empty until real Chennai packages arrive.
+
+- **Package spec v1** ([docs/ENGINEERING-PACKAGE-SPEC.md](docs/ENGINEERING-PACKAGE-SPEC.md) + fictitious sample in docs/samples/): one JSON per panel per revision — mm-only units (no silent conversion), panel envelope, devices+terminals with coordinates, duct nodes/segments; engineering symbols (`= + - : / .`) preserved; `DEVICE:TERMINAL` matching is case/whitespace-insensitive.
+- **Validator** (`package-validation.ts`, pure): structure/spec checks, dimension ranges, duplicate tags/terminals, coordinate sanity, duct-graph referential integrity + connectivity (disconnected = warning), schedule-match report. Failing validation writes nothing.
+- **Import service** (`engineering-import.service.ts`): transactional DRAFT import (`pending_review`, `published_at: null`), route-param ownership enforcement (no cross-panel packages), duplicate-revision rejection, mapping `reviewSummary` (matched/unmatched schedule ends), `approveAndPublish` (supervisor/admin only, re-validates geometry, marks prior published revision **superseded** — history preserved).
+- **Endpoints** (`api/engineering/*`): `validate` (dry-run) + `import` [supervisor/admin], `review/:modelId` [+ops_director], `approve/:modelId` [supervisor/admin]; technicians 403 on all import-workflow routes (live-verified).
+- **Twin-context hardened**: only **approved + published** revisions are visible (drafts can never change the technician view — live-verified: tech1 still sees Drawing Reference Only with a draft-free DB); per-cable end resolution against the terminal map; **A\* calculated route** through the duct graph via the author's `RoutingService`; approved-exact only from an approved `cable_route_mappings` row (`wiring_row_id = "<frameId>#<sno>"`); full Flat-3D geometry payload (panel/devices/ducts/markers/route) in the response.
+- **Frontend**: new `engineeringApi` (central client); twin classification/missing-list now server-authoritative with client asset fallback; new **`FlatPanelView`** (pure-SVG plan view — panel outline, device footprints+tags, duct runs, SRC/DST markers, approved-solid vs calculated-dashed route polyline, label/duct toggles; renders only published geometry, empty-envelope guard); twin gains a `Flat 3D` tab only when the server declares `flat-3d` available. Author's `EngineeringImportModal` (upload → validate → import → review → publish phases) wired to the same endpoints; two in-flight compile errors completed (Upload icon import, unused prop/catch).
+- **Verified:** backend build 0 + **118/118** tests (12 new: validator rules, symbol-preserving normalization, zero-write invalid import, ownership + duplicate-revision rejection, draft-not-published invariant, publish RBAC + supersede); FE tsc 0 · lint 0 · build 0 · twin tests 7/7; live: twin-context `drawing-reference` + `[approved-2d]` for tech1, technician import → **403**, twin modal renders server classification with Flat 3D correctly absent, no page errors.
+
+## 2026-07-16 — Fix/Feature — Twin-context 500 repair, Status workspace completion, typography cascade fix (autonomous session, browser-verified)
+
+Local-only on `migration/fastify-perf-ios`; joint author+AI session. Formatter confirmed disabled (byte canaries intact).
+
+- **Cable Digital Twin live repair:** reported "not visible" reproduced as two issues: (1) the dashboard/workstation UI was fully functional in the served app (13/13 acceptance as tech1 — stale browser bundle / prior editor-buffer windows explain the sighting); (2) the REAL defect: `GET api/engineering/twin-context` returned **500** because `schema.prisma` renamed `panel_id`→`frame_id` on 3 new tables while the live DB kept `panel_id`. Fixed without DDL via Prisma `@map("panel_id")` (drawing_assets, panel_models, mapping_issues) + client regen. Endpoint now returns the controlled shape (classification, availableModes, drawingRevision, geometry counts, `missing_requirements`) derived from real drawing packages + geometry-table counts; never a server error for empty geometry. Twin banner gained an expandable "Missing engineering data (N)" explainer (shared `missingTwinRequirements()`); the Not-Yet-Configured fallback now shows the full real cable-details grid + View Approved Drawing / Return / Report Mapping Issue actions. `backend/script.ts` (author scratch) excluded from tsconfig builds.
+- **Status workspace (author's `CompactStatusWorkspace`) completed:** the author's new compact Status implementation was adopted as the single live one (AI's parallel rewrite of `ReviewApprovalWorkspace.tsx` remains as unused dead code — nothing imports it). Fixes/additions on the author's component: real `user.id` for session-project scoping (was hardcoded `1`); **per-project panel persistence** via `selectedPanelByProject` + `resolveSelectedPanelId` (browser-verified round-trip); pre-start approval now calls `approve-assignment` (was mis-calling `review`); live read-only report enabled for in-progress panels (was completed-only) with Live/Completed labelling; **other-panel report rows** added; **Reviewer/Approver facts + expandable audit history** (new additive `reviewer_name`/`approver_name`/`rework_by_name` on `allPanels`); **Submit to Director** action (backend-validated); workflow error surface. `panelActivity` additively exposes `technician_logged_out` + `active_seconds`. Verified live: ONE status badge, ONE progress bar, 0 overflow at 1440/1180/1024/820/768/390, panel persisted across tab round-trip, no page errors.
+- **Typography cascade fix:** author's semantic token system (`--t-text-*`, role vars in themes.css, `.text-primary/…/.text-disabled` utilities + ~90-file class sweep) had a layer conflict — Tailwind's generated `.text-primary` (**brand blue** from `--color-primary`) and `.text-secondary` (from `--color-secondary`) in `@layer utilities` outranked the semantic classes in `@layer components`. Semantic typography utilities hoisted to **unlayered** rules so they always win. Live-verified: `text-primary`→slate-950 rgb(2,6,23), muted≠secondary hierarchy intact. Dark mode note: arctic is deliberately light-only (`data-mode="light"` warms surfaces; `dark` renders identical base visuals by design) — verified stable under `data-mode="dark"`, no dark palette exists.
+- **cable_skip test records reviewed (read-only):** audit ids 297/298, technician 40 (Viju Vijayan), project 001 / panel =H001 (assignment #72), reasons + timestamps intact, author already prefixed both with `[TEST]`. Cable 6 (index 5) confirmed still pending (src/dst false), counts 5/5/400 and KPI unchanged, no duplicate/orphan rows. **Recommendation: retain** as annotated verification history; audit rows are immutable by design; the cable completes through the normal workflow.
+- **Verified:** FE tsc 0 · oxlint exit 0 · vite build 0 · FE unit 21/21 (7 twin +1 missing-req, 10 panels, 4 state) · prisma validate OK · backend build 0 · backend tests **105/105** · bundle scans (dev assets absent, demo ids absent, twin present) · `git diff --check` clean · browser matrix supervisor/technician/qaqc/admin × light+dark × 4 viewports + ops_director1 + sales_demo = **0 overflow, 0 clipped headings, 0 page errors**; screenshots in `artifacts/{twin-repro,twin-accept,status,matrix}-2026-07-16/`.
+
+## 2026-07-15 — Feature — Technician Dashboard redesign, Digital Wiring Schedule, Skip workflow, Cable Digital Twin (browser-verified)
+
+Local-only on `migration/fastify-perf-ios`; combined AI + author session (author added the engineering DB layer + module; AI implemented technician UX, skip workflow, twin viewer glue). **Incident note:** a user-level editor extension was found destructively minifying string literals on save (verified in bytes); after it was disabled, 128 formatter-damaged files were `git restore`d to HEAD with the author's approval — intentional work was preserved/re-applied.
+
+- **Renames:** every user-facing "Digital Wiring View" → **Digital Wiring Schedule** (technician workspace aria, supervisor Projects button + tooltip, PanelWiringViewModal title, DigitalWiringMonitor aria). Technician "Digital Wiring Monitor" action → **Digital Wiring Schedule**; "3D GA / 2D Drawing View" action → **Cable Digital Twin** + new separate **Approved Drawing** action (all three side-by-side). No backend route renames.
+- **Technician Current Assignment card** (`PanelsTab.tsx` + `.tech-assignment-*`): one authoritative backend-sourced summary — project/number/panel/type/voltage/client/technician/assigned/started/cable counts/KPI/pause/Mid Change badge. `myPanels` now includes `panel_type`/`voltage_level`/`system_type` from the frame file (no schema change).
+- **One-cable engineering card** (`DigitalWiringFrame.tsx` + `.dwc-*`): the current cable renders as a large SOURCE → CABLE → DESTINATION card (device/terminal/ferrule/location per end + wire no./colour swatch/size/length/ref/remarks + per-end Wired/Open state) instead of a single spreadsheet row; Full Wiring View keeps the classic schedule-row reference table. Skipped-pending rows are labelled "Skipped — Pending".
+- **Action bar** (`WiringWorkstation.tsx`): `[Previous] [Start/Pause/Resume] [Complete Cable] [Skip] (+Complete Panel)`. **Complete Cable** = the existing atomic completion (advances to next pending). **Skip** = NEW true skip: reason required (≥3 chars, `dialog.prompt`), cable stays pending, KPI untouched, next-pending navigation (loop-safe), returnable via Previous. Backend `cable-action` gains additive `skip` + `flag_issue` verbs — audit-only (note + `tech_audit_log` rows `cable_skip`/`cable_mapping_issue`, no src/dst mutation, no auto-start, ownership + range validated). Also fixed a snap-back bug where the active-index effect depended on `status` and undid Skip/Previous navigation.
+- **Cable Digital Twin:** author's `CableDigitalTwinModal` kept as the dedicated entry point, reimplemented as a thin wrapper over the shared secure viewer in twin mode (`PanelGaDrawingModal twinAssignmentId`): auto-follows assigned project/panel + current (next-pending) schedule cable, tabs relabelled **Approved 2D / Flat 3D / Engineering 3D** (shown only when the asset exists; 3D gated by `VITE_ENABLE_PANEL_3D`), explicit route-confidence banner from new shared `cableTwinClassification.ts` (A Approved Exact → E Unavailable; currently honest max = D Drawing Reference Only since no terminal/duct mappings exist), **Report Mapping Issue** (audited), and the controlled "Cable Digital Twin Not Yet Configured" fallback that never blocks wiring. Removed the wrapper's hardcoded localhost fetch/fake "Est. 12.5m" data.
+- **Engineering module (author's, fixed):** `backend/src/engineering/` (twin-context endpoint + A* duct-graph `RoutingService`) — corrected guard import paths, added `api/` prefix + explicit `@Roles` (sales excluded), and gated the sample ENOWA "calculated-guidance" response behind `DEMO_MODE` (a calculated route must come from real mapped geometry, never fabricated coordinates). Author also added 8 geometry tables to WiringSchemeDB + `schema.prisma` (drawing_assets, panel_models, device/terminal geometries, duct nodes/segments, cable_route_mappings, mapping_issues) — created by the author directly; AI performed no DDL.
+- **Verified:** FE `tsc` 0 · oxlint exit 0 · `vite build` 0 (bundle: new labels present, old absent, no hardcoded twin fetch) · backend build 0 · backend tests **105/105** (5 new skip/flag_issue tests) · FE unit tests 6/6 twin + 10/10 panels + 4/4 state · real-browser (tech1 live =H001, 400 cables): 3 actions labelled/ordered, assignment card with real CPR/132KV-33KV data, one-cable card at 1280/1024×768/768×1024/600×960 with 0 hOverflow, Skip advance 6→7 with counts frozen + "Skipped — Pending" + 2 `cable_skip` audit rows in DB, twin opens with "Drawing Reference Only" + real cable #6 context (GREEN/YELLOW · 2.5SQ.mm · Rev 1) and no Engineering-3D tab without a model; supervisor spot: renamed button, biometric control, 768px rail, 0 overflow, no page errors.
+
+## 2026-07-15 — Feature/UX — Supervisor redesign CPI follow-up: orphan removal, panel persistence, tablet-portrait rail, Review & Approval section (browser-verified)
+
+Continuation of the same-day supervisor redesign. Frontend + CSS only; no backend/schema/API changes. Restore point: uncommitted working tree on `migration/fastify-perf-ios` (git left untouched per instruction).
+
+- **Orphan removed:** deleted `src/components/supervisor/PanelActivityRowDetails.tsx` after a full usage sweep (static/dynamic/lazy imports, barrels, tests, path aliases, prod bundle) confirmed **zero** consumers. Bundle scan post-build confirms it is absent from `dist`.
+- **Selected-panel persistence (per project):** new pure helper `src/utils/panelSelection.ts` (`resolveSelectedPanelId` / `rememberSelectedPanel` / `pruneSelectedPanels`); `useProjectSelectionStore` gains `selectedPanelByProject` (session-store, ids only, reset on user change). `ReviewApprovalWorkspace` restores the last panel per project across the tab-remount, falls back to the first panel when the stored one is deleted/invalid/unauthorized, and never carries a panel across projects. Unit tests: `tests/panel-selection.test.ts` (10/10) + new `test:panels` script. Browser-verified: select panel 2 → Projects tab → back to Status → panel restored.
+- **Tablet-portrait icon rail (shared):** the persistent sidebar now renders from `tablet-port` (768px) up — `.dash-sidebar` display + the rail media query extended to `768–1279px`; the topbar hamburger moved to `tablet-port:hidden` (only < 768px); `AppShell` closes the drawer at ≥768px so rail and drawer stay mutually exclusive. Desktop (≥1280px) keeps the expanded sidebar. All shared components (`Sidebar`/`AppShell`/`Topbar`/CSS) — no per-role logic. Browser-verified across supervisor + technician + QA/QC at 1440/1280/1180/1024/820/768/390: expanded ≥1280, rail 768–1279 (icon+label, ≥62px targets, underline selected state), drawer <768, **0 horizontal overflow at every viewport**.
+- **Review and Approval section (E):** Status workspace reordered to A Selectors → B Panel Status Summary → C Technician Activity (single authoritative badge) → D Reports → **E Review and Approval** (own section: workflow-state badge, audit facts, and only the permitted Approve / Request Rework / Review / Submit-to-Director actions). Review actions removed from the monitor/summary. Backend enforcement re-verified: `@Roles('prod_supervisor')` at the controller + service-level role checks; `submitToDirector` blocks submission unless every completed panel is `approved` and blocks QC-pending; audit fields stamped (`approved_by/at`, `reviewed_by/at`, `rework_requested_by/at`).
+- **Verified:** FE `tsc -b` 0 · `oxlint` 0 (no findings in changed files) · `vite build` OK · `test:panels` 10/10 · `test:state` 4/4 · backend `prisma generate && nest build` OK · backend tests **100/100** · `git diff --check` clean · real-browser layout probe **0 hOverflow** at all sampled viewports.
+
+## 2026-07-15 — Feature/UX — Supervisor dashboard redesign: Project Info, Status monitor, reports, tablet sidebar, biometric states
+
+Local-only, frontend + CSS only (no backend, schema, or API changes). Restore point: uncommitted working tree on `migration/fastify-perf-ios` (git left untouched per instruction).
+
+- **Project Information card** (`ProjectsTab.tsx`): removed the detailed Technician Activity block; replaced with a compact `PanelAssignmentSummary` showing only `Active Panel: <name>` + one `Assigned` / `Not Assigned` badge, plus assigned technician name + `@username` on one line when assigned. Detailed activity/breaks/progress/Mid Change no longer duplicated here. New `.pj-panel-assignment*` styles use dark `--color-text-primary/secondary` tokens.
+- **Status workspace redesign** (`ReviewApprovalWorkspace.tsx` rewritten): removed the Active/Waiting bucket chips + always-expanded project stack. New selector-driven monitor — Project dropdown (session-project source, shared with Projects tab) → Panel dropdown (panels of that project) → compact authoritative panel-status summary (assignment, wiring, cables done/left/total, %, start, last activity, completion) → the **moved** full Technician Activity + Mid Change contribution timeline (single authoritative live-status badge, no duplicates) → report actions. Preserves review / rework / approve-legacy / submit-to-director workflow and all existing report + activity APIs.
+- **Reports by project & panel:** selected-panel `View Live Report` (in-progress, read-only) / `View Completed Report` + `Download PDF` (completed) via existing `ReportPreviewModal` + `frameReportPdf`; per-panel report buttons for every panel; overall `View Project Report` via existing `ProjectPdfPreviewModal` (`reportPdf`). No duplicate report system introduced.
+- **Tablet sidebar auto icon-rail** (`Sidebar.tsx` + `design-system.css`): 1024–1279px viewport now auto-renders a compact rail — icon with a short label beneath, centered, ≥62px touch targets, underline selected indicator, `title`/`aria-label` tooltip, `aria-current`. Full sidebar returns at ≥1280px; no manual toggle needed. Label visibility moved to CSS control.
+- **Biometric control** (`useBiometric.ts` + `Topbar.tsx` + `themes.css`): explicit `BiometricStatus` = loading / no-context / unsupported / error / ready from real WebAuthn `platformAuthenticatorIsAvailable()` in a secure context (+ probe error state). Header control is now always present: enabled (opens panel) only when ready or context-fixable; clearly disabled with "Not Supported on This Device" / "Biometric check failed" / "Checking…" otherwise; enrolled-on-this-device dot. RP_ID/RP_ORIGIN/HTTPS/enrolment logic unchanged.
+- **User Management contrast** (`design-system.css` `.um-*`): darkened faded supporting text (emp id, section sub, field labels, readonly values, footer stat, hints, empties, assignment codes) toward slate-600/700/800/900; headers already use the shared modern `Modal` header + `user-management` typography.
+- **Verified:** FE `tsc -b` 0 · `oxlint` exit 0 (no findings in changed files) · `vite build` OK (CSS compiled with new classes) · backend `prisma generate && nest build` OK · backend tests **100/100**. Live browser/viewport screenshots NOT captured this session (see PROJECT_STATUS).
+
+## 2026-07-15 — Fix — Parser sub-header hardening (first-row retention) + documented admin redirect
+
+- **Parser root cause** (`excel-headers.ts` `isSubHeaderRow`): the generic "short digit-free text" fallback could classify a first DATA row of device names/colours (no digits, no "/") as a wire-spec sub-header and skip it — the remaining first-row-drop vector. Hardened: (1) a bare-numeric cell (serial/terminal) or a "left/right" pair marks the row as data outright; (2) only **strong** header evidence counts (wire specs or keyword/regex labels via new `looksLikeStrongHeaderLabel`), never the loose fallback. Genuine multi-row spec headers are still skipped. No test expectations changed, no dummy rows, no special-casing.
+- **Regression tests** (`excel-parser-regression.test.cjs`, now 7): + actual DWES WRING_FRAME format (`WIRE NO`, `LENGTH(m)`, leading-space `␣GREEN/YELLOW`), + digit-free first data row retained, + genuine wire-spec sub-header still skipped.
+- **/admin/users → /admin/settings**: the explicit authorized redirect already existed nested inside the `system_admin` ProtectedRoute (`App.tsx`) — not the catch-all; added an intent comment. Browser-verified: guest → `/`, technician → `/technician`, sales_director → `/director`, admin → **`/admin/settings`**.
+- **Verified:** backend tests **100/100** (7/7 parser); Mid Change E2E **54/54 zero failures** through the real parser + DB (six-row schedule stays six, F-001 first and in order, resume at F-004, final cable 6/6, ranges 1–3/4–6, rollbacks, teardown clean, =H001 unchanged); FE typecheck/lint/build 0; bundle scan 0 hits; all 6 role logins OK.
+
+## 2026-07-15 — Release-readiness — Sales Director scoping, retained test account, popup matrix, guard tests
+
+Release-readiness pass on the day's combined work; local-only, no commits.
+
+- **Sales Director demo account:** `sales_demo` (role `sales_director`, real bcrypt user id via admin API) + entry in gitignored `backend/seeds/demo-accounts.local.json` — auto-appears in the Device Preview role picker (verified live). The pre-existing `sales_director2` DB user (role `ops_director`) was left untouched.
+- **Sales Director data scoping (backend):** sales view is aggregate-only. 403 for: `director/workforce|activity|export`, `/users`, `/users/technicians`, all `supervisor/*`, project `report-pdf|report-xlsx`, frame `completion-report|report-pdf`, `tech/audit`, all `qaqc/*` (`users-rbac.ts` — own account only; controllers annotated). The `tech/audit` (technician names, pause reasons, per-cable remarks) and `qaqc/*` (per-inspection results/remarks) exclusions were added in this pass; the aggregate QC pass-rate still reaches sales via `director/stats`. `director/projects-summary` now redacts `technicianName` → "Restricted" for sales callers (`director.service.ts`). Live leak-scan of every allowed payload: no technician usernames, pause details, remarks, or audit strings. Frontend (`DirectorDashboard.tsx`): PDF buttons hidden for sales (kept sanitized Live modal).
+- **Inactive-technician hardening:** `assignFrame` now rejects deactivated accounts (`tech.service.ts`).
+- **Retained test history (documented):** `demo_midchg_tech` (id from 2026-07-15 Mid Change E2E) stays **deactivated** — hard delete is blocked by immutable session-log audit rows, matching the pre-existing `smoketech1-3`/`director1` precedent. Verified inert: login 401 "Account is disabled", absent from `/users/technicians` (29 active) and mid-change targets, counted inactive (41 users / 36 active).
+- **Guard tests** (`backend/test/release-guards.test.cjs`): DEMO_MODE-off → dev demo endpoints 404; sales list/view RBAC; deactivated-assign rejection with zero writes. Suite: **95/95** (incl. the parallel session's `sales-director-rbac.test.cjs`).
+- **Popup matrix (headless, read-only):** New Project, Assign Technician, Wiring Upload, User Management, Edit Project, PDF Drawing View, Pause Reason, Mid Change picker, Report Viewer × 600×960/960×600/768×1024/1024×768/1194×834/1600×1100 → **0 defects** (in-viewport, header/footer visible, no page h-overflow, no clipping, no sub-32px targets). Confirm dialogs share the verified `.modal-box-sm` shell (logout is immediate — no dialog to drive).
+- **Checks:** FE `tsc -b` 0 · `oxlint` 0 (pre-existing warnings only) · `vite build` 0 · prod-bundle scan 0 hits (`__device-preview`/`DevicePreviewPage`/`demo-login`/`demo-roles`/launcher/credentials) · `prisma generate && nest build` 0 · backend tests 95/95 · health 200.
+
+## 2026-07-15 — DevTool — Device Preview (dev-only tablet viewport testing) + responsive sweep
+
+User request ("Fix and Dev", MaxAI-enhanced spec): a development-only Device Preview so tablet layouts can be tested on a laptop, without adding any manual tablet-mode to production — the real app keeps adapting automatically via responsive CSS.
+
+- **Preview shell** (`src/pages/dev/DevicePreviewPage.tsx`, route `/__device-preview`): renders the REAL app in a same-origin iframe whose CSS size equals the selected preset (media queries see the true viewport — verified live: internal `documentElement.clientWidth` exactly 1024→600 across preset changes) while the frame is `transform: scale()`-fitted and centred (e.g. 600×960 shown at 472px, 98%/62% chips). 17 presets (Mini 600×960 … Maximum 1600×1100, Desktop 1280×900) + Custom W×H, Rotate, Refresh, Login page, Open full (new tab), Exit preview, and toolbar chips for role · W×H · orientation · scale · current route (iframe route polled same-origin).
+- **Launcher** (`src/components/dev/DevPreviewLauncher.tsx`): one compact floating button (bottom-left, translucent) that serves the Login page and every authenticated screen; hides itself inside the preview iframe and on the preview page.
+- **Prod exclusion:** both components are `React.lazy` behind `import.meta.env.DEV` guards in `App.tsx` (same pattern as `/ui-showcase`); production `dist/assets` scanned — 0 occurrences of `__device-preview`/`DevicePreviewPage`/`demo-login`.
+- **RBAC-safe role switching** (`auth.controller.ts`, `auth.service.ts`): `GET /api/auth/dev/demo-roles` (accounts w/o passwords, inactive filtered via new `filterActiveUsernames`) and `POST /api/auth/dev/demo-login { username }` — both **404 unless `DEMO_MODE=true`** (established gate pattern); login goes through the normal bcrypt flow and issues genuine tokens, so every preview role sees exactly its RBAC-permitted routes/data. No frontend credentials, no auth bypass. Legacy `DeviceSimulator`/`deviceProfile` store field left untouched (already a neutral pass-through).
+- **Verified:** FE typecheck/lint/prod build green; BE build green; headless drive of the preview (role switch → `/supervisor` with `prod_supervisor` token; preset math exact; no page errors). Note: "Sales Director" persona shares `ops_director` RBAC; the demo-accounts file currently holds no sales-director credential — add one to `backend/seeds/demo-accounts.local.json` and the picker lists it automatically.
+- **Responsive sweep:** automated presets(17+3 in-between)×roles(6) audit — results and fixes recorded in the entry below/status file.
+
+## 2026-07-15 — Verify/Fix — Full-session verification pass + inert-roster dimming fix
+
+End-of-session verification of all 21 commits on `migration/fastify-perf-ios` (popup modernization, icons, density, Assign Technician inline roster, Mid Change flow), per user request; local-only, no commits.
+
+- **Checks run:** `tsc -b` clean · `oxlint` pre-existing warnings only · FE `vite build` exit 0 · BE `prisma generate && nest build` exit 0 · backend tests **84/84** (incl. `requestMidChange`/`confirmMidChange`/`changeover`) · `/api/health` 200 · login for all 5 roles + `/api/me` role match · RBAC negatives (401 unauthenticated; 403 for qa/tech on `/api/users`, tech on `/api/users/technicians`) · headless page sweep of Supervisor/Technician/Admin/QA-QC/Director at 1280×900 (no console errors, no horizontal overflow, Material Symbols font loaded) · Assign Technician roster verified live: opens inside the modal, internal scroll, name/@username/status rows, selection enables Assign (screenshot), ASSIGNED rows amber-badged + click-rejected (verified via browser-side response interception — DB untouched), globally-disabled roster (panel already assigned) shows amber notice and inert rows.
+- **Fix (design-system.css):** `.tech-select-option:disabled` added beside `.is-disabled` — a globally disabled roster (schedule missing / panel already assigned) previously rendered rows that looked interactive; now they dim like per-row disabled entries. (Assigned rows inside the Assign Technician modal keep their deliberate full-opacity amber styling via the existing `.assign-technician-modal-body` override.)
+- **Findings (no code defect):** demo-accounts file lists deactivated `director1` first for `ops_director`, so `accountForRole('ops_director')` index 0 gets 401 — use index 1 (`ops_director1`) or reorder the local file; technician "Mid Change" button is correctly disabled until a panel is `in_progress` (tooltip explains); panel `=H001` now has a live assignment (created during today's testing), so the Assign popup correctly blocks re-assignment with the amber notice.
+
+## 2026-07-15 — UI — Technician dropdown opens downward inside the Assign Technician popup (custom in-modal listbox)
+
+User request (with screenshot): in the Technician Workflow popup on the Production Supervisor page, the technician dropdown opened upward/outside the modal (native `<select>` popup is OS-drawn and unstylable). It must open downward inside the popup with internal scroll, show Name + Username + status per entry with a circular status badge (green AVAILABLE / amber ASSIGNED), keep assigned technicians visible but disabled, and stay clean/compact/responsive.
+
+- **New reusable component** `src/components/assignment/TechnicianSelect.tsx`: accessible custom listbox (combobox trigger + `role="listbox"` menu) replacing the native `<select>`. Menu is absolutely positioned `top: calc(100% + 6px)` inside the dialog — always opens downward, `max-height: min(15rem, 42vh)` with internal `overflow-y: auto`, auto-`scrollIntoView` on open so it stays visible in the modal body. Rows show **full name** (bold) + **@username** (mono, muted) + status pill with dot: green "Available" (selectable) / amber "Assigned" (`aria-disabled`, dimmed, not clickable). Available technicians sort first. Keyboard: Enter/Space/Arrows open + navigate (skipping disabled), Enter selects, Escape closes only the menu (stopPropagation so the modal stays open), click-outside closes. Trigger mirrors `form-select` styling (40px, leading User icon, focus ring, chevron rotates).
+- **Wired into** `PanelAssignmentModal.tsx` (the supervisor "Assign Technician" workflow popup) — replaced the native `field-with-icon`+`select` block; selection state, `assignedTechnicianIds`/`availability_status` disable logic, and error clearing unchanged.
+- **CSS** in `design-system.css`: `.tech-select*` block (trigger/menu/option/status/dot) next to `.field-with-icon`.
+- **Verify:** `tsc -b` clean; `vite build` green (6.55s); headless Chrome opened the Workflow popup and the dropdown — geometry probe confirmed `opensDownward:true`, `insideModalX:true`, `menuScrollable:true`, 29 rows; screenshot shows name/@username/green-dot AVAILABLE pills and highlighted active row. (No technician was in ASSIGNED state in dev DB at test time, so the amber path was verified by code/CSS review only.)
+- **Note:** committed by the concurrently-running session as `eaf9023` (“replace technician select with in-modal dropdown”) — same shared-worktree sweeping behavior as earlier today. `TechnicianSelect` is reusable for the Technician Dashboard's Mid Change replacement picker if wanted.
+
+## 2026-07-15 — UI — Consistent modern icons + compact density across all popups/data-entry fields
+
+User request: apply the New-Project modal's modern design consistently to every popup and data-entry field — reduce spacing, improve alignment, resize appropriately, and add relevant modern leading icons to titles, inputs, dropdowns, date/upload/alert controls, and action buttons, keeping one icon style/size/placement, clean and uncluttered.
+
+- **Shared Modal title-icon slot** (`Modal.tsx`): new optional `icon`/`iconTone` props render a tinted rounded chip beside the title. `iconTone` = `primary`|`danger`|`warning`|`success` (blue/red/amber/green). Backward-compatible — modals without `icon` are unchanged.
+- **Reusable leading-icon shell** (`design-system.css`): `.field-with-icon` + `.field-lead-icon` (18px, slate-400, 12px inset; `--top` variant pins the icon to the first line for textareas). Any raw `input`/`select`/`textarea` wrapped in it gets a consistent leading icon and 38px left padding — mirrors the `TabletFields` `InputField` look already used by New Project. New `.modal-title-icon` chip styles (34px, tone variants, container-enforced 20px glyph). Added named icons `Mail/AtSign/IdCard/Type` in `named-icons.tsx`.
+- **Icons applied across ~35 popups** — title chips on every dialog (semantic tone: delete/reset → danger, pause/rework/reset-password → warning, verify → success); leading icons on every text/select/date/textarea field; leading icon on primary action buttons; upload/QR/search controls already iconized were left intact. Shared components propagate widely: `AppDialogProvider` (confirm/alert/prompt now use a tone chip in the header + prompt-field icon), `DeleteConfirmModal` (danger chip → all delete flows), `ProjectPanelSelect` (project/panel dropdown icons), `TabletFields`.
+- **Files:** `Modal.tsx`, `AppDialogProvider.tsx`, `DeleteConfirmModal.tsx`, `ProjectPanelSelect.tsx`, `icons/named-icons.tsx`, `styles/design-system.css`, plus per-modal edits in supervisor (`ProjectsTab`, `AssignTechnicianModal`, `PanelAssignmentModal`, `MidChangeoverModal`, `SmartAssignmentCenter`, `Unified/PanelDrawing/PdfDrawing/Drawings/Frames/Assignment/Review/PendingApprovals`, `ReviewApprovalWorkspace`, `PanelWiringView/PanelDrawingView/ProjectPdfPreview/PanelGaDrawing`), admin (`UserMgmtTab`, `UsersTab`, `HardReset/HardResetDb/DeleteProject/ResetAllProjects`), technician (`Pause/SubmitReport/AssignmentAck/ColumnPrefs/EnrollBiometric/QrScannerOverlay/GaDrawingView`), profile/auth (`MyProfileModal`, `ProductionBootstrapModal`), qaqc `HistoryTab`, director `SummaryReportTab`, `ReportPreviewModal`, `VerificationModal`.
+- **Compact density** was already applied at the CSS layer earlier in the day (tighter modal padding/max-widths, 40px fields) and auto-applies to every `.modal-box*`; this pass adds the icon layer and propagates the density to previously-untouched popups.
+- **Verify:** `tsc -b` typecheck clean; `vite build` green (exit 0, 5.87s); headless Chrome (`:5175`) confirmed title-icon chips render (New Project = kanban chip, Add User = person-add chip + Create-User button icon) and modals are compact/aligned/uncluttered. Field leading-icons use the established slate-400 styling to match the New-Project reference exactly.
+- **Note:** committed to `migration/fastify-perf-ios` alongside a concurrently-running session's work (that session `git add -A`-committed these edits together with its own; it also independently rewrote `PanelAssignmentModal` and added `TechnicianMidChangeModal`, both already using the new `icon` prop). No conflicts; build green.
+
+## 2026-07-15 — UI — Global top header: remove Project card, slightly taller bar
+
+User request (`DWES_TOP_HEADER_UPDATE_15_JULY_2026.md`): remove the Project / Active-Project card from the global top header (project selection stays only in the Production Supervisor workspace) and give the header a little more vertical breathing room, keeping the dark design, auth controls, responsiveness, and live clock unchanged.
+
+- **Project pill removed** (`Topbar.tsx`): deleted the `topbar-project-pill` block (icon + "Project" label + value that showed `No Project Available` / `Selection Required` / active code / live-wiring state). Removed its now-unused imports/locals (`FolderKanban`, `useLiveWiringStore`, `liveWiring`, `isTechLive`) and stopped destructuring the pill-only props. The remaining right-hand controls (user card, biometric button, logout, clock) stay flush-right via the existing `.topbar-controls` `justify-end`/`ml-auto` — no gap is left. `TopbarProps` still declares the project props and `AppShell` still passes them (AppShell's project-context reconciliation keeps the selection store clean for the Supervisor workspace); the header just no longer renders them. Project selection remains solely in the Supervisor **Projects** tab.
+- **Noticeably taller header** (`design-system.css`): `.topbar` vertical padding doubled `0.625rem → 1.25rem` (base) and `0.75rem → 1.5rem` (≥1024px); pre-hydration `--dash-topbar-height` fallback bumped `4rem → 5.5rem` / `4.5rem → 6rem` to match (runtime value is still measured by AppShell's ResizeObserver). Height now ~88px tablet / ~100px desktop. Controls remain vertically centered (`items-center`). No color, control, clock, or responsive-breakpoint changes.
+- **Scope:** the header is a single shared component (`AppShell` → `Topbar`, used by every authenticated role via `DashboardShell`), so the change applies uniformly across all role pages. Login page has its own layout and is unaffected.
+- **Verify:** `tsc -b` typecheck clean; `oxlint` clean; live Vite dev server (`:5175`) confirmed serving the updated module (0 `topbar-project-pill` / `No Project Available` occurrences) and the new padding; app loads with no console errors. Visual confirmation of the authenticated header is via an in-app refresh (header renders only when signed in).
+
+## 2026-07-15 — Data/Cleanup — Complete project-data reset; demo project seeding removed; project delete is now a hard delete
+
+User request (`DWES_COMPLETE_PROJECT_DATA_RESET_15_JULY_2026.md`): permanently delete all existing project data (preserving users, auth, RBAC, settings, schema, and the Fastify migration) and stop demo/legacy seed logic from recreating old projects after restart.
+
+- **Data deleted (via the app's own `POST /api/admin/reset-all-projects` flow, system_admin + confirm phrase):** all 5 canonical seed projects (`DEWA_Project_001/002`, `SEWA_Project_001`, `HITACHI_Project_001`, `FEWA_Project_001`). Dependent tables were already empty (0 assignments/inspections/file-hashes/audit rows; no project-scoped session logs; `backend/uploads` had no project folders). Preserved: 39 user accounts, login history, WebAuthn store, system settings, schema. Backups: `backend/uploads/backups/PROJECT_RESET_2026-07-15_09-13-11.dump` (manual pg_dump) + `RESET_ALL_2026-07-15T05-15-31.dump`/`RESET_ALL_2026-07-15T05-15-31/` (reset flow's own backup).
+- **Startup seeding removed** (`main.ts`): the `CANONICAL_SEED_PROJECTS` import loop is gone; `backend/src/common/seed-projects.ts` deleted. Projects are only ever created by a supervisor in the app. User seeding (empty-users bootstrap) is untouched.
+- **Dev hard-reset no longer reseeds projects** (`dev.service.ts`): after `HARD RESET DB` the projects table stays empty; response reports `reseeded: 0` and `HardResetDbTab.tsx` copy updated to match.
+- **Behavior change — permanent project delete is now a true hard delete** (`project-delete.util.ts`): the database tombstone (`is_active:false, project_state:'deleted'`) existed solely to stop startup seeds resurrecting deleted codes; with seeding removed the row is deleted outright, so a deleted project numbering becomes available for reuse (`codeAvailability` doc/message updated in `projects.service.ts`, comment in `ProjectsTab.tsx`). Panel tombstones (`file_hashes` `panel_deleted` rows) keep working unchanged for stale-file protection.
+- **Verify:** BE + FE builds green; `deletion-consistency.test.cjs` updated for hard delete, 5/5 pass. Live sweep as `prod_supervisor`: login OK → project list `[]` (empty state) → `DEWA_PROJECT_001` numbering available again → created `TEST_RESET_VERIFY_001` with 1 panel → permanently deleted it (`project_row=1`, uploads folder removed) → list `[]` and numbering free again. Backend killed and respawned by the dev runner: **0 projects after restart — nothing reseeds.** DB check: 0 rows in `projects`/`tech_assignments`/`panel_inspections`/`file_hashes`/`tech_audit_log`; 39 users intact; frontend :5175 → 200.
+
+## 2026-07-14 — UI — System Administrator dashboard: status only in Settings; sectioned Settings layout
+
+User request: User Management must contain only user-management functions; all system-status information lives only in System Settings; reorganize Settings into clearly separated sections.
+
+- **Shell KPI row removed** (`AdminDashboard.tsx`): the six diagnostics tiles (Uptime, Heap, Users, Projects, Assignments, Errors) rendered above *both* tabs, duplicating DiagnosticsTab and putting system status on the User Management page. The shell no longer fetches diagnostics at all; header, tabs, badge, and routing unchanged. DiagnosticsTab in Settings remains the single status surface (with its own Refresh/DB Ping/Clear Error Buffer actions).
+- **System Settings sectioned** (`AdminSettingsPage.tsx`): unlabeled bento grid → four labeled sections with icon headers: **System Overview** (DiagnosticsTab) → **Configuration** (Deployment Mode + DB Config side-by-side) → **Synchronization** (SyncTab) → **Danger Zone** (Delete Project + Hard Reset DB, red-accented heading). Tabs that draw their own cards are no longer wrapped in an extra `.dash-module`, removing the card-in-card nesting. Every tab component's internals, endpoints, confirmations, and RBAC are untouched.
+- **User Management unchanged** — already a pure user module (search, role/status filters, sticky-header table, role/status badges, row actions, modal popups for details/edit/reset password/change role/delete/add). Verified it contains zero status cards after the shell change.
+- **CSS** (`index.css` admin block only): removed dead `.admin-dashboard-hero + .dashboard-kpis` and `.admin-settings-grid` rules; added `.admin-settings-page/-section/-section-head/-ico/-duo` (danger variant included). Shared `design-system.css`/`themes.css` untouched. Orphan note: `tabs/HardResetTab.tsx` and `tabs/ResetAllProjectsTab.tsx` were already unrouted before this change and remain so.
+- **Verify:** FE `tsc` clean; production build green; live headless sweep at 1440/768/390 on `/admin/users` + `/admin/settings`: 0 KPI/status cards on User Management, all four Settings sections present, 39-row user table with sticky header, Add User modal opens, no horizontal body scroll at any width. Backend tests 80/80.
+- **Same-day environment note (not a code change):** local dev `WiringSchemeDB` reset to zero operational data at user request — all projects/assignments/inspections/audit/session/file-hash rows and `backend/uploads` cleared; 39 user accounts preserved; sysadmin login re-verified; approved 2026-07 perf indexes applied (schema.prisma diff is index-only); backups: `Backup/2026-07-14_19-53/` (full snapshot incl. uploads) + `backend/backups/pre-reset_20260714_195447/` (pre-wipe pg_dump). WebAuthn passkeys were cleared by the reset flow — users re-enroll biometrics on next login.
+
+## 2026-07-14 — Security/Hardening — Block private files over HTTP; make SSE proxy-safe; document ops constraints
+
+Verification of the login / project-management / wiring-upload / live-sync work surfaced one real leak and two operational gaps, all fixed here.
+
+- **Security (real leak, fixed):** the Vite dev/preview server serves any file under the project root, so `backend/seeds/demo-accounts.local.json` (plaintext demo passwords) and `backend/.env` were reachable over HTTP (`GET /backend/seeds/demo-accounts.local.json` → 200). Added `server.fs.deny` in `vite.config.ts` covering demo `*.local.json`, `.env*`, `certs/**`, `*.pem`/`*.key`, `uploads/**`, `backups/**`, `*.sqlite`, and `backend/data/**`. Both now return **403**. (`preview` serves only built `dist/`, which never contains these, so the guard is dev-server only.)
+- **SSE proxy-safety (risk #1, now self-defending):** `/api/events/stream` sets `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform` from the backend, so a buffering proxy no longer silently delays live updates even where the operator did not add the nginx `proxy_buffering off` block (that block already exists in `infra/nginx/conf.d/dwes.conf`). Verified: first SSE frame arrives in 0 ms; headers present.
+- **Docs:** new `docs/LIVE-UPDATES.md` records the two live-update operational constraints for deployers — (1) reverse proxies must not buffer `/api/events/stream` (with the exact requirements and a `curl -N` check), and (2) the event bus is in-process, so **run one backend instance**; horizontal scaling requires Postgres `LISTEN/NOTIFY` or Redis Pub/Sub at the single `EventsService.publish()` touch point.
+- **Verify:** FE `tsc` + BE `tsc` clean; backend tests 72/72; state 4/4; oxlint 39 (pre-existing). Full requirement sweep **49/49** on a throwaway project: secure demo file present + private + not served + no API exposure; five roles authenticate and RBAC holds; project numbering is the sole identifier with duplicate rejected before save; wiring schedule verifies on upload then shows only a compact re-upload status; SSE hardened + role-filtered; login shows Install App and no demo section; PWA manifest is standalone with a served service worker; supervisor actions are the four compact controls with Delete Project inside Edit; New Project popup gates Add Panel behind Name+Client, overlay has no System Type, and shows only the final project name.
+- **Not fixed (unchanged, as instructed):** the demo file's own passwords do not all match the already-seeded database (4/8 differ) — that is the maintainer's private reference to reconcile, not something to guess; and the wiring-parser first-row bug still needs a genuine ENOWA schedule to fix safely.
+
+## 2026-07-14 — Feature — Silent live sync: no flashing, no lost selection, role-filtered SSE
+
+Completes the live-update requirement. The SSE channel existed, but every screen still *reloaded* on each event: the shared loaders called `setLoading(true)` and blanked their lists, and `ProjectsTab.load()` additionally cleared the selected project and panel. So an event (or the 45 s poll) produced a visible flash and dropped the user's selection.
+
+- **Silent refresh is now the default for every automatic update.** `useDwesRefresh` dispatches `{ silent: true }` for server events, the fallback poll, and tab focus. A silent loader never shows a spinner, never blanks a list, never resets a selection, and keeps the last good data if the request fails — it swaps data in place. Applied to all ~20 loaders (supervisor, technician, director, QA/QC, admin, review workspace, assignment modal, report preview).
+- **Selection, popups, and form data are preserved.** `ProjectsTab` adopts refreshed project metadata in place instead of re-selecting (which was resetting the panel dropdown on every refetch); `InspectionFormTab` no longer re-seeds check/note/issue fields on a background refresh (it was silently discarding an inspection being typed); `TechnicianDashboard` keeps the open panel and wiring view; `QAQCDashboard` no longer zeroes its KPI tiles.
+- **A remote panel change now lands.** `ProjectsTab` silently reloads the panel list on a frames event for the selected project — previously a panel added by another supervisor never appeared.
+- **Polling is a fallback only.** New `useLiveConnection` store tracks the stream; while SSE is connected the interval poll is disabled entirely (measured: 0 project-list calls in 9 s). It resumes automatically if the stream drops.
+- **Per-tab echo suppression (`X-DWES-Client-Id`).** Mutations are tagged with the originating browser tab; that tab skips its own echo (it already refreshed locally) while every other client applies it. Keying this on the *user* — the first attempt — was wrong: the same person on a tablet and a desktop would have ignored their own other device. Caught in testing.
+- **Role-based event filtering (`event-visibility.ts`).** The stream no longer widens REST authorization: a technician receives only assignment events plus changes to panels they are currently assigned to; QA/QC receives panel/project/assignment/inspection scopes; supervisor/admin/director observe everything. Verified: a technician receives nothing about a project they are not assigned to.
+- **Verify:** FE `tsc` + build clean; BE `tsc` clean; backend 66/66; state 4/4; oxlint 39 (all pre-existing). Live sync smoke **19/19** — SSE auth-gated, role-filtered, heartbeat alive, per-tab origin tagging; and with a second user changing data: **no navigation, no spinner, no blanked project/panel list, selected project + panel preserved, open popup and typed form data preserved, another user's new panel appears without a reload, no polling while connected.** Feature smoke re-run 32/32 (no regression).
+
+## 2026-07-14 — Feature — Login hardening, PWA install, project management + wiring-upload rework, live sync
+
+- **Login (production-ready):** removed every demo element — demo-account picker, seeded usernames/passwords, auto-fill, and `src/data/demoCredentials.ts` (which bundled `backend/seeds/accounts.seed.json` passwords into the frontend). Also removed the two backend endpoints that served them: `GET /api/login-hints` (**returned plaintext passwords over the API**) and `GET /api/auth/demo-users`. Login now shows only username, password, visibility toggle, sign-in, install, biometric (when enrolled), and a support note stating accounts are issued by the System Administrator.
+- **PWA install:** `InstallAppButton` now also covers browsers that never fire `beforeinstallprompt` (iOS Safari, Firefox) with an "Add to Home Screen" hint, hides itself when already installed or running standalone, and is styled as a first-class login action.
+- **Admin user reference:** new `docs/ADMIN-USER-REFERENCE.md` — approved user list, roles/permissions matrix, account lifecycle, and security rules. **Contains no passwords**; resets go through the Admin → User Management workflow.
+- **Project Information (Supervisor):** replaced 6 mixed buttons (including a duplicate drawing button and a standalone destructive Delete) with 4 compact actions — **Add Panel · Digital Wiring View · Drawing View · Edit**. Edit is now a menu holding *Edit project information*, *Edit panel information*, *Remove panel*, and *Delete Project Permanently* (unchanged confirmation checkbox, warning, permissions, tombstone rules).
+- **New Project popup:** project-first workflow. Name + Client are required before **Add Panel** unlocks; Add Panel opens a small overlay asking only for **Panel Name / Panel Type / Voltage Level** (System Type removed); pending panels show in a compact list with Edit/Remove (removal never touches saved projects); Location/Region, Month/Year, and Project Numbering follow; the bottom shows only the **final project name** — the redundant second code identifier preview is gone (the code is still computed internally as the DB key).
+- **Project numbering uniqueness:** new `GET /api/projects/code-available/:code` (supervisor-only) checks the numbering live in the form. Because deleted projects are tombstoned rather than removed, a number stays permanently reserved for active, deleted, archived, and tombstoned projects; create remains authoritative (409).
+- **Wiring schedule:** the Excel preview/column-mapping/Full View flow is unchanged **during** upload and verification. After upload the Project Information card shows only a compact status strip — uploaded state, file name, cable count, upload/replacement date, and a small **Re-upload Wiring Schedule** button that opens a replace-confirmation popup first. `verify-data` now returns `uploaded_at` to drive it. Replacement remains fail-safe: all parsing/validation happens before any write, so a failed upload leaves the previous schedule untouched (verified).
+- **Live data sync (silent, cross-user):** new `backend/src/events/` module — one `APP_INTERCEPTOR` publishes a scoped change event after every *successful* mutating request (no per-service edits), streamed over SSE at `GET /api/events/stream` with a heartbeat. New `useServerEvents` hook (subscribed once in `AppShell`) consumes it via `fetch` streaming so the JWT stays in the Authorization header rather than the URL, and translates each event into the existing in-app event bus. Result: another user's change silently refreshes only the affected project/panel/row — no page reload, no flashing, no lost selection/scroll/form state. Reconnects with backoff; the existing background poll remains the fallback.
+- **Verify:** FE `tsc -b` + `vite build` clean; BE `tsc --noEmit` clean; backend tests 66/66; state-consistency 4/4; oxlint 39 warnings (all pre-existing, none in changed files); live smoke **32/32** on a throwaway project (demo endpoints 404, numbering availability + permanent reservation, compact actions, Edit menu, compact wiring status, re-upload confirmation, failed-replacement retention, Add Panel gating and overlay, no console/API errors).
+- **Found, NOT changed — pre-existing wiring-parser bug (needs a real ENOWA schedule to fix safely):** `isSubHeaderRow`/`looksLikeHeaderLabel` in `backend/src/upload/excel-headers.ts` classifies any short text cell as a header label, so a first data row with two device-name cells is misread as a sub-header and **silently dropped** (reproduced: 5 data rows → 4 cables, first ferrule missing). Untouched here because the heuristic exists for real merged-header schedules; changing it blind risks breaking production imports.
+
+## 2026-07-14 — Quality — Review/fix/simplify pass over the current refactor (pre-commit)
+
+- **Bugs fixed:** 3 un-awaited `this.svc.findOne(...)` calls in `frames.controller.ts` (panel drawing package/slot-file/download routes) — the async existence check was a floating promise, so a missing/deleted panel produced an unhandled rejection instead of a 404 and the handler kept executing; `panelDrawingAssetDownload` made properly `async`.
+- **Duplicate business rules removed:** 9 inline copies of the wiring KPI formula in `tech/qaqc/supervisor` services replaced with the existing shared `wiringKpiPercent` (identical math); 3 local `parseCS` duplicates (`supervisor`, `qaqc`, `projects` services) replaced with shared `parseCableStatus` (tech.service keeps its variant — it normalises `issue`); duplicated inline-SVG safety regex extracted to new `backend/src/common/safe-svg.util.ts` and reused by `upload.service.ts` + `drawing-preview-converter.ts`.
+- **React correctness:** `useLatestRequest` now returns a memoized stable object; ~29 effect/callback dependency arrays across 15 files switched from `requests.begin/isLatest/cancel` members to the stable `requests` object (removes all exhaustive-deps warnings for the pattern); `PdfDocumentViewer` render effect declares `rotation`; `AppShell` validation callback declares `user?.role`; `ProjectsTab` `emptyForm` hoisted to module scope and `resetCreateForm` memoized.
+- **Dead code / lint:** unused `normalize` (frames.service), unused `codes` (dev.service), unused `XLSX` import (supervisor.service) removed; useless regex escapes fixed in frames.service, frame-store, schedule-compare, upload.service, wiring-document.service.
+- **Test alignment:** `drawing-package.service.test.cjs` now awaits the async download controller route.
+- **Verify:** frontend `tsc -b` clean, `vite build` clean, backend `tsc --noEmit` clean, backend tests 66/66 pass, state-consistency tests 4/4 pass, oxlint warnings reduced ~60 → 39 (remainder pre-existing/out-of-scope). No behavior, schema, API-contract, or permission changes.
+- **Live smoke (2026-07-14, pre-commit):** 53/53 API checks + 24/24 browser checks on a throwaway project (drawing package upload/permissions/stream/download, 2D→3D convert → insufficient-info recovery → Enter-Dimensions regenerate → approve, technician assigned/unassigned/unapproved restrictions, assign / remove-before-start / auto-start lock / mid-changeover carry-over, panel + project deletion tombstones incl. code reservation, GA modal open/zoom/rotate/download/close, no console or API errors, no layout overflow at desktop/tablet). Throwaway data removed; smoke technician accounts left deactivated (session logs prevent hard delete).
+- **Deferred (future performance task):** dynamic `import()` of the heavy 3D viewer libraries (three.js / web-ifc / occt-import-js via `EngineeringModelViewer`) to remove the >500 kB main-chunk warning. Intentionally NOT in this change.
+
+## 2026-07-13 — Feature — 2D Drawing → 3D Panel Model conversion (generic, per-Project/per-Panel)
+
+- **Scope (new):** `backend/src/panel-model/{panel-model.service,panel-model-store,glb-builder,drawing-extract,pdf-text}.ts`, `backend/src/common/file-store.util.ts`, `backend/test/panel-model.test.cjs`, `src/types/panelModel.ts`. **(extended):** `backend/src/data/mock-store.ts` (PanelGeneratedModel types + cache), `backend/src/frames/frame-store.ts` (boot-load hook), `backend/src/frames/frames.controller.ts` (+5 routes), `frames.module.ts` (provider), `backend/src/upload/upload.service.ts` (supersede-on-new-2D-revision hook), `src/services/api.ts` (+5 calls), `src/components/ui/PanelGaDrawingModal.tsx` (tabs: Original 2D / Generated 3D View / Uploaded 3D / Revisions / Side-by-Side Verify), `src/index.css` (pm-* styles).
+- **Behavior:** Supervisor generates a browser-compatible **GLB** per panel from that panel's own 2D drawings only (Project → Panel → Drawing package boundary; package-revision optimistic-lock on convert/approve; 409 on stale). Pipeline statuses per panel: Drawing Uploaded → Analysing → Extracting Dimensions → Identifying Components → Generating 3D Model → Verification Required → Approved / Conversion Failed / Superseded by New Revision — persisted with a full per-panel audit (sources + SHA-256, package revision, converted/verified by, timestamps, extraction confidence, placeholder list).
+- **Honesty gates:** dependency-free PDF text extraction (zlib inflate + Tj/TJ scan) feeds deterministic dimension/apparatus extraction; when no dimension is found the conversion FAILS with the explicit "Insufficient GA, dimensional or internal-layout information…" message instead of inventing geometry; any assumed value renders in a translucent amber placeholder material, is listed, and forces Verification Required. Supervisor corrects (dims/doors/plates/troughs/terminal rows/components) → regenerate → approve. New 2D drawing revisions supersede models (read-only history kept; approval audit preserved).
+- **Security:** routes mirror the drawing-package audience (`prod_supervisor` + assigned `wiring_technician`); technicians see/stream **approved models only**; per-request re-validation of project/panel/model ownership (cross-project access 404s); GLB served `Cache-Control: private, no-store` + ETag; frontend hard-resets all modal state when the active Project/Panel changes.
+- **No new dependencies; no DB schema changes** — models live as files under `uploads/<code>/models/<frameId>/` (per data rules: frames/drawings/models are files, not rows).
+- **Verify:** backend + frontend builds clean; **59/59 backend tests pass** (10 new: GLB validity/determinism, extractor, PDF text, lifecycle incl. technician approved-only access, insufficient-info recovery, supersede, cross-project isolation); **31/31 live E2E checks passed** against an isolated running instance (port 3199, temp UPLOAD_DIR, throwaway project driven through upload→convert→correct→approve→technician access→supersede, then fully cleaned up: assignment deleted, project hard-deleted → 404). Live browser/UI pass not yet run — flagged as follow-up.
+- **DB guard:** app-endpoint writes only on a throwaway project (net-zero: hard-deleted); no schema/DDL; real `backend/uploads/` untouched (isolated temp dir).
+
+## 2026-07-13 — Deploy — Provider-neutral hosting assessment (docs only, approval gate open)
+
+- **Scope:** new `docs/hosting/` (15 deliverables: requirements, provider comparison, free-tier verification, recommended architecture, security audit + implementation plan, deployment/DNS/DB/file-storage/backup/incident/billing/provider-migration/final-checklist docs). No code, infra, DNS, or data changes; nothing provisioned.
+- Oracle Cloud signup remains blocked for the user → re-assessed hosting provider-neutrally against measured requirements (DB 9.5 MB on PG 18.3; live uploads ≈17 MB, 50 MB/file cap; no queues/websockets/cron; 3 persistent mounts incl. `dwes_auth.sqlite`). 16 providers verified against official pricing (2026-07-13).
+- **Verdict:** free tiers cannot host DWES production (no free always-on compute with persistent disk anywhere; Render free PG expires 30 d; AWS "free" auto-closes at 6 mo). **Recommendation: Option C** — Cloudflare Pages (free) + Railway API w/ volumes (~$5–7/mo) + Neon Postgres 18 (free) + R2 backups (free); Option B is its $0 pilot rehearsal; OCI Always Free stays the $0 fallback if signup ever succeeds.
+- Security gaps documented for pre-go-live fix (G1–G10 in `docs/hosting/SECURITY_AUDIT.md`), incl. missing ValidationPipe/DTOs, unscoped `GET /api/projects*`, CSP off, and `dwes_auth.sqlite` absent from both backup systems.
+- **Restore point:** docs-only additions on branch `change/complete-current-pass-2026-07-12`; awaiting user approval at Gate 0 (`docs/hosting/FINAL_DEPLOYMENT_CHECKLIST.md`).
+
+## 2026-07-12 — Supervisor — Unified technician assignment status indicators
+
+- Replaced the visible `Available` label with an accessible 16 px green indicator and standardized assignment-resource states as yellow **Assigned**, blue **Working**, and red **Busy**.
+- Centralized status derivation in `assignmentCenterUtils.ts` and rendering in `TechnicianStatusIndicator.tsx`; both the compact Panel Assignment modal and Smart Assignment Center now share the same semantics and presentation.
+- Enforced the three-action workflow in the backend: one active technician per panel, removal only for original pre-start assignments, atomic mid-changeover with linked history and preserved cable progress/time, and no Reassign wording.
+- Verified production build, typecheck, lint (existing warnings only), 31 backend tests, and live desktop/tablet popup layout with no horizontal overflow or application console errors.
+- Restore branch: `change/complete-current-pass-2026-07-12` from `main` at `5401763`.
 
 ## 2026-07-12 — Supervisor — Digital Wiring Monitor converted-view-only + compact Panel Assignment modal (interlocked)
 
@@ -177,7 +1667,7 @@ Format: `YYYY-MM-DD` ? prompt/source ? summary ? files ? restore point ? flags
 
 - **Problem:** After reboot, Vite on `:5175` could run while Nest on `:3001` was dead or had drifted to `:3002+`; demo `@sysadmin` login showed "Can't reach the server" (502 via stale proxy).
 - **Fix:** `launch-dwes.mjs` frees stale `:3001` before starting backend and health-checks runtime port from `backend/.dwes-port`; Vite `/api` proxy uses dynamic `router()` to re-read that file; dev launcher sets `DWES_MODE=dev` → Nest binds `:3001` only (no port scan).
-- **Verify:** Backend restarted; `POST /api/auth/login` (`sysadmin`/`admin123`) via `:5175` proxy → OK.
+- **Verify:** Backend restarted; `POST /api/auth/login` with the private local administrator account via `:5175` proxy → OK.
 - **Files:** `scripts/launch-dwes.mjs`, `vite.config.ts`, `backend/src/main.ts`, `CHANGELOG.md`
 
 ## 2026-07-09 — Verify — Pass 2 multi-project + panel switch smoke (17/17)
@@ -2286,3 +3776,30 @@ pm run build exit 0 (frontend dist/ regenerated by build).
 - **Files:** See prompts 4/5 entry (overlapping files)
 - **Restore point:** _(pending git)_
 - **Flags:** GA drawing modal is stub only.
+
+---
+
+## 2026-07-18 — Polish — Technician DWS Header Polish
+
+- **Source:** User Query
+- **Summary:** Restored live Project Name — Panel Name in upper assignment header. Removed duplicate project and panel name displays inside the Digital Wiring Schedule card to keep only the "DIGITAL WIRING SCHEDULE" label.
+- **Files:** `src/pages/technician/TechnicianDashboard.tsx`, `src/components/technician/wiring/WiringWorkstation.tsx`
+- **Verify:** `npm run build` exits 0.
+
+---
+
+## 2026-07-18 — Polish — Technician DWS Centered Live Progress
+
+- **Source:** User Query
+- **Summary:** Displayed the live overall completed/total cable progress counter centered in the Digital Wiring Schedule header (`dwf-exec-toolbar`) in a large, bold, absolute positioned layout. Grouped zoom and Full Wiring View buttons on the left, and removed the duplicate current-cable counter from the right.
+- **Files:** `src/components/technician/wiring/DigitalWiringFrame.tsx`
+- **Verify:** `npm run build` exits 0.
+
+---
+
+## 2026-07-18 — Feature — Technician Single-Wire Action Buttons
+
+- **Source:** User Query
+- **Summary:** Renamed "Next / Complete Wire" to "SKIP" and consolidated "Source End Open" and "Destination End Open" into a single "OPEN END" button, recording the event to reports.
+- **Files:** `src/components/technician/wiring/WiringWorkstation.tsx`
+- **Verify:** `npm run build` exits 0.

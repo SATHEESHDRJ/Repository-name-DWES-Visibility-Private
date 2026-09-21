@@ -1,0 +1,67 @@
+{
+    "assignment_id":  66,
+    "cable_index":  201,
+    "affected_end":  "BOTH",
+    "operation":  "crimp",
+    "changed":  true,
+    "crimping":  {
+                     "required":  true,
+                     "source":  {
+                                    "strippingStatus":  "COMPLETED",
+                                    "crimpingStatus":  "REWORK_REQUIRED",
+                                    "strippedBy":  42,
+                                    "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                    "crimpedBy":  42,
+                                    "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                                    "reworkHistory":  [
+                                                          {
+                                                              "operation":  "crimp",
+                                                              "previousStatus":  "COMPLETED",
+                                                              "reason":  "Browser acceptance rework BOTH",
+                                                              "setBy":  3,
+                                                              "setAt":  "2026-09-18T13:01:23.545Z",
+                                                              "role":  "prod_supervisor"
+                                                          }
+                                                      ]
+                                },
+                     "destination":  {
+                                         "strippingStatus":  "COMPLETED",
+                                         "crimpingStatus":  "REWORK_REQUIRED",
+                                         "strippedBy":  42,
+                                         "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                         "crimpedBy":  42,
+                                         "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                                         "reworkHistory":  [
+                                                               {
+                                                                   "operation":  "crimp",
+                                                                   "previousStatus":  "COMPLETED",
+                                                                   "reason":  "Browser acceptance rework BOTH",
+                                                                   "setBy":  3,
+                                                                   "setAt":  "2026-09-18T13:01:23.545Z",
+                                                                   "role":  "prod_supervisor"
+                                                               }
+                                                           ]
+                                     },
+                     "overall":  "REWORK_REQUIRED",
+                     "revision":  5,
+                     "updatedAt":  "2026-09-18T13:01:23.545Z",
+                     "updatedBy":  3,
+                     "cut":  {
+                                 "status":  "COMPLETED",
+                                 "plannedLength":  "3",
+                                 "by":  42,
+                                 "at":  "2026-09-18T13:00:54.769Z"
+                             },
+                     "wireStrip":  {
+                                       "status":  "COMPLETED",
+                                       "by":  42,
+                                       "at":  "2026-09-18T13:00:55.570Z"
+                                   },
+                     "wireCrimp":  {
+                                       "status":  "COMPLETED",
+                                       "by":  42,
+                                       "at":  "2026-09-18T13:00:57.179Z"
+                                   }
+                 },
+    "ready_for_wiring":  false
+}

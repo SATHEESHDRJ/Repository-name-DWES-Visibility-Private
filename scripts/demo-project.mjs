@@ -1,9 +1,20 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { accountForRole } from './demo-account-loader.mjs';
 
 const API_BASE = process.env.DWES_API_BASE || 'http://127.0.0.1:3001/api';
-const ADMIN_USER = process.env.DWES_ADMIN_USER || 'sysadmin';
-const ADMIN_PASS = process.env.DWES_ADMIN_PASS || 'admin123';
+const configuredAdminUser = process.env.DWES_ADMIN_USER?.trim();
+const configuredAdminPass = process.env.DWES_ADMIN_PASS?.trim();
+if (Boolean(configuredAdminUser) !== Boolean(configuredAdminPass)) {
+  throw new Error('DWES_ADMIN_USER and DWES_ADMIN_PASS must be provided together');
+}
+// Project create/delete routes are @Roles('prod_supervisor') — RolesGuard has
+// no super-role bypass, so a system_admin login gets 403 on both operations.
+const privateAdmin = configuredAdminUser
+  ? { username: configuredAdminUser, password: configuredAdminPass }
+  : accountForRole('prod_supervisor');
+const ADMIN_USER = privateAdmin.username;
+const ADMIN_PASS = privateAdmin.password;
 const TRACK_FILE = path.resolve(process.cwd(), '.demo-project.json');
 
 const forcedCode = process.env.DWES_DEMO_CODE?.trim();
@@ -104,6 +115,8 @@ async function setup() {
     name: 'Demo Project (Isolated Test)',
     description: 'DEMO-ONLY: isolated end-to-end testing project. Safe to remove after QA.',
     sequence: 999,
+    // Project creation requires at least one panel since the numbering refactor.
+    panels: [{ name: '=DEMO01', voltage_level: '415V', panel_type: 'DEMO' }],
   };
 
   const created = await api('/projects', {

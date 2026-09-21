@@ -1,0 +1,13 @@
+﻿{
+    "api":  "/api/tech/my-panels",
+    "username":  "tech2",
+    "cables_total":  653,
+    "project":  "003",
+    "panel":  "SOLAR WADI PV FEEDER-1",
+    "role":  "wiring_technician",
+    "cables_src_done":  15,
+    "assignment_id":  72,
+    "status":  "in_progress",
+    "cables_dst_done":  15,
+    "user_id":  41
+}

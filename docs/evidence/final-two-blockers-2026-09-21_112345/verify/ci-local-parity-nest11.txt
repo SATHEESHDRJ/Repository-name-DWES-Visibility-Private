@@ -1,0 +1,683 @@
+started: 2026-09-21T14:20:52.0390617+04:00
+
+>> npm run typecheck
+
+> dwes@0.0.0 typecheck
+> tsc -b --pretty false
+
+>> npm run lint
+
+> dwes@0.0.0 lint
+> oxlint --quiet --ignore-pattern "Backup/**" --ignore-pattern "ds-bundle/**" --ignore-pattern "_archive/**" --ignore-pattern "_old_src_extract/**" --ignore-pattern "backend/tmp_*" --ignore-pattern "**/tmp_*" --ignore-pattern "uploads/**" --ignore-pattern "docs/evidence/**" --ignore-pattern "backups/**"
+
+>> npm run test:endpoint-v2
+
+> dwes@0.0.0 test:endpoint-v2
+> node --experimental-strip-types --test tests/endpoint-classification-v2.test.ts
+
+Γû╢ parseConnectorTerminal
+  Γ£ö parses X420:2 (2.059ms)
+  Γ£ö parses X420/2 (0.2525ms)
+  Γ£ö parses X51:2 (0.1435ms)
+  Γ£ö returns null for plain pin number (0.1564ms)
+  Γ£ö returns null for non-X-series prefix (0.0891ms)
+Γ£ö parseConnectorTerminal (3.7803ms)
+Γû╢ classifyEndpointV2 ΓÇö fixture rules
+  Γ£ö DEV_TBLK=X87BZ2, TERM=2 ΓåÆ TB_TERMINAL (0.7116ms)
+  Γ£ö DEV_TBLK=87STUB, TERM=X420:2 ΓåÆ EQUIPMENT_CONNECTOR (never standalone TB) (0.2104ms)
+  Γ£ö DEV_TBLK=87STUB, TERM=X420/2 ΓåÆ EQUIPMENT_CONNECTOR (slash variant) (0.1611ms)
+  Γ£ö DEV_TBLK=QDC1, TERM=4 ΓåÆ EQUIPMENT_TERMINAL (0.1544ms)
+  Γ£ö DEV_TBLK=BCPU1, TERM=X51:2 ΓåÆ EQUIPMENT_CONNECTOR (0.4285ms)
+Γ£ö classifyEndpointV2 ΓÇö fixture rules (2.1134ms)
+Γû╢ classifyEndpointV2 ΓÇö provenance
+  Γ£ö TB_TERMINAL provenance has source=schedule_header (0.2196ms)
+  Γ£ö EQUIPMENT_CONNECTOR provenance records connector and pin (0.1045ms)
+  Γ£ö embedded terminal provenance has source=embedded_terminal (0.1309ms)
+Γ£ö classifyEndpointV2 ΓÇö provenance (0.6176ms)
+Γû╢ classifyLiveTbEndpoint (V1) backward-compat
+  Γ£ö X87BZ2 remains TB_GROUP (0.2465ms)
+  Γ£ö 87STUB with X420:2 remains DEVICE_TERMINAL (not TB_GROUP) (0.0835ms)
+  Γ£ö QDC1 remains DEVICE_TERMINAL (0.0499ms)
+Γ£ö classifyLiveTbEndpoint (V1) backward-compat (0.5132ms)
+Γû╢ endpointKindBadgeLabel
+  Γ£ö TB_TERMINAL ΓåÆ "TB TERMINAL" (0.2006ms)
+  Γ£ö EQUIPMENT_CONNECTOR ΓåÆ "EQUIPMENT CONNECTOR" (0.0648ms)
+  Γ£ö EQUIPMENT_TERMINAL ΓåÆ "EQUIPMENT" (0.0453ms)
+  Γ£ö UNKNOWN ΓåÆ "UNKNOWN" (0.0445ms)
+Γ£ö endpointKindBadgeLabel (0.9693ms)
+Γû╢ 2C: Wire 021/D1 fixture (=E01_R1/001)
+  Γ£ö Source 87STUB/X420:2 is EQUIPMENT_CONNECTOR, not TB (0.1538ms)
+  Γ£ö Destination QDC1/4 is EQUIPMENT_TERMINAL (0.0968ms)
+  Γ£ö resolveLiveTbWireEnds: Wire 021/D1 ΓÇö neither end is physical TB (0.5639ms)
+  Γ£ö resolveLiveTbWireEnds: V2 provenance is populated (0.1539ms)
+Γ£ö 2C: Wire 021/D1 fixture (=E01_R1/001) (1.0911ms)
+Γû╢ classifyEndpointV2 ΓÇö edge cases
+  Γ£ö empty header + empty terminal ΓåÆ UNKNOWN (0.106ms)
+  Γ£ö equipment with no terminal ΓåÆ UNKNOWN (0.0739ms)
+  Γ£ö empty header + embedded X5A:3 ΓåÆ TB_TERMINAL (TB-only row) (0.0688ms)
+  Γ£ö isPhysicalTbHeader does not match non-X equipment tags (0.0471ms)
+  Γ£ö isPhysicalTbHeader matches X-series TB headers (0.1333ms)
+Γ£ö classifyEndpointV2 ΓÇö edge cases (0.5556ms)
+Γä╣ tests 29
+Γä╣ suites 7
+Γä╣ pass 29
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 193.7134
+
+>> npm run test:state
+
+> dwes@0.0.0 test:state
+> node --experimental-strip-types --test tests/state-consistency.test.ts
+
+Γ£ö a stale response cannot restore a record after a newer request (1.3288ms)
+Γ£ö deletion invalidation blocks an in-flight response before refetch (0.1988ms)
+Γ£ö navigation, refresh, and multiple logged-in roles select only currently valid projects (0.1562ms)
+Γ£ö project and panel deletion purge assignment and workflow records independently (0.1813ms)
+Γä╣ tests 4
+Γä╣ suites 0
+Γä╣ pass 4
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 137.6432
+
+>> npm run test:pwa
+
+> dwes@0.0.0 test:pwa
+> node --test tests/pwa-install.test.mjs
+
+Γ£ö PWA manifest keeps the DWES standalone identity and valid icons (6.4375ms)
+Γ£ö service worker uses network-first HTML and caches hashed build assets (1.3357ms)
+Γ£ö frontend registers the root-scoped worker without HTTP-caching its script (1.5956ms)
+Γä╣ tests 3
+Γä╣ suites 0
+Γä╣ pass 3
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 158.1176
+
+>> npm run build
+
+> dwes@0.0.0 build
+> tsc -b && vite build
+
+vite v8.1.0 building client environment for production...
+[2K
+transforming...[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugin `vite:asset`. See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[plugin rolldown:vite-resolve] Module "path" has been externalized for browser compatibility, imported by "C:/dev/DWES-OCI-RESTORES/2026-07-25_115805_OCI-PRODUCTION-EXACT/02_GIT_PRODUCTION_SOURCE/DWES/node_modules/occt-import-js/dist/occt-import-js.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[plugin rolldown:vite-resolve] Module "crypto" has been externalized for browser compatibility, imported by "C:/dev/DWES-OCI-RESTORES/2026-07-25_115805_OCI-PRODUCTION-EXACT/02_GIT_PRODUCTION_SOURCE/DWES/node_modules/occt-import-js/dist/occt-import-js.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+Γ£ô 402 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                          2.92 kB Γöé gzip:     1.14 kB
+dist/assets/axe-Dd9k1NW7.webp                            4.11 kB
+dist/assets/back-BgZkiQYa.webp                           4.18 kB
+dist/assets/folder-D3FAnWmK.webp                         4.22 kB
+dist/assets/trash-can-3TNmfDsN.webp                      4.24 kB
+dist/assets/notebook-DDMrRH0i.webp                       4.32 kB
+dist/assets/next-DTWg3eKZ.webp                           4.36 kB
+dist/assets/file-text-CXjMayD0.webp                      4.41 kB
+dist/assets/pause-BQYcB3Ai.webp                          4.42 kB
+dist/assets/copy-CWdq6UAY.webp                           4.42 kB
+dist/assets/fire-D4-nQoMm.webp                           4.45 kB
+dist/assets/lock-nJtlRtX6.webp                           4.57 kB
+dist/assets/explorer-DuWkg4B_.webp                       4.61 kB
+dist/assets/color-palette-DUlDR0NU.webp                  4.62 kB
+dist/assets/zoom-r_jqSIUS.webp                           4.62 kB
+dist/assets/rocket-D1NhMVGT.webp                         4.64 kB
+dist/assets/link-Mpthtkhz.webp                           4.68 kB
+dist/assets/thumb-down-DqgaD_tf.webp                     4.69 kB
+dist/assets/medal-DUIB8bGs.webp                          4.73 kB
+dist/assets/locker-BBpDfbHG.webp                         4.99 kB
+dist/assets/lab-zBGXZ8Ji.webp                            4.99 kB
+dist/assets/puzzle-D5ZORNpM.webp                         5.08 kB
+dist/assets/clock-DgILokGA.webp                          5.15 kB
+dist/assets/target-CVih8qHK.webp                         5.15 kB
+dist/assets/picture-C95PjGzu.webp                        5.26 kB
+dist/assets/bell-CYsvV9ND.webp                           5.27 kB
+dist/assets/calender-CTBboz7O.webp                       5.62 kB
+dist/assets/map-pin-hsPS4mmH.webp                        5.66 kB
+dist/assets/setting-B8FdaS03.webp                        5.82 kB
+dist/assets/tool-CmRZq18w.webp                           5.93 kB
+dist/assets/chart-DA7EixmT.webp                          6.11 kB
+dist/assets/3d-DJ1_SgiE.webp                             6.83 kB
+dist/assets/wifi-BnprVGt-.webp                           6.91 kB
+dist/assets/stepModel.worker-SxkKEuPY.js                60.67 kB
+dist/assets/web-ifc-DaBphSR1.wasm                    1,303.94 kB Γöé gzip:   483.17 kB
+dist/assets/pdf.worker.min-yatZIOMy.mjs              1,375.83 kB
+dist/assets/ifcModel.worker-BUaWn1Vp.js              3,507.30 kB
+dist/assets/material-symbols-rounded-DrF7B3Ih.woff2  5,344.81 kB
+dist/assets/occt-import-js-BhHfLpto.wasm             7,604.03 kB Γöé gzip: 3,125.91 kB
+dist/assets/index-DamitpuD.css                       1,082.24 kB Γöé gzip:   159.88 kB
+dist/assets/OperationalTwin3D-BY1uPk4J.js                9.19 kB Γöé gzip:     3.49 kB
+dist/assets/PdfDocumentViewer-O-AjLKgN.js               12.16 kB Γöé gzip:     4.21 kB
+dist/assets/index-D96_eYp0.js                        2,669.71 kB Γöé gzip:   777.94 kB
+
+[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - vite:worker-import-meta-url (33%)
+  - vite:asset (30%)
+  - @tailwindcss/vite:generate:build (27%)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Γ£ô built in 8.24s
+
+>> npm --prefix backend run build
+
+> dwes-backend@1.0.0 build
+> prisma generate && nest build
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+
+Γ£ö Generated Prisma Client (v7.10.0) to .\node_modules\@prisma\client in 614ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+>> npm --prefix backend test
+
+> dwes-backend@1.0.0 test
+> node ../scripts/run-windowless.mjs node --test "test/**/*.test.cjs"
+
+Γû╢ assignment-lifecycle
+  Γ£ö derives UNASSIGNED for null / reassigned (1.6295ms)
+  Γ£ö derives ASSIGNED_NOT_STARTED for virgin assigned row (0.3744ms)
+  Γ£ö derives IN_PROGRESS when assigned has started_at or cable work (0.2135ms)
+  Γ£ö derives PAUSED and COMPLETED (0.1226ms)
+  Γ£ö assignmentActionPolicy flags match lifecycle (2.9948ms)
+  Γ£ö buildAssignmentActionPolicy composes lifecycle + flags (0.3167ms)
+  Γ£ö isAssignableBeforeStart rejects started / locked / handover / work (0.2841ms)
+  Γ£ö hasAssignmentCableWork detects counters and ends (0.1698ms)
+Γ£ö assignment-lifecycle (9.8083ms)
+Γ£ö JobsService.registerHandler: a successful handler reaches COMPLETED with its real result and reported progress (18.3105ms)
+[Nest] 49992  - 21/09/2026, 14:22:22   ERROR [JobsService] Job 33e2d6a3-67a0-4c0e-94fc-8b968c7d6d77 (demo_fail) failed: parser rejected the input: bad column mapping
+Γ£ö JobsService.registerHandler: a failing handler reaches FAILED with the real error, never a fabricated success (11.1713ms)
+Γ£ö JobsService.registerHandler: registering the same job type twice fails clearly (1.7826ms)
+[Nest] 49992  - 21/09/2026, 14:22:22   ERROR [JobsService] Job 795169b4-d3d0-4db6-a6f9-9661f99868db (demo_retry) failed: transient failure
+[Nest] 49992  - 21/09/2026, 14:22:22     LOG [UploadService] Async Excel processing enabled: excel_parse job handler registered
+Γ£ö JobsService.retryJob: re-invokes the registered handler and can recover a job that previously failed (45.8488ms)
+Γ£ö UploadService.enqueueMappedUpload: rejects with 404 when DWES_ASYNC_EXCEL_PROCESSING is not enabled (default) (3.7786ms)
+[Nest] 49992  - 21/09/2026, 14:22:22     LOG [WiringDocumentService] Async report generation enabled: pdf_report job handler registered
+Γ£ö UploadService async excel_parse: end-to-end through JobsService reuses the real uploadMapped parser (no duplicated logic) (165.2162ms)
+Γ£ö WiringDocumentService.enqueuePanelCompletionReport: rejects with 404 when DWES_ASYNC_REPORT_GENERATION is not enabled (default) (1.6205ms)
+Γ£ö WiringDocumentService async pdf_report: registers its handler only when the flag is enabled (2.0812ms)
+Γ£ö AuthService.login rejects unknown users (4.1853ms)
+Γ£ö AuthService.login rejects password mismatch (321.9661ms)
+Γ£ö AuthService.login rejects disabled accounts (133.4752ms)
+Γ£ö AuthService.login issues token, updates login timestamp, and writes session log (240.4183ms)
+Γ£ö exactTagKey preserves engineering characters (15.7327ms)
+Γ£ö runAutoExtract scans PDF text and resolves dimensions when labeled (10.027ms)
+Γ£ö buildAutoFixReport flags missing dimensions (0.5862ms)
+[upload] wiring-v1.xlsx: 7 Excel column(s) not mapped to a system field (kept in _raw): S.NO SERIAL NUMBER, FERRULE SOURCE FERRULE, SOURCE TERMINAL SOURCE TERMINALS, DEST DEVICE DESTINATION DEVICE, DEST TERMINAL DESTINATION TERMINALS, WIRE COLOR CABLE COLOR, WIRE SIZE CABLE SIZE
+[WHATSAPP] Panel "=H001" assigned to Cable Technician ()
+[WHATSAPP] OTP: 202295 | QR identity: WS-XOPP7R | Panel QR payload: WSM:CV_FLOW:frame_cv_flow:9001
+[syncWiringStageAssignee] best-effort failed for CV_FLOW/frame_cv_flow tech=701: Cannot read properties of undefined (reading 'findUnique')
+[upload] wiring-v2.xlsx: 7 Excel column(s) not mapped to a system field (kept in _raw): S.NO SERIAL NUMBER, FERRULE SOURCE FERRULE, SOURCE TERMINAL SOURCE TERMINALS, DEST DEVICE DESTINATION DEVICE, DEST TERMINAL DESTINATION TERMINALS, WIRE COLOR CABLE COLOR, WIRE SIZE CABLE SIZE
+Γ£ö supervisor upload ΓåÆ visual data ΓåÆ assignment ΓåÆ technician ΓåÆ replacement (512.0222ms)
+Γ£ö T1: Tech A / Project A / Panel A1 ΓÇö report rows = N only (7.6661ms)
+Γ£ö T2: Tech B / Project B / Panel B7 ΓÇö report rows = M only (no Project A leakage) (1.3676ms)
+Γ£ö T3: switching assignment selector changes report scope (no stale cross-assignment rows) (1.2998ms)
+Γ£ö T4: Project A maps leg size; Project B does not ΓÇö NOT AVAILABLE, never infer from wire.size (0.8843ms)
+Γ£ö T5: report projection is assignment-scoped ΓÇö foreign assignment data is never mixed in (0.7012ms)
+Γ£ö reportCell: empty / null ΓåÆ unavailable (NOT AVAILABLE), never fabricates (1.5573ms)
+Γ£ö fieldAvailability aggregates across assignment wires only (0.2674ms)
+Γ£ö reworkHistory: strip rework on source is projected (attribution preserved) (3.0911ms)
+Γ£ö live prep projection: wireId + cut/strip/crimp attribution + finished; legs never inferred (18.1874ms)
+Γ£ö missing crimping JSON defaults to not required ΓÇö no wiring lock (5.0965ms)
+Γ£ö OPEN END destination: only source is applicable; strip then crimp completes overall (7.2134ms)
+Γ£ö acceptance ┬º29: two-end required wire ΓÇö stripΓåÆcrimp each end before wiring unlock (1.0761ms)
+Γ£ö either end may be prepared first (DST strip+crimp then SRC) (0.4318ms)
+Γ£ö idempotent remake of completed crimp end does not change attribution (0.3075ms)
+Γ£ö legacy already-wired wire stamped when first marked required ΓÇö no gate (0.3551ms)
+Γ£ö crimping KPI denominator is required only; ready = strip+crimp complete (0.9512ms)
+Γ£ö wiring complete does not imply preparation complete (0.2915ms)
+Γ£ö CRIMPING_NOT_COMPLETED_CODE is stable for API clients (0.3078ms)
+Γ£ö deriveOverall COMPLETED when open both (zero applicable ends) and required (0.5501ms)
+Γ£ö legacy flat CR-01 crimp COMPLETE does not invent stripping; wiring stays locked (0.7465ms)
+Γ£ö bulk eligibility: crimp skipped when strip incomplete; strip proceeds (0.7579ms)
+Γ£ö rework: marks REWORK_REQUIRED, preserves prior by/at, clears ready for wiring (1.0661ms)
+Γ£ö markWirePrepared: rejects one-shot on fresh wire (stages required) (0.523ms)
+Γ£ö markWirePrepared: OPEN SOURCE ΓÇö rejects one-shot (stages required) (0.9394ms)
+Γ£ö markWirePrepared: OPEN DESTINATION ΓÇö rejects one-shot (stages required) (0.3736ms)
+Γ£ö markWirePrepared: Not Required throws (0.3717ms)
+Γ£ö markWirePrepared: idempotent when already COMPLETED (via V2 stages) (0.2757ms)
+Γ£ö markWirePrepared: rework then re-prepare preserves original by/at (0.8517ms)
+Γ£ö V2: markWireCut ΓåÆ markBothEndsStripped ΓåÆ markWireCrimped ΓåÆ ready for wiring (0.4328ms)
+Γ£ö V2: crimp-before-strip rejects (0.453ms)
+Γ£ö V2: strip-before-cut rejects (0.4159ms)
+Γ£ö V2: wiring locked until all stages complete (0.5189ms)
+Γ£ö V2: legacy exactly-one-end ΓåÆ legacyPartial blocks wiring (0.4751ms)
+Γ£ö V2: resolveLegacyPartial clears flag and maps stages when both ends done (1.0997ms)
+Γ£ö V2: KPIs count wires not ends for cut/stripped/crimped (1.5613ms)
+Γ£ö V2: KPI legacyPartial and openRework counts (0.8275ms)
+Γ£ö V2: idempotency of each stage (0.3938ms)
+Γ£ö V2: markWireCut throws when not required (0.6022ms)
+Γ£ö V2: open-end wire ΓÇö V2 stages honour open side (0.3904ms)
+Γ£ö V2: normalizeCrimping preserves V2 stages from raw (2.5314ms)
+Γ£ö V2: normalizeCrimping synthesizes stages for legacy both-ends complete (0.6724ms)
+Γ£ö P0: markWirePrepared rejects when V2 stages incomplete (0.4861ms)
+Γ£ö P0: markWirePrepared rejects with only cut done (0.4161ms)
+Γ£ö P0: markWirePrepared rejects with cut+strip done (crimp missing) (0.486ms)
+Γ£ö P0: markWirePrepared allows when rework needs clearing (0.4489ms)
+Γ£ö P0: markWirePrepared idempotent when already fully complete (0.7777ms)
+Γ£ö P0: STAGED_PREPARATION_REQUIRED_CODE is stable for API clients (3.1531ms)
+Γ£ö P0: strip before cut throws clear error (1.0365ms)
+Γ£ö P0: crimp before strip rejected (0.4347ms)
+Γ£ö P0: qaHold blocks isReadyForWiring (0.2862ms)
+Γ£ö P0: qaHold counted in KPIs (0.382ms)
+Γ£ö P0: markPrepReworkWithAffectedEnd SOURCE delegates to single end (0.5928ms)
+Γ£ö P0: markPrepReworkWithAffectedEnd BOTH marks both applicable ends (0.2601ms)
+Γ£ö P0: markPrepReworkWithAffectedEnd GENERAL marks wire-level stage (0.5117ms)
+Γ£ö P0: markPrepReworkWithAffectedEnd Not Required throws (0.4875ms)
+Γ£ö P0: markWirePrepared allowed for legacyPartial bypass (0.5243ms)
+Γ£ö aggregateCrimpingKpis sums assignment KPIs without inventing (1.8583ms)
+Γ£ö DashboardCacheService.acquireLock: is mutually exclusive until released (6.2893ms)
+Γ£ö DashboardCacheService.releaseLock: only the owning token can release (owner-safe compare-and-delete) (1.1163ms)
+Γ£ö DashboardCacheService.acquireLock: bounded TTL expires an abandoned lock (73.979ms)
+Γ£ö DashboardCacheService set/get: TTL expiry (cache miss -> set -> hit -> expiry) (96.2824ms)
+Γ£ö DashboardCacheService.invalidate: clears matching keys without touching others (2.0551ms)
+Γ£ö DashboardCacheService.getStatus: reports Redis as not configured when REDIS_URL is unset (0.6815ms)
+[FrameStore] Loaded 1 frames, 0 drawing packages and 0 generated panel models from disk
+Γ£ö permanent project deletion removes the database row and purges every memory store (7.9657ms)
+Γ£ö panel list excludes database tombstones even if stale memory still contains the panel (1.8858ms)
+Γ£ö permanent panel deletion atomically cascades assignments and writes a database tombstone (30.5775ms)
+Γ£ö panel delete removes the panel-scoped model directory and leaves other panels intact (57.6512ms)
+Γ£ö application restart loads only active database projects and non-deleted panels from JSON (13.1307ms)
+Γ£ö loads and validates a private demo account manifest (11.9113ms)
+Γ£ö rejects example placeholders and duplicate usernames (10.2443ms)
+Γû╢ director-monitoring.helper
+  Γ£ö maps assignment statuses (1.5633ms)
+  Γ£ö maps project lifecycle buckets (0.4359ms)
+  Γ£ö rollups mixed cable_status (1.3957ms)
+  Γ£ö classifies buckets and skip detection (0.5735ms)
+  Γ£ö buildOneSideRows emits wire refs (0.6521ms)
+Γ£ö director-monitoring.helper (7.0432ms)
+Γ£ö eligibleForAutoPaint rejects legend/directory KF87L (2.76ms)
+Γ£ö eligibleForAutoPaint accepts INTERNAL H74 device body (1.3489ms)
+Γ£ö seeded Solar Wadi index: H74 eligible, KF87L not (29.2544ms)
+Γû╢ extractJsonPayload
+  Γ£ö passes through clean JSON (1.584ms)
+  Γ£ö strips Tesseract/pymupdf warning prefixes (0.5499ms)
+  Γ£ö takes only the first JSON object when stdout is concatenated (0.3456ms)
+  Γ£ö rejects empty or non-JSON stdout (2.6922ms)
+Γ£ö extractJsonPayload (7.7686ms)
+Γ£ö panel drawing package keeps a stable id and preserves the other slot (34.9565ms)
+Γ£ö legacy replacement rejects cross-panel and cross-slot drawing ids (37.6046ms)
+Γ£ö slot validation rejects mismatched file signatures (7.9412ms)
+Γ£ö panel SVG drawings are accepted only when they contain no executable content (28.9714ms)
+Γ£ö browser-incompatible engineering source is preserved and reports no fake preview (20.807ms)
+Γ£ö unconfigured DWG conversion remains explicitly failed and preserves its source (16.6898ms)
+Γ£ö configured CAD adapter stores a validated preview while source/download bytes remain exact (345.9388ms)
+Γ£ö controller keeps inline preview and supervisor original download paths distinct (1.8999ms)
+[Nest] 37428  - 21/09/2026, 14:22:18     LOG [EngineeringImportService] Engineering package imported as DRAFT model 901 (rev R1) for PRJ/frame_eng by user 5
+[Nest] 37428  - 21/09/2026, 14:22:18     LOG [EngineeringImportService] Engineering model 4 (rev R2) approved+published for PRJ/frame_eng by user 2
+Γ£ö validatePackage accepts a well-formed package (5.0667ms)
+Γ£ö validatePackage rejects wrong units ΓÇö no silent conversion (1.4718ms)
+Γ£ö validatePackage rejects duplicate device tags and terminals (0.7555ms)
+Γ£ö validatePackage rejects duct segments referencing unknown nodes (0.4749ms)
+Γ£ö validatePackage warns (not errors) on a disconnected duct graph (0.6243ms)
+Γ£ö normalization preserves engineering symbols while matching case/space-insensitively (3.2775ms)
+Γ£ö importPackage rejects an invalid package with zero writes (6.4542ms)
+Γ£ö importPackage rejects a package targeting a different project/panel (1.1151ms)
+Γ£ö importPackage rejects a duplicate model revision (1.5392ms)
+Γ£ö importPackage creates a DRAFT: pending review, never published (6.2464ms)
+Γ£ö approveAndPublish rejects non-supervisor roles (4.5322ms)
+Γ£ö approveAndPublish refuses to publish a model without geometry (2.7369ms)
+Γ£ö approveAndPublish publishes and supersedes the previously published revision (1.6551ms)
+Γ£ö SSE stream emits a body heartbeat immediately after authentication (12.3823ms)
+evidence-fusion.test.cjs OK
+Γ£ö test\evidence-fusion.test.cjs (455.8827ms)
+Γ£ö Excel Parser Regression - One header and six cables (E2E format) (317.5064ms)
+Γ£ö Excel Parser Regression - Data begins immediately after header row (80.309ms)
+Γ£ö Excel Parser Regression - Empty and blank rows ignored (34.3137ms)
+Γ£ö Excel Parser Regression - Actual DWES schedule format (WIRE NO pairs, LENGTH(m), leading-space colours) (62.4833ms)
+Γ£ö Excel Parser Regression - Digit-free first data row is NOT skipped as a sub-header (57.5762ms)
+Γ£ö Excel Parser Regression - Genuine wire-spec sub-header row is still skipped (49.5439ms)
+Γ£ö Excel Parser Regression - Alternative header positions (Metadata at top) (25.5329ms)
+Γ£ö collects the file and text fields arriving BEFORE the file part (28.6518ms)
+Γ£ö collects text fields arriving AFTER the file part (wire order varies) (1.3134ms)
+Γ£ö non-multipart request passes through with request.file undefined (0.5936ms)
+Γ£ö the @fastify/multipart request.file helper FUNCTION is reset to undefined (0.3747ms)
+Γ£ö oversize file maps to 413 "File too large" exactly like Multer (7.0044ms)
+Γ£ö file under a different field name is rejected as "Unexpected field" (2.017ms)
+Γ£ö a second file part is rejected as "Unexpected field" (1.0933ms)
+Γ£ö prototype-polluting field names are dropped (2.4777ms)
+[Nest] 57028  - 21/09/2026, 14:22:17     LOG [Flat3dConversionService] flat3d run 4bc96950-6a5b-483d-8f1c-662f571c8b92: spawning __dwes_nonexistent_python__ -m flat3d.cli --input C:\dev\DWES-OCI-RESTORES\2026-07-25_115805_OCI-PRODUCTION-EXACT\02_GIT_PRODUCTION_SOURCE\DWES\backend\uploads\TEST_PROJECT\flat3d\frame-001\4bc96950-6a5b-483d-8f1c-662f571c8b92\source\source.dwg --out C:\dev\DWES-OCI-RESTORES\2026-07-25_115805_OCI-PRODUCTION-EXACT\02_GIT_PRODUCTION_SOURCE\DWES\backend\uploads\TEST_PROJECT\flat3d\frame-001\4bc96950-6a5b-483d-8f1c-662f571c8b92\out --project-code TEST_PROJECT --frame-id frame-001 cwd=C:\dev\DWES-OCI-RESTORES\2026-07-25_115805_OCI-PRODUCTION-EXACT\02_GIT_PRODUCTION_SOURCE\DWES\scripts\flat3d-conversion
+Γû╢ flat3d-conversion types
+  Γ£ö FLAT3D_STAGES contains all 12 expected stage identifiers (4.1674ms)
+  Γ£ö stage list is ordered correctly (INGEST first, FAILED last) (0.4961ms)
+Γ£ö flat3d-conversion types (6.7771ms)
+Γû╢ Flat3dConversionService.runConversion
+  Γ£ö rejects PDF input immediately with APPROVED_2D_ONLY fallback (695.991ms)
+  Γ£ö rejects missing source file with FAILED status (2.0099ms)
+  Γ£ö rejects unsupported file format (1.097ms)
+  Γ£ö buildScheduleJson preserves special chars in device names (0.8424ms)
+  Γ£ö DWG input fails gracefully when Python is not installed (no CLI) (97.055ms)
+Γ£ö Flat3dConversionService.runConversion (798.3368ms)
+Γ£ö FramesService.technicianAssignedToProject returns true when assignment exists (3.9083ms)
+Γ£ö FramesService.technicianAssignedToFrame requires matching frame_id (0.7383ms)
+Γ£ö FramesService drawing access excludes hidden former assignments (0.4856ms)
+Γ£ö FramesService.technicianAssignedFrameIds deduplicates frame ids (0.6347ms)
+Γ£ö FramesService.getPanelDrawings never returns another panel drawing (0.7761ms)
+Γ£ö FramesService.getPanelDrawingFile refuses a drawing id owned by another panel (0.4919ms)
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Persisting DEVICE geometry for DEVICE_A on drawing abc123checksumcurrent0000000000000000000000000000000000000001
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Created ga_device_location id=1
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Marking ga_device_location id=1 as AUTO_VERIFIED
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Persisting DEVICE geometry for DEVICE_A on drawing abc123checksumcurrent0000000000000000000000000000000000000001
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Created ga_device_location id=1
+[Nest] 53876  - 21/09/2026, 14:22:18   DEBUG [GaDeviceLocationsService] Marking ga_device_location id=1 as BLOCKED_GROUNDING
+Γ£ö 1 FRONT_VIEW physical DEVICE ΓåÆ persist success (4.5167ms)
+Γ£ö 2 INTERNAL_VIEW physical DEVICE ΓåÆ persist success (0.9458ms)
+Γ£ö 3 REAR_VIEW physical DEVICE ΓåÆ persist success (0.6604ms)
+Γ£ö 4 SIDE_VIEW physical DEVICE ΓåÆ persist success (27.5601ms)
+Γ£ö 5 BOM-only DEVICE ΓåÆ reject, no persist (0.8076ms)
+Γ£ö 6 description-table-only DEVICE ΓåÆ reject (0.2729ms)
+Γ£ö 7 physical DEVICE + BOM duplicate ΓåÆ physical wins (0.4831ms)
+Γ£ö 8 OCR-only physical tag+body ΓåÆ works (0.2979ms)
+Γ£ö 9 native-text physical tag+body ΓåÆ works (0.431ms)
+Γ£ö 10 tag found but no physical device body ΓåÆ no location (0.9621ms)
+Γ£ö 11 invalid normalized bbox ΓåÆ reject (0.4319ms)
+Γ£ö 12 stale drawing checksum ΓåÆ reject (0.4133ms)
+Γ£ö 13 multiple valid physical candidates same page ΓåÆ ambiguous (0.5921ms)
+Γ£ö 14 same DEVICE referenced by several wires ΓåÆ one target / one persist (4.5543ms)
+Γ£ö 15 physical device + GROUNDING_UNAVAILABLE ΓåÆ detect yes, AUTO_VERIFIED blocked (1.5943ms)
+Γ£ö nonphysical hits never call repository.create (0.4993ms)
+Γ£ö analyseDeviceLocations metrics honesty flags (0.6381ms)
+Γ£ö A: reference DEVICE_A/MODEL_X + physical DEVICE_A body ΓåÆ persist DEVICE_A (0.4488ms)
+Γ£ö B: DEVICE_A exists only in reference table ΓåÆ no physical geometry (0.4141ms)
+Γ£ö C: several physical MODEL_X; schedule DEVICE_A ΓåÆ select DEVICE_A only (0.5204ms)
+Γ£ö D: DEVICE_A / X100:12 + physical DEVICE_A ΓåÆ DEVICE geometry, not X100 TB (1.7224ms)
+Γ£ö E: SRC+DST both DEVICE_A different terminals ΓåÆ one shared DEVICE entity (0.6383ms)
+Γ£ö F: TB_A in reference table + physical strip ΓåÆ physical strip selected (0.3114ms)
+Γ£ö G: TB_A appears only in reference table ΓåÆ unresolved (0.1742ms)
+Γ£ö H: table occurrence + physical occurrence ΓåÆ physical wins (DEVICE + TB) (0.5278ms)
+Γ£ö GA normalization is deterministic and preserves meaningful engineering characters (7.2555ms)
+Γ£ö terminal point generation is deterministic for horizontal and reversed vertical blocks (1.9935ms)
+Γ£ö mapping validation rejects out-of-bounds geometry, excess pitch, and ambiguous tags (2.6297ms)
+Γ£ö correlation classifies exact, alias, suggested, unmatched, and ambiguous endpoints without auto-approving fuzzy results (6.2903ms)
+Γ£ö a correlation worker rejects stale GA, mapping, or schedule revision payloads before writes (30.7401ms)
+Γ£ö persistent background queue claims and completes a registered job once (25.1105ms)
+Γ£ö LibreDWG provider fails closed when unconfigured and keeps command placeholders as shell-free argv (3.0758ms)
+Γ£ö LibreDWG external-process adapter validates output, crash, timeout, size bound, and temp cleanup (9859.8431ms)
+Γ£ö panel GA upload preserves validated bytes, SHA/revisions, fallback formats, and panel isolation (25.6227ms)
+Γ£ö release gate preserves legacy panels and blocks enrolled stale revisions (1.6488ms)
+Γ£ö asCandidateHeaderGroup always sets paint_mode to header_group (3.0332ms)
+Γ£ö asCandidateHeaderGroup uses header group geometry, not terminal cell (0.6029ms)
+Γ£ö unique match returns SRC role metadata (1.0619ms)
+Γ£ö unique match returns DST role metadata (0.4436ms)
+Γ£ö multiple matches ΓåÆ Match 1 of N (keep peers, prefer first ranked) (0.7303ms)
+Γ£ö FRONT_VIEW candidates are rejected ΓÇö only eligible physical regions paint (0.6595ms)
+Γ£ö zero candidates ΓåÆ Header group not found (0.4086ms)
+Γ£ö EQUIPMENT_CONNECTOR 87STUB/X420 prefer connector group; never X420 as TB standalone (1.0094ms)
+Γ£ö EQUIPMENT_CONNECTOR prefers combined tag when present (0.5241ms)
+Γ£ö EQUIPMENT_TERMINAL QDC1 matches parent group, ignores pin (0.5796ms)
+Γ£ö manualMapToCandidate builds synthetic with negative id and header_group mode (2.5476ms)
+Γ£ö findManualMapCandidates matches identity_tag exact (1.043ms)
+Γ£ö findManualMapCandidates filters by connector for EQUIPMENT_CONNECTOR (0.3705ms)
+Γ£ö Wire 021/D1 classification + unique synthetic markers ΓåÆ two header groups (2.055ms)
+Γ£ö resolveEndpointHeaderGroup: TB_TERMINAL unique match (1.1401ms)
+Γ£ö resolveEndpointHeaderGroup: UNKNOWN kind ΓåÆ Header group not found (0.799ms)
+Γ£ö Match 1 of N: H74 FRONT manual map rejected; INTERNAL remains unique (1.9822ms)
+Γ£ö manualMapToCandidate DEVICE footprint uses PHYSICAL_DEVICE view (0.6533ms)
+Γ£ö IdempotencyInterceptor: ten concurrent requests with the same key produce exactly one execution and share the result (194.8816ms)
+Γ£ö IdempotencyInterceptor: a request replayed after completion returns the cached result without re-running the handler (2.8858ms)
+Γ£ö IdempotencyInterceptor: a genuinely new key (no header, different body) is not blocked by an unrelated in-flight key (103.1933ms)
+Γ£ö IdempotencyInterceptor: GET requests are never intercepted (1.0988ms)
+[Nest] 57736  - 21/09/2026, 14:22:19   ERROR [JobsService] Job 43b8901e-5e66-4609-8f20-8e49e0d3ae9b (totally_unsupported_type) failed: Unsupported job type: totally_unsupported_type
+Γ£ö JobsService: an unrecognized job type fails clearly instead of fake-succeeding (14.5476ms)
+[Nest] 57736  - 21/09/2026, 14:22:19   ERROR [JobsService] Job 66b1289c-4b23-4623-a145-56312b809b4f (dwg_convert) failed: DWG conversion is not configured for the generic job queue. Use the GA foundation CAD conversion pipeline (DWES_LIBREDWG_BIN_DIR) or the drawing preview converter (DWES_CAD_PREVIEW_EXECUTABLE); no fallback conversion is performed.
+Γ£ö JobsService: dwg_convert fails with a clear configuration error and never fabricates a converted result (39.5521ms)
+[Nest] 57736  - 21/09/2026, 14:22:19   ERROR [JobsService] Job bac40ade-f974-44db-8373-859e2ffe7fc6 (dwg_convert) failed: DWG conversion is not configured for the generic job queue. Use the GA foundation CAD conversion pipeline (DWES_LIBREDWG_BIN_DIR) or the drawing preview converter (DWES_CAD_PREVIEW_EXECUTABLE); no fallback conversion is performed.
+Γ£ö JobsService.updateJobProgress: never writes a `progress` column (background_jobs has none) and correctly persists status/timestamps (31.7878ms)
+Γ£ö JobsService.getStatus: reports BullMQ as inactive when REDIS_URL is unset and onModuleInit never ran (0.8497ms)
+Γû╢ legend OCR must not become AUTO HIGH
+  Γ£ö rejects KF87L legend/directory row (2.8422ms)
+  Γ£ö rejects X10 Weidmuller legend terminal row (1.5624ms)
+  Γ£ö allows non-legend rear/internal label context (1.0858ms)
+Γ£ö legend OCR must not become AUTO HIGH (12.639ms)
+Γ£ö IMAGE_ONLY + OCR worker missing ΓåÆ TECHNICAL_FAILURE (not mismatch) (2.8549ms)
+Γ£ö searchable legend-only empty physical finds ΓåÆ SCHEDULE_DRAWING_MISMATCH (3.28ms)
+Γ£ö Wire 030/D3 style: X321 absent + X9 legend ΓåÆ mismatch when extraction completed (2.1165ms)
+Γ£ö stale ANALYSING (>10m) ΓåÆ TECHNICAL_FAILURE via derivePanelLiveTbStatus (26.1522ms)
+Γû╢ normalizedFaceToMm
+  Γ£ö front face: x=0,y=0 maps to left-top (mm top=height) (1.9048ms)
+  Γ£ö front face: x=1,y=1 maps to right-bottom (0.477ms)
+  Γ£ö rear face: x is mirrored (0.4962ms)
+  Γ£ö internal face: z offset is non-zero (0.3181ms)
+  Γ£ö custom face behaves like front (0.4038ms)
+  Γ£ö SCENE_SCALE equals 0.001 (0.2787ms)
+  Γ£ö centre of front face is at half-width, half-height, z=0 (0.2955ms)
+  Γ£ö rear x mirroring: normalizedX=0 maps to W, normalizedX=1 maps to 0 (0.3822ms)
+Γ£ö normalizedFaceToMm (7.5156ms)
+Γû╢ payload shape validation
+  Γ£ö normalizedFaceToMm output has xMm, yMm, zMm fields (0.5952ms)
+  Γ£ö all mm values are finite numbers (0.4244ms)
+Γ£ö payload shape validation (1.4423ms)
+Γ£ö assessOversizedPage: huge pixmap is unsafe with preview scale (3.191ms)
+Γ£ö assessOversizedPage: normal page READY (0.4792ms)
+Γ£ö assessOversizedPage: invalid dimensions FAILED (0.3021ms)
+Γ£ö clampCanvasRenderScale reduces DPR or scale under budget (0.4893ms)
+Γ£ö drawing process job lifecycle QUEUEDΓåÆPROCESSINGΓåÆPARTIALΓåÆREADY (2.8059ms)
+Γ£ö glb-builder produces a valid, deterministic GLB with no placeholders for a fully manual spec (10.924ms)
+Γ£ö glb-builder refuses a missing or placeholder enclosure axis instead of using sample dimensions (3.2206ms)
+Γ£ö glb-builder geometry uses the exact entered enclosure dimensions (3.2569ms)
+Γ£ö extractDimensions reads labeled and triple dimensions, ignores implausible values (5.0112ms)
+Γ£ö extractComponents finds apparatus keywords and device tags on list lines (6.1314ms)
+Γ£ö classifyDrawingRole uses filename first, then text (5.9843ms)
+Γ£ö extractPdfText harvests text from an uncompressed PDF content stream (4.3706ms)
+Γ£ö extractPdfText rejects binary subset-font glyph bytes as a false text layer (3.0026ms)
+Γ£ö convert ΓåÆ verification_required ΓåÆ approve lifecycle with technician approved-only access (110.7252ms)
+Γ£ö insufficient drawing information fails honestly, manual correction recovers (158.7406ms)
+Γ£ö partial automatic dimensions fail without generating a fallback-sized GLB (46.8305ms)
+Γ£ö service mutations enforce Production Supervisor role in depth (40.2242ms)
+Γ£ö panel-model controller allows only the technician assigned to the exact panel (5.2539ms)
+Γ£ö correction rejects a model tied to an older source package revision (46.0058ms)
+Γ£ö a new 2D drawing revision supersedes active models (store-level hook) (52.6961ms)
+Γ£ö models are strictly panel-scoped ΓÇö same panel name in another project stays independent (42.2899ms)
+Γ£ö resolveDirectorKey maps legacy W1 keys (1.9609ms)
+Γ£ö isStageInUse detects assignees, progress, actuals, status, deps (0.8338ms)
+Γ£ö preview maps legacy catalog: renames, adds, retain in-use HV_TESTING (2.0977ms)
+Γ£ö QAQC display name in catalog is QA/QC Pending Punch Points (0.4058ms)
+Γ£ö upgrade adds missing stages without duplicating WIRING; retains in-use HV_TESTING (10.8839ms)
+Γ£ö createWorkflow sets planning_template_version DIRECTOR_WA1_V1 (21.3468ms)
+Γ£ö DEFAULT_PANEL_STAGES defines Director WA1 planning catalog (2.3065ms)
+Γ£ö createWorkflow copies default stages and recommended dependencies (5.8346ms)
+Γ£ö createWorkflow rejects duplicate active workflow (2.8924ms)
+Γ£ö addDependency rejects cycles (42.5547ms)
+Γ£ö getProductivityDefaults returns code defaults when no DB row (3.6515ms)
+Γ£ö getByPanel returns null when no workflow exists (1.4067ms)
+Γ£ö deleteWorkflow soft-archives and keeps history (2.5344ms)
+Γ£ö getWorkflow throws NotFound for missing id (2.1962ms)
+Γ£ö estimateWiring computes hours from wires and targets without writing DB (2.9482ms)
+Γ£ö ensureWorkflow creates once then returns existing (4.251ms)
+Γ£ö applyTemplate replace copies template stages and writes history (3.7034ms)
+Γ£ö applyTemplate throws NotFound for missing template (3.5674ms)
+Γ£ö applyTemplate rejects empty template_id (1.8163ms)
+Γ£ö durationToMinutes converts days using configured productive hours (not hard-coded 10) (2.16ms)
+Γ£ö minutesToDisplayHours rounds to two decimals (0.5555ms)
+Γ£ö WA1 catalog flags confirmation and supervisor-input stages (0.6627ms)
+Γ£ö createWorkflow seeds WA1 durations and confirmation flags (5.3362ms)
+Γ£ö ensureWorkflow does not overwrite an existing active workflow (2.0625ms)
+Γ£ö updateStage recomputes minutes from value+unit using productive hours (2.7131ms)
+Γ£ö estimateWiring keeps 22 wph and director 11h without overwriting (0.663ms)
+Γ£ö listTemplates seeds DIRECTOR_WA1_V1 system template once (1.2364ms)
+Γ£ö WIRING Case A creates panel assignment then stage assignee (4.8033ms)
+Γ£ö WIRING Case A with existing stage assignee still creates missing panel assignment (0.9144ms)
+Γ£ö WIRING Case B links stage without creating duplicate panel assignment (1.0318ms)
+Γ£ö WIRING Case C blocks when another technician owns the panel (2.3136ms)
+Γ£ö Case D non-WIRING creates stage assignee only (1.0027ms)
+Γ£ö WIRING rejects non wiring_technician role (1.1728ms)
+Γ£ö WIRING propagates missing schedule error from assignFrame without stage row (0.8546ms)
+Γ£ö assignStageUser 404 for unknown stage (0.6047ms)
+Γ£ö resolvePgDumpExecutable honors PG_DUMP_PATH (2.7971ms)
+Γ£ö resolvePgDumpExecutable defaults to pg_dump on non-win32 (0.8227ms)
+Γ£ö resolvePgDumpConnection parses DATABASE_URL (2.63ms)
+Γ£ö wire_cut ΓåÆ WIRE_CUT / Both (1.6111ms)
+Γ£ö source_stripped ΓåÆ SRC_STRIPPED (0.3455ms)
+Γ£ö buildCanonicalPrepEvent never invents from null audit (0.3645ms)
+Γ£ö FINISHED mapping is explicit WIRING_FINISHED only when audit says so (3.8111ms)
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+[Nest] 58684  - 21/09/2026, 14:22:20     LOG [ProductionBootstrapService] Production bootstrap store: C:\Users\sathe\AppData\Local\Temp\dwes-bootstrap-lEa7qb\data\dwes_auth.sqlite
+Γ£ö statusForUser inactive in demo mode (75.5602ms)
+Γ£ö statusForUser requires password only for admin in production (webauthn deferred) (4.3267ms)
+Γ£ö recordPasswordRotation clears bootstrap when webauthn deferred (8.5902ms)
+Γ£ö recordWebAuthnEnrollment remains compatible (19.4144ms)
+Γ£ö technician role never requires bootstrap (3.0832ms)
+Γ£ö ops_director never requires bootstrap while fingerprint is deferred (2.5398ms)
+Γ£ö deferWebAuthnEnrollment clears webauthn requirement without credentials (16.4119ms)
+Γ£ö ProjectsService.findAll always requests active database projects only (4.3388ms)
+Γ£ö ProjectsService.create rejects empty panel list (2.524ms)
+Γ£ö ProjectsService.create rejects duplicate project numbering (1.152ms)
+Γ£ö ProjectsService.codeAvailability checks normalized project numbering (0.7511ms)
+Γ£ö ProjectsService.create rejects route-unsafe project numbering (0.7645ms)
+Γ£ö ProjectsService.create persists initial panel metadata (1.7579ms)
+Γ£ö ProjectsService.create converts a concurrent unique constraint race into a numbering conflict (0.9289ms)
+Γ£ö ProjectsService.submitToDirector rejects unknown project (1.1585ms)
+Γ£ö ProjectsService.submitToDirector requires panel target when QA/QC workflow is disabled (0.8275ms)
+Γ£ö ProjectsService.submitToDirector rejects when no completed panels exist (QA enabled legacy) (1.7323ms)
+Γ£ö ProjectsService.submitToDirector rejects when QC is pending (10.1763ms)
+Γ£ö ProjectsService.submitToDirector rejects when completed panels are marked rework (1.1918ms)
+Γ£ö ProjectsService.submitToDirector updates state and writes audit rows (2.3416ms)
+Γ£ö ProjectsService.submitToDirector per-panel writes one audit when wiring is complete (1.7174ms)
+Γ£ö ProjectsService.submitToDirector per-panel retry is idempotent: one audit row, one publish, same result replayed (1.1601ms)
+Γ£ö auth dev demo endpoints return 404 when DEMO_MODE is disabled (2.8438ms)
+Γ£ö TechService.assignFrame rejects a deactivated technician before any write (1.0459ms)
+Γ£ö sales_director role is rejected by assertRoleSupported (4.3766ms)
+Γ£ö director endpoints allow ops_director only (no sales_director) (0.8822ms)
+Γ£ö sales_director is excluded from personnel-identity and audit endpoints (0.5474ms)
+Γ£ö buildExpectedTbHeaders excludes equipment embedded TERM; keeps physical TB headers (14.2779ms)
+Γ£ö buildExpectedTbHeaders prefers _raw DEV_TBLK over equipment typed fields (0.7572ms)
+Γ£ö classifyPageView rejects schematic/terminal-diagram; allows rear/internal (3.3482ms)
+Γ£ö scoreCandidate HIGH with eligible view + box without terminal cells (0.7886ms)
+Γ£ö extractPdfLiteralText does not treat compressed-stream X9 as a header hit (4.1859ms)
+Γ£ö legend neighborhood is not classified as a physical strip (2.3702ms)
+Γ£ö findTerminalRangeNearHeader never invents 1-12 evidence (1.0225ms)
+Γ£ö crossVerifyTbHeader: legend-only stays LOW; rear strip header-group promotes HIGH (227.6592ms)
+Γ£ö isPhysicalStripKind only accepts strip_candidate (0.5557ms)
+Γ£ö repro GA PDF literals do not contain X321 (schedule/drawing presence gate) (17.4156ms)
+Γ£ö TB_GROUP marker type is accepted by validate path (create body contract) (2.1961ms)
+Γ£ö buildExpectedTbHeaders returns unique physical TB headers only (10.1889ms)
+Γ£ö isPhysicalTbHeader distinguishes equipment from X-series TB strips (2.2622ms)
+Γ£ö classifyLiveTbEndpoint: DEVICE vs TB_GROUP cases AΓÇôD (1.449ms)
+Γ£ö scoreCandidate HIGH requires header + (range or cells) + unique (0.6629ms)
+Γ£ö TbMarkerMatchService matches TB_GROUP for both source and destination (1244.5303ms)
+Γ£ö equipment fixture markers (74IO/K01) are never matched as physical TBs (2.3707ms)
+Γ£ö superseded markers are not matched (0.9142ms)
+Γ£ö drawing_checksum mismatch excludes ACTIVE markers; matching checksum included (2.0009ms)
+Γ£ö Terminal range parsing + inclusion (4.3588ms)
+Γ£ö TB markers CRUD + geometry validation + history (7.8731ms)
+Γ£ö Near-duplicate detection requires confirmation (1.9413ms)
+Γ£ö Technician cannot create markers (permission) (1.1654ms)
+Γ£ö TB marker matching: header-group paint; prefer exact terminal when present (15.5088ms)
+Γ£ö valid token validates for authenticated user, records visit, and builds official domain URL (53.6643ms)
+Γ£ö authenticated failure does not increment visit count (7.3922ms)
+Γ£ö expired link is rejected for authenticated user (4.8427ms)
+Γ£ö revoked link is rejected after disable (15.7952ms)
+Γ£ö malformed and unknown tokens fail safely for authenticated user (10.6007ms)
+Γ£ö regenerate rotates hash ΓÇö old token stops working (9.877ms)
+Γ£ö unsupported role is denied defensively in service (7.5482ms)
+Γ£ö IP allowlist denies when client IP not listed (12.2505ms)
+Γ£ö audit records actor on authenticated validation success (11.341ms)
+Γ£ö brute-force style attempts do not reveal validity via response shape (73.4676ms)
+Γ£ö install link controller exposes validate only (open removed) (1.8207ms)
+[WHATSAPP] Changeover: New Tech (undefined) assigned to continue panel "=H001"
+[WHATSAPP] Changeover OTP: 420313 | QR: WS-YMJF1P
+[syncWiringStageAssignee] best-effort failed for PRJ/frame tech=8: Cannot read properties of undefined (reading 'findUnique')
+Γ£ö TechService.assignFrame rejects a panel that already has an active assignment (5.9884ms)
+Γ£ö TechService.assignFrame rejects a technician who already has an active panel (1.0254ms)
+Γ£ö TechService.deleteAssignment only removes an original assigned-before-start row (3.3537ms)
+Γ£ö TechService.deleteAssignment rejects protected in_progress workflow state (1.1519ms)
+Γ£ö TechService.deleteAssignment rejects protected paused workflow state (0.5911ms)
+Γ£ö TechService.deleteAssignment rejects protected assigned workflow state (0.5278ms)
+Γ£ö TechService.deleteAssignment rejects an assigned row after the first cable update (0.7987ms)
+Γ£ö TechService.updateCableStatus auto-starts an assigned panel on its first cable update (3.0564ms)
+Γ£ö TechService.changeover validates the replacement before pausing current work (1.8141ms)
+Γ£ö TechService.changeover carries wiring progress and links immutable history (5.9633ms)
+Γ£ö TechService.executeMidChange direct transfer closes the source and creates a waiting-for-resume continuation (3.7881ms)
+Γ£ö TechService.executeMidChange rejects a missing reason before any assignment writes (0.8547ms)
+Γ£ö TechService.executeMidChange rejects an invalid receiving technician before any writes (1.0129ms)
+Γ£ö TechService.executeMidChange rejects interchange with a technician who has not started their panel (1.4822ms)
+Γ£ö TechService.executeMidChange interchange atomically closes both segments and creates two continuations (1.8687ms)
+Γ£ö TechService.updateCableStatus blocks un-checking a cable completed by the previous technician (1.4059ms)
+Γ£ö TechService.cableAction skip records audit + note without completing the cable (2.5488ms)
+Γ£ö TechService.cableAction skip requires a reason of at least 3 characters (0.6951ms)
+Γ£ö TechService.cableAction skip rejects another technician's assignment (0.581ms)
+Γ£ö TechService.cableAction skip rejects an out-of-range cable index (0.4538ms)
+Γ£ö TechService.cableAction flag_issue sets the issue flag without completing (1.2192ms)
+Γ£ö TechService.updateCableStatus stamps technicianId when marking src true (0.9038ms)
+Γ£ö TechService.updateCableStatus clears technicianId when both ends reset (0.7999ms)
+Γ£ö TechService.cableAction complete stamps technicianId on the cable entry (2.2739ms)
+Γ£ö TechService.cableAction source_end_open records openEnd without completing cable + audit (1.7866ms)
+Γ£ö TechService.cableAction destination_end_open records openEnd without completing cable + audit (1.9617ms)
+Γ£ö TechService.cableAction complete preserves prior openEnd marker (2.7097ms)
+Γ£ö TechService.cableAction selecting both open ends sets openEnd both (2.0608ms)
+Γ£ö TechService.cableAction reset_all preserves baseline technicianId on Mid Change handover (2.5041ms)
+Γ£ö freeze: WiringWorkstation source exists (2.8883ms)
+Γ£ö freeze: DIGITAL WIRING / STRIPPING / CRIMPING / CRIMPING REPORT modules present (8.8793ms)
+Γ£ö freeze: FINISHED only gated to wiring module (2.0916ms)
+Γ£ö freeze: V2 staged controls present (Mark Wire Cut / Both Ends Stripped / Mark Both Ends Crimped) (3.306ms)
+Γ£ö freeze: Stage badges present (CUT / STRIPPED / CRIMPED / REWORK / READY / LEGACY PARTIAL) (3.2852ms)
+Γ£ö freeze: PREPARE WIRE kept as compat/escape (not primary in stripping/crimping) (2.2843ms)
+Γ£ö freeze: V2 staged API calls present (cutWire / stripWire / crimpWire) (9.7494ms)
+Γ£ö freeze: PrepareWireDrawer confirms whole-wire prepare (27.998ms)
+Γ£ö freeze: TechnicianCrimpingReport is read-only (no crimpingAction posts) (2.302ms)
+Γ£ö freeze: TechnicianCrimpingReport shows V2 KPIs with QA Hold (1.3257ms)
+Γ£ö freeze: Group view uses staged CUT/STRIP/CRIMP SELECTED and PREPARE SELECTED (compat) (1.7618ms)
+Γ£ö freeze: Group view table has CUT/STRIPPED/CRIMPED/READY columns (1.0093ms)
+Γ£ö freeze: wiring-utils summarizeCrimpingStatus includes V2 fields + qaHold (3.7777ms)
+Γ£ö freeze: Frontend API client has staged methods (2.6657ms)
+Γ£ö freeze: Backend controller has V2 routes (2.6007ms)
+Γ£ö freeze: Supervisor controller has resolve-legacy-partial route (3.4919ms)
+Γ£ö UsersService.remove rejects unknown user (4.7974ms)
+Γ£ö UsersService.remove blocks non-admin/supervisor deletion (1.7564ms)
+Γ£ö UsersService.remove deactivates user when linked records exist (4.6605ms)
+Γ£ö UsersService.remove hard-deletes user with no dependencies (1.7812ms)
+Γ£ö safePanelName strips leading equals for folder names (4.7609ms)
+Γ£ö buildCorrectedFilename keeps project code 002 as text (32.4584ms)
+Γ£ö wire corrections write versioned panel folder + WIRING SCHEDULE cell update (1207.4463ms)
+Γû╢ runWorkflowDiagnose honest blockers
+  Γ£ö missing auto extract is a FAIL blocking at SEMANTIC_EXTRACTION (18.2921ms)
+  Γ£ö checksum mismatch between conversion run and stored drawing is a FAIL (0.7635ms)
+  Γ£ö revision mismatch recorded by the conversion run is a FAIL (0.6499ms)
+  Γ£ö matching revision passes; unknown revision emits no fabricated pass (0.5014ms)
+  Γ£ö schedule devices entirely missing from the drawing is a FAIL with tag evidence (2.9817ms)
+  Γ£ö partially missing schedule devices warn with tag evidence (0.5196ms)
+  Γ£ö undetected terminals and ducts are reported as warnings, never silently passed (0.6859ms)
+  Γ£ö non-PDF drawing without a Flat 3D GLB fails at GLB_EXPORT (no fabricated readiness) (0.4649ms)
+  Γ£ö a FAILED Flat 3D run is surfaced with its failure reason (2.4863ms)
+  Γ£ö missing drawing fails both storage and Approved 2D fallback checks (0.8044ms)
+  Γ£ö complete CAD run with matching provenance reaches PASS (manual checks stay manual) (23.0995ms)
+Γ£ö runWorkflowDiagnose honest blockers (54.5414ms)
+Γû╢ validateGlbBuffer
+  Γ£ö accepts a valid GLB v2 header and rejects garbage or short buffers (0.7667ms)
+Γ£ö validateGlbBuffer (1.0326ms)
+Γû╢ applySafeAutoFixes
+  Γ£ö removes duplicate components without inventing values (1.1949ms)
+  Γ£ö reports whitespace trim only when labels actually had stray whitespace (0.4782ms)
+Γ£ö applySafeAutoFixes (1.9868ms)
+Γä╣ tests 426
+Γä╣ suites 11
+Γä╣ pass 426
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 14095.9432
+CI_LOCAL_PARITY_PASS ended: 2026-09-21T14:22:30.7942455+04:00

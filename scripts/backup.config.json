@@ -1,6 +1,6 @@
 {
-  "projectRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
-  "backupRoot": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES\\Backup",
+  "projectRoot": "..",
+  "backupRoot": "../Backup",
   "backupFolderPrefix": null,
   "schedule": {
     "mode": "daily",
@@ -17,7 +17,8 @@
     "logs",
     ".vite",
     "coverage",
-    "backend\\data"
+    "backend\\data",
+    "docs\\evidence"
   ],
   "retention": {
     "maxCount": 21,

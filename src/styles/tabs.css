@@ -7,15 +7,15 @@
   :root {
     --nav-tab-ease: cubic-bezier(0.4, 0, 0.2, 1);
     --nav-tab-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
-    --nav-tab-indicator: linear-gradient(90deg, #2563EB 0%, #4F46E5 52%, #7C3AED 100%);
+    --nav-tab-indicator: linear-gradient(90deg, #93C5FD 0%, #2563EB 52%, #1D4ED8 100%);
     --nav-tab-indicator-soft: linear-gradient(
       135deg,
       color-mix(in srgb, var(--color-primary) 14%, transparent) 0%,
-      color-mix(in srgb, #6366F1 10%, transparent) 100%
+      color-mix(in srgb, #93C5FD 10%, transparent) 100%
     );
     --nav-tab-ripple: color-mix(in srgb, var(--color-primary) 22%, transparent);
     --nav-tab-pill-bg: color-mix(in srgb, var(--color-on-surface) 5%, transparent);
-    --nav-tab-pill-active: linear-gradient(135deg, #2563EB 0%, #4338CA 100%);
+    --nav-tab-pill-active: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
     --nav-tab-inactive-opacity: 0.78;
     --nav-tab-active-glow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent),
       0 4px 16px color-mix(in srgb, var(--color-primary) 14%, transparent);
@@ -269,7 +269,7 @@
   .tab-strip > .tab-btn.active svg,
   .tab-strip > .tab-btn.active .ui-icon,
   .tab-strip > .tab-btn.active .material-symbols-rounded {
-    color: #2563EB;
+    color: var(--t-accent, #2563EB);
   }
 
   /* ── Segmented pill groups (scroll strips / filter rows) ────────────────── */
@@ -344,22 +344,22 @@
   }
 
   .dash-sidebar-link.is-active {
-    background: var(--nav-tab-indicator-soft);
-    color: var(--color-primary-800, #1E40AF);
+    background: var(--t-sidebar-active-bg, var(--nav-tab-indicator-soft));
+    color: #FFFFFF;
     font-weight: 700;
-    box-shadow: var(--nav-tab-active-glow);
+    box-shadow: var(--t-sidebar-active-shadow, var(--nav-tab-active-glow));
     transform: scale(1.01);
   }
 
   .dash-sidebar-link:not(.is-active) {
-    color: var(--color-text-secondary, #334155);
+    color: var(--t-sidebar-text, rgba(226, 232, 240, 0.82));
   }
 
   .dash-sidebar-link:not(.is-active) .dash-sidebar-icon svg,
   .dash-sidebar-link:not(.is-active) .dash-sidebar-icon .ui-icon,
   .dash-sidebar-link:not(.is-active) .dash-sidebar-icon .material-symbols-rounded {
-    opacity: var(--nav-tab-inactive-opacity);
-    filter: saturate(0.65);
+    opacity: 0.94;
+    filter: none;
   }
 
   .dash-sidebar-link.is-active::after {
@@ -370,15 +370,15 @@
   .dash-sidebar-link.is-active .dash-sidebar-icon .ui-icon,
   .dash-sidebar-link.is-active .dash-sidebar-icon .material-symbols-rounded {
     animation: nav-tab-icon-pop 0.38s var(--nav-tab-spring);
-    color: var(--color-primary);
+    color: #FFFFFF;
     opacity: 1;
-    filter: saturate(1.1) drop-shadow(0 0 8px color-mix(in srgb, var(--color-primary) 32%, transparent));
+    filter: none;
   }
 
   .dash-sidebar-icon svg,
   .dash-sidebar-icon .ui-icon,
   .dash-sidebar-icon .material-symbols-rounded {
-    opacity: 0.78;
+    opacity: 0.94;
     transition:
       transform 0.28s var(--nav-tab-ease),
       color 0.28s var(--nav-tab-ease),
@@ -388,7 +388,20 @@
   .dash-sidebar-link:hover .dash-sidebar-icon svg,
   .dash-sidebar-link:hover .dash-sidebar-icon .ui-icon,
   .dash-sidebar-link:hover .dash-sidebar-icon .material-symbols-rounded {
-    opacity: 0.95;
+    opacity: 1;
+  }
+
+  /* Compact rail — keep two-line labels visible; ripple stays clipped */
+  @media (min-width: 768px) {
+    .dash-sidebar-link {
+      overflow: visible;
+    }
+    .dash-sidebar-link::before {
+      inset: 2px;
+    }
+    .dash-sidebar-nav {
+      overflow-x: visible;
+    }
   }
 
   /* ── GA drawing viewer tabs (dark toolbar) ─────────────────────────────── */

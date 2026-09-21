@@ -9,8 +9,9 @@ import DeleteConfirmModal, { type DeleteScopeId } from '../../../components/ui/D
 import { usePermissions } from '../../../hooks/usePermissions';
 import {
   User, Lock, UserCog, Search, Plus, Pencil, KeyRound, ShieldCheck, ShieldOff,
-  CheckCircle2, UserX, Users, Trash2,
+  CheckCircle2, UserX, Users, Trash2, UserPlus, FolderKanban, PanelTop,
 } from '../../../components/ui/icons';
+import { DwesLoadingCenter } from '../../../components/ui/DwesLoadingIndicator';
 
 const TECHNICIAN_ROLE = 'wiring_technician';
 
@@ -28,11 +29,11 @@ function roleBadge(role: string) {
     ops_director:      'bg-indigo-100 text-indigo-700 border-indigo-200',
     prod_supervisor:   'bg-blue-100 text-blue-700 border-blue-200',
     qaqc_engineer:     'bg-teal-100 text-teal-700 border-teal-200',
-    wiring_technician: 'bg-slate-100 text-slate-600 border-slate-200',
+    wiring_technician: 'bg-slate-100 text-muted border-slate-200',
   };
   const label = ROLES.find(r => r.value === role)?.label ?? role;
   return (
-    <span className={`um-badge ${map[role] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+    <span className={`um-badge ${map[role] ?? 'bg-slate-100 text-muted border-slate-200'}`}>
       {label}
     </span>
   );
@@ -40,7 +41,7 @@ function roleBadge(role: string) {
 
 function statusBadge(isActive: boolean) {
   return (
-    <span className={`um-badge gap-0.5 ${isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+    <span className={`um-badge gap-0.5 ${isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-muted border-slate-200'}`}>
       {isActive ? <CheckCircle2 size={10} className="shrink-0" /> : <UserX size={10} className="shrink-0" />}
       {isActive ? 'Active' : 'Inactive'}
     </span>
@@ -53,7 +54,7 @@ const ACTIVE_ASSIGNMENT_STATUSES = new Set(['assigned', 'in_progress', 'paused']
 function AssignedPanelBadge({ panels }: { panels?: string[] }) {
   if (!panels || panels.length === 0) {
     return (
-      <span className="um-badge bg-slate-100 text-slate-500 border-slate-200">
+      <span className="um-badge bg-slate-100 text-muted border-slate-200">
         Unassigned
       </span>
     );
@@ -65,7 +66,7 @@ function AssignedPanelBadge({ panels }: { panels?: string[] }) {
       title={title}
       className="um-badge bg-amber-50 text-amber-700 border-amber-200"
     >
-      <span className="truncate">{panels[0]}</span>
+      <span className="break-words [overflow-wrap:anywhere]">{panels[0]}</span>
       {extra > 0 && <span className="shrink-0 ml-0.5">+{extra}</span>}
     </span>
   );
@@ -98,10 +99,10 @@ export default function UsersTab() {
       </div>
 
       <div className="text-center max-w-xs">
-        <p className="text-[16px] font-semibold text-slate-800 mb-1.5">
+        <p className="text-[16px] font-semibold text-primary mb-1.5">
           {readOnly ? 'User Directory' : 'Team Management'}
         </p>
-        <p className="text-[13px] text-slate-500 leading-relaxed">
+        <p className="text-[13px] text-muted leading-relaxed">
           {readOnly
             ? 'View user accounts across the organization.'
             : 'Create, edit, activate/deactivate, and reset passwords for technicians on your team.'}
@@ -190,6 +191,7 @@ export function TeamManagementModal({ onClose }: { onClose: () => void }) {
     <>
       <Modal
         title={modalTitle}
+        icon={<Users />}
         onClose={onClose}
         size="team"
         typography="user-management"
@@ -242,7 +244,7 @@ export function TeamManagementModal({ onClose }: { onClose: () => void }) {
           )}
 
           {loading ? (
-            <div className="um-empty">Loading users…</div>
+            <DwesLoadingCenter label="Loading users…" className="um-empty" />
           ) : filtered.length === 0 ? (
             <div className="um-empty um-empty--bordered">{emptyMessage}</div>
           ) : (
@@ -397,10 +399,19 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
     const ok = await dialog.confirm({
       title: isActive ? 'Deactivate User' : 'Activate User',
       message: isActive
-        ? `Deactivate ${form.full_name}? They will be unable to log in until reactivated.`
-        : `Activate ${form.full_name}? They will regain login access.`,
+        ? 'This account will lose login access until an administrator reactivates it.'
+        : 'This account will regain login access immediately.',
       tone: isActive ? 'warning' : 'info',
       confirmText: isActive ? 'Deactivate' : 'Activate',
+      actionSummary: isActive
+        ? `Deactivate ${form.full_name} and block new sessions.`
+        : `Activate ${form.full_name} and restore login access.`,
+      entity: {
+        label: 'User',
+        value: form.full_name,
+        meta: form.username ? `@${form.username}` : undefined,
+        kind: 'user',
+      },
     });
     if (!ok) return;
     setTogglingStatus(true);
@@ -463,6 +474,7 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
   return (
     <Modal
       title={`Edit User — ${user.full_name}`}
+      icon={<Pencil />}
       onClose={onClose}
       size="wide"
       typography="user-management"
@@ -615,10 +627,10 @@ function EditUserModal({ user, panels, onClose, onSaved, onAssignmentsChanged, t
                     ? <ShieldCheck size={20} className="text-green-600 shrink-0" />
                     : <ShieldOff size={20} className="text-slate-400 shrink-0" />}
                   <div>
-                    <div className="text-[14px] font-semibold text-slate-800">
+                    <div className="text-[14px] font-semibold text-primary">
                       {isActive ? 'Account is active' : 'Account is inactive'}
                     </div>
-                    <div className="text-[12px] text-slate-500 mt-0.5">
+                    <div className="text-[12px] text-muted mt-0.5">
                       {isActive ? 'Deactivate to revoke login access.' : 'Activate to restore login access.'}
                     </div>
                   </div>
@@ -837,15 +849,20 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
       <div className="um-field-grid">
         <div className="um-native-field">
           <label className="um-field-label">Project</label>
-          <select className="form-select w-full" value={projectCode} onChange={e => setProjectCode(e.target.value)}>
-            <option value="">Select project…</option>
-            {projects.map(p => (
-              <option key={p.code} value={p.code}>{p.name}</option>
-            ))}
-          </select>
+          <div className="field-with-icon">
+            <span className="field-lead-icon"><FolderKanban size={18} /></span>
+            <select className="form-select w-full" value={projectCode} onChange={e => setProjectCode(e.target.value)}>
+              <option value="">Select project…</option>
+              {projects.map(p => (
+                <option key={p.code} value={p.code}>{p.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="um-native-field">
           <label className="um-field-label">Panel</label>
+          <div className="field-with-icon">
+          <span className="field-lead-icon"><PanelTop size={18} /></span>
           <select
             className="form-select w-full"
             value={panelId}
@@ -859,6 +876,7 @@ function PanelAssignmentSection({ userId, onChanged }: { userId: number; onChang
               <option key={p.id} value={p.id}>{p.panel_name}</option>
             ))}
           </select>
+          </div>
         </div>
       </div>
       {selectedProject && panelId && (
@@ -1016,6 +1034,7 @@ function UserFormModal({ mode, user, onClose, onSaved, techniciansOnly = false }
   return (
     <Modal
       title={mode === 'create' ? (techniciansOnly ? 'New Technician' : 'New User') : `Edit — ${user?.full_name}`}
+      icon={mode === 'create' ? <UserPlus /> : <Pencil />}
       onClose={onClose}
       size="lg"
       typography="user-management"
@@ -1023,6 +1042,7 @@ function UserFormModal({ mode, user, onClose, onSaved, techniciansOnly = false }
         <div className="um-footer">
           <button type="button" onClick={onClose} className="pj-btn-secondary">Cancel</button>
           <button type="button" onClick={handleSave} disabled={saving} className="pj-btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            {mode === 'create' ? <UserPlus size={16} /> : <Pencil size={16} />}
             {saving ? 'Saving…' : mode === 'create' ? (techniciansOnly ? 'Create Technician' : 'Create User') : 'Save Changes'}
           </button>
         </div>

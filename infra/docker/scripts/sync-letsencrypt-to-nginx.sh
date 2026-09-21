@@ -23,5 +23,9 @@ fi
 
 cp -L "${LIVE}/fullchain.pem" "${OUT}/fullchain.pem"
 cp -L "${LIVE}/privkey.pem" "${OUT}/privkey.pem"
+chmod 644 "${OUT}/fullchain.pem"
+chmod 600 "${OUT}/privkey.pem"
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T nginx nginx -t
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T nginx nginx -s reload
 echo "[sync-letsencrypt] Installed certs for ${DOMAIN} and reloaded nginx"
+openssl x509 -in "${OUT}/fullchain.pem" -noout -subject -issuer -dates 2>/dev/null || true

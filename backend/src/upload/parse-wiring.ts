@@ -1,10 +1,8 @@
-import * as XLSX from 'xlsx';
+import { readSheetData } from './excel-reader';
 import type { Cable } from '../data/mock-store';
 import {
   buildHeaderPairs,
-  cleanExcelHeader,
   dataStartRow,
-  findHeaderRow,
 } from './excel-headers';
 
 export { findHeaderRow } from './excel-headers';
@@ -87,19 +85,19 @@ export function buildParseValidation(cables: Cable[]): ParseValidation {
   };
 }
 
-export function parseWiringSheet(
+export async function parseWiringSheet(
   buffer: Buffer,
   sheetName: string,
   mapping: Record<string, string>,
   headerRowOverride?: number,
-): ParsedWiring {
-  const wb = XLSX.read(buffer, { type: 'buffer' });
-  const ws = wb.Sheets[sheetName] || wb.Sheets[wb.SheetNames[0]];
-  const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
+): Promise<ParsedWiring> {
+  // readSheetData already returns post-header data rows only. Rebuild a
+  // header-at-index-0 sheet view so sub-header detection stays correct even
+  // when the original Excel header sat below metadata rows.
+  const { rows, headerRow, rawHeaders } = await readSheetData(buffer, sheetName, headerRowOverride);
+  const sheetRows: unknown[][] = [rawHeaders, ...rows.map(r => r.map(c => String(c ?? '')))];
 
-  const headerRowIdx = headerRowOverride ?? findHeaderRow(rows);
-  const headerPairs = buildHeaderPairs(rows, headerRowIdx);
-  const rawHeaders = (rows[headerRowIdx] || []).map(h => cleanExcelHeader(h));
+  const headerPairs = buildHeaderPairs(sheetRows, 0);
   const colIndex: Record<string, number> = {};
   headerPairs.forEach(p => { colIndex[p.name] = p.idx; });
   rawHeaders.forEach((h, i) => { if (h && colIndex[h] === undefined) colIndex[h] = i; });
@@ -114,15 +112,21 @@ export function parseWiringSheet(
     return ['none', 'null', 'n/a', '-'].includes(s.toLowerCase()) ? '' : s;
   };
 
-  const dataRows = rows.slice(dataStartRow(rows, headerRowIdx)).filter(r =>
-    (r as unknown[]).some(c => String(c ?? '').trim())
-  );
+  const firstDataRow = dataStartRow(sheetRows, 0);
+  const dataRows = sheetRows
+    .slice(firstDataRow)
+    .map((row, relativeIndex) => ({
+      row,
+      // headerRow is zero-based; Excel row numbers are one-based.
+      excelRow: headerRow + firstDataRow + relativeIndex + 1,
+    }))
+    .filter(entry => (entry.row as unknown[]).some(c => String(c ?? '').trim()));
 
   const excelHeaders = headerPairs.map(p => p.name);
   const mappedHeaders = new Set(Object.values(mapping).filter(Boolean));
   const unmatchedHeaders = excelHeaders.filter(h => !mappedHeaders.has(h));
 
-  const cables: Cable[] = dataRows.map((row, idx) => {
+  const cables: Cable[] = dataRows.map(({ row, excelRow }, idx) => {
     const rawRow: Record<string, string> = {};
     rawHeaders.forEach((h, colIdx) => {
       if (h) rawRow[h] = String((row as unknown[])[colIdx] ?? '').trim();
@@ -221,6 +225,7 @@ export function parseWiringSheet(
     const normalizedPath = normalizeText(path || '');
 
     return {
+      excel_row: excelRow,
       sno: Number.parseInt(snoRaw, 10) || idx + 1,
       panel: normalizeText(getVal(row, 'panel')),
       ferrule: normalizeText(ferruleRaw),
@@ -238,6 +243,16 @@ export function parseWiringSheet(
       remarks: normalizeText(getVal(row, 'remarks')),
       path: normalizedPath,
       rack: normalizeText(getVal(row, 'rack')),
+      source_crimp_leg_number: normalizeText(getVal(row, 'source_crimp_leg_number')) || null,
+      source_crimp_leg_size: normalizeText(getVal(row, 'source_crimp_leg_size')) || null,
+      source_crimp_leg_color: normalizeColor(getVal(row, 'source_crimp_leg_color')) || null,
+      source_ferrule_type: normalizeText(getVal(row, 'source_ferrule_type')) || null,
+      source_ferrule_marking: normalizeText(getVal(row, 'source_ferrule_marking')) || null,
+      dest_crimp_leg_number: normalizeText(getVal(row, 'dest_crimp_leg_number')) || null,
+      dest_crimp_leg_size: normalizeText(getVal(row, 'dest_crimp_leg_size')) || null,
+      dest_crimp_leg_color: normalizeColor(getVal(row, 'dest_crimp_leg_color')) || null,
+      dest_ferrule_type: normalizeText(getVal(row, 'dest_ferrule_type')) || null,
+      dest_ferrule_marking: normalizeText(getVal(row, 'dest_ferrule_marking')) || null,
       _raw: rawRow,
     } as Cable;
   }).filter(Boolean) as Cable[];
@@ -260,7 +275,7 @@ export function parseWiringSheet(
   return {
     cables,
     excelHeaders,
-    headerRowIdx,
+    headerRowIdx: headerRow,
     unmatchedHeaders,
     validation: buildParseValidation(cables),
   };

@@ -1,0 +1,71 @@
+{
+  "bootId": "2026-07-21T04-15-51-607Z",
+  "mode": "dev",
+  "startedAt": "2026-07-21T04:15:51.608Z",
+  "status": "ready",
+  "phases": [
+    {
+      "name": "preflight-ports",
+      "ok": true,
+      "ms": 4,
+      "postgresPort": true,
+      "backendPort": false,
+      "frontendPort": false,
+      "expectedPorts": [
+        5432,
+        3001,
+        5175
+      ]
+    },
+    {
+      "name": "postgres",
+      "ok": true,
+      "ms": 266,
+      "postgresOk": true,
+      "waitedSecs": 0,
+      "host": "localhost",
+      "port": 5432,
+      "database": "WiringSchemeDB"
+    },
+    {
+      "name": "recover-partial",
+      "ok": true,
+      "ms": 3,
+      "recovered": false
+    },
+    {
+      "name": "backend-start",
+      "ok": true,
+      "ms": 3290,
+      "spawned": true
+    },
+    {
+      "name": "backend-health",
+      "ok": true,
+      "ms": 7110,
+      "healthy": true
+    },
+    {
+      "name": "frontend-start",
+      "ok": true,
+      "ms": 255,
+      "spawned": true
+    },
+    {
+      "name": "stack-ready",
+      "ok": true,
+      "ms": 1072,
+      "ready": true,
+      "waitedSecs": 1
+    }
+  ],
+  "stack": {
+    "frontendPort": 5175,
+    "frontendReady": true,
+    "backendReady": true,
+    "mode": "vite-hmr",
+    "partialDetected": false,
+    "backendPort": 3001
+  },
+  "finishedAt": "2026-07-21T04:16:05.773Z"
+}

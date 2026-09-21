@@ -1,0 +1,27 @@
+﻿{
+  "slice": 4,
+  "role": "wiring_technician",
+  "username": "tech2",
+  "verdict": "PARTIAL",
+  "ui_mission_bar": {
+    "project": "SOLAR WADI SIC 93MWP PV PLANT – SOHAR – OMAN / OMAN – 003",
+    "panel": "SOLAR WADI PV FEEDER-1",
+    "Completed": 15,
+    "Total": 653,
+    "Remaining": 638,
+    "Progress": "2%",
+    "Continue": true,
+    "quick_access": ["Panels", "Table View", "Full View", "LIVE TB VIEW", "Stripping", "Crimping", "Exit"]
+  },
+  "api_reconcile": {
+    "assignment_id": 72,
+    "status": "in_progress",
+    "cables_src_done": 15,
+    "cables_total": 653,
+    "matches_baseline": true
+  },
+  "prep_bypass": false,
+  "note": "Continue opens tablet view; CUT/STRIP/CRIMP gates remain inside WiringWorkstation",
+  "screenshots": ["after-technician-mission-tablet.png"],
+  "build": "npm run build exit 0; dist deployed"
+}

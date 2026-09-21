@@ -1,0 +1,4 @@
+{
+  "description": "Scanned PDF: minimal PDF no geometry; pipeline returns APPROVED_2D_ONLY",
+  "expected_fallback": "APPROVED_2D_ONLY"
+}

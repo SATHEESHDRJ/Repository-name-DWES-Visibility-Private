@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-19",
+  "overall_pass": true,
+  "drawing_mapping_pass": true,
+  "preparation_reporting_pass": true,
+  "classes": {
+    "searchable": { "pass": true, "browser": "wire-021-d1-browser-both-boxes.png" },
+    "scanned": { "pass": true, "browser": "wire-2016e-browser-both-boxes.png" },
+    "hybrid": { "pass": true, "browser": "hybrid-live-browser-both-boxes.png", "sha": "292db173c11ba5d4fc93ef622c170c234d0dbee3140204b77e774eddaaa9093b" }
+  },
+  "restored_003_sha": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+  "post_restore_match_20_16_E": { "source_unmatched": false, "destination_unmatched": false, "page": 6 }
+}

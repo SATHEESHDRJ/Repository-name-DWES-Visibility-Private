@@ -30,6 +30,7 @@ function sym(
 /* ── Navigation & layout ─────────────────────────────────────────────────── */
 export const Menu            = sym('menu');
 export const X               = sym('close');
+export const Palette         = sym('palette');
 export const ChevronDown     = sym('expand_more');
 export const ChevronUp       = sym('expand_less');
 export const ChevronLeft     = sym('chevron_left');
@@ -45,6 +46,10 @@ export const LayoutGrid      = sym('grid_view');
 export const LayoutPanelTop  = sym('dashboard');
 export const FolderKanban    = sym('view_kanban');
 export const Maximize        = sym('fullscreen');
+export const Maximize2       = sym('open_in_full');
+export const Minimize2       = sym('close_fullscreen');
+export const Crosshair       = sym('center_focus_strong');
+export const Focus           = sym('filter_center_focus');
 
 /* ── Actions ───────────────────────────────────────────────────────────────── */
 export const Plus            = sym('add');
@@ -86,6 +91,7 @@ export const CircleX         = sym('cancel');
 export const XCircle         = sym('cancel');
 export const ShieldAlert     = sym('gpp_bad');
 export const ShieldCheck     = sym('verified_user');
+export const BadgeCheck      = sym('verified');
 export const ShieldOff       = sym('remove_moderator');
 export const Shield          = sym('shield');
 
@@ -99,6 +105,10 @@ export const Lock              = sym('lock');
 export const Unlock            = sym('lock_open');
 export const Key               = sym('key');
 export const KeyRound          = sym('key');
+export const Mail              = sym('mail');
+export const AtSign            = sym('alternate_email');
+export const IdCard            = sym('badge');
+export const Type              = sym('title');
 
 /* ── Files & documents ─────────────────────────────────────────────────────── */
 export const File              = sym('draft');
@@ -118,6 +128,8 @@ export const Wrench            = sym('build');
 export const PenTool           = sym('draw');
 export const QrCode            = sym('qr_code_scanner');
 export const Cable             = sym('cable');
+/** Terminal-to-terminal internal device looping within the same panel. */
+export const InternalLoop      = sym('sync_alt');
 export const Zap               = sym('bolt');
 export const Database          = sym('database');
 export const HardDrive         = sym('hard_drive');
@@ -149,5 +161,6 @@ export const Sun               = sym('light_mode');
 export const Pin               = sym('push_pin');
 export const Columns3          = sym('view_column');
 export const PanelTop          = sym('web_asset');
+export const Boxes             = sym('deployed_code');
 export const MessageCircle     = sym('chat');
 export const Loader            = sym('progress_activity', { className: 'ui-icon--spin' });

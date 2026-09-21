@@ -1,44 +1,226 @@
 /*
-  DWES — Arctic Enterprise (single app-wide palette)
-  Applied via <html data-theme="arctic">. Component rules live in themes.css.
+  DWES theme palettes — applied via <html data-theme="…">.
+  Component rules live in themes.css.
+
+  default   = production baseline (loads unless user switches) — modern high-contrast
+              brand-blue chrome, solid AppShell (no frosted glass)
+  arctic    = optional liquid-glass variant
+  harbor    = optional steel glass + teal
+  graphite  = optional charcoal glass + brand blue
+  ingenious = Ingenious Network logo brand (navy / teal / white / light grey)
+
+  Harbor / Graphite source archive: src/styles/theme-backup-harbor-graphite.css
 */
 
-[data-theme="arctic"] {
-  --t-bg:            #EEF2F6;
-  --t-bg-grad:       linear-gradient(180deg, #EAEFF4 0%, #F1F5F9 100%);
-  --t-header:        linear-gradient(180deg, #101B2E 0%, #0B1220 45%, #070D16 100%);
-  --t-header-border: rgba(56, 189, 248, 0.14);
-  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(2, 6, 23, 0.42);
-  --t-on-header:     #F8FAFC;
-  --t-on-header-muted: rgba(226, 232, 240, 0.62);
-  --t-header-icon:           rgba(226, 232, 240, 0.72);
+/* ── Default — modern high-contrast DWES (solid brand-blue chrome) ── */
+[data-theme="default"] {
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  /* Cool slate canvas — white cards pop (not washed grey-on-grey) */
+  --t-bg:            #D2DCE8;
+  --t-bg-grad:       linear-gradient(180deg, #CDD8E6 0%, #E4EBF3 52%, #F4F7FB 100%);
+
+  /* Solid brand navy/blue chrome — AppShell baseline (no frosted glass) */
+  --t-sidebar-bg:     #0C224F;
+  --t-sidebar-bg-solid: #0C224F;
+  --t-sidebar-border: rgba(255, 255, 255, 0.24);
+  --t-sidebar-text:   #F8FAFC;
+  --t-sidebar-muted:  #BFDBFE;
+  --t-sidebar-strong: #FFFFFF;
+  --t-sidebar-hover:  rgba(255, 255, 255, 0.16);
+  --t-sidebar-active-bg: #1D4ED8;
+  --t-sidebar-active-border: #93C5FD;
+  --t-sidebar-active-shadow: 0 2px 10px rgba(15, 23, 42, 0.32);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(255, 255, 255, 0.06);
+  --t-sidebar-blur: 0px;
+  --t-sidebar-saturate: 100%;
+  --t-header: #091A40;
+  --t-header-border: rgba(255, 255, 255, 0.24);
+  --t-header-shadow: 0 2px 12px rgba(15, 23, 42, 0.26);
+  --t-header-blur: 0px;
+  --t-header-saturate: 100%;
+  --t-on-header:     #FFFFFF;
+  --t-on-header-muted: #DBEAFE;
+  --t-header-icon:           #FFFFFF;
   --t-header-icon-hover:     #FFFFFF;
-  --t-header-icon-accent:    #38BDF8;
-  --t-header-action-bg:     rgba(255, 255, 255, 0.06);
-  --t-header-action-border: rgba(255, 255, 255, 0.11);
-  --t-header-action-hover:  rgba(255, 255, 255, 0.12);
-  --t-header-float-bg:      rgba(255, 255, 255, 0.07);
-  --t-header-float-border:  rgba(255, 255, 255, 0.14);
-  --t-header-float-shadow:  0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  --t-header-float-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.14), 0 12px 32px rgba(2, 6, 23, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --t-header-user-bg:            rgba(255, 255, 255, 0.92);
-  --t-header-user-border:        rgba(15, 23, 42, 0.10);
-  --t-header-user-shadow:        0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --t-header-user-hover-shadow:  0 4px 12px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --t-header-icon-accent:    #93C5FD;
+  --t-header-action-bg:     rgba(255, 255, 255, 0.14);
+  --t-header-action-border: rgba(255, 255, 255, 0.30);
+  --t-header-action-hover:  rgba(255, 255, 255, 0.24);
+  --t-header-float-bg:      rgba(255, 255, 255, 0.16);
+  --t-header-float-border:  rgba(255, 255, 255, 0.34);
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  --t-header-user-bg:            #FFFFFF;
+  --t-header-user-border:        rgba(15, 23, 42, 0.16);
+  --t-header-user-shadow:        0 1px 3px rgba(2, 6, 23, 0.18);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(2, 6, 23, 0.24);
   --t-header-user-text:          #0F172A;
-  --t-header-user-muted:         #64748B;
+  --t-header-user-muted:         #334155;
   --t-header-pill-text:          var(--t-header-user-text);
   --t-header-pill-muted:         var(--t-header-user-muted);
-  --t-header-divider:       rgba(255, 255, 255, 0.12);
-  --t-header-nav-active-bg: rgba(56, 189, 248, 0.14);
-  --t-header-logout-bg:          rgba(239, 68, 68, 0.10);
-  --t-header-logout-border:      rgba(248, 113, 113, 0.28);
-  --t-header-logout-icon:          #FCA5A5;
-  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.18);
-  --t-header-logout-hover-icon:    #FECACA;
+  --t-header-divider:       rgba(255, 255, 255, 0.30);
+  --t-header-nav-active-bg: rgba(147, 197, 253, 0.32);
+  --t-header-logout-bg:          rgba(254, 202, 202, 0.24);
+  --t-header-logout-border:      rgba(252, 165, 165, 0.58);
+  --t-header-logout-icon:          #FEE2E2;
+  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.30);
+  --t-header-logout-hover-icon:    #FFFFFF;
   --t-card:          #FFFFFF;
-  --t-card-border:   #CBD5E1;
-  --t-card-shadow:   0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 14px rgba(15, 23, 42, 0.06);
+  --t-card-border:   #475569;
+  --t-card-shadow:   0 1px 2px rgba(15, 23, 42, 0.07), 0 4px 16px rgba(15, 23, 42, 0.09);
+  --t-card-accent-grad: linear-gradient(135deg, rgba(37, 99, 235, 0.09) 0%, rgba(15, 37, 87, 0.03) 48%, transparent 72%);
+  --t-elev:          #FFFFFF;
+  --t-elev-shadow:   0 12px 36px rgba(15, 23, 42, 0.14);
+  --t-surface:       var(--t-card);
+  --t-surface-2:     #E2E8F0;
+  --t-surface-3:     #F8FAFC;
+  --t-table:         #FFFFFF;
+  --t-table-head:    #E2E8F0;
+  --t-table-row-alt: #F1F5F9;
+  --t-table-border:  rgba(15, 23, 42, 0.14);
+  --t-btn-secondary-bg:     #FFFFFF;
+  --t-btn-secondary-border: rgba(15, 23, 42, 0.24);
+  --t-border:        rgba(15, 23, 42, 0.16);
+  --t-border-strong: rgba(15, 23, 42, 0.30);
+  --t-text:          #0F172A;
+  --t-text-primary:  #020617;
+  --t-text-secondary:#0F172A;
+  --t-text-muted:    #1E293B;
+  --t-text-faint:    #334155;
+  --t-text-inverse:  #FFFFFF;
+  --t-muted:         var(--t-text-secondary);
+  --t-faint:         var(--t-text-muted);
+  --t-accent:        #2563EB;
+  --t-accent-strong: #1D4ED8;
+  --t-accent-bright: #3B82F6;
+  --t-accent-soft:   rgba(37, 99, 235, 0.12);
+  --t-accent-border: rgba(37, 99, 235, 0.34);
+  --t-on-accent:     #FFFFFF;
+  --t-primary-grad:  linear-gradient(180deg, #3B82F6 0%, #2563EB 100%);
+  --t-schematic-well:    #E2E8F0;
+  --t-schematic-border:  #475569;
+  --t-src:           #1D4ED8;
+  --t-dst:           #C2410C;
+  --t-success:       #15803D;
+  --t-success-soft:  #DCFCE7;
+  --t-warning:       #B45309;
+  --t-warning-soft:  #FEF3C7;
+  --t-danger:        #DC2626;
+  --t-danger-soft:   #FEE2E2;
+  --t-on-danger:     #FFFFFF;
+  --t-shadow-1: 0 1px 2px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+  --t-shadow-2: 0 4px 14px rgba(15,23,42,0.11);
+  --t-shadow-3: 0 12px 36px rgba(15, 23, 42, 0.14);
+  --t-login-hero:       linear-gradient(145deg, #091A40 0%, #0C224F 42%, #1D4ED8 100%);
+  --t-login-hero-grid:  rgba(255, 255, 255, 0.06);
+  --t-login-hero-glow:  rgba(59, 130, 246, 0.26);
+  --t-login-hero-stop-1: #091A40;
+  --t-login-hero-stop-2: #0C224F;
+  --t-login-hero-stop-3: #1D4ED8;
+  --t-glass-bg:            rgba(255, 255, 255, 0.94);
+  --t-glass-bg-solid:      #FFFFFF;
+  --t-glass-bg-subtle:     rgba(255, 255, 255, 0.86);
+  --t-glass-border:        rgba(15, 23, 42, 0.16);
+  --t-glass-border-strong: rgba(15, 23, 42, 0.24);
+  --t-glass-blur:          0px;
+  --t-glass-blur-subtle:   0px;
+  --t-glass-blur-overlay:  0px;
+  --t-glass-saturate:      100%;
+  --t-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.09);
+  --t-glass-shadow-hover: 0 4px 14px rgba(15, 23, 42, 0.10), 0 12px 28px rgba(15, 23, 42, 0.13);
+  --t-glass-text:          var(--t-text);
+  --t-glass-text-muted:    var(--t-muted);
+  --t-bento-gap:       clamp(0.75rem, 2vw, 1.25rem);
+  --t-bento-radius:    14px;
+  --t-bento-columns:   12;
+  --t-bento-min-cell:  180px;
+  --t-bento-row-min:   5.5rem;
+}
+
+/* ── Arctic — optional liquid glass (slate/navy + cyan) ── */
+[data-theme="arctic"] {
+  /* Semantic white surface channel. Light mode warms it below; dark mode keeps
+     the historical white value so this change does not alter dark rendering. */
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  /* Workspace canvas — cool slate so white cards contrast clearly */
+  --t-bg:            #D4DEEA;
+  --t-bg-grad:       linear-gradient(180deg, #CFDAE7 0%, #E6EEF5 55%, #F5F8FB 100%);
+
+  /* Chrome — industrial liquid glass (topbar + sidebar). Deep slate/navy frost
+     with soft cyan / brand-blue accents. Content workspace stays light dense. */
+  --t-sidebar-bg:     linear-gradient(180deg, rgba(15, 27, 46, 0.94) 0%, rgba(11, 18, 32, 0.96) 55%, rgba(7, 13, 22, 0.98) 100%);
+  --t-sidebar-bg-solid: #0B1220;
+  --t-sidebar-border: rgba(56, 189, 248, 0.28);
+  --t-sidebar-text:   #F1F5F9;
+  --t-sidebar-muted:  #CBD5E1;
+  --t-sidebar-strong: #FFFFFF;
+  --t-sidebar-hover:  rgba(56, 189, 248, 0.16);
+  --t-sidebar-active-bg: linear-gradient(135deg, rgba(37, 99, 235, 0.65) 0%, rgba(14, 165, 233, 0.48) 100%);
+  --t-sidebar-active-border: rgba(56, 189, 248, 0.50);
+  --t-sidebar-active-shadow:
+    0 4px 14px rgba(37, 99, 235, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(255, 255, 255, 0.06);
+  --t-sidebar-blur: 18px;
+  --t-sidebar-saturate: 160%;
+  --t-header: linear-gradient(
+    125deg,
+    rgba(15, 27, 46, 0.96) 0%,
+    rgba(11, 18, 32, 0.94) 42%,
+    rgba(8, 20, 40, 0.96) 72%,
+    rgba(7, 13, 22, 0.98) 100%
+  );
+  --t-header-border: rgba(56, 189, 248, 0.28);
+  /* Liquid glass rim + soft depth — no heavy glow spam */
+  --t-header-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(56, 189, 248, 0.08),
+    0 4px 18px rgba(2, 6, 23, 0.32);
+  --t-header-blur: 22px;
+  --t-header-saturate: 170%;
+  --t-on-header:     #FFFFFF;
+  --t-on-header-muted: #E2E8F0;
+  --t-header-icon:           #F8FAFC;
+  --t-header-icon-hover:     #FFFFFF;
+  --t-header-icon-accent:    #7DD3FC;
+  --t-header-action-bg:     rgba(255, 255, 255, 0.10);
+  --t-header-action-border: rgba(255, 255, 255, 0.20);
+  --t-header-action-hover:  rgba(56, 189, 248, 0.18);
+  --t-header-float-bg:      rgba(255, 255, 255, 0.12);
+  --t-header-float-border:  rgba(148, 163, 184, 0.36);
+  /* Controls sit in the header band. Only a hairline highlight — no lift. */
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  --t-header-user-bg:            rgba(255, 255, 255, 0.96);
+  --t-header-user-border:        rgba(15, 23, 42, 0.12);
+  --t-header-user-shadow:        0 1px 3px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --t-header-user-text:          #0F172A;
+  --t-header-user-muted:         #475569;
+  --t-header-pill-text:          var(--t-header-user-text);
+  --t-header-pill-muted:         var(--t-header-user-muted);
+  --t-header-divider:       rgba(255, 255, 255, 0.20);
+  --t-header-nav-active-bg: rgba(56, 189, 248, 0.22);
+  --t-header-logout-bg:          rgba(239, 68, 68, 0.14);
+  --t-header-logout-border:      rgba(248, 113, 113, 0.36);
+  --t-header-logout-icon:          #FECACA;
+  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.22);
+  --t-header-logout-hover-icon:    #FFFFFF;
+  --t-card:          #FFFFFF;
+  --t-card-border:   #475569;
+  --t-card-shadow:   0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.08);
+  /* Soft brand accent wash on content cards only (blue industrial — not purple) */
+  --t-card-accent-grad: linear-gradient(135deg, rgba(37, 99, 235, 0.07) 0%, rgba(15, 37, 87, 0.02) 48%, transparent 72%);
   --t-elev:          #FFFFFF;
   --t-elev-shadow:   0 12px 32px rgba(15, 23, 42, 0.12);
   --t-surface:       var(--t-card);
@@ -50,11 +232,17 @@
   --t-table-border:  rgba(15, 23, 42, 0.06);
   --t-btn-secondary-bg:     #FFFFFF;
   --t-btn-secondary-border: rgba(15, 23, 42, 0.14);
-  --t-border:        rgba(15, 23, 42, 0.08);
-  --t-border-strong: rgba(15, 23, 42, 0.14);
+  --t-border:        rgba(15, 23, 42, 0.14);
+  --t-border-strong: rgba(15, 23, 42, 0.24);
   --t-text:          #0F172A;
-  --t-muted:         #334155;
-  --t-faint:         #475569;
+  /* Dense industrial glass — WCAG AA+ on white / warm paper cards */
+  --t-text-primary:  #050C1B; /* Very dark blue-gray, near black */
+  --t-text-secondary:#0F172A; /* Slate 900 */
+  --t-text-muted:    #1E293B; /* Slate 800 */
+  --t-text-faint:    #334155; /* Slate 700 */
+  --t-text-inverse:  #FFFFFF;
+  --t-muted:         var(--t-text-secondary);
+  --t-faint:         var(--t-text-muted);
   --t-accent:        #2563EB;
   --t-accent-strong: #1D4ED8;
   --t-accent-bright: #3B82F6;
@@ -81,6 +269,9 @@
   --t-login-hero:       linear-gradient(145deg, #0B1220 0%, #0F2557 42%, #1D4ED8 100%);
   --t-login-hero-grid:  rgba(255, 255, 255, 0.04);
   --t-login-hero-glow:  rgba(59, 130, 246, 0.22);
+  --t-login-hero-stop-1: #0B1220;
+  --t-login-hero-stop-2: #0F2557;
+  --t-login-hero-stop-3: #1D4ED8;
 
   /* Liquid Glass — Arctic light theme */
   --t-glass-bg:            rgba(255, 255, 255, 0.72);
@@ -109,4 +300,464 @@
   --t-bento-columns:   12;
   --t-bento-min-cell:  180px;
   --t-bento-row-min:   5.5rem;
+}
+
+/* ── Harbor — steel glass + teal accents (tablet-friendly) ── */
+[data-theme="harbor"] {
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  --t-bg:            #CDDBE3;
+  --t-bg-grad:       linear-gradient(180deg, #C7D6E0 0%, #E2ECF1 55%, #F2F7FA 100%);
+  --t-sidebar-bg:     linear-gradient(180deg, rgba(12, 32, 40, 0.92) 0%, rgba(8, 24, 32, 0.96) 100%);
+  --t-sidebar-bg-solid: #0A1C24;
+  --t-sidebar-border: rgba(45, 212, 191, 0.28);
+  --t-sidebar-text:   #F1F5F9;
+  --t-sidebar-muted:  #99F6E4;
+  --t-sidebar-strong: #FFFFFF;
+  --t-sidebar-hover:  rgba(45, 212, 191, 0.16);
+  --t-sidebar-active-bg: linear-gradient(135deg, rgba(13, 148, 136, 0.55) 0%, rgba(14, 165, 233, 0.35) 100%);
+  --t-sidebar-active-border: rgba(45, 212, 191, 0.40);
+  --t-sidebar-active-shadow: 0 4px 14px rgba(13, 148, 136, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(255, 255, 255, 0.06);
+  --t-sidebar-blur: 18px;
+  --t-sidebar-saturate: 160%;
+  --t-header: linear-gradient(125deg, rgba(12, 32, 40, 0.92) 0%, rgba(8, 24, 32, 0.90) 55%, rgba(6, 18, 26, 0.95) 100%);
+  --t-header-border: rgba(45, 212, 191, 0.18);
+  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 4px 18px rgba(2, 6, 23, 0.28);
+  --t-header-blur: 22px;
+  --t-header-saturate: 170%;
+  --t-on-header:     #FFFFFF;
+  --t-on-header-muted: #E2E8F0;
+  --t-header-icon:           #F8FAFC;
+  --t-header-icon-hover:     #FFFFFF;
+  --t-header-icon-accent:    #5EEAD4;
+  --t-header-action-bg:     rgba(255, 255, 255, 0.07);
+  --t-header-action-border: rgba(255, 255, 255, 0.12);
+  --t-header-action-hover:  rgba(45, 212, 191, 0.14);
+  --t-header-float-bg:      rgba(255, 255, 255, 0.08);
+  --t-header-float-border:  rgba(148, 163, 184, 0.22);
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --t-header-user-bg:            rgba(255, 255, 255, 0.92);
+  --t-header-user-border:        rgba(15, 23, 42, 0.10);
+  --t-header-user-shadow:        0 1px 3px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --t-header-user-text:          #0F172A;
+  --t-header-user-muted:         #334155;
+  --t-header-pill-text:          var(--t-header-user-text);
+  --t-header-pill-muted:         var(--t-header-user-muted);
+  --t-header-divider:       rgba(255, 255, 255, 0.18);
+  --t-header-nav-active-bg: rgba(45, 212, 191, 0.20);
+  --t-header-logout-bg:          rgba(239, 68, 68, 0.12);
+  --t-header-logout-border:      rgba(248, 113, 113, 0.32);
+  --t-header-logout-icon:          #FECACA;
+  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.22);
+  --t-header-logout-hover-icon:    #FFFFFF;
+  --t-card:          #FFFFFF;
+  --t-card-border:   #64748B;
+  --t-card-shadow:   0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.08);
+  --t-card-accent-grad: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(8, 47, 73, 0.02) 48%, transparent 72%);
+  --t-elev:          #FFFFFF;
+  --t-elev-shadow:   0 12px 32px rgba(15, 23, 42, 0.12);
+  --t-surface:       var(--t-card);
+  --t-surface-2:     #F0FDFA;
+  --t-surface-3:     #F8FAFC;
+  --t-table:         #FFFFFF;
+  --t-table-head:    #F0FDFA;
+  --t-table-row-alt: #F8FAFC;
+  --t-table-border:  rgba(15, 23, 42, 0.10);
+  --t-btn-secondary-bg:     #FFFFFF;
+  --t-btn-secondary-border: rgba(15, 23, 42, 0.18);
+  --t-border:        rgba(15, 23, 42, 0.12);
+  --t-border-strong: rgba(15, 23, 42, 0.22);
+  --t-text:          #0F172A;
+  --t-text-primary:  #042F2E;
+  --t-text-secondary:#0F172A;
+  --t-text-muted:    #1E293B;
+  --t-text-faint:    #334155;
+  --t-text-inverse:  #FFFFFF;
+  --t-muted:         var(--t-text-secondary);
+  --t-faint:         var(--t-text-muted);
+  --t-accent:        #0D9488;
+  --t-accent-strong: #0F766E;
+  --t-accent-bright: #14B8A6;
+  --t-accent-soft:   rgba(13, 148, 136, 0.10);
+  --t-accent-border: rgba(13, 148, 136, 0.22);
+  --t-on-accent:     #FFFFFF;
+  --t-primary-grad:  linear-gradient(180deg, #14B8A6 0%, #0D9488 100%);
+  --t-schematic-well:    #F0FDFA;
+  --t-schematic-border:  #99F6E4;
+  --t-src:           #0F766E;
+  --t-dst:           #C2410C;
+  --t-success:       #15803D;
+  --t-success-soft:  #DCFCE7;
+  --t-warning:       #B45309;
+  --t-warning-soft:  #FEF3C7;
+  --t-danger:        #DC2626;
+  --t-danger-soft:   #FEE2E2;
+  --t-on-danger:     #FFFFFF;
+  --t-shadow-1: 0 1px 2px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04);
+  --t-shadow-2: 0 4px 12px rgba(15,23,42,0.08);
+  --t-shadow-3: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --t-login-hero:       linear-gradient(145deg, #0C2028 0%, #0F766E 42%, #0EA5E9 100%);
+  --t-login-hero-grid:  rgba(255, 255, 255, 0.04);
+  --t-login-hero-glow:  rgba(45, 212, 191, 0.22);
+  --t-login-hero-stop-1: #0C2028;
+  --t-login-hero-stop-2: #0F766E;
+  --t-login-hero-stop-3: #0EA5E9;
+  --t-glass-bg:            rgba(255, 255, 255, 0.72);
+  --t-glass-bg-solid:      rgba(255, 255, 255, 0.94);
+  --t-glass-bg-subtle:     rgba(255, 255, 255, 0.56);
+  --t-glass-border:        rgba(255, 255, 255, 0.52);
+  --t-glass-border-strong: rgba(15, 23, 42, 0.10);
+  --t-glass-blur:          14px;
+  --t-glass-blur-subtle:   10px;
+  --t-glass-blur-overlay:  6px;
+  --t-glass-saturate:      165%;
+  --t-glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --t-glass-shadow-hover: 0 4px 14px rgba(15, 23, 42, 0.08), 0 16px 42px rgba(15, 23, 42, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --t-glass-text:          var(--t-text);
+  --t-glass-text-muted:    var(--t-muted);
+  --t-bento-gap:       clamp(0.75rem, 2vw, 1.25rem);
+  --t-bento-radius:    16px;
+  --t-bento-columns:   12;
+  --t-bento-min-cell:  180px;
+  --t-bento-row-min:   5.5rem;
+}
+
+/* ── Graphite — charcoal glass + brand blue (dense MES) ── */
+[data-theme="graphite"] {
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  --t-bg:            #D0D6DF;
+  --t-bg-grad:       linear-gradient(180deg, #CCD3DD 0%, #E6EBEF 55%, #F4F5F7 100%);
+  --t-sidebar-bg:     linear-gradient(180deg, rgba(24, 24, 27, 0.97) 0%, rgba(15, 15, 18, 0.99) 100%);
+  --t-sidebar-bg-solid: #18181B;
+  --t-sidebar-border: rgba(96, 165, 250, 0.36);
+  --t-sidebar-text:   #FAFAFA;
+  --t-sidebar-muted:  #E4E4E7;
+  --t-sidebar-strong: #FFFFFF;
+  --t-sidebar-hover:  rgba(96, 165, 250, 0.16);
+  --t-sidebar-active-bg: linear-gradient(135deg, rgba(37, 99, 235, 0.58) 0%, rgba(30, 64, 175, 0.42) 100%);
+  --t-sidebar-active-border: rgba(96, 165, 250, 0.40);
+  --t-sidebar-active-shadow: 0 4px 14px rgba(37, 99, 235, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(255, 255, 255, 0.06);
+  --t-sidebar-blur: 18px;
+  --t-sidebar-saturate: 150%;
+  --t-header: linear-gradient(125deg, rgba(24, 24, 27, 0.94) 0%, rgba(15, 15, 18, 0.92) 55%, rgba(9, 9, 11, 0.96) 100%);
+  --t-header-border: rgba(96, 165, 250, 0.16);
+  --t-header-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 18px rgba(0, 0, 0, 0.35);
+  --t-header-blur: 22px;
+  --t-header-saturate: 160%;
+  --t-on-header:     #FAFAFA;
+  --t-on-header-muted: #E4E4E7;
+  --t-header-icon:           #FAFAFA;
+  --t-header-icon-hover:     #FFFFFF;
+  --t-header-icon-accent:    #93C5FD;
+  --t-header-action-bg:     rgba(255, 255, 255, 0.06);
+  --t-header-action-border: rgba(255, 255, 255, 0.11);
+  --t-header-action-hover:  rgba(96, 165, 250, 0.14);
+  --t-header-float-bg:      rgba(255, 255, 255, 0.07);
+  --t-header-float-border:  rgba(161, 161, 170, 0.28);
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --t-header-user-bg:            rgba(255, 255, 255, 0.94);
+  --t-header-user-border:        rgba(24, 24, 27, 0.12);
+  --t-header-user-shadow:        0 1px 3px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --t-header-user-text:          #18181B;
+  --t-header-user-muted:         #52525B;
+  --t-header-pill-text:          var(--t-header-user-text);
+  --t-header-pill-muted:         var(--t-header-user-muted);
+  --t-header-divider:       rgba(255, 255, 255, 0.10);
+  --t-header-nav-active-bg: rgba(96, 165, 250, 0.14);
+  --t-header-logout-bg:          rgba(239, 68, 68, 0.10);
+  --t-header-logout-border:      rgba(248, 113, 113, 0.28);
+  --t-header-logout-icon:          #FCA5A5;
+  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.18);
+  --t-header-logout-hover-icon:    #FECACA;
+  --t-card:          #FFFFFF;
+  --t-card-border:   #71717A;
+  --t-card-shadow:   0 1px 2px rgba(24, 24, 27, 0.07), 0 4px 16px rgba(24, 24, 27, 0.09);
+  --t-card-accent-grad: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(24, 24, 27, 0.02) 48%, transparent 72%);
+  --t-elev:          #FFFFFF;
+  --t-elev-shadow:   0 12px 32px rgba(24, 24, 27, 0.14);
+  --t-surface:       var(--t-card);
+  --t-surface-2:     #F4F4F5;
+  --t-surface-3:     #FAFAFA;
+  --t-table:         #FFFFFF;
+  --t-table-head:    #F4F4F5;
+  --t-table-row-alt: #FAFAFA;
+  --t-table-border:  rgba(24, 24, 27, 0.12);
+  --t-btn-secondary-bg:     #FFFFFF;
+  --t-btn-secondary-border: rgba(24, 24, 27, 0.18);
+  --t-border:        rgba(24, 24, 27, 0.12);
+  --t-border-strong: rgba(24, 24, 27, 0.22);
+  --t-text:          #18181B;
+  --t-text-primary:  #09090B;
+  --t-text-secondary:#18181B;
+  --t-text-muted:    #27272A;
+  --t-text-faint:    #3F3F46;
+  --t-text-inverse:  #FFFFFF;
+  --t-muted:         var(--t-text-secondary);
+  --t-faint:         var(--t-text-muted);
+  --t-accent:        #2563EB;
+  --t-accent-strong: #1D4ED8;
+  --t-accent-bright: #3B82F6;
+  --t-accent-soft:   rgba(37, 99, 235, 0.10);
+  --t-accent-border: rgba(37, 99, 235, 0.22);
+  --t-on-accent:     #FFFFFF;
+  --t-primary-grad:  linear-gradient(180deg, #3B82F6 0%, #2563EB 100%);
+  --t-schematic-well:    #F4F4F5;
+  --t-schematic-border:  #D4D4D8;
+  --t-src:           #1D4ED8;
+  --t-dst:           #C2410C;
+  --t-success:       #15803D;
+  --t-success-soft:  #DCFCE7;
+  --t-warning:       #B45309;
+  --t-warning-soft:  #FEF3C7;
+  --t-danger:        #DC2626;
+  --t-danger-soft:   #FEE2E2;
+  --t-on-danger:     #FFFFFF;
+  --t-shadow-1: 0 1px 2px rgba(24,24,27,0.06), 0 1px 3px rgba(24,24,27,0.04);
+  --t-shadow-2: 0 4px 12px rgba(24,24,27,0.08);
+  --t-shadow-3: 0 12px 32px rgba(24,24,27,0.14);
+  --t-login-hero:       linear-gradient(145deg, #18181B 0%, #1E3A8A 42%, #2563EB 100%);
+  --t-login-hero-grid:  rgba(255, 255, 255, 0.04);
+  --t-login-hero-glow:  rgba(59, 130, 246, 0.22);
+  --t-login-hero-stop-1: #18181B;
+  --t-login-hero-stop-2: #1E3A8A;
+  --t-login-hero-stop-3: #2563EB;
+  --t-glass-bg:            rgba(255, 255, 255, 0.72);
+  --t-glass-bg-solid:      rgba(255, 255, 255, 0.94);
+  --t-glass-bg-subtle:     rgba(255, 255, 255, 0.56);
+  --t-glass-border:        rgba(255, 255, 255, 0.52);
+  --t-glass-border-strong: rgba(24, 24, 27, 0.10);
+  --t-glass-blur:          14px;
+  --t-glass-blur-subtle:   10px;
+  --t-glass-blur-overlay:  6px;
+  --t-glass-saturate:      155%;
+  --t-glass-shadow: 0 1px 2px rgba(24, 24, 27, 0.05), 0 8px 28px rgba(24, 24, 27, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --t-glass-shadow-hover: 0 4px 14px rgba(24, 24, 27, 0.08), 0 16px 42px rgba(24, 24, 27, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --t-glass-text:          var(--t-text);
+  --t-glass-text-muted:    var(--t-muted);
+  --t-bento-gap:       clamp(0.75rem, 2vw, 1.25rem);
+  --t-bento-radius:    14px;
+  --t-bento-columns:   12;
+  --t-bento-min-cell:  180px;
+  --t-bento-row-min:   5.5rem;
+}
+
+/* ── Ingenious Network — logo brand (navy #1B2958, teal #2E9DAA, white, light grey) ──
+   Palette sourced from public/logo.svg (Ingenious Network FZC recreation). */
+[data-theme="ingenious"] {
+  --t-surface-white:     #FFFFFF;
+  --t-surface-white-rgb: 255, 255, 255;
+  --t-surface-white-10:  rgba(255, 255, 255, 0.10);
+  --t-surface-white-20:  rgba(255, 255, 255, 0.20);
+  --t-surface-white-90:  rgba(255, 255, 255, 0.90);
+  /* Light grey workspace canvas — white cards pop */
+  --t-bg:            #E8ECF0;
+  --t-bg-grad:       linear-gradient(180deg, #E2E8EE 0%, #EEF1F5 52%, #F8FAFB 100%);
+
+  /* Light sidebar — navy/teal accents on white/light-grey (topbar stays dark navy) */
+  --t-sidebar-bg:        linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  --t-sidebar-bg-solid:  #FFFFFF;
+  --t-sidebar-border:    rgba(27, 41, 88, 0.10);
+  --t-sidebar-text:      #334155;
+  --t-sidebar-muted:     #64748B;
+  --t-sidebar-strong:    #1B2958;
+  --t-sidebar-hover:     rgba(46, 157, 170, 0.10);
+  --t-sidebar-active-bg: #1B7080;
+  --t-sidebar-active-border: #2E9DAA;
+  --t-sidebar-active-shadow: 0 1px 3px rgba(27, 112, 128, 0.28);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(27, 41, 88, 0.04);
+  --t-sidebar-blur: 0px;
+  --t-sidebar-saturate: 100%;
+  --t-header: linear-gradient(90deg, #141E42 0%, #1B2958 46%, #248892 100%);
+  --t-header-border: rgba(109, 207, 212, 0.28);
+  --t-header-shadow: 0 2px 12px rgba(27, 41, 88, 0.26);
+  --t-header-blur: 0px;
+  --t-header-saturate: 100%;
+  --t-on-header:     #FFFFFF;
+  --t-on-header-muted: #CCE8EC;
+  --t-header-icon:           #FFFFFF;
+  --t-header-icon-hover:     #FFFFFF;
+  --t-header-icon-accent:    #6DCFD4;
+  --t-header-action-bg:     rgba(255, 255, 255, 0.12);
+  --t-header-action-border: rgba(109, 207, 212, 0.32);
+  --t-header-action-hover:  rgba(46, 157, 170, 0.22);
+  --t-header-float-bg:      rgba(255, 255, 255, 0.12);
+  --t-header-float-border:  rgba(109, 207, 212, 0.34);
+  --t-header-float-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  --t-header-float-hover-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --t-header-user-bg:            #FFFFFF;
+  --t-header-user-border:        rgba(27, 41, 88, 0.14);
+  --t-header-user-shadow:        0 1px 3px rgba(27, 41, 88, 0.16);
+  --t-header-user-hover-shadow:  0 2px 6px rgba(27, 41, 88, 0.22);
+  --t-header-user-text:          #1B2958;
+  --t-header-user-muted:         #334155;
+  --t-header-pill-text:          var(--t-header-user-text);
+  --t-header-pill-muted:         var(--t-header-user-muted);
+  --t-header-divider:       rgba(109, 207, 212, 0.30);
+  --t-header-nav-active-bg: rgba(46, 157, 170, 0.28);
+  --t-header-logout-bg:          rgba(254, 202, 202, 0.22);
+  --t-header-logout-border:      rgba(252, 165, 165, 0.52);
+  --t-header-logout-icon:          #FEE2E2;
+  --t-header-logout-hover-bg:      rgba(239, 68, 68, 0.28);
+  --t-header-logout-hover-icon:    #FFFFFF;
+  --t-card:          #FFFFFF;
+  --t-card-border:   #94A3B8;
+  --t-card-shadow:   0 1px 2px rgba(27, 41, 88, 0.07), 0 4px 16px rgba(27, 41, 88, 0.08);
+  --t-card-accent-grad: linear-gradient(135deg, rgba(46, 157, 170, 0.09) 0%, rgba(27, 41, 88, 0.03) 48%, transparent 72%);
+  --t-elev:          #FFFFFF;
+  --t-elev-shadow:   0 12px 36px rgba(27, 41, 88, 0.12);
+  --t-surface:       var(--t-card);
+  --t-surface-2:     #E8ECF0;
+  --t-surface-3:     #F8FAFB;
+  --t-table:         #FFFFFF;
+  --t-table-head:    #E8ECF0;
+  --t-table-row-alt: #F1F4F7;
+  --t-table-border:  rgba(27, 41, 88, 0.12);
+  --t-btn-secondary-bg:     #FFFFFF;
+  --t-btn-secondary-border: rgba(27, 41, 88, 0.20);
+  --t-border:        rgba(27, 41, 88, 0.14);
+  --t-border-strong: rgba(27, 41, 88, 0.26);
+  --t-text:          #1B2958;
+  --t-text-primary:  #141E42;
+  --t-text-secondary:#1B2958;
+  --t-text-muted:    #334155;
+  --t-text-faint:    #475569;
+  --t-text-inverse:  #FFFFFF;
+  --t-muted:         var(--t-text-secondary);
+  --t-faint:         var(--t-text-muted);
+  --t-accent:        #2E9DAA;
+  --t-accent-strong: #1B7080;
+  --t-accent-bright: #6DCFD4;
+  --t-accent-soft:   rgba(46, 157, 170, 0.12);
+  --t-accent-border: rgba(46, 157, 170, 0.32);
+  --t-on-accent:     #FFFFFF;
+  --t-primary-grad:  linear-gradient(180deg, #2E9DAA 0%, #1B7080 100%);
+  --t-schematic-well:    #E8ECF0;
+  --t-schematic-border:  #94A3B8;
+  --t-src:           #248892;
+  --t-dst:           #C2410C;
+  --t-success:       #15803D;
+  --t-success-soft:  #DCFCE7;
+  --t-warning:       #B45309;
+  --t-warning-soft:  #FEF3C7;
+  --t-danger:        #DC2626;
+  --t-danger-soft:   #FEE2E2;
+  --t-on-danger:     #FFFFFF;
+  --t-shadow-1: 0 1px 2px rgba(27,41,88,0.07), 0 1px 3px rgba(27,41,88,0.05);
+  --t-shadow-2: 0 4px 14px rgba(27,41,88,0.10);
+  --t-shadow-3: 0 12px 36px rgba(27, 41, 88, 0.12);
+  --t-login-hero:       linear-gradient(145deg, #141E42 0%, #1B2958 42%, #2E9DAA 100%);
+  --t-login-hero-grid:  rgba(255, 255, 255, 0.06);
+  --t-login-hero-glow:  rgba(46, 157, 170, 0.26);
+  --t-login-hero-stop-1: #141E42;
+  --t-login-hero-stop-2: #1B2958;
+  --t-login-hero-stop-3: #2E9DAA;
+  --t-glass-bg:            rgba(255, 255, 255, 0.94);
+  --t-glass-bg-solid:      #FFFFFF;
+  --t-glass-bg-subtle:     rgba(255, 255, 255, 0.86);
+  --t-glass-border:        rgba(27, 41, 88, 0.14);
+  --t-glass-border-strong: rgba(27, 41, 88, 0.22);
+  --t-glass-blur:          0px;
+  --t-glass-blur-subtle:   0px;
+  --t-glass-blur-overlay:  0px;
+  --t-glass-saturate:      100%;
+  --t-glass-shadow: 0 1px 2px rgba(27, 41, 88, 0.06), 0 4px 16px rgba(27, 41, 88, 0.08);
+  --t-glass-shadow-hover: 0 4px 14px rgba(27, 41, 88, 0.10), 0 12px 28px rgba(27, 41, 88, 0.12);
+  --t-glass-text:          var(--t-text);
+  --t-glass-text-muted:    var(--t-muted);
+  --t-bento-gap:       clamp(0.75rem, 2vw, 1.25rem);
+  --t-bento-radius:    14px;
+  --t-bento-columns:   12;
+  --t-bento-min-cell:  180px;
+  --t-bento-row-min:   5.5rem;
+}
+
+/* Ingenious — primary brand keeps light content surfaces in both modes.
+   Dark styling is reserved for topbar, section headers, and key action controls. */
+[data-theme="ingenious"][data-mode="dark"] {
+  --t-text:          #1B2958;
+  --t-text-primary:  #141E42;
+  --t-text-secondary:#334155;
+  --t-text-muted:    #475569;
+  --t-text-faint:    #64748B;
+}
+
+/* Warm light surfaces only. ThemeProvider keeps the selected mode in
+   data-mode; scoping here guarantees dark mode remains byte-for-byte visual. */
+[data-theme="arctic"][data-mode="light"] {
+  --t-surface-white:     #F7F6F2;
+  --t-surface-white-rgb: 247, 246, 242;
+  --t-surface-white-10:  rgba(247, 246, 242, 0.10);
+  --t-surface-white-20:  rgba(247, 246, 242, 0.20);
+  --t-surface-white-90:  rgba(247, 246, 242, 0.90);
+
+  --t-card:              #F7F6F2;
+  --t-elev:              #F7F6F2;
+  --t-table:             #F7F6F2;
+  --t-btn-secondary-bg:  #F7F6F2;
+  --t-header-user-bg:    rgba(247, 246, 242, 0.92);
+  --t-header-action-bg:  rgba(247, 246, 242, 0.06);
+  --t-header-action-hover: rgba(247, 246, 242, 0.12);
+  --t-header-float-bg:   rgba(247, 246, 242, 0.07);
+
+  --t-glass-bg:          rgba(247, 246, 242, 0.72);
+  --t-glass-bg-solid:    rgba(247, 246, 242, 0.94);
+  --t-glass-bg-subtle:   rgba(247, 246, 242, 0.56);
+
+  /* Legacy surface roles still consumed by a few older modules. */
+  --color-surface-elevated: #F7F6F2;
+  --color-surface-overlay:  rgba(247, 246, 242, 0.95);
+  --color-md-surface:       #F7F6F2;
+}
+
+/* ── Light mode — light sidebar surface (dark mode keeps dark chrome) ──
+   Scoped under [data-mode="light"] so the dark-mode sidebar (Default / Arctic
+   base values above) remains byte-for-byte visual. The topbar stays dark navy
+   brand chrome in both modes — only its height/spacing adjusts in design-system.css. */
+[data-mode="light"] {
+  --t-sidebar-bg:        linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  --t-sidebar-bg-solid:  #FFFFFF;
+  --t-sidebar-border:    rgba(15, 23, 42, 0.10);
+  --t-sidebar-text:      #334155;
+  --t-sidebar-muted:     #64748B;
+  --t-sidebar-strong:    #0F172A;
+  --t-sidebar-hover:     rgba(37, 99, 235, 0.08);
+  --t-sidebar-active-bg: #1D4ED8;
+  --t-sidebar-active-border: #1D4ED8;
+  --t-sidebar-active-shadow: 0 1px 3px rgba(29, 78, 216, 0.22);
+  --t-sidebar-active-text: #FFFFFF;
+  --t-sidebar-toggle-bg: rgba(15, 23, 42, 0.04);
+  --t-sidebar-blur:      0px;
+  --t-sidebar-saturate:  100%;
+}
+
+/* Ingenious — light sidebar uses teal active (logo accent) instead of default blue */
+[data-theme="ingenious"][data-mode="light"] {
+  --t-sidebar-hover:     rgba(46, 157, 170, 0.10);
+  --t-sidebar-active-bg: #1B7080;
+  --t-sidebar-active-border: #2E9DAA;
+  --t-sidebar-active-shadow: 0 1px 3px rgba(27, 112, 128, 0.28);
+}
+
+/* Harbor — light sidebar teal active to match theme accent */
+[data-theme="harbor"][data-mode="light"] {
+  --t-sidebar-hover:     rgba(13, 148, 136, 0.10);
+  --t-sidebar-active-bg: #0D9488;
+  --t-sidebar-active-border: #0F766E;
+  --t-sidebar-active-shadow: 0 1px 3px rgba(13, 148, 136, 0.24);
 }

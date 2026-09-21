@@ -17,6 +17,8 @@ export interface DocumentStatus {
   drawing?: DrawingSummary | null;
   fileName?: string;
   cableCount?: number;
+  /** ISO timestamp of the original upload or the most recent replacement. */
+  uploadedAt?: string;
 }
 
 export function pickPreviewableDrawing(

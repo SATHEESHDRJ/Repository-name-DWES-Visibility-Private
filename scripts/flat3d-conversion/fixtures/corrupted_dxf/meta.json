@@ -1,0 +1,5 @@
+{
+  "description": "Corrupted DXF: garbage bytes; expect DXF_PARSE failure",
+  "expected_status": "FAILED",
+  "expected_stage": "DXF_PARSE"
+}

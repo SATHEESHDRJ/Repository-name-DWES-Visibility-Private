@@ -17,6 +17,17 @@ export const WIRING_SYSTEM_FIELDS = [
   { key: 'rack', label: 'Rack', required: false },
   { key: 'ref', label: 'Ref', required: false },
   { key: 'remarks', label: 'Remarks', required: false },
+  // Optional crimping-leg engineering fields (additive; missing → NOT AVAILABLE in report)
+  { key: 'source_crimp_leg_number', label: 'Source Crimp Leg No', required: false },
+  { key: 'source_crimp_leg_size', label: 'Source Crimp Leg Size', required: false },
+  { key: 'source_crimp_leg_color', label: 'Source Crimp Leg Color', required: false },
+  { key: 'source_ferrule_type', label: 'Source Ferrule Type', required: false },
+  { key: 'source_ferrule_marking', label: 'Source Ferrule Marking', required: false },
+  { key: 'dest_crimp_leg_number', label: 'Dest Crimp Leg No', required: false },
+  { key: 'dest_crimp_leg_size', label: 'Dest Crimp Leg Size', required: false },
+  { key: 'dest_crimp_leg_color', label: 'Dest Crimp Leg Color', required: false },
+  { key: 'dest_ferrule_type', label: 'Dest Ferrule Type', required: false },
+  { key: 'dest_ferrule_marking', label: 'Dest Ferrule Marking', required: false },
 ] as const;
 
 export type WiringSystemFieldKey = (typeof WIRING_SYSTEM_FIELDS)[number]['key'];
@@ -56,6 +67,47 @@ export function buildAutoWiringMapping(hdrs: string[], sample: unknown[][]): Rec
       if (field.key === 'source_terminal') return hl === 'term_a' || hl === 'src_term' || hl === 'terminal_a';
       if (field.key === 'dest_device') return hl.includes('dst_dev') || hl === 'dev_tblk_b' || hl === 'dev_b';
       if (field.key === 'dest_terminal') return hl === 'term_b' || hl === 'dst_term' || hl === 'terminal_b';
+      // Leg / ferrule meta — alias patterns only (never project-name branches)
+      if (field.key === 'source_crimp_leg_number') {
+        return hl.includes('src') && (hl.includes('leg') && (hl.includes('no') || hl.includes('num') || hl.includes('#')))
+          || hl === 'crimp_leg_a' || hl === 'leg_no_a' || hl === 'source_leg_no';
+      }
+      if (field.key === 'source_crimp_leg_size') {
+        return (hl.includes('src') || hl.endsWith('_a')) && hl.includes('leg') && hl.includes('size')
+          || hl === 'crimp_leg_size_a' || hl === 'source_leg_size';
+      }
+      if (field.key === 'source_crimp_leg_color') {
+        return (hl.includes('src') || hl.endsWith('_a')) && hl.includes('leg') && (hl.includes('color') || hl.includes('colour'))
+          || hl === 'crimp_leg_color_a' || hl === 'source_leg_color';
+      }
+      if (field.key === 'source_ferrule_type') {
+        return (hl.includes('src') || hl.endsWith('_a')) && hl.includes('ferrule') && hl.includes('type')
+          || hl === 'ferrule_type_a';
+      }
+      if (field.key === 'source_ferrule_marking') {
+        return (hl.includes('src') || hl.endsWith('_a')) && hl.includes('ferrule') && (hl.includes('mark') || hl.includes('text'))
+          || hl === 'ferrule_marking_a';
+      }
+      if (field.key === 'dest_crimp_leg_number') {
+        return hl.includes('dst') && hl.includes('leg') && (hl.includes('no') || hl.includes('num') || hl.includes('#'))
+          || hl === 'crimp_leg_b' || hl === 'leg_no_b' || hl === 'dest_leg_no';
+      }
+      if (field.key === 'dest_crimp_leg_size') {
+        return (hl.includes('dst') || hl.endsWith('_b')) && hl.includes('leg') && hl.includes('size')
+          || hl === 'crimp_leg_size_b' || hl === 'dest_leg_size';
+      }
+      if (field.key === 'dest_crimp_leg_color') {
+        return (hl.includes('dst') || hl.endsWith('_b')) && hl.includes('leg') && (hl.includes('color') || hl.includes('colour'))
+          || hl === 'crimp_leg_color_b' || hl === 'dest_leg_color';
+      }
+      if (field.key === 'dest_ferrule_type') {
+        return (hl.includes('dst') || hl.endsWith('_b')) && hl.includes('ferrule') && hl.includes('type')
+          || hl === 'ferrule_type_b';
+      }
+      if (field.key === 'dest_ferrule_marking') {
+        return (hl.includes('dst') || hl.endsWith('_b')) && hl.includes('ferrule') && (hl.includes('mark') || hl.includes('text'))
+          || hl === 'ferrule_marking_b';
+      }
       return false;
     });
     if (match) auto[field.key] = match;

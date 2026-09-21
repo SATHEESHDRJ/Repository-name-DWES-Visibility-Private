@@ -16,6 +16,7 @@ const r = spawnSync(
   {
     stdio: 'inherit',
     shell: true,
+    windowsHide: true,
     env: { ...process.env, K6_INSECURE_SKIP_TLS_VERIFY: 'true' },
   },
 );

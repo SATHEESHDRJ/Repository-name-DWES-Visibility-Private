@@ -144,7 +144,7 @@ export default function DeleteConfirmModal({
   warningText,
   irreversible = true,
   confirmCheckboxLabel,
-  confirmButtonLabel = 'Delete',
+  confirmButtonLabel = 'Delete Permanently',
   loading = false,
   deleting = false,
   error,
@@ -234,6 +234,8 @@ export default function DeleteConfirmModal({
     <Modal
       title={title}
       subtitle={subtitle}
+      icon={<Trash2 />}
+      iconTone="danger"
       onClose={handleClose}
       size={size}
       typography={typography}

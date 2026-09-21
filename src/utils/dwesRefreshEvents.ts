@@ -11,6 +11,12 @@ export interface WorkflowChangedDetail {
   scope?: WorkflowChangedScope;
   projectCode?: string;
   frameId?: string;
+  assignmentId?: number;
+  cableIndex?: number;
+  wireId?: string;
+  previousWireId?: string;
+  nextWireId?: string;
+  nextCableIndex?: number;
 }
 
 const EVENT = 'dwes:workflow-changed';

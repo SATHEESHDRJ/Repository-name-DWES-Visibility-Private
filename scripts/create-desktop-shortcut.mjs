@@ -1,8 +1,8 @@
 /**
  * Desktop launcher — creates DWES startup icon(s).
  *
- *   node scripts/create-desktop-shortcut.mjs              -> Dev (Vite HMR) DWES.lnk
- *   node scripts/create-desktop-shortcut.mjs --prod       -> Dev + Prod desktop icons
+ *   node scripts/create-desktop-shortcut.mjs              -> canonical Start + Stop shortcuts
+ *   node scripts/create-desktop-shortcut.mjs --prod       -> Start + Stop + optional Prod shortcut
  *   node scripts/create-desktop-shortcut.mjs --lan        -> browser-only .url for LAN tablets
  */
 import { execFileSync } from 'child_process';
@@ -10,11 +10,12 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { HTTP_DEV_PORT } from './dwes-ports.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const icoPath = path.join(root, 'public', 'app-icon.ico');
-const PORT = process.env.VITE_PORT || 5173;
-const fixScript = path.join(root, 'scripts', 'fix-desktop-shortcut.ps1');
+const PORT = Number(process.env.VITE_HTTP_PORT) || HTTP_DEV_PORT;
+const fixScript = path.join(root, 'scripts', 'Create-DWES-Shortcuts.ps1');
 
 if (process.platform !== 'win32') {
   console.error('[DWES] Desktop shortcuts are Windows-only.');
@@ -34,7 +35,7 @@ if (wantLan || url) {
   const desktop = execFileSync(
     'powershell.exe',
     ['-NoProfile', '-Command', "[Environment]::GetFolderPath('Desktop')"],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', windowsHide: true },
   ).trim();
 
   if (!url) {
@@ -68,4 +69,4 @@ if (wantLan || url) {
 const psArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', fixScript];
 if (wantProd) psArgs.push('-IncludeProd');
 
-execFileSync('powershell.exe', psArgs, { stdio: 'inherit' });
+execFileSync('powershell.exe', psArgs, { stdio: 'inherit', windowsHide: true });

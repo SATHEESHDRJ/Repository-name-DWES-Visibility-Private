@@ -90,7 +90,7 @@ export default function DuplicatePanelWarning({
               </button>
             ))}
             {onSelectPanel && duplicates.length > 1 && (
-              <label className="flex items-center gap-2 text-[12px] text-slate-600 min-w-0">
+              <label className="flex items-center gap-2 text-[12px] text-muted min-w-0">
                 <span className="font-medium shrink-0">Set active duplicate panel:</span>
                 <select
                   className="form-select !h-8 !py-0 !text-[12px] min-w-[200px] max-w-full"

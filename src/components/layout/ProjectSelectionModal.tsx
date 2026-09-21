@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Project } from '../../types';
-import { AlertCircle, Building2, CheckCircle2, FolderOpen, MapPin, RefreshCw } from '../ui/icons';
+import { AlertCircle, Building2, CheckCircle2, FolderOpen, MapPin } from '../ui/icons';
+import { DwesLoadingIndicator } from '../ui/DwesLoadingIndicator';
 
 interface ProjectSelectionModalProps {
   open: boolean;
@@ -49,8 +50,7 @@ export default function ProjectSelectionModal({
         <div className="project-gate-body">
           {loading && (
             <div className="project-gate-state" aria-live="polite">
-              <RefreshCw size={18} />
-              <span>Loading available projects...</span>
+              <DwesLoadingIndicator label="Loading available projects…" />
             </div>
           )}
 

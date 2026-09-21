@@ -1,0 +1,5 @@
+Container: dwes_oci_restore_api_20260725_082028
+require.resolve('@fastify/middie'): ABSENT
+@nestjs/platform-fastify@11.1.29 (npm ls --depth=0)
+backend/package-lock.json: no @fastify/middie entry (workspace HEAD 1daddc54)
+main.ts: skipMiddie: true (mitigation retained; package not on disk)

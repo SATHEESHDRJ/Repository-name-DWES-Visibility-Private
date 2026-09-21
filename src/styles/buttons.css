@@ -300,7 +300,7 @@
     box-shadow: var(--glass-shadow, var(--btn-shadow));
   }
   .btn-secondary:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--glass-bg-solid, var(--color-surface-variant)) 92%, white);
+    background: color-mix(in srgb, var(--glass-bg-solid, var(--color-surface-variant)) 92%, var(--t-surface-white, white));
     border-color: var(--glass-border-strong, var(--color-outline));
     box-shadow: var(--glass-shadow-hover, var(--btn-shadow-hover));
   }
@@ -358,7 +358,7 @@
     padding: var(--btn-py) var(--btn-px-sm);
     font-size: var(--btn-fs-sm);
     border-radius: var(--btn-radius-md);
-    background: #FFFFFF;
+    background: var(--t-surface-white, #FFFFFF);
     color: #334155;
     border-color: #E2E8F0;
     box-shadow: var(--btn-shadow);
@@ -491,7 +491,9 @@
     gap: 0;
   }
 
-  .btn-action--edit     { background: linear-gradient(180deg, #3B82F6 0%, #2563EB 100%); border-color: rgba(29, 78, 216, 0.55); }
+  .btn-action--view     { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); border-color: rgba(29, 78, 216, 0.55); }
+  .btn-action--edit     { background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%); border-color: rgba(79, 70, 229, 0.55); }
+  .btn-action--role     { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); border-color: rgba(91, 33, 182, 0.55); }
   .btn-action--reset    { background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%); border-color: rgba(180, 83, 9, 0.5); }
   .btn-action--delete   { background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%); border-color: rgba(185, 28, 28, 0.55); }
   .btn-action--block    { background: linear-gradient(180deg, #64748B 0%, #475569 100%); border-color: rgba(51, 65, 85, 0.55); }
@@ -597,18 +599,18 @@
     align-items: center;
     justify-content: center;
     gap: var(--btn-gap);
-    min-height: var(--btn-min-h);
-    min-width: var(--btn-min-w);
-    padding: 0 var(--btn-px-sm);
+    min-height: 36px;
+    min-width: 0;
+    padding: 0 12px;
     font-family: inherit;
-    font-size: var(--btn-fs-sm);
+    font-size: 12px;
     font-weight: var(--btn-fw-bold);
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: 0.01em;
     white-space: nowrap;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     border: 1px solid transparent;
-    border-radius: var(--btn-radius-md);
+    border-radius: 10px;
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
@@ -663,36 +665,35 @@
     filter: none;
   }
 
-  .pj-info-action--secondary {
-    background: var(--color-surface, #FFFFFF);
-    color: var(--color-on-surface, #0F172A);
-    border-color: var(--color-outline, #CBD5E1);
-  }
-  .pj-info-action--secondary:hover:not(:disabled) {
-    background: var(--color-surface-variant, #F1F5F9);
+  /* One muted slate for every action in the group — no accent-per-button. */
+  .pj-info-action--secondary,
+  .pj-info-action--drawing,
+  .pj-info-action--wiring,
+  .pj-info-action--edit {
+    background: #1E293B;
+    color: #FFFFFF;
+    border-color: #1E293B;
   }
 
-  .pj-info-action--drawing {
-    background: linear-gradient(180deg, #0F766E 0%, #0D9488 55%, #0F766E 100%);
-    color: #FFFFFF;
-    border-color: #115E59;
-  }
-  .pj-info-action--drawing:hover:not(:disabled) {
-    filter: brightness(1.08);
+  .pj-info-action--secondary:hover:not(:disabled),
+  .pj-info-action--drawing:hover:not(:disabled),
+  .pj-info-action--wiring:hover:not(:disabled),
+  .pj-info-action--edit:hover:not(:disabled) {
+    background: #334155;
+    border-color: #475569;
   }
 
-  .pj-info-action--wiring {
-    background: linear-gradient(180deg, #4338CA 0%, #4F46E5 55%, #4338CA 100%);
-    color: #FFFFFF;
-    border-color: #3730A3;
-  }
-  .pj-info-action--wiring:hover:not(:disabled) {
-    filter: brightness(1.08);
+  .pj-info-action--secondary:active:not(:disabled),
+  .pj-info-action--drawing:active:not(:disabled),
+  .pj-info-action--wiring:active:not(:disabled),
+  .pj-info-action--edit:active:not(:disabled) {
+    background: #0F172A;
   }
 
   /* Document actions when genuinely unavailable — flat muted, not gradient + opacity */
   .pj-info-action--drawing:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
-  .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
+  .pj-info-action--wiring:is(:disabled, .pj-info-action--unavailable):not(.btn--loading),
+  .pj-info-action--edit:is(:disabled, .pj-info-action--unavailable):not(.btn--loading) {
     background: var(--color-surface-variant, #E2E8F0);
     color: var(--color-text-secondary, #64748B);
     border-color: var(--color-outline, #CBD5E1);
@@ -703,14 +704,13 @@
   }
 
   .pj-info-action--danger {
-    background: var(--color-surface, #FFFFFF);
-    color: var(--color-on-surface, #0F172A);
-    border-color: var(--color-outline, #CBD5E1);
+    background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+    color: #FFFFFF;
+    border-color: rgba(153, 27, 27, 0.62);
   }
   .pj-info-action--danger:hover:not(:disabled) {
-    background: #FEF2F2;
-    color: #DC2626;
-    border-color: #FECACA;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
   }
 
   /* Icon sizing inside buttons */

@@ -1,13 +1,23 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
 import type { NavItem } from './Topbar';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useProjectSelectionStore } from '../../store/useProjectSelectionStore';
+import { useLiveWiringStore } from '../../store/useLiveWiringStore';
+import { projectsApi, techApi } from '../../services/api';
+import { onFramesChanged } from '../../utils/projectFramesEvents';
+import { onWorkflowChanged } from '../../utils/dwesRefreshEvents';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
+import { useServerEvents } from '../../hooks/useServerEvents';
+import type { ActiveProjectContext } from '../../store/useProjectSelectionStore';
+import { reconcileProjectSelection } from '../../utils/entityConsistency';
 
 interface AppShellProps {
   children: ReactNode;
   navItems?: NavItem[];
+  sideNavItems?: NavItem[];
   activeTab?: string;
   onTabChange?: (key: string) => void;
   noPadding?: boolean;
@@ -22,11 +32,27 @@ export default function AppShell({
   onTabChange,
   noPadding = false,
   sidebarNav = true,
+  sideNavItems = [],
 }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
   const { user } = useAuthStore();
-  const { selectedProject, ownerUserId, initializeForUser } = useProjectSelectionStore();
+  const {
+    selectedProject,
+    ownerUserId,
+    initializeForUser,
+    setProjectForUser,
+    clearProjectForUser,
+  } = useProjectSelectionStore();
+  const clearLiveWiring = useLiveWiringStore(state => state.clear);
+  const [projectContextLoading, setProjectContextLoading] = useState(Boolean(user?.id));
+  const [projectContextVerified, setProjectContextVerified] = useState(false);
+  const { begin: beginProjectValidation, isLatest: isLatestProjectValidation } = useLatestRequest();
+
+  // Live change stream: silently refreshes only the affected data across users.
+  // This tab's own mutations already refresh locally, so only their echo is ignored.
+  useServerEvents(Boolean(user?.id));
 
   // Keep --dash-topbar-height equal to the topbar's REAL height at all times.
   // The topbar is a sticky flex-wrap bar whose height changes with viewport
@@ -47,13 +73,122 @@ export default function AppShell({
 
   const useSidebar = sidebarNav && navItems.length > 0;
   // Project context is surfaced in the header pill, not enforced by a blocking gate.
-  const activeProject = user?.id && selectedProject && ownerUserId === user.id ? selectedProject : null;
+  const activeProject = projectContextVerified
+    && !projectContextLoading
+    && user?.id
+    && selectedProject
+    && ownerUserId === user.id
+    ? selectedProject
+    : null;
+
+  const validateProjectContext = useCallback(async () => {
+    if (!user?.id) {
+      setProjectContextLoading(false);
+      setProjectContextVerified(false);
+      return;
+    }
+
+    const request = beginProjectValidation();
+    setProjectContextLoading(true);
+    setProjectContextVerified(false);
+    try {
+      const rows = user.role === 'wiring_technician'
+        ? Array.from(
+            new Map(
+              ((await techApi.myPanels(request.signal)) as Array<Record<string, unknown>>)
+                .map(panel => [
+                  String(panel.project_code),
+                  {
+                    code: String(panel.project_code),
+                    name: String(panel.project_name ?? panel.project_code),
+                    client: String(panel.client ?? ''),
+                    project_state: String(panel.project_state ?? 'active'),
+                    is_active: true,
+                  },
+                ]),
+            ).values(),
+          )
+        : await projectsApi.list(request.signal) as Array<Record<string, unknown>>;
+      if (!isLatestProjectValidation(request.id)) return;
+
+      const state = useProjectSelectionStore.getState();
+      const currentCode = state.ownerUserId === user.id ? state.selectedProject?.code : null;
+      const selected = reconcileProjectSelection(rows as Array<Record<string, unknown> & { code: string }>, currentCode);
+
+      if (selected) {
+        setProjectForUser({
+          code: String(selected.code),
+          name: String(selected.name ?? selected.code),
+          client: String(selected.client ?? ''),
+          project_state: String(selected.project_state ?? 'not_started') as ActiveProjectContext['project_state'],
+          is_active: selected.is_active !== false,
+        }, user.id);
+      } else {
+        clearProjectForUser(user.id);
+        clearLiveWiring();
+      }
+      setProjectContextVerified(true);
+    } catch (error: any) {
+      if (!isLatestProjectValidation(request.id) || error?.code === 'ERR_CANCELED') return;
+      // Do not reveal an unverified persisted project while the database is unreachable.
+      setProjectContextVerified(false);
+    } finally {
+      if (isLatestProjectValidation(request.id)) setProjectContextLoading(false);
+    }
+  }, [
+    beginProjectValidation,
+    clearLiveWiring,
+    clearProjectForUser,
+    isLatestProjectValidation,
+    setProjectForUser,
+    user?.id,
+    user?.role,
+  ]);
 
   // Keep the persisted project context scoped to the signed-in user.
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setProjectContextLoading(false);
+      setProjectContextVerified(false);
+      return;
+    }
     initializeForUser(user.id);
-  }, [initializeForUser, user?.id]);
+    void validateProjectContext();
+  }, [initializeForUser, pathname, user?.id, user?.role, validateProjectContext]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const onFocus = () => void validateProjectContext();
+    const onVisibility = () => { if (!document.hidden) void validateProjectContext(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.id, validateProjectContext]);
+
+  useEffect(() => onFramesChanged(detail => {
+    if (detail.action !== 'deleted') return;
+    const state = useProjectSelectionStore.getState();
+    if ((detail.entity ?? (detail.frameId ? 'panel' : 'project')) === 'project'
+      && state.selectedProject?.code === detail.projectCode
+      && user?.id) {
+      clearProjectForUser(user.id);
+    }
+    const live = useLiveWiringStore.getState();
+    if (live.projectCode === detail.projectCode) {
+      clearLiveWiring();
+    }
+    void validateProjectContext();
+  }), [clearLiveWiring, clearProjectForUser, user?.id, validateProjectContext]);
+
+  useEffect(() => {
+    if (user?.role !== 'wiring_technician') return;
+    return onWorkflowChanged(detail => {
+      if (detail.scope === 'assignment') void validateProjectContext();
+    });
+  }, [user?.role, validateProjectContext]);
 
   return (
     <div ref={shellRef} className="app-shell" data-ui-polish="saas">
@@ -64,12 +199,15 @@ export default function AppShell({
         onMenuClick={useSidebar ? () => setMobileNavOpen(v => !v) : undefined}
         showMenuButton={useSidebar}
         activeProject={activeProject}
+        projectContextLoading={projectContextLoading}
+        noProjectAvailable={projectContextVerified && !projectContextLoading && !activeProject}
       />
 
       <div className="dash-layout">
         {useSidebar && (
           <Sidebar
             items={navItems}
+            sideNavItems={sideNavItems}
             activeTab={activeTab}
             onTabChange={onTabChange}
             mobileOpen={mobileNavOpen}
@@ -77,7 +215,7 @@ export default function AppShell({
           />
         )}
 
-        <main className={noPadding ? 'dash-main dash-main--flush' : 'dash-main'}>
+        <main id="main-content" className={noPadding ? 'dash-main dash-main--flush' : 'dash-main'} tabIndex={-1}>
           {children}
         </main>
       </div>

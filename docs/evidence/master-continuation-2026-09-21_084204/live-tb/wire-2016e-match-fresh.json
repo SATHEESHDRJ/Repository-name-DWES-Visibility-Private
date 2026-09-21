@@ -1,0 +1,225 @@
+{
+    "source_marker_candidates":  [
+                                     {
+                                         "id":  -3,
+                                         "tb_number":  "H74",
+                                         "terminal_group":  "X10",
+                                         "page_number":  6,
+                                         "view_name":  null,
+                                         "notes":  "Wire 20.16:E Source — physical H74 footprint on INTERNAL VIEW-1 (page 6) REAR section. Legend/DEVICE REF rejected.",
+                                         "geometry":  {
+                                                          "x":  0.255,
+                                                          "y":  0.118,
+                                                          "width":  0.125,
+                                                          "height":  0.06,
+                                                          "strip_bbox":  {
+                                                                             "x":  0.255,
+                                                                             "y":  0.118,
+                                                                             "width":  0.125,
+                                                                             "height":  0.06
+                                                                         },
+                                                          "paint_mode":  "header_group",
+                                                          "tb_header":  "H74",
+                                                          "target_terminal":  "X10:4"
+                                                      },
+                                         "matched_terminal":  "X10:4",
+                                         "view_classification":  "REAR_WIRING_VIEW",
+                                         "detection_method":  "MANUAL_MAP",
+                                         "marker_type":  "DEVICE",
+                                         "paint_mode":  "header_group"
+                                     }
+                                 ],
+    "destination_marker_candidates":  [
+                                          {
+                                              "id":  -5,
+                                              "tb_number":  "KF87L",
+                                              "terminal_group":  "",
+                                              "page_number":  6,
+                                              "view_name":  null,
+                                              "notes":  "Wire 20.16:E Destination — physical KF87L Finder aux relay module on INTERNAL VIEW-1 LHS DIN rail (row K74-1,K74-2,KF67,KF87L,…). Single device footprint — not whole bank, not directory REF text. Distinct from F87L protection relay.",
+                                              "geometry":  {
+                                                               "x":  0.108,
+                                                               "y":  0.358,
+                                                               "width":  0.032,
+                                                               "height":  0.042,
+                                                               "strip_bbox":  {
+                                                                                  "x":  0.108,
+                                                                                  "y":  0.358,
+                                                                                  "width":  0.032,
+                                                                                  "height":  0.042
+                                                                              },
+                                                               "paint_mode":  "header_group",
+                                                               "tb_header":  "KF87L",
+                                                               "target_terminal":  "5"
+                                                           },
+                                              "matched_terminal":  "5",
+                                              "view_classification":  "INTERNAL_VIEW",
+                                              "detection_method":  "MANUAL_MAP",
+                                              "marker_type":  "DEVICE",
+                                              "paint_mode":  "header_group"
+                                          }
+                                      ],
+    "best_source":  {
+                        "id":  -3,
+                        "tb_number":  "H74",
+                        "terminal_group":  "X10",
+                        "page_number":  6,
+                        "view_name":  null,
+                        "notes":  "Wire 20.16:E Source — physical H74 footprint on INTERNAL VIEW-1 (page 6) REAR section. Legend/DEVICE REF rejected.",
+                        "geometry":  {
+                                         "x":  0.255,
+                                         "y":  0.118,
+                                         "width":  0.125,
+                                         "height":  0.06,
+                                         "strip_bbox":  {
+                                                            "x":  0.255,
+                                                            "y":  0.118,
+                                                            "width":  0.125,
+                                                            "height":  0.06
+                                                        },
+                                         "paint_mode":  "header_group",
+                                         "tb_header":  "H74",
+                                         "target_terminal":  "X10:4"
+                                     },
+                        "matched_terminal":  "X10:4",
+                        "view_classification":  "REAR_WIRING_VIEW",
+                        "detection_method":  "MANUAL_MAP",
+                        "marker_type":  "DEVICE",
+                        "paint_mode":  "header_group"
+                    },
+    "best_destination":  {
+                             "id":  -5,
+                             "tb_number":  "KF87L",
+                             "terminal_group":  "",
+                             "page_number":  6,
+                             "view_name":  null,
+                             "notes":  "Wire 20.16:E Destination — physical KF87L Finder aux relay module on INTERNAL VIEW-1 LHS DIN rail (row K74-1,K74-2,KF67,KF87L,…). Single device footprint — not whole bank, not directory REF text. Distinct from F87L protection relay.",
+                             "geometry":  {
+                                              "x":  0.108,
+                                              "y":  0.358,
+                                              "width":  0.032,
+                                              "height":  0.042,
+                                              "strip_bbox":  {
+                                                                 "x":  0.108,
+                                                                 "y":  0.358,
+                                                                 "width":  0.032,
+                                                                 "height":  0.042
+                                                             },
+                                              "paint_mode":  "header_group",
+                                              "tb_header":  "KF87L",
+                                              "target_terminal":  "5"
+                                          },
+                             "matched_terminal":  "5",
+                             "view_classification":  "INTERNAL_VIEW",
+                             "detection_method":  "MANUAL_MAP",
+                             "marker_type":  "DEVICE",
+                             "paint_mode":  "header_group"
+                         },
+    "source_unmatched":  false,
+    "destination_unmatched":  false,
+    "source_match_reason":  "Matched Source header group H74 on REAR_WIRING_VIEW page 6.",
+    "destination_match_reason":  "Matched Destination header group KF87L on INTERNAL_VIEW page 6.",
+    "source_candidate_count":  1,
+    "destination_candidate_count":  1,
+    "drawing_checksum_applied":  null,
+    "superseded_excluded":  0,
+    "source_rejection_reasons":  [
+
+                                 ],
+    "destination_rejection_reasons":  [
+
+                                      ],
+    "same_physical_group":  false,
+    "source_resolution":  {
+                              "endpoint_type":  "DEVICE_TERMINAL",
+                              "physical_identity":  null,
+                              "terminal_reference":  "X10 / 4",
+                              "location_granularity":  "UNRESOLVED",
+                              "status":  "UNRESOLVED",
+                              "confidence":  "NONE"
+                          },
+    "destination_resolution":  {
+                                   "endpoint_type":  "DEVICE_TERMINAL",
+                                   "physical_identity":  null,
+                                   "terminal_reference":  "5",
+                                   "location_granularity":  "UNRESOLVED",
+                                   "status":  "UNRESOLVED",
+                                   "confidence":  "NONE"
+                               },
+    "source_endpoint_kind":  "EQUIPMENT_CONNECTOR",
+    "destination_endpoint_kind":  "EQUIPMENT_TERMINAL",
+    "source_header_group_diagnostics":  {
+                                            "page":  6,
+                                            "matched_label":  "H74",
+                                            "group_bbox":  {
+                                                               "x":  0.255,
+                                                               "y":  0.118,
+                                                               "width":  0.125,
+                                                               "height":  0.06
+                                                           },
+                                            "confidence":  "HIGH",
+                                            "rejected_candidates":  [
+                                                                        {
+                                                                            "label":  "H74",
+                                                                            "reason":  "rejected ineligible region view=FRONT_VIEW page=3",
+                                                                            "page":  3
+                                                                        }
+                                                                    ]
+                                        },
+    "destination_header_group_diagnostics":  {
+                                                 "page":  6,
+                                                 "matched_label":  "KF87L",
+                                                 "group_bbox":  {
+                                                                    "x":  0.108,
+                                                                    "y":  0.358,
+                                                                    "width":  0.032,
+                                                                    "height":  0.042
+                                                                },
+                                                 "confidence":  "HIGH",
+                                                 "rejected_candidates":  [
+
+                                                                         ]
+                                             },
+    "diagnostics":  {
+                        "source_rejected_reasons":  [
+
+                                                    ],
+                        "destination_rejected_reasons":  [
+
+                                                         ],
+                        "source_classification":  {
+                                                      "kind":  "EQUIPMENT_CONNECTOR",
+                                                      "legacyType":  "DEVICE_TERMINAL",
+                                                      "parentEquipment":  "H74",
+                                                      "connector":  "X10",
+                                                      "pin":  "4",
+                                                      "tbHeader":  null,
+                                                      "physicalLookupKey":  "H74",
+                                                      "terminalReference":  "X10 / 4",
+                                                      "provenance":  {
+                                                                         "source":  "schedule_header",
+                                                                         "devTblk":  "H74",
+                                                                         "term":  "X10:4",
+                                                                         "connector":  "X10",
+                                                                         "pin":  "4"
+                                                                     }
+                                                  },
+                        "destination_classification":  {
+                                                           "kind":  "EQUIPMENT_TERMINAL",
+                                                           "legacyType":  "DEVICE_TERMINAL",
+                                                           "parentEquipment":  "KF87L",
+                                                           "connector":  null,
+                                                           "pin":  "5",
+                                                           "tbHeader":  null,
+                                                           "physicalLookupKey":  "KF87L",
+                                                           "terminalReference":  "5",
+                                                           "provenance":  {
+                                                                              "source":  "schedule_header",
+                                                                              "devTblk":  "KF87L",
+                                                                              "term":  "5",
+                                                                              "connector":  null,
+                                                                              "pin":  "5"
+                                                                          }
+                                                       }
+                    }
+}

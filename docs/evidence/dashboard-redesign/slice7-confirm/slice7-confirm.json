@@ -1,0 +1,13 @@
+﻿{
+  "updatedAt": "2026-09-19T14:28:00+04:00",
+  "sharedConfirm": {
+    "confirmAsync": true,
+    "formFields": ["select", "textarea"],
+    "loading": true,
+    "doubleSubmitLock": true,
+    "backendErrorRetention": true,
+    "focusTrap": "Modal"
+  },
+  "migratedFlows": ["assign", "reassign", "midchange"],
+  "build": "npm run build exit 0"
+}

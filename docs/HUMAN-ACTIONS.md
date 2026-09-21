@@ -50,7 +50,7 @@ terraform init && terraform plan && terraform apply
 
 ## B. Domain + Cloudflare DNS
 
-Prefer `dwes.ingeniousnetwork.com` (see [DEPLOY-DECISIONS.md](./DEPLOY-DECISIONS.md)).
+Use **`dwes.ingenious-network.com`** (canonical RP_ID / WebAuthn; see [DNS_AND_SSL_GUIDE.md](./hosting/DNS_AND_SSL_GUIDE.md)).
 
 Automated: gray-cloud A record via Cloudflare API (`proxied=false`).
 

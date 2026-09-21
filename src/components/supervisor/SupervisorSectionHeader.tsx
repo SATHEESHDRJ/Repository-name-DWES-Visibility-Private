@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import SectionHeader from '../ui/SectionHeader';
+import WorkspaceSectionHeading from '../ui/WorkspaceSectionHeading';
 
 interface SupervisorSectionHeaderProps {
   title: string;
@@ -8,7 +8,19 @@ interface SupervisorSectionHeaderProps {
   icon?: ReactNode;
 }
 
-/** Supervisor workspace section header — thin wrapper over the global SectionHeader. */
-export default function SupervisorSectionHeader(props: SupervisorSectionHeaderProps) {
-  return <SectionHeader {...props} />;
+/** Supervisor workspace section header — shared WorkspaceSectionHeading with required icon. */
+export default function SupervisorSectionHeader({
+  title,
+  description,
+  actions,
+  icon,
+}: SupervisorSectionHeaderProps) {
+  return (
+    <WorkspaceSectionHeading
+      title={title}
+      subtitle={description || undefined}
+      icon={icon}
+      actions={actions}
+    />
+  );
 }

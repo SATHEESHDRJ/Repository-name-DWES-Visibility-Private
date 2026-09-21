@@ -9,8 +9,8 @@
   --icon-size-md: 20px;
   --icon-size-lg: 24px;
   --icon-size-xl: 32px;
-  --icon-weight-default: 400;
-  --icon-weight-emphasis: 500;
+  --icon-weight-default: 500;
+  --icon-weight-emphasis: 600;
 }
 
 .material-symbols-rounded {
@@ -31,7 +31,7 @@
   filter: drop-shadow(0 1px 1.5px color-mix(in srgb, currentColor 18%, transparent));
 }
 
-[data-theme="dark"] .ui-icon--depth {
+[data-mode="dark"] .ui-icon--depth {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
@@ -87,7 +87,21 @@
   font-size: 20px !important;
 }
 .dash-sidebar-icon .ui-icon {
-  font-size: 20px !important;
+  font-size: inherit !important;
+}
+.dash-sidebar-title-icon .ui-icon {
+  font-size: inherit !important;
+}
+/* Compact rail — same filled icon weight on all viewports (size scales only) */
+.dash-sidebar .dash-sidebar-icon .ui-icon,
+.dash-sidebar .dash-sidebar-icon .material-symbols-rounded {
+  font-size: 28px !important;
+  font-variation-settings: 'FILL' 1, 'wght' 650, 'GRAD' 0, 'opsz' 24 !important;
+}
+.dash-sidebar .dash-sidebar-title-icon .ui-icon,
+.dash-sidebar .dash-sidebar-title-icon .material-symbols-rounded {
+  font-size: 24px !important;
+  font-variation-settings: 'FILL' 1, 'wght' 650, 'GRAD' 0, 'opsz' 24 !important;
 }
 
 /* Topbar / nav icon buttons — subtle depth on interactive icons */
@@ -148,4 +162,69 @@
 .tab-btn:disabled .material-symbols-rounded {
   opacity: 0.38;
   filter: grayscale(0.4);
+}
+
+/* ── Dashboard 3D raster icons (3dicons.co V1 Color/Dynamic, CC0) ──────────── */
+.dashboard-3d-icon {
+  display: inline-block;
+  object-fit: contain;
+  vertical-align: middle;
+  flex-shrink: 0;
+  user-select: none;
+  pointer-events: none;
+  background: transparent;
+}
+
+.dashboard-3d-icon--depth {
+  filter: drop-shadow(0 1px 1.5px rgba(15, 23, 42, 0.18));
+}
+
+[data-mode="dark"] .dashboard-3d-icon--depth {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.btn .dashboard-3d-icon,
+.btn-primary .dashboard-3d-icon,
+.btn-secondary .dashboard-3d-icon,
+.tab-btn .dashboard-3d-icon,
+.tech-dash-action-btn .dashboard-3d-icon,
+.pj-action-btn .dashboard-3d-icon,
+.pj-info-action .dashboard-3d-icon,
+.proj-mini-action .dashboard-3d-icon {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.btn-sm .dashboard-3d-icon,
+.btn-ghost .dashboard-3d-icon {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.dash-sidebar-icon .dashboard-3d-icon,
+.dash-sidebar-title-icon .dashboard-3d-icon {
+  width: inherit;
+  height: inherit;
+}
+
+/* Same sidebar icon sizes on phone and tablet (layout rail width still responsive). */
+.dash-sidebar .dash-sidebar-icon .dashboard-3d-icon {
+  width: 28px !important;
+  height: 28px !important;
+}
+.dash-sidebar .dash-sidebar-title-icon .dashboard-3d-icon {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.dash-sidebar-link.is-active .dashboard-3d-icon,
+.tab-btn.active .dashboard-3d-icon,
+.topbar-nav-btn.active .dashboard-3d-icon {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--t-accent, #2563eb) 35%, transparent));
+}
+
+.tab-btn:disabled .dashboard-3d-icon,
+button:disabled .dashboard-3d-icon {
+  opacity: 0.38;
+  filter: grayscale(0.35);
 }

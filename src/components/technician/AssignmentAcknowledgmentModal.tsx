@@ -1,4 +1,4 @@
-import { CheckCircle2 } from '../ui/icons';
+import { CheckCircle2, ClipboardCheck, PlayCircle } from '../ui/icons';
 import Modal from '../Modal';
 
 interface Props {
@@ -26,6 +26,7 @@ export default function AssignmentAcknowledgmentModal({
     <Modal
       title="Assignment Acknowledgment"
       subtitle="Please review and acknowledge before starting"
+      icon={<ClipboardCheck />}
       onClose={() => !busy && onClose()}
       size="lg"
       footer={(
@@ -34,6 +35,7 @@ export default function AssignmentAcknowledgmentModal({
             Cancel
           </button>
           <button type="button" className="btn-primary" onClick={onAcknowledge} disabled={busy}>
+            <PlayCircle size={16} />
             {busy ? 'Starting…' : 'Acknowledge & Start'}
           </button>
         </>
@@ -51,8 +53,8 @@ export default function AssignmentAcknowledgmentModal({
           { label: 'ASSIGNED TO', value: technicianName },
         ].map(tile => (
           <div key={tile.label} className="tc-ack-tile rounded-lg border border-slate-200 bg-slate-50 p-3 text-left">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">{tile.label}</div>
-            <div className="text-[14px] font-semibold text-slate-800 break-words">{tile.value}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-muted mb-1">{tile.label}</div>
+            <div className="text-[14px] font-semibold text-primary break-words">{tile.value}</div>
           </div>
         ))}
       </div>

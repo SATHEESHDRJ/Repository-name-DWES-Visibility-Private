@@ -1,0 +1,27 @@
+{
+  "id": "pdr_1c9b43902ec72b720cb0cf9d",
+  "project_code": "003",
+  "frame_id": "frame_1789793600080_0_hhkw7",
+  "revision": 1,
+  "created_at": "2026-09-19T04:53:57.710Z",
+  "updated_at": "2026-09-19T04:53:57.710Z",
+  "drawing_2d": {
+    "id": "drw_b2c17e4b-8605-465a-8480-fe3750cc5e72",
+    "kind": "2d",
+    "filename": "drw_b2c17e4b-8605-465a-8480-fe3750cc5e72_SIET-4 SOLAR WADI PV FEEDER-1_GA.pdf",
+    "original_name": "SIET-4 SOLAR WADI PV FEEDER-1_GA.pdf",
+    "content_type": "application/pdf",
+    "source_format": "pdf",
+    "size": 2965945,
+    "sha256": "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "uploaded_at": "2026-09-19T04:53:57.710Z",
+    "uploaded_by": 3,
+    "preview": {
+      "filename": "drw_b2c17e4b-8605-465a-8480-fe3750cc5e72_SIET-4 SOLAR WADI PV FEEDER-1_GA.pdf",
+      "content_type": "application/pdf",
+      "format": "pdf",
+      "status": "source"
+    }
+  },
+  "model_3d": null
+}

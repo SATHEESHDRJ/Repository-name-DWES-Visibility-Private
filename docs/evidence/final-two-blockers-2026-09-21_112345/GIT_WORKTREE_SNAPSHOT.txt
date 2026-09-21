@@ -1,0 +1,4 @@
+branch: security/nest11-fastify5
+tracked_files_modified_vs_HEAD: 83
+untracked_files: 2295
+note: Full `git diff --stat` is slow/noisy (CRLF warning on api-entrypoint.sh); use selective diffs before commit/PR.

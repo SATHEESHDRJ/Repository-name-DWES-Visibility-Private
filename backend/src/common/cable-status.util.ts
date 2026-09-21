@@ -3,6 +3,15 @@ export interface CableStatusEntry {
   src?: boolean;
   dst?: boolean;
   note?: string;
+  /** Technician who last marked src/dst on this cable (additive JSON — no DB column). */
+  technicianId?: number;
+  /**
+   * Intentionally open end(s); may be set before or after completion (src+dst).
+   * Additive JSON — no DB column / no schema migration.
+   */
+  openEnd?: 'source' | 'destination' | 'both' | null;
+  /** Additive preparation / crimping JSON — no DB column. */
+  crimping?: Record<string, unknown> | null;
 }
 
 export function parseCableStatus(raw: string | Record<string, CableStatusEntry> | null | undefined): Record<string, CableStatusEntry> {

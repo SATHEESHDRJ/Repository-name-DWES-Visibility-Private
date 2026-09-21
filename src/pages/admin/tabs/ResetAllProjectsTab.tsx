@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldAlert, Trash2 } from '../../../components/ui/icons';
+import { AlertTriangle, CheckCircle2, ShieldAlert, Trash2, FolderKanban } from '../../../components/ui/icons';
 import Modal from '../../../components/Modal';
 import { adminApi, projectsApi } from '../../../services/api';
+import { DwesLoadingCenter } from '../../../components/ui/DwesLoadingIndicator';
+
+/**
+ * Orphan UI — not mounted in AdminSettingsPage (2026-07 tablet roadmap).
+ * Prefer hide over deleting backend reset-all endpoints. Do not re-wire
+ * without explicit ops approval; project delete stays on DeleteProjectTab.
+ */
 
 type Scope = 'all' | 'single';
 
@@ -184,7 +191,7 @@ export default function ResetAllProjectsTab() {
     : resetting || !modalCode || modalSingleTotalItems === 0;
 
   return (
-    <div className="rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-red-200 bg-[var(--t-surface-white)] shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-red-200 bg-red-50 flex items-center gap-3">
         <Trash2 size={20} className="text-red-700 shrink-0" />
         <div>
@@ -214,8 +221,8 @@ export default function ResetAllProjectsTab() {
                 onClick={() => setScope(opt.key)}
                 className={`h-10 px-4 rounded-lg text-[13px] font-semibold transition-colors ${
                   scope === opt.key
-                    ? 'bg-white text-red-800 shadow-sm border border-red-100'
-                    : 'text-slate-600 hover:text-slate-800'
+                    ? 'bg-[var(--t-surface-white)] text-red-800 shadow-sm border border-red-100'
+                    : 'text-muted hover:text-primary'
                 }`}
               >
                 {opt.label}
@@ -228,20 +235,23 @@ export default function ResetAllProjectsTab() {
           <div className="mb-5">
             <label className="form-label mb-1">Select project</label>
             {projects.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-[13px] text-slate-500">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-[13px] text-muted">
                 No projects available.
               </div>
             ) : (
-              <select
-                value={selCode}
-                onChange={e => setSelCode(e.target.value)}
-                className="form-select"
-                aria-label="Select project"
-              >
-                {projects.map(p => (
-                  <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                ))}
-              </select>
+              <div className="field-with-icon">
+                <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                <select
+                  value={selCode}
+                  onChange={e => setSelCode(e.target.value)}
+                  className="form-select"
+                  aria-label="Select project"
+                >
+                  {projects.map(p => (
+                    <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         )}
@@ -288,15 +298,15 @@ export default function ResetAllProjectsTab() {
         </div>
 
         {scope === 'all' && allIsEmpty ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-slate-500">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-muted">
             System is already clean — no projects to delete.
           </div>
         ) : scope === 'single' && projects.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-slate-500">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-muted">
             No projects available to reset.
           </div>
         ) : scope === 'single' && singleIsEmpty ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-slate-500">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-[13px] text-muted">
             This project is already empty — nothing to reset.
           </div>
         ) : canOpenModal ? (
@@ -315,16 +325,18 @@ export default function ResetAllProjectsTab() {
 
       {showModal && (
         <Modal
-          title={modalScope === 'all' ? 'Confirm: Delete All Projects' : 'Confirm: Reset Project'}
+          title={modalScope === 'all' ? 'Delete All Projects Permanently' : 'Reset Project Permanently'}
+          icon={<Trash2 />}
+          iconTone="danger"
           onClose={closeModal}
           size="lg"
           footer={result ? undefined : (
-            <div className="flex gap-3 w-full">
+            <div className="action-status-footer">
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={resetting}
-                className="flex-1 h-[56px] rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-[14px] hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="btn-secondary"
               >
                 Cancel
               </button>
@@ -332,17 +344,17 @@ export default function ResetAllProjectsTab() {
                 type="button"
                 onClick={handleReset}
                 disabled={resetDisabled}
-                className="flex-1 h-[56px] rounded-xl bg-red-700 text-white font-bold text-[14px] hover:bg-red-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn-danger"
               >
                 {resetting ? (
                   <>
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    {modalScope === 'all' ? 'Deleting…' : 'Resetting…'}
+                    <span className="delete-confirm-spinner" aria-hidden="true" />
+                    {modalScope === 'all' ? 'Deleting…' : 'Processing…'}
                   </>
                 ) : (
                   <>
                     <Trash2 size={16} />
-                    {modalScope === 'all' ? 'Permanently Delete All' : 'Permanently Reset'}
+                    {modalScope === 'all' ? 'Delete Permanently' : 'Reset Permanently'}
                   </>
                 )}
               </button>
@@ -361,25 +373,28 @@ export default function ResetAllProjectsTab() {
               </div>
 
               {modalPrecheckLoading ? (
-                <div className="py-8 text-center text-[13px] text-slate-500">Loading details…</div>
+                <DwesLoadingCenter label="Loading details…" className="py-8" />
               ) : modalScope === 'all' && modalAllCounts ? (
                 <>
                   <div className="mb-4">
                     <label className="form-label mb-1">Confirm action</label>
-                    <select
-                      value={modalConfirmPhrase}
-                      onChange={e => { setModalConfirmPhrase(e.target.value); setError(''); }}
-                      className="form-select"
-                      aria-label="Confirm delete all projects"
-                      disabled={resetting}
-                    >
-                      <option value="">Select confirmation…</option>
-                      <option value={CONFIRM_PHRASE}>Permanently delete ALL projects ({modalAllCounts.projects})</option>
-                    </select>
+                    <div className="field-with-icon">
+                      <span className="field-lead-icon"><ShieldAlert size={18} /></span>
+                      <select
+                        value={modalConfirmPhrase}
+                        onChange={e => { setModalConfirmPhrase(e.target.value); setError(''); }}
+                        className="form-select"
+                        aria-label="Confirm delete all projects"
+                        disabled={resetting}
+                      >
+                        <option value="">Select confirmation…</option>
+                        <option value={CONFIRM_PHRASE}>Permanently delete ALL projects ({modalAllCounts.projects})</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-slate-700">
-                    <div className="font-semibold text-slate-800 mb-2">The following will be permanently deleted:</div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-secondary">
+                    <div className="font-semibold text-primary mb-2">The following will be permanently deleted:</div>
                     <ul className="space-y-1">
                       <li>• All {modalAllCounts.projects} project{modalAllCounts.projects !== 1 ? 's' : ''}</li>
                       <li>• All {modalAllCounts.frames} frame file{modalAllCounts.frames !== 1 ? 's' : ''}</li>
@@ -400,21 +415,24 @@ export default function ResetAllProjectsTab() {
                 <>
                   <div className="mb-4">
                     <label className="form-label mb-1">Select project to reset</label>
-                    <select
-                      value={modalCode}
-                      onChange={e => { setModalCode(e.target.value); setError(''); }}
-                      className="form-select"
-                      aria-label="Select project to reset"
-                      disabled={resetting}
-                    >
-                      {projects.map(p => (
-                        <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
-                      ))}
-                    </select>
+                    <div className="field-with-icon">
+                      <span className="field-lead-icon"><FolderKanban size={18} /></span>
+                      <select
+                        value={modalCode}
+                        onChange={e => { setModalCode(e.target.value); setError(''); }}
+                        className="form-select"
+                        aria-label="Select project to reset"
+                        disabled={resetting}
+                      >
+                        {projects.map(p => (
+                          <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-slate-700">
-                    <div className="font-semibold text-slate-800 mb-2">{modalSinglePrecheck.project.name}</div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 text-[13px] text-secondary">
+                    <div className="font-semibold text-primary mb-2">{modalSinglePrecheck.project.name}</div>
                     <ul className="space-y-1">
                       <li>• {modalSingleCounts.frames} frame{modalSingleCounts.frames !== 1 ? 's' : ''}</li>
                       <li>• {modalSingleCounts.drawings} drawing{modalSingleCounts.drawings !== 1 ? 's' : ''}</li>
@@ -431,13 +449,13 @@ export default function ResetAllProjectsTab() {
                   </div>
 
                   {modalSingleTotalItems === 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 mb-4 text-[13px] text-slate-500 text-center">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 mb-4 text-[13px] text-muted text-center">
                       This project is already empty — nothing to reset.
                     </div>
                   )}
                 </>
               ) : (
-                <div className="py-8 text-center text-[13px] text-slate-500">
+                <div className="py-8 text-center text-[13px] text-muted">
                   {error || 'Could not load reset details.'}
                 </div>
               )}
@@ -447,11 +465,11 @@ export default function ResetAllProjectsTab() {
           ) : (
             <div className="text-center">
               <CheckCircle2 size={48} className="text-green-500 mx-auto mb-3" />
-              <div className="text-[16px] font-bold text-slate-800 mb-2">
+              <div className="text-[16px] font-bold text-primary mb-2">
                 {modalScope === 'all' ? 'All projects deleted' : 'Reset complete'}
               </div>
-              <div className="text-[13px] text-slate-600 mb-4">{result.message}</div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-[12px] text-slate-600 mb-4 space-y-1">
+              <div className="text-[13px] text-muted mb-4">{result.message}</div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-[12px] text-muted mb-4 space-y-1">
                 {modalScope === 'all' ? (
                   <>
                     <div>
@@ -517,11 +535,11 @@ function PrecheckGrid({
             }`}>
               {item.value}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">{item.label}</div>
+            <div className="text-[11px] text-muted mt-1">{item.label}</div>
           </div>
         ))}
       </div>
-      <div className="text-[12px] text-slate-500 flex items-start gap-1.5">
+      <div className="text-[12px] text-muted flex items-start gap-1.5">
         <CheckCircle2 size={14} className="text-green-500 shrink-0 mt-0.5" />
         <span>{backupNote}</span>
       </div>

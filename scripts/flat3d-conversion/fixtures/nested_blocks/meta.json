@@ -1,0 +1,5 @@
+{
+  "description": "Nested blocks: OUTER_DEVICE block contains INSERT of INNER_DEVICE block",
+  "insunits": 4,
+  "expected_status": "READY_FOR_REVIEW"
+}

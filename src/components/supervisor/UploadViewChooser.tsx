@@ -53,14 +53,14 @@ export default function UploadViewChooser({
 
   return (
     <div className="upload-view-chooser flex flex-col gap-4">
-      <p className="text-[13px] text-slate-600 leading-relaxed">
+      <p className="text-[13px] text-muted leading-relaxed">
         {isWiring
           ? 'A wiring schedule is already uploaded for this panel.'
           : 'A drawing is already uploaded for this panel.'}
         {resolvedName && (
           <>
             {' '}
-            <strong className="text-slate-800">{resolvedName}</strong>
+            <strong className="text-primary">{resolvedName}</strong>
           </>
         )}
       </p>

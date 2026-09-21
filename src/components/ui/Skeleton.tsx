@@ -1,4 +1,128 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+
+export type DwesLoaderSize = 'sm' | 'md' | 'lg';
+
+const SIZE_PX: Record<DwesLoaderSize, number> = { sm: 36, md: 44, lg: 52 };
+
+const DEFAULT_LABEL = 'Loading\u2026';
+
+export function DwesLoadingIndicator({
+  label = DEFAULT_LABEL,
+  size = 'md',
+  showLabel = true,
+  className = '',
+}: {
+  label?: string;
+  size?: DwesLoaderSize;
+  showLabel?: boolean;
+  className?: string;
+}) {
+  const gid = useId().replace(/:/g, '');
+  const gradId = `dwes-loader-grad-${gid}`;
+  const px = SIZE_PX[size];
+
+  return (
+    <div
+      className={`dwes-loader dwes-loader--${size}${className ? ` ${className}` : ''}`}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="dwes-loader-visual" aria-hidden="true" style={{ width: px, height: px }}>
+        <svg viewBox="0 0 48 48" className="dwes-loader-svg" width={px} height={px}>
+          <defs>
+            <linearGradient id={gradId} x1="10" y1="8" x2="38" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#93c5fd" />
+              <stop offset="50%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#1d4ed8" />
+            </linearGradient>
+          </defs>
+          <ellipse cx="24" cy="26" rx="19" ry="5" fill="rgba(37, 99, 235, 0.12)" />
+          <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(59, 130, 246, 0.14)" strokeWidth="4" />
+          <circle
+            cx="24"
+            cy="24"
+            r="19"
+            fill="none"
+            stroke={`url(#${gradId})`}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="44 75"
+            className="dwes-loader-arc"
+          />
+        </svg>
+      </div>
+      {showLabel && label ? <span className="dwes-loader-label">{label}</span> : null}
+    </div>
+  );
+}
+
+export function DwesLoadingState({
+  label = DEFAULT_LABEL,
+  className = 'empty-state',
+  size = 'md',
+}: {
+  label?: string;
+  className?: string;
+  size?: DwesLoaderSize;
+}) {
+  return (
+    <div className={className}>
+      <DwesLoadingIndicator label={label} size={size} />
+    </div>
+  );
+}
+
+export function DwesLoadingCenter({
+  label = DEFAULT_LABEL,
+  className = 'dwes-loader-center',
+  size = 'md',
+}: {
+  label?: string;
+  className?: string;
+  size?: DwesLoaderSize;
+}) {
+  return (
+    <div className={className}>
+      <DwesLoadingIndicator label={label} size={size} />
+    </div>
+  );
+}
+
+export function DwesLoadingOverlay({
+  active,
+  label = DEFAULT_LABEL,
+  showLabel = false,
+  children,
+  className,
+  hostClassName = 'dwes-loader-host',
+}: {
+  active: boolean;
+  label?: string;
+  showLabel?: boolean;
+  children: ReactNode;
+  className?: string;
+  hostClassName?: string;
+}) {
+  return (
+    <div className={`${hostClassName}${className ? ` ${className}` : ''}`}>
+      {children}
+      {active ? (
+        <div className="dwes-loader-overlay" aria-hidden={false}>
+          <DwesLoadingIndicator label={label} showLabel={showLabel} size="sm" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function DwesGaViewerLoading({ label = DEFAULT_LABEL }: { label?: string }) {
+  return (
+    <div className="ga-viewer-message ga-viewer-message--loading" role="status">
+      <DwesLoadingIndicator label={label} />
+    </div>
+  );
+}
 
 interface SkeletonProps {
   className?: string;
@@ -64,22 +188,11 @@ interface SkeletonTableProps {
 }
 
 export function SkeletonTable({ rows = 5, columns = 4, className = '' }: SkeletonTableProps) {
+  void rows;
+  void columns;
   return (
     <div className={`skeleton-table ${className}`}>
-      {/* Header */}
-      <div className="skeleton-table-header">
-        {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton key={`header-${i}`} variant="text" height="1.5em" />
-        ))}
-      </div>
-      {/* Rows */}
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={`row-${rowIndex}`} className="skeleton-table-row">
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={`cell-${rowIndex}-${colIndex}`} variant="text" height="1em" />
-          ))}
-        </div>
-      ))}
+      <DwesLoadingCenter label="Loading…" />
     </div>
   );
 }
@@ -91,13 +204,7 @@ interface SkeletonKpiProps {
 export function SkeletonKpi({ className = '' }: SkeletonKpiProps) {
   return (
     <div className={`skeleton-kpi ${className}`}>
-      <div className="skeleton-kpi-icon">
-        <Skeleton variant="circular" width="40px" height="40px" />
-      </div>
-      <div className="skeleton-kpi-content">
-        <Skeleton variant="text" width="60%" height="1em" />
-        <Skeleton variant="text" width="40%" height="1.5em" />
-      </div>
+      <DwesLoadingCenter label="Loading…" size="sm" />
     </div>
   );
 }
@@ -108,17 +215,10 @@ interface SkeletonListProps {
 }
 
 export function SkeletonList({ items = 3, className = '' }: SkeletonListProps) {
+  void items;
   return (
     <div className={`skeleton-list ${className}`}>
-      {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="skeleton-list-item">
-          <Skeleton variant="circular" width="40px" height="40px" />
-          <div className="skeleton-list-content">
-            <Skeleton variant="text" width="70%" height="1em" />
-            <Skeleton variant="text" width="50%" height="0.875em" />
-          </div>
-        </div>
-      ))}
+      <DwesLoadingCenter label="Loading…" />
     </div>
   );
 }

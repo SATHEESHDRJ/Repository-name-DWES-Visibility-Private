@@ -1,4 +1,52 @@
-# DWES — LAN deployment with HTTPS
+# DWES — LAN deployment
+
+## Universal Local Network Mode (HTTP — any Wi‑Fi / hotspot / office LAN)
+
+No hardcoded IP. Connect tablets to the **same network** as this PC, start LAN mode, open the printed URL.
+
+```bash
+npm run lan
+```
+
+Or double‑click: `launchers\START-DWES-LAN.bat`
+
+What this does:
+
+1. Detects the current private LAN IPv4 (`192.168.*` / `10.*` / `172.16–31.*`)
+2. Binds Vite (`0.0.0.0:5175`) and Nest (`HOST=0.0.0.0:3001`)
+3. Prints Frontend + Backend + Health URLs
+4. Tries to ensure Windows Firewall rules (Private profile) for TCP **5175** and **3001**
+5. Proxies `/api` through Vite — the browser never needs a hardcoded backend host
+
+Example terminal output:
+
+```text
+  Current LAN IP : 192.168.0.42
+  Frontend URL   : http://192.168.0.42:5175
+  Backend URL    : http://192.168.0.42:3001
+  Health         : http://192.168.0.42:3001/api/health
+```
+
+| Script | Purpose |
+|--------|---------|
+| `npm run lan` | Universal Local Network Mode (auto IP + FE/BE) |
+| `npm run lan:skip-firewall` | Same, skip firewall helper |
+| `npm run lan:firewall` | Create firewall rules (run elevated once) |
+| `npm run lan:url` / `lan:url:full` | Print URLs only |
+
+**Switching Wi‑Fi:** stop the stack (Ctrl+C) and run `npm run lan` again — the new IP is detected automatically. No source changes.
+
+**Password login** works on HTTP LAN. **Passkeys / fingerprint** still need HTTPS + hostname — see below.
+
+**Firewall (once, elevated):**
+
+```powershell
+npm run lan:firewall
+```
+
+---
+
+## HTTPS LAN (fingerprint / WebAuthn)
 
 Deploy DWES on your PC so tablets, phones, and other computers on the same Wi-Fi can access it over **HTTPS**.
 
@@ -20,7 +68,7 @@ npm run dev:https
 This will:
 
 1. Generate TLS certificates (if missing) in `certs/`
-2. Start the NestJS backend on port **3001** (HTTP, localhost only — proxied by Vite)
+2. Start the NestJS backend on port **3001** (HTTP — proxied by Vite)
 3. Start the Vite dev server (HTTPS on internal port 5174, proxied through gateway)
 4. Start a TCP gateway on port **5173** — HTTP auto-redirects to HTTPS, TLS proxied to Vite
 5. Start an HTTP→HTTPS redirect on port **8080** (for LAN devices)
@@ -68,13 +116,32 @@ This runs `mkcert -install` (may prompt for admin) and regenerates certs for `lo
 
 If [mkcert](https://github.com/FiloSottile/mkcert) is installed, `certs:generate` also uses it automatically.
 
-### Without mkcert (self-signed)
+### Xiaomi / Android tablet — trusted standalone app
 
-Browsers show a security warning. Proceed anyway:
+HTTP `http://<LAN_IP>:5175` can be used for normal password-login testing, but Chrome
+cannot install it as a true standalone PWA. “Add to Home screen” creates a browser
+shortcut, so the Chrome address bar remains visible.
 
-- **Chrome (Android/iOS):** Advanced → Proceed to site (unsafe)
-- **Safari (iPad/iPhone):** Show Details → visit this website
-- **Edge (Windows):** Advanced → Continue to site
+For a standalone app on a Xiaomi/Android tablet:
+
+1. On the laptop run `npm run certs:trust`, then `npm run dev:https`.
+2. Run `mkcert -CAROOT` and transfer **only** `rootCA.pem` to the tablet. Never copy
+   `rootCA-key.pem`.
+3. On Xiaomi HyperOS/Android, install `rootCA.pem` as a **CA certificate** from
+   Settings → Security/Privacy → More security settings → Encryption & credentials
+   → Install a certificate → CA certificate. Menu wording varies by HyperOS version.
+4. Open the printed `https://<LAN_IP>:5173` URL in Chrome. It must show a normal
+   trusted lock/connection with no certificate warning.
+5. Use Chrome menu → **Install app**, then launch DWES from its home-screen icon.
+   The manifest `display: standalone` removes the Chrome address bar.
+
+Remove the development CA from the tablet when LAN testing is finished.
+
+### Untrusted/self-signed certificate limitation
+
+Proceeding through a certificate warning may let a page load, but it does **not**
+provide a reliably trusted secure context for service-worker registration,
+PWA installation, or WebAuthn. Use the trusted mkcert procedure above.
 
 Regenerate certs after a DHCP IP change:
 

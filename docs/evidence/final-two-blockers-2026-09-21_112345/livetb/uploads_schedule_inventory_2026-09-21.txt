@@ -1,0 +1,10 @@
+# Restore uploads — wiring schedule / frame XLSX (2026-09-21)
+
+001/frames/frame_1785319116166_0_wcplt.xlsx          (E01+R1 schedule — searched)
+002/frames/frame_1784977437763_0_ahv74.xlsx          (T601+R1)
+002/frames/frame_1785154448804_0_zn8m6.xlsx
+002/Corrections/*                                    (corrected copies — same wire corpus)
+003/frames/frame_1789793600080_0_hhkw7.xlsx          (SIET P1 — canonical 20.16:E pair)
+T601 frame backups (4)                               (replace snapshots)
+
+No additional schedule files beyond livetb search scope. Project 002 has schedules but no drawing PDFs in uploads.

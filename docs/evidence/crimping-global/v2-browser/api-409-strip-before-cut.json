@@ -1,0 +1,4 @@
+{
+    "body":  "{\"code\":\"STAGE_ORDER_VIOLATION\",\"message\":\"Wire must be cut before stripping\",\"cable_index\":200}",
+    "status":  409
+}

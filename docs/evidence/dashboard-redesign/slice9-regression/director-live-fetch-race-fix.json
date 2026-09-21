@@ -1,0 +1,1 @@
+﻿{ "fix": "DirectorDashboard used one shared useLatestRequest for stats/submitted/live/monitoring; concurrent begin() dropped live results. Split into four request tracks. Verified: 3 projects, 5 panels, Live SSE." }

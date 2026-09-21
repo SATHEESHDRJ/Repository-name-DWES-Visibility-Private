@@ -1,6 +1,11 @@
 /**
- * Panel Project Completion Report — single-page executive PDF (portrait A4).
- * Layout zones per dwes_project_completion_report_redesign.md spec.
+ * Panel production report — single-page executive PDF (portrait A4).
+ *
+ * The document type follows the real production process: a panel still in
+ * execution prints a PRODUCTION PROGRESS REPORT; only a fully wired and
+ * supervisor-approved panel prints a PROJECT COMPLETION REPORT.
+ *
+ * Palette is industrial: dark charcoal, slate grey, white, restrained teal accent.
  */
 import * as PDFDocument from 'pdfkit';
 import { PDFDocument as PDFLibDocument } from 'pdf-lib';
@@ -16,29 +21,32 @@ import type { PanelCompletionReportData, PanelReportStatus } from './panel-compl
 const F = REPORT_FONTS;
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
-const ML = 40;
-const MR = 555;
+const ML = 42;
+const MR = 553;
 const CW = MR - ML;
 const LOGO_ASPECT = 332 / 175; // native dimensions of logo-full.png (keep aspect faithful)
 
+/** Industrial palette — charcoal + slate + white, teal used sparingly for emphasis. */
 const C = {
-  navy: '#0F2557',
-  accent: '#2563EB',
-  ink: '#0F172A',
+  charcoal: '#1E293B',
+  charcoalDeep: '#0F172A',
+  teal: '#0D9488',
+  tealDeep: '#0F766E',
+  tealSoft: '#CCFBF1',
+  tealTint: '#F0FDFA',
+  ink: '#111827',
+  slate700: '#334155',
   slate600: '#475569',
   slate500: '#64748B',
   slate400: '#94A3B8',
+  slate300: '#CBD5E1',
   border: '#E2E8F0',
+  hairline: '#EEF2F6',
   white: '#FFFFFF',
-  success: '#15803D',
-  successBg: '#DCFCE7',
+  panel: '#F8FAFC',
   amber: '#B45309',
-  amberBg: '#FEF3C7',
+  amberSoft: '#FEF3C7',
   rose: '#B91C1C',
-  roseBg: '#FEE2E2',
-  neutralBg: '#F1F5F9',
-  zebra: '#F8FAFC',
-  blue50: '#EFF6FF',
 };
 
 function fmtDateTime(d?: Date | null): string {
@@ -51,7 +59,8 @@ function fmtDateTime(d?: Date | null): string {
 
 function clip(s: string, max = 56): string {
   const t = (s || '').trim();
-  if (t.length <= max) return t || '—';
+  if (!t) return '—';
+  if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
 }
 
@@ -74,21 +83,27 @@ function parseCodeMeta(code: string): { location: string; region: string; voltag
   };
 }
 
-function statusStyle(status: PanelReportStatus): { fill: string; text: string } {
-  switch (status) {
-    case 'completed': return { fill: C.successBg, text: C.success };
-    case 'in_progress': return { fill: C.amberBg, text: C.amber };
-    case 'on_hold': return { fill: C.neutralBg, text: C.slate600 };
-    case 'not_started': return { fill: C.blue50, text: C.accent };
-    default: return { fill: C.neutralBg, text: C.slate600 };
-  }
+function statusStyle(status: PanelReportStatus): { fill: string; text: string; border: string } {
+  return status === 'completed'
+    ? { fill: C.tealSoft, text: C.tealDeep, border: C.teal }
+    : { fill: C.panel, text: C.slate700, border: C.slate300 };
 }
 
-function kpiColor(v: number): string {
-  return v >= 90 ? C.success : v >= 50 ? C.amber : C.rose;
+function progressColor(v: number): string {
+  return v >= 100 ? C.teal : v >= 50 ? C.slate600 : C.amber;
 }
 
-function drawMetaField(
+/** Section rule: a thin charcoal bar with a teal tick — quieter than a filled band. */
+function drawSectionHeading(doc: PDFKit.PDFDocument, y: number, label: string): number {
+  drawBox(doc, ML, y, 3, 10, { fill: C.teal });
+  drawText(doc, label.toUpperCase(), ML + 9, y + 0.5, {
+    font: F.bold, size: 7, color: C.charcoal,
+  }, { lineBreak: false, characterSpacing: 0.55 });
+  drawDivider(doc, ML, MR, y + 13, { color: C.border });
+  return y + 18;
+}
+
+function drawField(
   doc: PDFKit.PDFDocument,
   x: number,
   y: number,
@@ -96,30 +111,30 @@ function drawMetaField(
   label: string,
   value: string,
 ): void {
-  drawText(doc, label.toUpperCase(), x, y, { font: F.bold, size: 6.5, color: C.slate500 }, { lineBreak: false });
-  drawText(doc, clip(value, Math.floor(w / 5)), x, y + 9, { font: F.reg, size: 8.5, color: C.ink }, {
-    width: w - 4,
-    lineBreak: false,
-    ellipsis: true,
-  });
+  drawText(doc, label.toUpperCase(), x, y, {
+    font: F.bold, size: 6, color: C.slate500,
+  }, { lineBreak: false, characterSpacing: 0.4 });
+  drawText(doc, clip(value, Math.max(12, Math.floor(w / 4.6))), x, y + 9.5, {
+    font: F.reg, size: 9, color: C.ink,
+  }, { width: w, lineBreak: false, ellipsis: true });
 }
 
-function drawMetaGrid(
+function drawFieldGrid(
   doc: PDFKit.PDFDocument,
   x: number,
   y: number,
   w: number,
   rows: [string, string][],
-  cols = 2,
+  cols: number,
+  rowH = 22,
 ): number {
   const colW = w / cols;
-  const rowH = 24;
   let cy = y;
   for (let i = 0; i < rows.length; i += cols) {
     for (let c = 0; c < cols; c++) {
       const row = rows[i + c];
       if (!row) break;
-      drawMetaField(doc, x + c * colW, cy, colW - 10, row[0], row[1]);
+      drawField(doc, x + c * colW, cy, colW - 12, row[0], row[1]);
     }
     cy += rowH;
   }
@@ -134,44 +149,60 @@ function drawKpiCard(
   h: number,
   label: string,
   value: string,
-  opts: { primary?: boolean; valueColor?: string } = {},
+  opts: { primary?: boolean; valueColor?: string; valueSize?: number } = {},
 ): void {
   const primary = opts.primary ?? false;
   drawBox(doc, x, y, w, h, {
-    fill: primary ? C.accent : C.white,
+    fill: primary ? C.charcoal : C.white,
     stroke: primary ? undefined : C.border,
     strokeWidth: primary ? undefined : 0.75,
-    radius: 6,
+    radius: 5,
   });
-  drawText(doc, value, x, y + (primary ? 10 : 12), {
+  // Shrink the value until it fits on one line, so a long value can never wrap into
+  // the label beneath it.
+  const baseSize = opts.valueSize ?? (primary ? 21 : 15);
+  const inner = w - 12;
+  let size = baseSize;
+  doc.font(F.bold);
+  while (size > 7 && doc.fontSize(size).widthOfString(value) > inner) size -= 0.5;
+  drawText(doc, value, x + 6, y + (primary ? 13 : 14) + (baseSize - size) / 2, {
     font: F.bold,
-    size: primary ? 22 : 16,
-    color: primary ? C.white : (opts.valueColor || C.navy),
-  }, { width: w, align: 'center', lineBreak: false });
-  drawText(doc, label, x, y + h - 16, {
-    font: F.reg,
-    size: 6.5,
-    color: primary ? '#BFDBFE' : C.slate500,
-  }, { width: w, align: 'center', lineBreak: false });
+    size,
+    color: primary ? C.white : (opts.valueColor || C.charcoal),
+  }, { width: inner, align: 'center', lineBreak: false, ellipsis: true });
+  drawText(doc, label.toUpperCase(), x, y + h - 14, {
+    font: F.bold,
+    size: 6,
+    color: primary ? C.slate400 : C.slate500,
+  }, { width: w, align: 'center', lineBreak: false, characterSpacing: 0.4 });
 }
 
 function drawProgressBar(doc: PDFKit.PDFDocument, x: number, y: number, w: number, pct: number): void {
-  const h = 7;
-  drawBox(doc, x, y, w, h, { fill: C.border, radius: 3 });
+  const h = 5;
+  drawBox(doc, x, y, w, h, { fill: '#334155', radius: 2.5 });
   const fillW = Math.max(0, Math.min(w, (w * pct) / 100));
-  if (fillW > 0) {
-    drawBox(doc, x, y, fillW, h, { fill: pct >= 90 ? C.success : pct >= 50 ? C.amber : C.accent, radius: 3 });
-  }
+  if (fillW > 0) drawBox(doc, x, y, fillW, h, { fill: C.teal, radius: 2.5 });
 }
 
 export async function buildPanelCompletionReportPdf(data: PanelCompletionReportData): Promise<Buffer> {
-  const docNo = `DWES-PCR-${data.panel.id.replace(/[^A-Za-z0-9]/g, '').slice(0, 24)}`;
+  const isCompletion = data.reportKind === 'completion';
+  const reportTitle = data.reportTitle;
+  const hasContributionPage = data.contributions.length > 1 || data.midChangeHistory.length > 0;
+  const reportPageCount = hasContributionPage ? 2 : 1;
+  // Reference is derived from the project + panel the reader can actually see —
+  // no internal frame identifier is printed anywhere in the document.
+  const refCode = `${data.project.code}-${data.panel.name}`
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 30);
+  const docNo = `DWES-${isCompletion ? 'PCR' : 'PPR'}-${refCode}`;
+
   const doc = new PDFDocument({
     size: 'A4',
     margin: 0,
     autoFirstPage: true,
     info: {
-      Title: `Project Completion Report — ${data.panel.name}`,
+      Title: `${reportTitle} — ${data.panel.name}`,
       Author: `${REPORT_SYSTEM_SHORT} — ${REPORT_COMPANY}`,
     },
   });
@@ -196,186 +227,226 @@ export async function buildPanelCompletionReportPdf(data: PanelCompletionReportD
   const logoutTimes = data.sessionLog.length
     ? data.sessionLog.map(s => (s.logoutAt ? fmtDateTime(s.logoutAt) : 'Active')).join(' · ')
     : '—';
-  const reworkLabel = data.rework.count > 0 ? `${data.rework.count} · ${data.rework.status}` : 'None';
+  // Compact enough for a KPI card; the reason itself is printed under Remarks.
+  const reworkLabel = data.rework.count > 0
+    ? `${data.rework.count} recorded`
+    : 'None';
 
-  // ── Zone 1: Header band ───────────────────────────────────────────────────
-  drawBox(doc, 0, 0, PAGE_W, 64, { fill: C.navy });
-  drawBox(doc, 0, 60, PAGE_W, 3, { fill: C.accent });
+  // ── Header band ───────────────────────────────────────────────────────────
+  const headerH = 62;
+  drawBox(doc, 0, 0, PAGE_W, headerH, { fill: C.charcoalDeep });
+  drawBox(doc, 0, headerH, PAGE_W, 2.5, { fill: C.teal });
 
-  const logoY = 12;
+  const logoY = 13;
   if (logoPath) {
-    const logoH = 34;
-    const logoW = Math.round(logoH * LOGO_ASPECT); // aspect-correct — no stretch
-    // White rounded card so the full-colour company mark reads cleanly on the
-    // navy header band (its dark navy elements would otherwise disappear).
-    drawBox(doc, ML - 5, logoY - 5, logoW + 12, logoH + 10, { fill: C.white, radius: 6 });
+    const logoH = 32;
+    const logoW = Math.round(logoH * LOGO_ASPECT);
+    // White card keeps the full-colour mark legible on the charcoal band.
+    drawBox(doc, ML - 5, logoY - 5, logoW + 12, logoH + 10, { fill: C.white, radius: 5 });
     try { doc.image(logoPath, ML + 1, logoY, { height: logoH }); } catch { /* text fallback */ }
   }
-  const headerTextX = logoPath ? ML + 92 : ML;
-  drawText(doc, REPORT_COMPANY, headerTextX, logoY + 2, { font: F.bold, size: 9, color: C.white }, { lineBreak: false });
-  drawText(doc, REPORT_SYSTEM, headerTextX, logoY + 14, { font: F.reg, size: 7, color: '#BFDBFE' }, { lineBreak: false });
+  const headerTextX = logoPath ? ML + 90 : ML;
+  drawText(doc, REPORT_COMPANY, headerTextX, logoY + 3, {
+    font: F.bold, size: 9.5, color: C.white,
+  }, { lineBreak: false });
+  drawText(doc, REPORT_SYSTEM, headerTextX, logoY + 16, {
+    font: F.reg, size: 7, color: C.slate400,
+  }, { lineBreak: false });
 
-  drawText(doc, 'PROJECT COMPLETION REPORT', MR - 200, logoY + 2, {
-    font: F.bold, size: 9, color: C.white,
-  }, { width: 200, align: 'right', lineBreak: false });
-  drawText(doc, `Ref: ${docNo}`, MR - 200, logoY + 14, {
-    font: F.reg, size: 7, color: '#93C5FD',
-  }, { width: 200, align: 'right', lineBreak: false });
-  drawText(doc, `Frame: ${data.panel.id}`, MR - 200, logoY + 24, {
-    font: F.reg, size: 7, color: '#93C5FD',
-  }, { width: 200, align: 'right', lineBreak: false });
+  drawText(doc, reportTitle.toUpperCase(), MR - 230, logoY + 2, {
+    font: F.bold, size: 10, color: C.white,
+  }, { width: 230, align: 'right', lineBreak: false, characterSpacing: 0.5 });
+  drawText(doc, `Ref: ${docNo}`, MR - 230, logoY + 17, {
+    font: F.reg, size: 6.5, color: C.slate400,
+  }, { width: 230, align: 'right', lineBreak: false });
+  drawText(doc, fmtDateTime(data.generatedAt), MR - 230, logoY + 27, {
+    font: F.reg, size: 6.5, color: C.slate400,
+  }, { width: 230, align: 'right', lineBreak: false });
 
-  // ── Zone 2: Project / client meta strip ───────────────────────────────────
-  let y = 76;
-  drawBox(doc, ML, y, CW, 4, { fill: C.accent, radius: 2 });
-  y += 10;
-  const metaRows: [string, string][] = [
+  // ── Project & panel identification ────────────────────────────────────────
+  let y = headerH + 14;
+  y = drawSectionHeading(doc, y, 'Project & panel');
+  y = drawFieldGrid(doc, ML, y, CW, [
     ['Project name', substation],
     ['Panel / subpanel', data.panel.name],
+    ['Project number', data.project.code],
+    ['Panel type', data.panel.panelType || '—'],
     ['Client', client],
-    ['Region / location', regionLocation],
     ['Voltage', voltage],
-    ['Project assigned by', data.assignedBy?.fullName || '—'],
-    ['Generated', fmtDateTime(data.generatedAt)],
-    ['Generated by', data.generatedBy],
-  ];
-  y = drawMetaGrid(doc, ML, y, CW, metaRows, 2) + 6;
+    ['Region / location', regionLocation],
+    ['Assigned by', data.assignedBy?.fullName || '—'],
+  ], 2, 27);
+  y += 4;
 
-  // ── Zone 3: Personnel row ─────────────────────────────────────────────────
-  const personGap = 8;
-  const personCount = data.midChangeTechnician ? 3 : 2;
-  const personW = (CW - (personCount - 1) * personGap) / personCount;
-  const personH = 42;
+  // ── Personnel ─────────────────────────────────────────────────────────────
+  y = drawSectionHeading(doc, y, 'Personnel');
+  const personGap = 10;
+  const personW = (CW - 2 * personGap) / 3;
+  const personH = 40;
   const personnel = [
-    { label: 'Assigned technician', name: data.technician?.fullName || '—' },
-    ...(data.midChangeTechnician
-      ? [{ label: 'Mid-change technician', name: data.midChangeTechnician.fullName }]
-      : []),
+    { label: 'Assigned technician(s)', name: data.technicians.map(t => t.fullName).join(', ') || '—' },
     { label: 'Production supervisor', name: data.supervisor?.fullName || '—' },
+    { label: 'Report generated by', name: data.generatedBy },
   ];
   personnel.forEach((p, i) => {
     const x = ML + i * (personW + personGap);
-    drawBox(doc, x, y, personW, personH, { fill: C.zebra, stroke: C.border, strokeWidth: 0.75, radius: 5 });
-    drawText(doc, p.label.toUpperCase(), x + 8, y + 7, { font: F.bold, size: 6.5, color: C.slate500 }, { lineBreak: false });
-    drawText(doc, clip(p.name, 32), x + 8, y + 20, { font: F.reg, size: 9, color: C.ink }, {
-      width: personW - 16, lineBreak: false, ellipsis: true,
-    });
+    drawBox(doc, x, y, personW, personH, { fill: C.panel, stroke: C.border, strokeWidth: 0.75, radius: 5 });
+    drawText(doc, p.label.toUpperCase(), x + 9, y + 8, {
+      font: F.bold, size: 6, color: C.slate500,
+    }, { lineBreak: false, characterSpacing: 0.4 });
+    drawText(doc, clip(p.name, 24), x + 9, y + 21, {
+      font: F.reg, size: 9, color: C.ink,
+    }, { width: personW - 18, lineBreak: false, ellipsis: true });
   });
-  y += personH + 10;
+  y += personH + 14;
 
-  // ── Zone 4: KPI card row (visual centerpiece) ─────────────────────────────
-  const kpiGap = 7;
-  const leadW = CW * 0.28;
+  // ── Wiring progress (KPI row) ─────────────────────────────────────────────
+  y = drawSectionHeading(doc, y, 'Wiring progress');
+  const kpiGap = 8;
+  const leadW = CW * 0.29;
   const smallW = (CW - leadW - 4 * kpiGap) / 4;
-  const kpiH = 58;
-  drawKpiCard(doc, ML, y, leadW, kpiH, 'Completion %', `${data.completionPercent}%`, { primary: true });
-  drawProgressBar(doc, ML + 10, y + kpiH - 14, leadW - 20, data.completionPercent);
+  const kpiH = 60;
+  drawKpiCard(doc, ML, y, leadW, kpiH, 'Completion', `${data.completionPercent}%`, { primary: true });
+  drawProgressBar(doc, ML + 12, y + kpiH - 24, leadW - 24, data.completionPercent);
 
-  const kpiX1 = ML + leadW + kpiGap;
-  drawKpiCard(doc, kpiX1, y, smallW, kpiH, 'Total cables', String(data.cables.total));
-  drawKpiCard(doc, kpiX1 + smallW + kpiGap, y, smallW, kpiH, 'Completed', String(data.cables.completed), { valueColor: C.success });
-  drawKpiCard(doc, kpiX1 + 2 * (smallW + kpiGap), y, smallW, kpiH, 'Remaining', String(data.cables.remaining));
-  drawKpiCard(doc, kpiX1 + 3 * (smallW + kpiGap), y, smallW, kpiH, 'Wiring KPI', `${data.kpi}%`, { valueColor: kpiColor(data.kpi) });
+  const kx = ML + leadW + kpiGap;
+  drawKpiCard(doc, kx, y, smallW, kpiH, 'Total cables', String(data.cables.total));
+  drawKpiCard(doc, kx + smallW + kpiGap, y, smallW, kpiH, 'Completed', String(data.cables.completed), { valueColor: C.teal });
+  drawKpiCard(doc, kx + 2 * (smallW + kpiGap), y, smallW, kpiH, 'Remaining', String(data.cables.remaining), {
+    valueColor: data.cables.remaining > 0 ? C.amber : C.slate600,
+  });
+  drawKpiCard(doc, kx + 3 * (smallW + kpiGap), y, smallW, kpiH, 'Assigned cable KPI', `${data.kpi}%`, {
+    valueColor: progressColor(data.kpi),
+  });
+  y += kpiH + kpiGap;
 
-  y += kpiH + 8;
-  const subCardW = (CW - 3 * kpiGap) / 4;
-  drawKpiCard(doc, ML, y, subCardW, 40, 'Open-end (src / dst)', `${data.cables.openEndSource} / ${data.cables.openEndDestination}`);
-  drawKpiCard(doc, ML + subCardW + kpiGap, y, subCardW, 40, 'Rework', reworkLabel, {
+  // Secondary row: open ends, rework, and the live status chip.
+  const subW = (CW - 3 * kpiGap) / 4;
+  const subH = 42;
+  drawKpiCard(doc, ML, y, subW, subH, 'Open-end (src / dst)', `${data.cables.openEndSource} / ${data.cables.openEndDestination}`);
+  drawKpiCard(doc, ML + subW + kpiGap, y, subW, subH, 'Rework', reworkLabel, {
     valueColor: data.rework.count > 0 ? C.amber : C.slate600,
   });
-  const statusX = ML + 2 * (subCardW + kpiGap);
-  drawBox(doc, statusX, y, subCardW * 2 + kpiGap, 40, { fill: st.fill, radius: 6 });
-  drawText(doc, 'FINAL STATUS', statusX, y + 8, { font: F.bold, size: 6.5, color: C.slate500 }, { width: subCardW * 2 + kpiGap, align: 'center', lineBreak: false });
-  drawText(doc, data.reportStatusLabel.toUpperCase(), statusX, y + 20, { font: F.bold, size: 12, color: st.text }, { width: subCardW * 2 + kpiGap, align: 'center', lineBreak: false });
+  const statusX = ML + 2 * (subW + kpiGap);
+  const statusW = subW * 2 + kpiGap;
+  drawBox(doc, statusX, y, statusW, subH, {
+    fill: st.fill, stroke: st.border, strokeWidth: 0.75, radius: 5,
+  });
+  drawText(doc, 'CURRENT STATUS', statusX, y + 9, {
+    font: F.bold, size: 6, color: C.slate500,
+  }, { width: statusW, align: 'center', lineBreak: false, characterSpacing: 0.4 });
+  drawText(doc, data.reportStatusLabel.toUpperCase(), statusX, y + 21, {
+    font: F.bold, size: 12, color: st.text,
+  }, { width: statusW, align: 'center', lineBreak: false, characterSpacing: 0.6 });
+  y += subH + 14;
 
-  y += 48;
-
-  // ── Zone 5: Execution timeline / duration ─────────────────────────────────
-  drawBox(doc, ML, y, CW, 18, { fill: C.navy, radius: 4 });
-  drawText(doc, 'EXECUTION TIMELINE & DURATION', ML + 10, y + 5, { font: F.bold, size: 7, color: C.white }, { lineBreak: false });
-  y += 22;
-  y = drawMetaGrid(doc, ML + 4, y, CW - 8, [
+  // ── Execution timeline ────────────────────────────────────────────────────
+  y = drawSectionHeading(doc, y, 'Execution timeline & duration');
+  y = drawFieldGrid(doc, ML, y, CW, [
     ['Wiring start', fmtDateTime(data.wiring.startedAt)],
     ['Wiring completion', fmtDateTime(data.wiring.completedAt)],
     ['Wiring duration', data.wiring.durationHuman],
-    ['Project duration', `${data.projectDurationDays} day(s)`],
+    ['Total working hours', data.totalWorkingHours],
     ['Technician login(s)', loginTimes],
     ['Technician logout(s)', logoutTimes],
-    ['Total working hours', data.totalWorkingHours],
-    ['Frame ID', data.panel.id],
-  ], 2) + 6;
+  ], 2, 27);
+  y += 4;
 
-  // ── Zone 6: Remarks ───────────────────────────────────────────────────────
-  drawBox(doc, ML, y, CW, 18, { fill: C.navy, radius: 4 });
-  drawText(doc, 'REMARKS & NOTES', ML + 10, y + 5, { font: F.bold, size: 7, color: C.white }, { lineBreak: false });
-  y += 22;
-  const remarksH = 44;
-  drawBox(doc, ML, y, CW, remarksH, { fill: C.zebra, stroke: C.border, strokeWidth: 0.75, radius: 4 });
-  const techRemarks = data.technicianRemarks.length ? data.technicianRemarks.join(' · ') : '—';
-  const supRemarks = data.supervisorRemarks || data.rework.reason || '—';
-  drawText(doc, 'Technician remarks', ML + 10, y + 6, { font: F.bold, size: 7, color: C.navy }, { lineBreak: false });
-  drawText(doc, clip(techRemarks, 120), ML + 96, y + 6, { font: F.reg, size: 8, color: C.ink }, { width: CW - 108, lineBreak: false, ellipsis: true });
-  drawDivider(doc, ML + 10, MR - 10, y + 22, { color: C.border });
-  drawText(doc, 'Supervisor remarks', ML + 10, y + 26, { font: F.bold, size: 7, color: C.navy }, { lineBreak: false });
-  drawText(doc, clip(supRemarks, 120), ML + 96, y + 26, { font: F.reg, size: 8, color: C.ink }, { width: CW - 108, lineBreak: false, ellipsis: true });
-  y += remarksH + 8;
+  // ── Remarks (presentation removed; underlying data preserved) ──────────
 
-  // ── Zone 7: Approval / signature footer ───────────────────────────────────
-  drawBox(doc, ML, y, CW, 18, { fill: C.navy, radius: 4 });
-  drawText(doc, 'APPROVAL & SIGN-OFF', ML + 10, y + 5, { font: F.bold, size: 7, color: C.white }, { lineBreak: false });
-  // Live approval status chip (right-aligned in the section bar).
-  const approvalChip = data.approval.approved
-    ? `APPROVED${data.approval.approvedAt ? ` · ${fmtDateTime(data.approval.approvedAt)}` : ''}`
-    : data.technician ? 'PENDING SUPERVISOR APPROVAL' : 'NOT YET SUBMITTED';
-  const approvalChipColor = data.approval.approved ? '#4ADE80' : data.technician ? '#FBBF24' : '#93C5FD';
-  drawText(doc, approvalChip, MR - 270, y + 5, { font: F.bold, size: 7, color: approvalChipColor }, { width: 260, align: 'right', lineBreak: false });
-  y += 22;
-  const sigGap = 10;
-  const sigW = (CW - 2 * sigGap) / 3;
-  const sigH = 54;
-  const supervisorSignName = data.approval.approvedBy?.fullName || data.supervisor?.fullName || data.generatedBy;
-  const roles: { title: string; name: string; sub?: string }[] = [
-    { title: 'Technician', name: data.technician?.fullName || '' },
-    {
-      title: 'Production Supervisor',
-      name: supervisorSignName,
-      sub: data.approval.approved && data.approval.approvedAt ? `Approved ${fmtDateTime(data.approval.approvedAt)}` : '',
-    },
-    { title: 'Client / Management', name: '' },
-  ];
-  roles.forEach((r, i) => {
-    const x = ML + i * (sigW + sigGap);
-    drawBox(doc, x, y, sigW, sigH, { fill: C.white, stroke: C.border, strokeWidth: 0.75, radius: 4 });
-    drawText(doc, r.title.toUpperCase(), x + 8, y + 6, { font: F.bold, size: 6.5, color: C.slate500 }, { lineBreak: false });
-    if (r.name) {
-      drawText(doc, clip(r.name, 28), x + 8, y + 18, { font: F.reg, size: 8, color: C.ink }, { width: sigW - 16, lineBreak: false, ellipsis: true });
-    }
-    if (r.sub) {
-      drawText(doc, clip(r.sub, 30), x + 8, y + 28, { font: F.reg, size: 6.5, color: C.success }, { width: sigW - 16, lineBreak: false, ellipsis: true });
-    }
-    drawDivider(doc, x + 8, x + sigW - 8, y + 40, { color: C.slate400 });
-    drawText(doc, 'Signature / Date', x + 8, y + 44, { font: F.reg, size: 6.5, color: C.slate400 }, { lineBreak: false });
-  });
+  // ── Approval & sign-off (presentation removed; underlying data preserved) ─
 
-  // ── Zone 8: Page footer ───────────────────────────────────────────────────
+  // Closing certification note (presentation removed; underlying data preserved) ─
+
+  // ── Footer ────────────────────────────────────────────────────────────────
   drawEnterpriseFooter(doc, {
     pageNumber: 1,
-    totalPages: 1,
+    totalPages: reportPageCount,
     projectCode: data.project.code,
     generatedAt: data.generatedAt,
     left: ML,
     right: MR,
-    y: PAGE_H - 28,
+    y: y + 14,
     confidentialNote: 'Confidential — Management and Client Review Copy',
   });
+
+  if (hasContributionPage) {
+    doc.addPage({ size: 'A4', margin: 0 });
+    drawBox(doc, 0, 0, PAGE_W, 54, { fill: C.charcoalDeep });
+    drawBox(doc, 0, 54, PAGE_W, 2.5, { fill: C.teal });
+    drawText(doc, 'TECHNICIAN CONTRIBUTION & MID CHANGE HISTORY', ML, 17, {
+      font: F.bold, size: 12, color: C.white,
+    }, { width: CW, lineBreak: false });
+    drawText(doc, `${clip(data.project.name, 70)} · ${clip(data.panel.name, 50)}`, ML, 34, {
+      font: F.reg, size: 7.5, color: C.slate300,
+    }, { width: CW, lineBreak: false, ellipsis: true });
+
+    let detailY = 76;
+    const columns = [
+      { label: 'Technician', x: ML, w: 105 },
+      { label: 'Work period', x: ML + 105, w: 148 },
+      { label: 'Duration', x: ML + 253, w: 58 },
+      { label: 'Contribution', x: ML + 311, w: 112 },
+      { label: 'Progress', x: ML + 423, w: 88 },
+    ];
+    drawBox(doc, ML, detailY, CW, 22, { fill: C.charcoal });
+    columns.forEach(column => drawText(doc, column.label.toUpperCase(), column.x + 6, detailY + 7, {
+      font: F.bold, size: 6, color: C.white,
+    }, { width: column.w - 12, lineBreak: false }));
+    detailY += 22;
+
+    data.contributions.forEach((contribution, index) => {
+      const rowH = 43;
+      drawBox(doc, ML, detailY, CW, rowH, {
+        fill: index % 2 === 0 ? C.white : C.panel,
+        stroke: C.border,
+        strokeWidth: 0.5,
+      });
+      const values = [
+        `${contribution.technician.fullName}${contribution.technician.username ? ` (@${contribution.technician.username})` : ''}`,
+        `${fmtDateTime(contribution.startedAt)} → ${contribution.endedAt ? fmtDateTime(contribution.endedAt) : 'Active'}`,
+        contribution.durationHuman || '—',
+        `${contribution.cablesCompleted} cables · ${contribution.sourceEndsCompleted} src · ${contribution.destinationEndsCompleted} dst`,
+        `${contribution.progressBefore} → ${contribution.progressAfter}`,
+      ];
+      columns.forEach((column, columnIndex) => drawText(doc, values[columnIndex], column.x + 6, detailY + 7, {
+        font: columnIndex === 0 ? F.bold : F.reg,
+        size: 7,
+        color: C.ink,
+      }, { width: column.w - 12, height: rowH - 12, lineBreak: true, ellipsis: true }));
+      detailY += rowH;
+    });
+
+    if (data.midChangeHistory.length > 0) {
+      detailY += 14;
+      detailY = drawSectionHeading(doc, detailY, 'Permanent Mid Change audit');
+      data.midChangeHistory.forEach(entry => {
+        drawText(doc, `${fmtDateTime(entry.at)} · ${entry.technicianName || 'Technician'} · ${entry.action.replace(/_/g, ' ')}`, ML + 8, detailY, {
+          font: F.reg, size: 7.5, color: C.slate700,
+        }, { width: CW - 16, lineBreak: false, ellipsis: true });
+        detailY += 14;
+      });
+    }
+
+    drawEnterpriseFooter(doc, {
+      pageNumber: 2,
+      totalPages: reportPageCount,
+      projectCode: data.project.code,
+      generatedAt: data.generatedAt,
+      left: ML,
+      right: MR,
+      y: PAGE_H - 28,
+      confidentialNote: 'Confidential — Management and Client Review Copy',
+    });
+  }
 
   doc.end();
   const raw = await done;
   const pdf = await PDFLibDocument.load(raw);
-  if (pdf.getPageCount() > 1) {
+  if (pdf.getPageCount() > reportPageCount) {
     const trimmed = await PDFLibDocument.create();
-    const [page0] = await trimmed.copyPages(pdf, [0]);
-    trimmed.addPage(page0);
+    const pages = await trimmed.copyPages(pdf, Array.from({ length: reportPageCount }, (_, index) => index));
+    pages.forEach(page => trimmed.addPage(page));
     return Buffer.from(await trimmed.save());
   }
   return raw;

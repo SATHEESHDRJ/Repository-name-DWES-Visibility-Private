@@ -1,0 +1,146 @@
+{
+  "capturedAt": "2026-09-20T07:24:46.302Z",
+  "base": "http://127.0.0.1:5275",
+  "shots": [
+    {
+      "role": "supervisor",
+      "viewport": "desktop",
+      "file": "after-supervisor-desktop.png",
+      "bytes": 229113,
+      "url": "http://127.0.0.1:5275/supervisor?tab=projects&project=002&panel=frame_1784977437763_0_ahv74"
+    },
+    {
+      "role": "supervisor",
+      "viewport": "laptop",
+      "file": "after-supervisor-laptop.png",
+      "bytes": 206139,
+      "url": "http://127.0.0.1:5275/supervisor?tab=projects&project=002&panel=frame_1784977437763_0_ahv74"
+    },
+    {
+      "role": "supervisor",
+      "viewport": "tablet-landscape",
+      "file": "after-supervisor-tablet-landscape.png",
+      "bytes": 179176,
+      "url": "http://127.0.0.1:5275/supervisor?tab=projects&project=002&panel=frame_1784977437763_0_ahv74"
+    },
+    {
+      "role": "supervisor",
+      "viewport": "tablet-portrait",
+      "file": "after-supervisor-tablet-portrait.png",
+      "bytes": 165828,
+      "url": "http://127.0.0.1:5275/supervisor?tab=projects&project=002&panel=frame_1784977437763_0_ahv74"
+    },
+    {
+      "role": "supervisor",
+      "viewport": "phone",
+      "file": "after-supervisor-phone.png",
+      "bytes": 99810,
+      "url": "http://127.0.0.1:5275/supervisor?tab=projects&project=002&panel=frame_1784977437763_0_ahv74"
+    },
+    {
+      "role": "technician",
+      "viewport": "desktop",
+      "file": "after-technician-desktop.png",
+      "bytes": 336945,
+      "url": "http://127.0.0.1:5275/technician"
+    },
+    {
+      "role": "technician",
+      "viewport": "laptop",
+      "file": "after-technician-laptop.png",
+      "bytes": 305553,
+      "url": "http://127.0.0.1:5275/technician"
+    },
+    {
+      "role": "technician",
+      "viewport": "tablet-landscape",
+      "file": "after-technician-tablet-landscape.png",
+      "bytes": 239776,
+      "url": "http://127.0.0.1:5275/technician"
+    },
+    {
+      "role": "technician",
+      "viewport": "tablet-portrait",
+      "file": "after-technician-tablet-portrait.png",
+      "bytes": 192884,
+      "url": "http://127.0.0.1:5275/technician"
+    },
+    {
+      "role": "technician",
+      "viewport": "phone",
+      "file": "after-technician-phone.png",
+      "bytes": 113454,
+      "url": "http://127.0.0.1:5275/technician"
+    },
+    {
+      "role": "director",
+      "viewport": "desktop",
+      "file": "after-director-desktop.png",
+      "bytes": 324923,
+      "url": "http://127.0.0.1:5275/director"
+    },
+    {
+      "role": "director",
+      "viewport": "laptop",
+      "file": "after-director-laptop.png",
+      "bytes": 252569,
+      "url": "http://127.0.0.1:5275/director"
+    },
+    {
+      "role": "director",
+      "viewport": "tablet-landscape",
+      "file": "after-director-tablet-landscape.png",
+      "bytes": 190218,
+      "url": "http://127.0.0.1:5275/director"
+    },
+    {
+      "role": "director",
+      "viewport": "tablet-portrait",
+      "file": "after-director-tablet-portrait.png",
+      "bytes": 174634,
+      "url": "http://127.0.0.1:5275/director"
+    },
+    {
+      "role": "director",
+      "viewport": "phone",
+      "file": "after-director-phone.png",
+      "bytes": 94712,
+      "url": "http://127.0.0.1:5275/director"
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop",
+      "file": "after-admin-desktop.png",
+      "bytes": 219292,
+      "url": "http://127.0.0.1:5275/admin/settings"
+    },
+    {
+      "role": "admin",
+      "viewport": "laptop",
+      "file": "after-admin-laptop.png",
+      "bytes": 184452,
+      "url": "http://127.0.0.1:5275/admin/settings"
+    },
+    {
+      "role": "admin",
+      "viewport": "tablet-landscape",
+      "file": "after-admin-tablet-landscape.png",
+      "bytes": 151964,
+      "url": "http://127.0.0.1:5275/admin/settings"
+    },
+    {
+      "role": "admin",
+      "viewport": "tablet-portrait",
+      "file": "after-admin-tablet-portrait.png",
+      "bytes": 141716,
+      "url": "http://127.0.0.1:5275/admin/settings"
+    },
+    {
+      "role": "admin",
+      "viewport": "phone",
+      "file": "after-admin-phone.png",
+      "bytes": 81927,
+      "url": "http://127.0.0.1:5275/admin/settings"
+    }
+  ]
+}

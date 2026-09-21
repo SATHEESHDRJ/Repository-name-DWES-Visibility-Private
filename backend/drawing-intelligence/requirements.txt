@@ -1,0 +1,14 @@
+# DWES Drawing Intelligence (OCR + OpenCV + optional LocateAnything / PaddleOCR)
+fastapi>=0.110
+uvicorn>=0.27
+pypdf>=4.0
+pymupdf>=1.24
+pytesseract>=0.3.10
+Pillow>=10.0
+numpy>=1.24
+opencv-python-headless>=4.8
+# Optional ensemble / grounding (soft-fail if not installed):
+# paddleocr>=2.7
+# torch
+# transformers
+# accelerate

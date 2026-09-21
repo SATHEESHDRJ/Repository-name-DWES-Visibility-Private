@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-09-21T08:55:00+04:00",
+  "evidence_dir": "docs/evidence/master-continuation-2026-09-21_084204",
+  "commands": {
+    "typecheck": { "cmd": "npm run typecheck", "exit": 0 },
+    "lint": { "cmd": "npm run lint (oxlint --quiet + ignore patterns)", "exit": 0, "notes": "Quarantined UTF-16 corrupt sources that broke oxlint parser" },
+    "build": { "cmd": "npm run build", "exit": 0 },
+    "backend_test": { "cmd": "npm --prefix backend test", "exit": 0, "tests": 420, "pass": 420, "fail": 0 },
+    "focused_prep": { "cmd": "node --test oversized/crimping/prep-events/assignment", "exit": 0 },
+    "uiux_smoke": { "cmd": "node scripts/uiux-recovery-smoke.mjs", "exit": 0, "routes": ["/", "/supervisor", "/technician", "/director", "/admin/settings"], "api_roles": 200 },
+    "api_health": { "cmd": "GET http://127.0.0.1:3101/api/health", "status": 200, "degraded": true, "sse_mode": "pg" }
+  },
+  "browser_role_flows": "PARTIAL — smoke HTTP 200; deep LIVE TB browser overlay not re-captured this session",
+  "sse_reconnect_poll": "PARTIAL — health proves pg SSE; dedicated reconnect matrix NOT re-run",
+  "permission_negatives": "NOT TESTED this session (beyond Match 403 for tech3 on project 003)",
+  "back_forward_deeplink": "PARTIAL — prior URL_NAV_EVIDENCE; not re-proven",
+  "overall_functional": "PARTIAL"
+}

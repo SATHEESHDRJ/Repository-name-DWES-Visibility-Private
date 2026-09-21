@@ -73,7 +73,7 @@ export default function SupervisorScopeToolbar({
               techSelectDisabled ? 'opacity-50 pointer-events-none' : 'opacity-100'
             }`}
           >
-            <span className="text-[13px] font-semibold text-slate-600">Technician</span>
+            <span className="text-[13px] font-semibold text-muted">Technician</span>
             <select
               value={selectedTechId}
               onChange={e => onTechChange(e.target.value)}
@@ -103,7 +103,7 @@ export default function SupervisorScopeToolbar({
 
       {selectedTechName && (
         <p className="ops-toolbar-note">
-          Filtering for <span className="font-semibold text-slate-800">{selectedTechName}</span>
+          Filtering for <span className="font-semibold text-primary">{selectedTechName}</span>
         </p>
       )}
     </section>

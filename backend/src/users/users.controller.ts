@@ -14,6 +14,8 @@ import type { User } from '../data/mock-store';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  // sales_director is excluded from roster endpoints — its dashboard is
+  // aggregate-only and must not expose technician usernames (users-rbac.ts).
   @Get()
   @Roles('system_admin', 'prod_supervisor', 'ops_director')
   findAll(@CurrentUser() user: User) {

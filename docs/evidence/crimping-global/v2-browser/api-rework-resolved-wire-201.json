@@ -1,0 +1,119 @@
+{
+    "assignment_id":  66,
+    "cable_index":  201,
+    "changed":  true,
+    "crimping":  {
+                     "required":  true,
+                     "source":  {
+                                    "strippingStatus":  "COMPLETED",
+                                    "crimpingStatus":  "COMPLETED",
+                                    "strippedBy":  42,
+                                    "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                    "crimpedBy":  42,
+                                    "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                                    "reworkHistory":  [
+                                                          {
+                                                              "operation":  "crimp",
+                                                              "previousStatus":  "COMPLETED",
+                                                              "reason":  "Browser acceptance rework BOTH",
+                                                              "setBy":  3,
+                                                              "setAt":  "2026-09-18T13:01:23.545Z",
+                                                              "role":  "prod_supervisor"
+                                                          }
+                                                      ]
+                                },
+                     "destination":  {
+                                         "strippingStatus":  "COMPLETED",
+                                         "crimpingStatus":  "COMPLETED",
+                                         "strippedBy":  42,
+                                         "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                         "crimpedBy":  42,
+                                         "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                                         "reworkHistory":  [
+                                                               {
+                                                                   "operation":  "crimp",
+                                                                   "previousStatus":  "COMPLETED",
+                                                                   "reason":  "Browser acceptance rework BOTH",
+                                                                   "setBy":  3,
+                                                                   "setAt":  "2026-09-18T13:01:23.545Z",
+                                                                   "role":  "prod_supervisor"
+                                                               }
+                                                           ]
+                                     },
+                     "overall":  "COMPLETED",
+                     "revision":  6,
+                     "updatedAt":  "2026-09-18T13:05:59.376Z",
+                     "updatedBy":  42,
+                     "cut":  {
+                                 "status":  "COMPLETED",
+                                 "plannedLength":  "3",
+                                 "by":  42,
+                                 "at":  "2026-09-18T13:00:54.769Z"
+                             },
+                     "wireStrip":  {
+                                       "status":  "COMPLETED",
+                                       "by":  42,
+                                       "at":  "2026-09-18T13:00:55.570Z"
+                                   },
+                     "wireCrimp":  {
+                                       "status":  "COMPLETED",
+                                       "by":  42,
+                                       "at":  "2026-09-18T13:00:57.179Z"
+                                   }
+                 },
+    "wiring_locked":  false,
+    "wire":  {
+                 "cable_index":  201,
+                 "required":  true,
+                 "overall":  "COMPLETED",
+                 "wiring_locked":  false,
+                 "readyForWiring":  true,
+                 "openEnd":  null,
+                 "wiring_src":  false,
+                 "wiring_dst":  false,
+                 "legacyWiringCompleted":  false,
+                 "legacyCrimpWithoutStrip":  false,
+                 "legacyPartial":  false,
+                 "qaHold":  false,
+                 "cut":  {
+                             "status":  "COMPLETED",
+                             "plannedLength":  "3",
+                             "by":  42,
+                             "at":  "2026-09-18T13:00:54.769Z"
+                         },
+                 "wireStrip":  {
+                                   "status":  "COMPLETED",
+                                   "by":  42,
+                                   "at":  "2026-09-18T13:00:55.570Z"
+                               },
+                 "wireCrimp":  {
+                                   "status":  "COMPLETED",
+                                   "by":  42,
+                                   "at":  "2026-09-18T13:00:57.179Z"
+                               },
+                 "source":  {
+                                "strippingStatus":  "COMPLETED",
+                                "crimpingStatus":  "COMPLETED",
+                                "strippedBy":  42,
+                                "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                "crimpedBy":  42,
+                                "crimpedAt":  "2026-09-18T13:00:57.179Z"
+                            },
+                 "destination":  {
+                                     "strippingStatus":  "COMPLETED",
+                                     "crimpingStatus":  "COMPLETED",
+                                     "strippedBy":  42,
+                                     "strippedAt":  "2026-09-18T13:00:55.570Z",
+                                     "crimpedBy":  42,
+                                     "crimpedAt":  "2026-09-18T13:00:57.179Z"
+                                 },
+                 "source_strip":  "COMPLETED",
+                 "source_crimp":  "COMPLETED",
+                 "destination_strip":  "COMPLETED",
+                 "destination_crimp":  "COMPLETED",
+                 "sourceBy":  42,
+                 "destinationBy":  42,
+                 "sourceAt":  "2026-09-18T13:00:57.179Z",
+                 "destinationAt":  "2026-09-18T13:00:57.179Z"
+             }
+}

@@ -1,0 +1,63 @@
+{
+  "checks": [
+    {
+      "viewport": "desktop-1920x1080",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\premium-brand-lockup\\login-desktop-1920x1080.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "descriptor": "DIGITAL ENGINEERING PLATFORM",
+      "companyLines": 1,
+      "wrapW": 144,
+      "imgW": 128,
+      "companyFs": 27,
+      "titleFs": 30,
+      "companyLtTitle": true,
+      "nowrap": true,
+      "filter": "none",
+      "src": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "scrollX": false,
+      "accent": true
+    },
+    {
+      "viewport": "desktop-1600x900",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\premium-brand-lockup\\login-desktop-1600x900.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "descriptor": "DIGITAL ENGINEERING PLATFORM",
+      "companyLines": 1,
+      "wrapW": 128,
+      "imgW": 112,
+      "companyFs": 24.8,
+      "titleFs": 30,
+      "companyLtTitle": true,
+      "nowrap": true,
+      "filter": "none",
+      "src": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "scrollX": false,
+      "accent": true
+    },
+    {
+      "viewport": "laptop-1366x768",
+      "file": "C:\\dev\\DWES-OCI-RESTORES\\2026-07-25_115805_OCI-PRODUCTION-EXACT\\02_GIT_PRODUCTION_SOURCE\\DWES\\docs\\evidence\\ui-login-showcase\\premium-brand-lockup\\login-laptop-1366x768.png",
+      "brandText": "INGENIOUS NETWORK FZC",
+      "descriptor": "DIGITAL ENGINEERING PLATFORM",
+      "companyLines": 1,
+      "wrapW": 124,
+      "imgW": 108,
+      "companyFs": 21.2,
+      "titleFs": 18.4,
+      "companyLtTitle": false,
+      "nowrap": true,
+      "filter": "none",
+      "src": "/assets/ingenious-network-official-logo-color.png?v=20260725e",
+      "scrollX": false,
+      "accent": true
+    }
+  ],
+  "consoleErrors": [],
+  "acceptance": {
+    "noConsole": true,
+    "oneLine": true,
+    "logoBand": true,
+    "noScroll": true,
+    "artwork": true
+  }
+}

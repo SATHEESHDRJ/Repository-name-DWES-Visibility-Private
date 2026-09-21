@@ -20,9 +20,17 @@ export default function Toast({
   onDismiss: () => void;
 }) {
   useEffect(() => {
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      onDismiss();
+      return;
+    }
     const id = setTimeout(onDismiss, duration);
     return () => clearTimeout(id);
-  }, [onDismiss, duration]);
+  }, [onDismiss, duration, message]);
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return null;
+  }
 
   // Portal to <body> so the fixed-position toast anchors to the viewport, not to a
   // transformed/overflow-clipped ancestor (e.g. the animated .nav-tab-panel).

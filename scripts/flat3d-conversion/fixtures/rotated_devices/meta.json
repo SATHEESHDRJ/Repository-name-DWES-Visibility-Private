@@ -1,0 +1,6 @@
+{
+  "description": "Rotated devices: INSERT rotation=90 degrees",
+  "insunits": 4,
+  "rotation_deg": 90,
+  "expected_status": "READY_FOR_REVIEW"
+}

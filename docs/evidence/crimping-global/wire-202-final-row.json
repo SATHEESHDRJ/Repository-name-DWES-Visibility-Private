@@ -1,0 +1,164 @@
+﻿{
+    "cableIndex":  201,
+    "wireId":  "wire_bddc4eb762da4da0dbd781e7",
+    "sno":  202,
+    "ferrule":  "86STUB:B7/X6-A:5",
+    "panel":  "E01+R1",
+    "groupKey":  "86STUB → X6-A",
+    "source":  {
+                   "device":  "86STUB",
+                   "terminal":  "B7",
+                   "side":  "86STUB:B7",
+                   "ferrule":  "86STUB:B7/X6-A:5",
+                   "legNumber":  {
+                                     "value":  null,
+                                     "available":  false,
+                                     "sourceField":  "source_crimp_leg_number"
+                                 },
+                   "legSize":  {
+                                   "value":  null,
+                                   "available":  false,
+                                   "sourceField":  "source_crimp_leg_size"
+                               },
+                   "legColor":  {
+                                    "value":  null,
+                                    "available":  false,
+                                    "sourceField":  "source_crimp_leg_color"
+                                },
+                   "ferruleType":  {
+                                       "value":  null,
+                                       "available":  false,
+                                       "sourceField":  "source_ferrule_type"
+                                   },
+                   "ferruleMarking":  {
+                                          "value":  null,
+                                          "available":  false,
+                                          "sourceField":  "source_ferrule_marking"
+                                      },
+                   "strippingStatus":  "COMPLETED",
+                   "crimpingStatus":  "COMPLETED",
+                   "strippedBy":  42,
+                   "strippedAt":  "2026-09-18T13:00:55.570Z",
+                   "strippedByName":  "Yidnekachew Mamo",
+                   "crimpedBy":  42,
+                   "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                   "crimpedByName":  "Yidnekachew Mamo",
+                   "reworkHistory":  [
+                                         {
+                                             "operation":  "crimp",
+                                             "previousStatus":  "COMPLETED",
+                                             "reason":  "Browser acceptance rework BOTH",
+                                             "setBy":  3,
+                                             "setAt":  "2026-09-18T13:01:23.545Z",
+                                             "role":  "prod_supervisor"
+                                         },
+                                         {
+                                             "operation":  "crimp",
+                                             "previousStatus":  "COMPLETED",
+                                             "reason":  "Live acceptance rework BOTH Wire 202",
+                                             "setBy":  3,
+                                             "setAt":  "2026-09-19T04:53:10.383Z",
+                                             "role":  "prod_supervisor"
+                                         },
+                                         {
+                                             "operation":  "strip",
+                                             "previousStatus":  "COMPLETED",
+                                             "reason":  "Force strip rework for 409 test",
+                                             "setBy":  3,
+                                             "setAt":  "2026-09-19T04:53:11.044Z",
+                                             "role":  "prod_supervisor"
+                                         }
+                                     ]
+               },
+    "destination":  {
+                        "device":  "X6-A",
+                        "terminal":  "5",
+                        "side":  "X6-A:5",
+                        "ferrule":  "86STUB:B7/X6-A:5",
+                        "legNumber":  {
+                                          "value":  null,
+                                          "available":  false,
+                                          "sourceField":  "dest_crimp_leg_number"
+                                      },
+                        "legSize":  {
+                                        "value":  null,
+                                        "available":  false,
+                                        "sourceField":  "dest_crimp_leg_size"
+                                    },
+                        "legColor":  {
+                                         "value":  null,
+                                         "available":  false,
+                                         "sourceField":  "dest_crimp_leg_color"
+                                     },
+                        "ferruleType":  {
+                                            "value":  null,
+                                            "available":  false,
+                                            "sourceField":  "dest_ferrule_type"
+                                        },
+                        "ferruleMarking":  {
+                                               "value":  null,
+                                               "available":  false,
+                                               "sourceField":  "dest_ferrule_marking"
+                                           },
+                        "strippingStatus":  "COMPLETED",
+                        "crimpingStatus":  "COMPLETED",
+                        "strippedBy":  42,
+                        "strippedAt":  "2026-09-18T13:00:55.570Z",
+                        "strippedByName":  "Yidnekachew Mamo",
+                        "crimpedBy":  42,
+                        "crimpedAt":  "2026-09-18T13:00:57.179Z",
+                        "crimpedByName":  "Yidnekachew Mamo",
+                        "reworkHistory":  [
+                                              {
+                                                  "operation":  "crimp",
+                                                  "previousStatus":  "COMPLETED",
+                                                  "reason":  "Browser acceptance rework BOTH",
+                                                  "setBy":  3,
+                                                  "setAt":  "2026-09-18T13:01:23.545Z",
+                                                  "role":  "prod_supervisor"
+                                              },
+                                              {
+                                                  "operation":  "crimp",
+                                                  "previousStatus":  "COMPLETED",
+                                                  "reason":  "Live acceptance rework BOTH Wire 202",
+                                                  "setBy":  3,
+                                                  "setAt":  "2026-09-19T04:58:11.299Z",
+                                                  "role":  "prod_supervisor"
+                                              }
+                                          ]
+                    },
+    "wireColor":  "BLUE",
+    "wireSize":  "1.5SQ.mm",
+    "length":  "3m",
+    "openEnd":  null,
+    "wiringSrc":  false,
+    "wiringDst":  false,
+    "crimpingRequired":  true,
+    "overall":  "COMPLETED",
+    "readyForWiring":  true,
+    "finished":  true,
+    "qaHold":  false,
+    "cut":  {
+                "status":  "COMPLETED",
+                "by":  42,
+                "at":  "2026-09-19T04:58:34.348Z",
+                "byName":  "Yidnekachew Mamo"
+            },
+    "wireStrip":  {
+                      "status":  "COMPLETED",
+                      "by":  42,
+                      "at":  "2026-09-19T04:58:34.426Z",
+                      "byName":  "Yidnekachew Mamo"
+                  },
+    "wireCrimp":  {
+                      "status":  "COMPLETED",
+                      "by":  42,
+                      "at":  "2026-09-19T04:58:34.492Z",
+                      "byName":  "Yidnekachew Mamo"
+                  },
+    "preparedBy":  42,
+    "preparedAt":  "2026-09-18T13:00:55.570Z",
+    "reworkCount":  5,
+    "latestReworkReason":  "Live acceptance rework BOTH Wire 202",
+    "preparedByName":  "Yidnekachew Mamo"
+}

@@ -93,6 +93,10 @@ export interface TechAssignment {
 }
 
 export interface Cable {
+  /** Stable identity of this parsed wiring record within its panel frame. */
+  record_id?: string;
+  /** One-based source row in the uploaded Excel worksheet. */
+  excel_row?: number;
   sno: number | string;
   panel: string;
   ferrule: string;
@@ -110,6 +114,17 @@ export interface Cable {
   remarks: string;
   path: string;
   rack?: string;
+  /** Optional crimping-leg engineering fields (mapped at upload; never inferred). */
+  source_crimp_leg_number?: string | null;
+  source_crimp_leg_size?: string | null;
+  source_crimp_leg_color?: string | null;
+  source_ferrule_type?: string | null;
+  source_ferrule_marking?: string | null;
+  dest_crimp_leg_number?: string | null;
+  dest_crimp_leg_size?: string | null;
+  dest_crimp_leg_color?: string | null;
+  dest_ferrule_type?: string | null;
+  dest_ferrule_marking?: string | null;
   /** Original Excel cell values keyed by header name (preserved on upload). */
   _raw?: Record<string, string>;
 }
@@ -171,8 +186,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   system_admin: 'System Administrator',
   ops_director: 'Operations Director',
   prod_supervisor: 'Production Supervisor',
-  qaqc_engineer: 'QA/QC Engineer',
-  wiring_technician: 'Wiring Technician',
+  qaqc_engineer: 'QA/QC',
+  wiring_technician: 'Technician',
 };
 
 export const ROLE_ROUTES: Record<UserRole, string> = {
@@ -196,3 +211,54 @@ export const STATE_LABELS: Record<ProjectState, string> = {
   report_generated: 'Report Ready',
   in_review: 'In Review',
 };
+
+export interface PanelActivityTechnician {
+  id: number;
+  name: string;
+  username: string;
+}
+
+export interface PanelMidChangeActivity {
+  occurred: boolean;
+  changed_at: string | null;
+  original_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_technician: PanelActivityTechnician & { cables_completed: number };
+  incoming_started: boolean;
+}
+
+export type AssignmentLifecycle =
+  | 'UNASSIGNED'
+  | 'ASSIGNED_NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'PAUSED'
+  | 'COMPLETED';
+
+export interface PanelActivityData {
+  project_code: string;
+  frame_id: string;
+  panel_name: string;
+  assigned: boolean;
+  status: string;
+  status_label: string;
+  work_state_label: string;
+  pause_reason?: string | null;
+  technician: PanelActivityTechnician | null;
+  assigned_at: string | null;
+  wiring_started_at: string | null;
+  last_activity_at: string | null;
+  completed_at: string | null;
+  completed_by: PanelActivityTechnician | null;
+  has_started: boolean;
+  is_completed: boolean;
+  cables_total: number;
+  cables_completed: number;
+  cables_remaining: number;
+  completion_percentage: number;
+  mid_change: PanelMidChangeActivity | null;
+  /** Present when backend attaches assignment-lifecycle projection. */
+  lifecycle?: AssignmentLifecycle;
+  can_reassign?: boolean;
+  can_mid_change?: boolean;
+  wiring_started?: boolean;
+  synced_with_wiring_stage?: boolean;
+}

@@ -1,0 +1,9 @@
+{
+  "fixture": "empty_drawing",
+  "status": "FAILED",
+  "fallback": null,
+  "verdict": "PASS",
+  "expected_outcome": "expected_fail",
+  "glb_bytes": 0,
+  "overlay": {}
+}

@@ -1,0 +1,23 @@
+﻿{
+  "slice": 5,
+  "role": "ops_director",
+  "username": "ops_director1",
+  "verdict": "PARTIAL",
+  "read_only": true,
+  "assign_reassign_midchange_delete_buttons": [],
+  "ui_portfolio_kpis": {
+    "Total projects": "3",
+    "Total panels": "10",
+    "In progress": "4",
+    "Completed panels": "2",
+    "Cable progress": "22%",
+    "Completed cables": "1276",
+    "Remaining cables": "4549",
+    "Technicians active": "29",
+    "Rework / QA": "0"
+  },
+  "matches_baseline_api_stats": true,
+  "projection_note": "Total panels=10 is assignment projection from /api/director/stats (not Supervisor frame-universe 5).",
+  "screenshots": ["after-director-portfolio-desktop.png"],
+  "build": "npm run build exit 0; dist deployed"
+}

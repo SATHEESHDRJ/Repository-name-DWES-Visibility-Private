@@ -1,0 +1,42 @@
+{
+    "status":  "ENRICHMENT_RETRY",
+    "panel_status":  "ANALYSIS_IN_PROGRESS",
+    "failed_stage":  "none",
+    "drawing_revision":  "12",
+    "drawing_checksum":  "b52f477d15f9174840b053bb4658ba5c3c084f5d07e9d743299a1ae7e8940baa",
+    "result_summary":  {
+                           "last_error":  "local_pdf_text_fallback|pdfjs_text_layout|no_pdf_text_glyphs",
+                           "retry_count":  1,
+                           "failed_stage":  "worker_startup",
+                           "worker_health":  {
+                                                 "gpu":  "unavailable",
+                                                 "cuda":  false,
+                                                 "notes":  [
+                                                               "ocr_tesseract_probe_ok",
+                                                               "locate:future_cloud_no_local_gpu",
+                                                               "locate:no_invented_boxes"
+                                                           ],
+                                                 "pdfjs":  "ok",
+                                                 "queue":  "inline_fallback",
+                                                 "opencv":  "ok",
+                                                 "paddleocr":  "missing",
+                                                 "ocr_python":  "ok",
+                                                 "locate_mode":  "hybrid",
+                                                 "locate_status":  "GROUNDING_UNAVAILABLE",
+                                                 "locate_anything":  "unavailable",
+                                                 "locate_model_loaded":  false,
+                                                 "locate_execution_mode":  "future_cloud",
+                                                 "locate_anything_provider":  {
+                                                                                  "status":  "GROUNDING_UNAVAILABLE",
+                                                                                  "required":  true,
+                                                                                  "available":  false,
+                                                                                  "model_loaded":  false,
+                                                                                  "execution_mode":  "future_cloud",
+                                                                                  "inference_ready":  false
+                                                                              }
+                                             }
+                       },
+    "failure_reason":  null,
+    "updated_at":  "2026-09-21T05:21:40.841Z",
+    "usable_tb_groups":  0
+}

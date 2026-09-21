@@ -1,0 +1,260 @@
+{
+  "global": "DWES",
+  "pkg": "dwes",
+  "pkgDir": "C:\\Users\\sathe\\OneDrive\\Desktop\\DWES",
+  "extraEntries": [],
+  "exported": [],
+  "storybookStatic": null,
+  "keyRecipe": 7,
+  "cfgSliceGlobal": "1a4c6ed99f032f169c79396b30911d17c53a3d515943d484a30607521050fd5b",
+  "components": [
+    {
+      "name": "Badge",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "ec5f8c9a837d0cde",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Button",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "0fbc9e33d816e0fa",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ButtonHintPopover",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "d4026178719b9d53",
+      "cfgSlice": "048a0a70c17254f7f906017d4602735126a7eb1091c123fdcac4b783086c44bb",
+      "stories": []
+    },
+    {
+      "name": "CableSchematic",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "768fa5e7515a7cd1",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Card",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "31dcc1c8ef7e914d",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ComboField",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "387c988a2d9b6f00",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CompanyLogo",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "368653be79645fe8",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CompletionReport",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "757d6de30cab2e32",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "DashboardShell",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "811ab91d23ad5701",
+      "cfgSlice": "11f39bca790133fbe72c71f4b01c16ce4e8f0f4e49ad501a9bf09638e543ac0f",
+      "stories": []
+    },
+    {
+      "name": "DataTable",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "cbd46f2267177d48",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "EmptyState",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "b26c6d1ade0a6d45",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormError",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "8fd89ebda0ef0d26",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormGroup",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "6b0eedeaa82a1d99",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormInput",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "86a00c21ae0c9811",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormLabel",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "fe48363ce1e2498b",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormSelect",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "d591fddacd1aa2ec",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormTextarea",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "66113919065437c8",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Icon",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "2ab16391ad2523f7",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Input",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "d2511562cad034c9",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InputField",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "782af92256dce7cb",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "KpiCard",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "4d898e08cec851ed",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Modal",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "6c1cc6bf63e997e3",
+      "cfgSlice": "2764943bc39c7d3c3c03e59c6f8e3ac592461eb06afff727d8ecc1e56eb511f9",
+      "stories": []
+    },
+    {
+      "name": "OverflowActionMenu",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "0dcd8dd7487d1a57",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ProjectInfoCard",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "1ecd02700b73736d",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ReportPreviewModal",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "3eebcafa592bbbc9",
+      "cfgSlice": "6a9925e4c84a10190eaae08509f3719d2983f33529e0133b01c16f6ef2e2e07c",
+      "stories": []
+    },
+    {
+      "name": "SectionHeader",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "d7545ec4bc42de75",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SelectField",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "69a0fd9a69a0bee7",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Skeleton",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "ddf247c426a41daf",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ThemeToggle",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "0edc66091548c201",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Toast",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "8959533afe142f75",
+      "cfgSlice": "a6a733b3a95994ba875025244512fa286da2e83faf4c470da0876a5dff605f1c",
+      "stories": []
+    },
+    {
+      "name": "VerificationModal",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "0a47aa1aa4fcbb45",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    }
+  ]
+}

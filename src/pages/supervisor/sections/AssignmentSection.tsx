@@ -18,6 +18,7 @@ export default function AssignmentSection() {
       <SupervisorSectionHeader
         title="Assignments"
         description="Assign technicians to panels directly — no OTP gate. Monitor active ownership, KPI progress, and submission state."
+        icon={<Users size={16} strokeWidth={1.75} />}
       />
 
       <SupervisorScopeToolbar

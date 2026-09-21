@@ -6,6 +6,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User, UserRole } from '../data/mock-store';
 
+// sales_director excluded — QC endpoints expose per-inspection results and
+// remarks; the sales view is aggregate-only (QC pass rate arrives via director stats).
 const QC_ROLES: UserRole[] = ['qaqc_engineer', 'prod_supervisor', 'ops_director', 'system_admin'];
 
 @UseGuards(JwtAuthGuard)

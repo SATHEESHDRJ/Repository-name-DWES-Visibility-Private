@@ -1,0 +1,1 @@
+{"message":"Cannot delete panel \"DEMO-PANEL-01\" because it has an active or in-progress assignment by a technician.","error":"Bad Request","statusCode":400}

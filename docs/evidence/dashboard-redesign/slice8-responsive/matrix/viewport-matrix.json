@@ -1,0 +1,253 @@
+﻿{
+  "capturedAt": "2026-09-19T14:20:00+04:00",
+  "method": "Chrome CDP Emulation.setDeviceMetricsOverride + window.__dwesMeasure()",
+  "viewports": {
+    "phone": { "width": 390, "height": 844, "mobile": true },
+    "tablet": { "width": 1024, "height": 1024, "mobile": true },
+    "laptop": { "width": 1440, "height": 900, "mobile": false },
+    "desktop": { "width": 1920, "height": 1080, "mobile": false }
+  },
+  "passCriteria": {
+    "overflowX": false,
+    "extraNestedCount": 0,
+    "liveOk": true,
+    "singleMainScroller": "app-shell (or none when content fits)"
+  },
+  "results": [
+    {
+      "role": "director",
+      "account": "ops_director1",
+      "path": "/director",
+      "cells": [
+        {
+          "viewport": "phone",
+          "w": 390,
+          "h": 844,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "screenshot": "matrix-director-phone.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "tablet",
+          "w": 1024,
+          "h": 1024,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "screenshot": "matrix-director-tablet.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "laptop",
+          "w": 1440,
+          "h": 900,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:10:42",
+          "screenshot": "matrix-director-laptop.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "desktop",
+          "w": 1920,
+          "h": 1080,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:11:32",
+          "screenshot": "matrix-director-desktop.png",
+          "verdict": "PASS"
+        }
+      ],
+      "roleVerdict": "PASS"
+    },
+    {
+      "role": "supervisor",
+      "account": "supervisor1",
+      "path": "/supervisor",
+      "cells": [
+        {
+          "viewport": "phone",
+          "w": 390,
+          "h": 844,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:13:20",
+          "screenshot": "matrix-supervisor-phone.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "tablet",
+          "w": 1024,
+          "h": 1024,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": [],
+          "note": "Content fits viewport; no nested scrollers",
+          "liveOk": true,
+          "live": "LiveUpdated 14:13:45",
+          "screenshot": "matrix-supervisor-tablet.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "laptop",
+          "w": 1440,
+          "h": 900,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:14:35",
+          "screenshot": "matrix-supervisor-laptop.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "desktop",
+          "w": 1920,
+          "h": 1080,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": [],
+          "note": "Content fits viewport; no nested scrollers",
+          "liveOk": true,
+          "live": "LiveUpdated 14:15:00",
+          "screenshot": "matrix-supervisor-desktop.png",
+          "verdict": "PASS"
+        }
+      ],
+      "roleVerdict": "PASS"
+    },
+    {
+      "role": "technician",
+      "account": "tech2",
+      "path": "/technician",
+      "cells": [
+        {
+          "viewport": "phone",
+          "w": 390,
+          "h": 844,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:15:43",
+          "screenshot": "matrix-technician-phone.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "tablet",
+          "w": 1024,
+          "h": 1024,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:16:33",
+          "screenshot": "matrix-technician-tablet.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "laptop",
+          "w": 1440,
+          "h": 900,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:16:58",
+          "screenshot": "matrix-technician-laptop.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "desktop",
+          "w": 1920,
+          "h": 1080,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:17:48",
+          "screenshot": "matrix-technician-desktop.png",
+          "verdict": "PASS"
+        }
+      ],
+      "roleVerdict": "PASS"
+    },
+    {
+      "role": "admin",
+      "account": "sysadmin",
+      "path": "/admin/settings",
+      "cells": [
+        {
+          "viewport": "phone",
+          "w": 390,
+          "h": 844,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:18:28",
+          "screenshot": "matrix-admin-phone.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "tablet",
+          "w": 1024,
+          "h": 1024,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:18:53",
+          "screenshot": "matrix-admin-tablet.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "laptop",
+          "w": 1440,
+          "h": 900,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:19:18",
+          "screenshot": "matrix-admin-laptop.png",
+          "verdict": "PASS"
+        },
+        {
+          "viewport": "desktop",
+          "w": 1920,
+          "h": 1080,
+          "overflowX": false,
+          "extraNestedCount": 0,
+          "mainScrollers": ["app-shell"],
+          "liveOk": true,
+          "live": "LiveUpdated 14:19:43",
+          "screenshot": "matrix-admin-desktop.png",
+          "verdict": "PASS"
+        }
+      ],
+      "roleVerdict": "PASS"
+    }
+  ],
+  "summary": {
+    "cellsTotal": 16,
+    "cellsPass": 16,
+    "cellsFail": 0,
+    "matrixVerdict": "PASS",
+    "notes": [
+      "Director live grid shows 3 projects / 5 panels after fetch-race fix",
+      "No horizontal overflow observed on any cell",
+      "No extra nested scrollers outside .app-shell on measured dashboards"
+    ]
+  }
+}
