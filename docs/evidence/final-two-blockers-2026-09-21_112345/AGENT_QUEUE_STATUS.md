@@ -22,7 +22,7 @@
 | Gate | Action |
 |------|--------|
 | Unseeded AUTO/HIGH | Supply drawing per acceptance doc |
-| Satheesh UI | `scripts/open-owner-rereview-gallery.ps1` → overall approve |
+| Satheesh UI | `scripts/open-owner-rereview-gallery.ps1` → overall approve · **`OWNER_UNBLOCK_CHECKLIST.md`** |
 | Remote CI | **PUSHED** `origin/security/nest11-fastify5` @ **`953f153f`** — Actions **blocked (billing lock)**; local parity **PASS** — see `verify/GITHUB_ACTIONS_RUNS_2026-09-21.txt` |
 | Production | Separate deploy authority |
 
