@@ -1,4 +1,6 @@
-# Owner unblock checklist — Final PASS (2026-09-21)
+# Owner unblock checklist — Final PASS (2026-09-21, resumed 2026-09-22)
+
+**Remote CI (2026-09-22):** still **billing lock** — no runner jobs started (Run 5 @ `2faad03f`). Local restore gates **PASS** today.
 
 Engineering two-blocker remediation is **closed with evidence** on local restore. Product **Final PASS** needs the items below (no agent substitute).
 

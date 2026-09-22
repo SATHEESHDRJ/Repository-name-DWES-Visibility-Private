@@ -1,4 +1,4 @@
-Re-verified: 2026-09-21T14:52+04:00 (origin/security/nest11-fastify5 @ 2faad03f; restore stack up; VERIFY_RESTORE_PASS + BROWSER_SMOKE_PASS re-run)
+Re-verified: 2026-09-22T08:50+04:00 (local @ 489fb392 ahead of origin; restore stack up; VERIFY_RESTORE_PASS + BROWSER_SMOKE_PASS re-run)
 
 BE tests: 426 pass / 0 fail (re-run 2026-09-21T14:27+04:00 on HEAD 1daddc54, ~14.1s)
 BE build: 0 (re-run 2026-09-21T14:29+04:00 nest build + prisma generate)
